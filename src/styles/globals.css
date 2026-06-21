@@ -2,22 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  No brand-specific tokens or styling here. This file is the global reset only.
+  Narriva and Kekere each apply their own theme classes within their own
+  route-group layouts — see src/app/(narriva)/layout.tsx and
+  src/app/(kekere)/layout.tsx.
+*/
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 @layer utilities {
