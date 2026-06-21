@@ -82,6 +82,41 @@ decisions — company name, domains, cowrie top-up packages, story tier cowrie
 ranges, etc. Import from this file instead of re-specifying these values
 anywhere else in the codebase.
 
+## Database & auth
+
+`prisma/schema.prisma` is the single source of truth for the shared database
+— one `User` table, one login, used by both brands. Several models include
+fields that aren't used until later phases (moderation notes, order
+fulfillment, legal consent timestamps) — they're included now to avoid
+disruptive migrations later; see the inline comments in the schema for which
+phase introduces each one.
+
+Auth is NextAuth.js (Credentials provider, bcrypt-hashed passwords, JWT
+session strategy — database-strategy sessions don't populate automatically
+for Credentials logins, so JWT is required here). The session cookie is
+scoped to `.narriva.com` in production so a login on either brand carries
+over to the other; locally there's no shared parent domain between
+`localhost` and `kekere.localhost`, so the cookie falls back to per-host
+during development (see `src/lib/auth/options.ts`).
+
+- `src/lib/db/prisma.ts` — Prisma client singleton
+- `src/lib/auth/options.ts` — NextAuth config
+- `src/lib/auth/middleware.ts` — `getCurrentSession()` / `withAuth()` route protection
+- `src/lib/auth/roles.ts` — `hasRole()` / `requireRole()` RBAC helpers
+- `src/app/api/auth/[...nextauth]/route.ts`, `register/route.ts`, `me/route.ts`
+
+### Setting up the database
+
+```bash
+cp .env.example .env          # fill in DATABASE_URL with a real Postgres connection string
+npx prisma migrate dev --name init
+```
+
+The schema has been validated and the Prisma client generated against it
+(`npx prisma generate`), but no migration has been run yet in this repo —
+that needs an actual reachable Postgres instance (local, Docker, or a hosted
+free tier like Neon/Supabase/Railway).
+
 ## Running locally
 
 ```bash
@@ -98,6 +133,8 @@ Open [http://localhost:3000](http://localhost:3000) for Narriva, or
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS (two independently namespaced theme token sets — see
   `tailwind.config.ts`)
+- Prisma + PostgreSQL (shared database)
+- NextAuth.js (Credentials provider, JWT sessions, bcrypt)
 - framer-motion (in-page micro-interactions only)
 - lucide-react (icons)
 - Radix UI primitives (dialog, dropdown menu, tabs)

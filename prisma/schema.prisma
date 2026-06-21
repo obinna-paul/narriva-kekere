@@ -1,0 +1,313 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Shared across Narriva and Kekere — one account, one login, both brands.
+// See README.md "Brand independence rule" before adding anything here that
+// implies a product link between the two brands.
+
+enum UserRole {
+  READER
+  WRITER
+  ADMIN
+}
+
+model User {
+  id       String   @id @default(cuid())
+  email    String   @unique
+  name     String
+  password String
+  role     UserRole @default(READER)
+  avatar   String?
+  bio      String?
+
+  emailVerified       DateTime?
+  // Legal consent timestamp and account deletion flow — built out in Phase 16.
+  termsAcceptedAt     DateTime?
+  deletionRequestedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallet             Wallet?
+  stories            Story[]             @relation("StoryAuthor")
+  unlocks            StoryUnlock[]
+  savedStories       SavedStory[]
+  narrivaSubmissions NarrivaSubmission[]
+  orders             Order[]
+  books              Book[]              @relation("BookAuthor")
+}
+
+model Wallet {
+  id      String @id @default(cuid())
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions Transaction[]
+}
+
+enum TransactionType {
+  TOP_UP
+  UNLOCK
+  REFUND
+  WITHDRAWAL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Transaction {
+  id       String @id @default(cuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type             TransactionType
+  amountCowries    Int
+  amountNgn        Float?
+  paymentReference String?
+  status           TransactionStatus @default(PENDING)
+  description      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+}
+
+// Kekere Stories
+
+enum StoryStatus {
+  DRAFT
+  SUBMITTED
+  // REVIEWING and REVISIONS_REQUESTED support the moderation pipeline (Phase 12).
+  REVIEWING
+  REVISIONS_REQUESTED
+  PUBLISHED
+  REJECTED
+}
+
+enum StoryTier {
+  STANDARD
+  FEATURED
+  PREMIUM
+}
+
+model Story {
+  id       String @id @default(cuid())
+  authorId String
+  author   User   @relation("StoryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  title    String
+  hookLine String
+  body     String
+
+  isSerialized Boolean @default(false)
+  chapters     Json?
+
+  status StoryStatus @default(DRAFT)
+  tier   StoryTier
+
+  cowrieCost        Int
+  readingTime       Int
+  completionRate    Float?
+  moderationNotes   String?
+  plagiarismFlagged Boolean @default(false)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  unlocks            StoryUnlock[]
+  competitionEntries CompetitionEntry[]
+  savedBy            SavedStory[]
+
+  @@index([authorId])
+}
+
+model StoryUnlock {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId    String
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+enum CompetitionStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  JUDGING
+  COMPLETE
+}
+
+model Competition {
+  id               String            @id @default(cuid())
+  title            String
+  theme            String
+  deadline         DateTime
+  prizeDescription String
+  wordCountLimit   Int
+  status           CompetitionStatus @default(DRAFT)
+  createdAt        DateTime          @default(now())
+
+  entries CompetitionEntry[]
+}
+
+model CompetitionEntry {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  storyId       String
+  story         Story       @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  placement     Int?
+  createdAt     DateTime    @default(now())
+
+  @@unique([competitionId, storyId])
+}
+
+// Narriva
+
+enum NarrivaSubmissionStatus {
+  RECEIVED
+  READING
+  REVIEWED
+  ACCEPTED
+  DECLINED
+}
+
+// Used by the Author Portal (Phase 8) to show progress after acceptance.
+enum NarrivaSubmissionStage {
+  SUBMITTED
+  EDITORIAL
+  DESIGN
+  PRODUCTION
+  LAUNCHED
+}
+
+model NarrivaSubmission {
+  id String @id @default(cuid())
+
+  authorName  String
+  authorEmail String
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  manuscriptTitle String
+  manuscriptRef   String
+  synopsis        String?
+  targetAudience  String?
+
+  status        NarrivaSubmissionStatus @default(RECEIVED)
+  reviewerNotes String?
+  currentStage  NarrivaSubmissionStage?
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Needed for fulfillment (Phase 15).
+enum BookStockStatus {
+  IN_STOCK
+  PRINT_ON_DEMAND
+  PRE_ORDER
+  OUT_OF_STOCK
+}
+
+model Book {
+  id       String @id @default(cuid())
+  title    String
+  authorId String
+  author   User   @relation("BookAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  hookLine      String
+  synopsis      String
+  coverImageRef String
+  coverImages   Json?
+  formats       String[]
+  price         Float
+  editorNote    String?
+
+  stockStatus BookStockStatus @default(PRE_ORDER)
+  publishedAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([authorId])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// Narriva bookstore order fulfillment — needed for Phase 15.
+model Order {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status           OrderStatus @default(PENDING)
+  shippingAddress  Json?
+  trackingNumber   String?
+  totalNgn         Float
+  paymentReference String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId  String
+  book    Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  format   String
+  quantity Int
+  priceNgn Float
+
+  @@index([orderId])
+  @@index([bookId])
+}
+
+model SavedStory {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String
+  story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  savedAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
