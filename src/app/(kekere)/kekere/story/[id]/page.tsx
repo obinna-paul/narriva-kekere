@@ -1,0 +1,36 @@
+import { notFound } from "next/navigation";
+import { KekereTheme } from "@/components/theme";
+import { StoryReader } from "@/components/kekere/story-reader";
+import { getStoryForReader } from "@/lib/data/kekere-stories";
+import { isStorySaved } from "@/lib/data/kekere-library";
+import { getWalletForUser } from "@/lib/data/kekere-wallet";
+import { toReaderStoryData } from "@/lib/adapters/kekere";
+import { getCurrentSession } from "@/lib/auth/middleware";
+
+export const dynamic = "force-dynamic";
+
+export default async function KekereStoryPage({ params }: { params: { id: string } }) {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+
+  const dbStory = await getStoryForReader(params.id, userId);
+  if (!dbStory) notFound();
+
+  const [saved, wallet] = await Promise.all([
+    userId ? isStorySaved(userId, params.id) : Promise.resolve(false),
+    userId ? getWalletForUser(userId) : Promise.resolve(null),
+  ]);
+
+  return (
+    <KekereTheme>
+      <StoryReader
+        story={toReaderStoryData(dbStory)}
+        isLoggedIn={!!userId}
+        userEmail={session?.user?.email ?? undefined}
+        initialUnlocked={dbStory.unlocked}
+        initialBalance={wallet?.balance ?? 0}
+        initialSaved={saved}
+      />
+    </KekereTheme>
+  );
+}

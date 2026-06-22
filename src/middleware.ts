@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 /**
  * Minimal Phase 1 stub, NOT deferred work — it's required even for local dev.
@@ -15,15 +16,58 @@ import type { NextRequest } from "next/server";
  * Production hardening (real subdomain allow-list, www/apex handling, preview
  * deployments, etc.) is deferred to the deployment phase — see README.md.
  */
-export function middleware(request: NextRequest) {
+// Personal pages — need a real logged-in identity to mean anything, not
+// just the unlock action itself (the literal ask was "the unlock flow must
+// be authenticated," but a logged-out visitor looking at someone's wallet
+// or library page makes no sense either, so these are gated the same way).
+const KEKERE_PROTECTED_PREFIXES = ["/kekere/wallet", "/kekere/library", "/kekere/profile", "/kekere/write"];
+
+export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
 
   const isKekere = hostname.startsWith("kekere.");
+  const needsRewrite = isKekere && !pathname.startsWith("/kekere");
+  // The path auth/route-protection checks below must run against, since a
+  // request to the Kekere subdomain's "/wallet" is really "/kekere/wallet"
+  // once rewritten — checking the pre-rewrite `pathname` would silently skip
+  // protection for every subdomain request (the rewrite used to return
+  // early before this check ever ran).
+  const effectivePathname = needsRewrite ? `/kekere${pathname}` : pathname;
 
-  if (isKekere && !pathname.startsWith("/kekere")) {
+  // Route protection for the admin dashboard, Author Portal, and Kekere's
+  // personal pages. Middleware runs on the edge, so it reads the JWT
+  // directly via next-auth/jwt rather than going through getServerSession
+  // (which needs a full request context and Prisma access) — see
+  // src/lib/auth/middleware.ts for the route-handler equivalent used inside
+  // API routes and Server Components.
+  const isProtected =
+    effectivePathname.startsWith("/admin") ||
+    effectivePathname.startsWith("/portal") ||
+    KEKERE_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix));
+
+  if (isProtected) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+
+    if (!token) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.search = "";
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (effectivePathname.startsWith("/admin") && token.role !== "ADMIN") {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      homeUrl.search = "";
+      return NextResponse.redirect(homeUrl);
+    }
+  }
+
+  if (needsRewrite) {
     const url = request.nextUrl.clone();
-    url.pathname = `/kekere${pathname}`;
+    url.pathname = effectivePathname;
     return NextResponse.rewrite(url);
   }
 

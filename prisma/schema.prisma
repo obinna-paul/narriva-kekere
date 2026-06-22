@@ -29,6 +29,13 @@ model User {
   avatar   String?
   bio      String?
 
+  // Author-facing profile fields, used when this user is a published Narriva
+  // author (role WRITER) and shown on /authors/[slug] — see Phase 3/7.
+  slug         String? @unique
+  shortBio     String?
+  avatarColor  String?
+  socialLinks  Json?
+
   emailVerified       DateTime?
   // Legal consent timestamp and account deletion flow — built out in Phase 16.
   termsAcceptedAt     DateTime?
@@ -43,6 +50,8 @@ model User {
   savedStories       SavedStory[]
   narrivaSubmissions NarrivaSubmission[]
   orders             Order[]
+  bookPurchases      BookPurchase[]
+  bookReadingProgress BookReadingProgress[]
   books              Book[]              @relation("BookAuthor")
 }
 
@@ -113,7 +122,17 @@ model Story {
 
   title    String
   hookLine String
+  // Paragraphs joined by a blank line ("\n\n") — same convention as
+  // BlogPost.content (Phase 7) — so the "first ~10%" preview gate in
+  // src/lib/utils/text-preview.ts can split on it consistently.
   body     String
+
+  // Free-text genre and a placeholder cover colour — no real cover image
+  // pipeline yet, same placeholder-block approach used everywhere else in
+  // this codebase (Book, BlogPost). Added in Phase 11 alongside the rest of
+  // Kekere's reading-side backend; didn't exist in the Phase 1 schema.
+  genre      String  @default("Drama")
+  coverColor String  @default("#C75D2C")
 
   isSerialized Boolean @default(false)
   chapters     Json?
@@ -127,6 +146,11 @@ model Story {
   moderationNotes   String?
   plagiarismFlagged Boolean @default(false)
 
+  // Set on the DRAFT/REVISIONS_REQUESTED → SUBMITTED transition — used to
+  // order the admin moderation queue oldest-first by actual submission time,
+  // not draft-creation time (createdAt) or last-edit time (updatedAt, which
+  // also moves on unrelated edits while in REVISIONS_REQUESTED).
+  submittedAt DateTime?
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -158,9 +182,15 @@ enum CompetitionStatus {
 }
 
 model Competition {
-  id               String            @id @default(cuid())
-  title            String
-  theme            String
+  id    String @id @default(cuid())
+  // Added in Phase 13 alongside the rest of the competitions backend — the
+  // Phase 1 schema had no clean-URL field, and /competitions/[slug] needs one.
+  slug  String @unique
+  title String
+  theme String
+  // Longer copy for the detail page; `theme` stays the short label used on
+  // listing cards. Didn't exist in the Phase 1 schema either.
+  themeDescription String   @default("")
   deadline         DateTime
   prizeDescription String
   wordCountLimit   Int
@@ -221,60 +251,103 @@ model NarrivaSubmission {
   submittedAt DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  updates SubmissionUpdate[]
+
   @@index([userId])
 }
 
-// Needed for fulfillment (Phase 15).
-enum BookStockStatus {
-  IN_STOCK
-  PRINT_ON_DEMAND
-  PRE_ORDER
-  OUT_OF_STOCK
+// Dated communication-log entries shown in the Author Portal after
+// acceptance (Phase 8) — posted by admins from /admin/submissions.
+model SubmissionUpdate {
+  id           String            @id @default(cuid())
+  submissionId String
+  submission   NarrivaSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  note      String
+  createdAt DateTime @default(now())
+
+  @@index([submissionId])
 }
 
 model Book {
   id       String @id @default(cuid())
+  slug     String @unique
   title    String
   authorId String
   author   User   @relation("BookAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
+  genre         String
   hookLine      String
   synopsis      String
+  excerpt       String[]
   coverImageRef String
-  coverImages   Json?
-  formats       String[]
   price         Float
-  editorNote    String?
+  editorNote            String?
+  editorNoteAttribution String?
 
-  stockStatus BookStockStatus @default(PRE_ORDER)
+  // Ebook content stored in Cloudflare R2; never served as a downloadable file.
+  ebookRef          String
+  chapterCount      Int    @default(0)
+  wordCount         Int    @default(0)
+  estimatedReadTime Int    @default(0) // minutes
+
+  // Drives the homepage "Featured Books" carousel and bookstore "new
+  // releases" filter (Phase 3/4/7) — editorial flags, not derived from dates,
+  // since a book's launch push doesn't always line up with its print date.
+  featured     Boolean @default(false)
+  isNewRelease Boolean @default(false)
+
   publishedAt DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   orderItems OrderItem[]
+  purchases  BookPurchase[]
+  readingProgress BookReadingProgress[]
 
   @@index([authorId])
 }
 
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  REFUNDED
+model BookPurchase {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  paymentReference String
+  purchasedAt      DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
 }
 
-// Narriva bookstore order fulfillment — needed for Phase 15.
+model BookReadingProgress {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  currentChapter      Int   @default(1)
+  currentScrollPosition Int @default(0) // pixel offset within chapter
+  lastReadAt          DateTime
+  completedChapterIds Int[] // chapter indices the user has finished
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+// Narriva bookstore purchases — a purchase record is created when a user
+// buys an ebook, granting them in-platform reading access only.
 model Order {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  status           OrderStatus @default(PENDING)
-  shippingAddress  Json?
-  trackingNumber   String?
   totalNgn         Float
   paymentReference String?
 
@@ -293,8 +366,6 @@ model OrderItem {
   bookId  String
   book    Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
-  format   String
-  quantity Int
   priceNgn Float
 
   @@index([orderId])
@@ -310,4 +381,62 @@ model SavedStory {
   savedAt DateTime @default(now())
 
   @@unique([userId, storyId])
+}
+
+// Narriva blog (Phase 7) — added here since it didn't exist in the Phase 1
+// schema; the mock posts from Phase 6 seed into this model.
+
+enum BlogCategory {
+  WRITING_CRAFT
+  PUBLISHING_ADVICE
+  AUTHOR_SPOTLIGHT
+  KEKERE_FEATURE
+  BEHIND_THE_SCENES
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model BlogPost {
+  id    String @id @default(cuid())
+  slug  String @unique
+  title String
+
+  excerpt String
+  // Stored as lightweight markdown (headings, bold/italic, links) written
+  // through the admin's simple rich text editor — see src/lib/utils/markdown.tsx.
+  content String
+
+  // No real image pipeline yet — every featured "image" on the site today is
+  // a solid colour placeholder block, same as Book/Author. featuredImageRef
+  // stays nullable for whenever real asset URLs (R2/CDN) replace this.
+  featuredImageRef String?
+  coverColor       String       @default("#1E3A8A")
+  category         BlogCategory
+  tags             String[]
+  authorName       String
+
+  status      BlogStatus @default(DRAFT)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
+// Service page content (Phase 4/7) — editorial copy, admin-editable since it
+// evolves, but stable enough that public pages can render it directly.
+model Service {
+  id      String @id @default(cuid())
+  slug    String @unique
+  title   String
+  content Json
+  order   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

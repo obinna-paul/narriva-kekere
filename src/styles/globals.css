@@ -12,6 +12,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /*
+    Theming contract for src/components/ui primitives (see README "Brand
+    independence rule"). Primitives read ONLY these variables — never a
+    brand-prefixed Tailwind color or a hard-coded hex. NarrivaTheme /
+    KekereTheme (src/components/theme) override them per-brand; these root
+    values are a neutral fallback so primitives still render sanely outside
+    any theme wrapper (e.g. in isolation, Storybook, or tests).
+  */
+  --color-primary: #27272a;
+  --color-primary-light: #3f3f46;
+  --color-bg: #ffffff;
+  --color-ink: #18181b;
+  --color-accent: #71717a;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -22,5 +38,41 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/*
+  Used by the Narriva homepage hero (src/components/narriva/hero-book-animation.tsx).
+  6s build + 3s hold = 9s loop. Elements are styled to their FINAL frame by
+  default; `motion-safe:animate-[...]` layers the animation on top, so a
+  prefers-reduced-motion user simply sees the static end state with no JS
+  branching needed.
+*/
+@keyframes narriva-layer-build {
+  0%,
+  8% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  40%,
+  100% {
+    /* Each element sets --narriva-layer-opacity inline to its own final
+       opacity, so layers that are meant to stay translucent (e.g. an accent
+       stripe at 0.85) don't get pulled up to fully opaque mid-animation. */
+    opacity: var(--narriva-layer-opacity, 1);
+    transform: scale(1);
+  }
+}
+
+@keyframes narriva-line-settle {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  40%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
