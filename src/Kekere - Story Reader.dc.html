@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#F5EBDD;color:#2A1A12;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#C75D2C;color:#F5EBDD}
+  button{font-family:inherit}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F5EBDD;position:relative;overflow-x:hidden">
+
+  <!-- WATERMARK -->
+  <div style="position:fixed;inset:-30% -10%;z-index:1;pointer-events:none;transform:rotate(-26deg);display:flex;flex-direction:column;gap:54px;overflow:hidden">
+    <sc-for list="{{ watermarkRows }}" as="row" hint-placeholder-count="12">
+      <div style="white-space:nowrap;font-size:14px;letter-spacing:0.28em;color:rgba(42,26,18,0.06)">{{ row }}</div>
+    </sc-for>
+  </div>
+
+  <!-- TOP PROGRESS BAR -->
+  <div style="position:fixed;top:0;left:0;right:0;z-index:50;height:3px;background:rgba(42,26,18,0.08)"><div style="height:100%;width:{{ progressPct }};background:#C75D2C;transition:width .15s linear"></div></div>
+
+  <!-- TOP CHROME -->
+  <div style="position:fixed;top:3px;left:0;right:0;z-index:45;transform:translateY({{ chromeY }});opacity:{{ chromeOpacity }};transition:transform .35s,opacity .35s;background:rgba(245,235,221,0.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(42,26,18,0.08)">
+    <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <a href="Kekere - Feed.dc.html" aria-label="Back to feed" style="font-size:20px;color:#6A5446;flex:none">←</a>
+      <div style="flex:1;font-size:14px;font-weight:600;color:#2A1A12;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The Last Bus to Yaba</div>
+      <div style="display:flex;gap:14px;flex:none">
+        <button aria-label="Bookmark" style="background:none;border:none;cursor:pointer;color:#6A5446;font-size:17px" style-hover="color:#C75D2C">♡</button>
+        <button aria-label="Share" style="background:none;border:none;cursor:pointer;color:#6A5446;font-size:16px" style-hover="color:#C75D2C">↗</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- READING AREA -->
+  <main style="position:relative;z-index:5;max-width:620px;margin:0 auto;padding:78px 24px 80px">
+    <div style="margin-bottom:30px">
+      <span style="display:inline-block;font-size:11px;font-weight:600;color:#fff;background:#1F4B4B;padding:4px 11px;border-radius:20px">LOVE</span>
+      <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:32px;line-height:1.12;color:#2A1A12;margin-top:16px">The Last Bus to Yaba</h1>
+      <div style="margin-top:10px;font-size:13.5px;color:#8A7565">by Funmi Adeleke · 4 min read</div>
+    </div>
+
+    <div style="font-size:17px;line-height:1.75;color:#2A1A12">
+      <p style="margin-bottom:1.3em">The 9:40 to Yaba was the last one that didn't smell of the day, and Ngozi had been catching it for three years specifically so she would never have to share it with the man who was now, impossibly, sitting across from her.</p>
+      <p style="margin-bottom:1.3em">He hadn't seen her yet. He was doing the thing he always did — reading the adverts above the windows as though they were news, mouthing the phone numbers like he might call them. She had loved that once, the way he paid attention to things nobody else thought were worth it. She had also, later, hated it, for exactly the same reason.</p>
+
+      <!-- LOCKED: fade + unlock -->
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+        <div style="position:relative">
+          <p style="margin-bottom:1.3em">The bus pulled out. She had thirty minutes to decide whether to say his name, and she spent the first five of them pretending to look at her phone, which had died at Obalende and was now just a black mirror showing her own face deciding —</p>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(to bottom,rgba(245,235,221,0),#F5EBDD)"></div>
+        </div>
+
+        <div style="position:relative;text-align:center;padding-top:8px">
+          <div style="font-family:'Fraunces',serif;font-size:21px;font-weight:600;color:#2A1A12;margin-bottom:6px">Keep reading?</div>
+          <p style="font-size:13.5px;color:#8A7565;margin-bottom:20px">91% of readers who start this one finish it.</p>
+          <div style="background:#fff;border:1px solid rgba(42,26,18,0.1);border-radius:16px;padding:24px;box-shadow:0 16px 40px -18px rgba(42,26,18,0.3)">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#6A5446;margin-bottom:16px">
+              <span>Your balance</span>
+              <span style="display:inline-flex;align-items:center;gap:5px;font-weight:600;color:#2A1A12">
+                <svg width="14" height="14" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C"/><path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" stroke-width="1.1" fill="none"/></svg>{{ balance }}
+              </span>
+            </div>
+            <button onClick="{{ unlock }}" style="width:100%;cursor:pointer;border:none;font-size:16px;font-weight:600;color:#fff;background:#C75D2C;padding:16px;border-radius:10px;box-shadow:0 10px 24px -10px rgba(199,93,44,0.55)" style-hover="background:#B14E22">Unlock for {{ cost }} cowries</button>
+            <p style="font-size:12px;color:#A08C7C;margin-top:12px">Every unlock supports the writer directly.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- UNLOCKED: rest of story -->
+      <sc-if value="{{ unlockedView }}" hint-placeholder-val="{{ false }}">
+        <p style="margin-bottom:1.3em">The bus pulled out. She had thirty minutes to decide whether to say his name, and she spent the first five of them pretending to look at her phone, which had died at Obalende and was now just a black mirror showing her own face deciding.</p>
+        <p style="margin-bottom:1.3em">It was the conductor who undid her, leaning across to collect his fare, saying <span style="font-style:italic">"Yaba straight?"</span> in a voice loud enough that he looked up, and looked at the conductor, and then — because the conductor was pointing at her for the change — looked at her.</p>
+        <p style="margin-bottom:1.3em">"Ngozi," he said. Not a question. He had never asked questions he already knew the answers to; it was another thing she had loved and then not.</p>
+        <p style="margin-bottom:1.3em">"This is my stop," she said, though it was not, though they were nowhere near, though the bus was doing fifty on the bridge with the lagoon black and patient on both sides. She stood anyway. And he said her name again, softer, the way you'd say it to keep someone in a room, and she understood that she had missed three years of this bus on purpose and caught this one, also, on purpose, and that the difference between the two was the whole story of her life.</p>
+        <p style="margin-bottom:1.3em">She sat back down. The bridge went on. Yaba was still twenty minutes away, and for the first time in three years she was in no hurry at all to arrive.</p>
+
+        <div style="text-align:center;padding:30px 0 0">
+          <button onClick="{{ finish }}" style="cursor:pointer;border:1px solid rgba(42,26,18,0.16);background:transparent;color:#6A5446;font-size:14px;font-weight:600;padding:12px 24px;border-radius:30px" style-hover="border-color:#C75D2C;color:#C75D2C">I finished this</button>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+
+  <!-- COMPLETION END SCREEN -->
+  <sc-if value="{{ finished }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:60;background:#F5EBDD;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;text-align:center">
+      <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#C75D2C;font-weight:600;margin-bottom:16px">You finished</div>
+      <h2 style="font-family:'Fraunces',serif;font-weight:600;font-size:30px;line-height:1.16;color:#2A1A12;max-width:320px">The Last Bus to Yaba</h2>
+      <p style="margin-top:18px;font-size:14px;color:#8A7565">How was it?</p>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <sc-for list="{{ stars }}" as="st" hint-placeholder-count="5">
+          <button onClick="{{ st.onClick }}" aria-label="Rate" style="cursor:pointer;background:none;border:none;font-size:34px;line-height:1;color:{{ st.color }}">★</button>
+        </sc-for>
+      </div>
+      <div style="margin-top:36px;display:flex;flex-direction:column;gap:12px;width:100%;max-width:280px">
+        <a href="Kekere - Feed.dc.html" style="text-align:center;font-size:15px;font-weight:600;color:#fff;background:#C75D2C;padding:15px;border-radius:10px">Back to feed</a>
+        <button style="cursor:pointer;border:1px solid rgba(42,26,18,0.16);background:transparent;color:#2A1A12;font-size:15px;font-weight:600;padding:15px;border-radius:10px">Share this story</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = { locked: true, chrome: true, progress: 0, finished: false, rating: 0 };
+  componentDidMount() {
+    this._email = 'ngozi.reads@kekere.app';
+    this._show();
+    this._onScroll = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      this.setState({ progress: h > 0 ? Math.min(1, window.scrollY / h) : 0 });
+      this._show();
+    };
+    this._onMove = () => this._show();
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    window.addEventListener('mousemove', this._onMove, { passive: true });
+    window.addEventListener('touchstart', this._onMove, { passive: true });
+  }
+  componentWillUnmount() {
+    clearTimeout(this._t);
+    window.removeEventListener('scroll', this._onScroll);
+    window.removeEventListener('mousemove', this._onMove);
+    window.removeEventListener('touchstart', this._onMove);
+  }
+  _show() {
+    if (!this.state.chrome) this.setState({ chrome: true });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ chrome: false }), 3000);
+  }
+  renderVals() {
+    const wm = [];
+    for (let i = 0; i < 14; i++) wm.push((this._email + '     ').repeat(7));
+    return {
+      locked: this.state.locked,
+      unlockedView: !this.state.locked,
+      finished: this.state.finished,
+      balance: 340, cost: 12,
+      progressPct: Math.round(this.state.progress * 100) + '%',
+      chromeY: this.state.chrome ? '0' : '-130%',
+      chromeOpacity: this.state.chrome ? 1 : 0,
+      watermarkRows: wm,
+      unlock: () => { this.setState({ locked: false }); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+      finish: () => this.setState({ finished: true }),
+      stars: [1, 2, 3, 4, 5].map(n => ({
+        color: n <= this.state.rating ? '#C75D2C' : 'rgba(42,26,18,0.18)',
+        onClick: () => this.setState({ rating: n })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

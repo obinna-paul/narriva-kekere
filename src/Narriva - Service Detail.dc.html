@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Services</a>
+        <a href="#" style="font-size:15px;color:#161616">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER with accent photo -->
+  <header style="max-width:1240px;margin:0 auto;padding:56px 32px 0">
+    <div style="font-size:13px;color:#8A857C;margin-bottom:30px"><a href="Narriva - Services.dc.html" style="color:#8A857C" style-hover="color:#1E3A8A">Services</a> <span style="margin:0 8px;opacity:0.5">/</span> <span style="color:#55514A">Editorial</span></div>
+    <div style="display:grid;grid-template-columns:1.05fr 0.95fr;gap:56px;align-items:center">
+      <div>
+        <div style="width:36px;height:1px;background:#B08D57;margin-bottom:26px"></div>
+        <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:58px;line-height:1.02;letter-spacing:-0.02em;color:#161616">Editorial</h1>
+        <p style="margin-top:22px;font-size:19px;line-height:1.55;color:#1E3A8A;font-family:'Fraunces',serif;font-style:italic;max-width:440px">The work of making a good manuscript into the best version of itself.</p>
+      </div>
+      <div style="aspect-ratio:4/3;border-radius:4px;background:repeating-linear-gradient(45deg,#ECE7DD,#ECE7DD 10px,#E6E0D4 10px,#E6E0D4 20px);position:relative;overflow:hidden;box-shadow:0 18px 40px -20px rgba(22,22,22,0.3)">
+        <span style="position:absolute;left:16px;bottom:13px;font-family:'Inter',monospace;font-size:11px;letter-spacing:0.04em;color:#A99F8E">photo · editor marking up a manuscript</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- OPENING -->
+  <section style="max-width:720px;margin:0 auto;padding:72px 32px 0">
+    <p style="font-family:'Fraunces',serif;font-size:21px;line-height:1.65;color:#2A2620">Editing isn't proofreading. A developmental edit looks at the whole shape of a book — what it's trying to do, where it loses the reader, where the real story is hiding two chapters in. A line edit goes sentence by sentence for rhythm, clarity, and voice. Most manuscripts need some of both, and we'll tell you honestly which.</p>
+  </section>
+
+  <!-- WHAT'S INCLUDED -->
+  <section style="max-width:720px;margin:0 auto;padding:56px 32px 0">
+    <h2 style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:28px">What's included</h2>
+    <div>
+      <sc-for list="{{ included }}" as="it" hint-placeholder-count="6">
+        <div style="display:flex;gap:18px;padding:18px 0;border-bottom:1px solid rgba(22,22,22,0.08)">
+          <span style="flex:none;width:7px;height:7px;border-radius:50%;background:#B08D57;margin-top:8px"></span>
+          <div>
+            <div style="font-size:16px;font-weight:600;color:#161616">{{ it.t }}</div>
+            <div style="margin-top:4px;font-size:14.5px;line-height:1.6;color:#55514A">{{ it.d }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- COST -->
+  <section style="max-width:720px;margin:0 auto;padding:64px 32px 0">
+    <div style="background:#F6F3ED;border:1px solid rgba(22,22,22,0.08);border-radius:6px;padding:44px;text-align:center">
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:28px;color:#161616;letter-spacing:-0.01em">Every book is different — let's talk about yours.</h2>
+      <p style="margin-top:14px;font-size:15.5px;line-height:1.6;color:#55514A;max-width:420px;margin-left:auto;margin-right:auto">Editorial scope depends on what the manuscript needs. We'll read it, tell you what we'd do, and quote it properly — no packages, no guesswork.</p>
+      <a href="Narriva - Contact.dc.html" style="display:inline-block;margin-top:26px;font-size:15px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:15px 30px;border-radius:2px" style-hover="background:#162C6B">Talk to us about your book</a>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section style="max-width:720px;margin:0 auto;padding:72px 32px 100px">
+    <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;color:#161616;letter-spacing:-0.01em;margin-bottom:30px">Questions authors ask</h2>
+    <div style="border-top:1px solid rgba(22,22,22,0.12)">
+      <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="5">
+        <div style="border-bottom:1px solid rgba(22,22,22,0.12)">
+          <button onClick="{{ f.toggle }}" style="width:100%;background:transparent;border:none;cursor:pointer;text-align:left;padding:24px 0;display:flex;align-items:center;justify-content:space-between;gap:20px">
+            <span style="font-size:17px;font-weight:500;color:#161616;font-family:'Fraunces',serif">{{ f.q }}</span>
+            <span style="flex:none;font-size:22px;color:#1E3A8A;transform:rotate({{ f.rot }});transition:transform .25s">+</span>
+          </button>
+          <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+            <p style="font-size:15px;line-height:1.7;color:#55514A;padding:0 0 26px;max-width:600px">{{ f.a }}</p>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { open: -1 };
+  renderVals() {
+    const faqData = [
+      { q: 'How long does an edit take?', a: 'A developmental edit on a full-length novel usually runs four to eight weeks, depending on length and how much rework we recommend. A line edit is faster. We give you a real timeline once we have read the manuscript.' },
+      { q: 'Do I keep the rights to my book?', a: 'Always. Editing changes nothing about who owns the work. You hold your rights start to finish — the editorial service is work-for-hire on your manuscript, not an acquisition of it.' },
+      { q: 'Can I use my own editor and only some of your services?', a: "Yes. Plenty of authors come to us for design or production having edited elsewhere. We'll happily pick up where someone else left off, and we'll be honest if we think the manuscript still needs editorial work." },
+      { q: "What happens if I'm not happy with the edit?", a: "We build in a revision round, and your editor talks through every major suggestion with you before it lands. Nothing is imposed. If the direction isn't right, we course-correct — you have a say at every stage." },
+      { q: 'Will you change my voice?', a: "No. The job of a good editor is to make your book sound more like itself, not like us. We flag, we suggest, we question — but the voice on the page stays yours." }
+    ];
+    return {
+      included: [
+        { t: 'A full manuscript read', d: 'Before anything else, an editor reads the whole thing and writes you an honest assessment.' },
+        { t: 'Developmental editing', d: 'Structure, pacing, character, and the gap between what you meant and what is on the page.' },
+        { t: 'Line editing', d: 'Sentence-level work on rhythm, clarity, and voice once the structure is sound.' },
+        { t: 'An editorial letter', d: 'A written map of what we recommend and why — not just tracked changes you have to decode.' },
+        { t: 'A revision round', d: 'Time built in for you to revise and for us to read it again. Editing is a conversation, not a single pass.' },
+        { t: 'A single point of contact', d: 'One editor who knows your book, available throughout — not a relay of strangers.' }
+      ],
+      faqs: faqData.map((f, i) => ({
+        q: f.q, a: f.a,
+        open: this.state.open === i,
+        rot: this.state.open === i ? '45deg' : '0deg',
+        toggle: () => this.setState({ open: this.state.open === i ? -1 : i })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

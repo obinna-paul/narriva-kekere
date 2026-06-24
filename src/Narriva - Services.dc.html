@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A;letter-spacing:-0.01em">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Services</a>
+        <a href="#" style="font-size:15px;color:#161616">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <header style="max-width:1240px;margin:0 auto;padding:80px 32px 56px;max-width:760px">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:16px">What we do</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:52px;line-height:1.06;letter-spacing:-0.02em;color:#161616">Everything a book needs, under one roof</h1>
+    <p style="margin-top:20px;font-size:17.5px;line-height:1.6;color:#55514A">Five services, one team. Most authors use more than one — and they all talk to each other. Choose where you need us, or bring us the whole thing.</p>
+  </header>
+
+  <section style="max-width:1100px;margin:0 auto;padding:0 32px 100px">
+    <div style="border-top:1px solid rgba(22,22,22,0.12)">
+      <sc-for list="{{ servicesList }}" as="s" hint-placeholder-count="5">
+        <a href="Narriva - Service Detail.dc.html" style="display:grid;grid-template-columns:80px 1fr auto;gap:32px;align-items:center;padding:38px 8px;border-bottom:1px solid rgba(22,22,22,0.12)" style-hover="background:rgba(30,58,138,0.025)">
+          <span style="font-family:'Fraunces',serif;font-size:17px;color:#B08D57">{{ s.num }}</span>
+          <div style="max-width:620px">
+            <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:28px;color:#161616;letter-spacing:-0.01em">{{ s.name }}</h2>
+            <p style="margin-top:10px;font-size:15.5px;line-height:1.6;color:#55514A">{{ s.desc }}</p>
+          </div>
+          <span style="font-size:14px;color:#1E3A8A;font-weight:500;white-space:nowrap">Learn more →</span>
+        </a>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:64px;background:#1E3A8A;color:#FAF8F4;border-radius:6px;padding:54px 48px;text-align:center">
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;letter-spacing:-0.01em">Not sure which you need?</h2>
+      <p style="margin-top:14px;font-size:16px;color:rgba(250,248,244,0.78);max-width:460px;margin-left:auto;margin-right:auto">That's what the assessment is for. Send us your manuscript and we'll tell you exactly where it needs work.</p>
+      <a href="Narriva - Submit.dc.html" style="display:inline-block;margin-top:28px;font-size:15px;font-weight:500;color:#1E3A8A;background:#FAF8F4;padding:14px 28px;border-radius:2px" style-hover="background:#fff">Submit Your Manuscript</a>
+    </div>
+  </section>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      servicesList: [
+        { num: '01', name: 'Publishing', desc: 'The whole journey, handled — editorial, design, production, ISBN, and launch. One team, one point of contact, from manuscript to bookstore.' },
+        { num: '02', name: 'Editorial', desc: 'Developmental and line editing from people who have shaped the kind of book you are trying to write. Structure, pacing, and prose — not a proofreading pass dressed up as editing.' },
+        { num: '03', name: 'Design', desc: 'Covers and interiors built to compete with traditional houses. A cover that survives a thumbnail and an interior that disappears the way good typesetting should.' },
+        { num: '04', name: 'Author Growth', desc: 'Launch planning, positioning, and the slow work of building a readership. We stay invested in what happens after the book ships.' },
+        { num: '05', name: 'Ghostwriting', desc: 'For authors with a story and not the time to write it. We pair you with a writer who can hold your voice on the page.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

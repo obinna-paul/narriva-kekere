@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#161616">Authors</a>
+        <a href="Narriva - Blog.dc.html" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="Narriva - Library.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Library</a>
+        <div style="width:34px;height:34px;border-radius:50%;background:#1E3A8A;color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;font-family:'Fraunces',serif">A</div>
+      </div>
+    </div>
+  </nav>
+
+  <header style="max-width:1140px;margin:0 auto;padding:64px 32px 44px">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">Your library</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:42px;letter-spacing:-0.015em;color:#161616">Everything you've bought</h1>
+  </header>
+
+  <section style="max-width:1140px;margin:0 auto;padding:0 32px 110px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:40px 32px">
+      <sc-for list="{{ library }}" as="b" hint-placeholder-count="8">
+        <div>
+          <a href="Narriva - Reader.dc.html" style="display:block">
+            <div style="aspect-ratio:3/4;border-radius:3px 5px 5px 3px;box-shadow:0 12px 28px -14px rgba(22,22,22,0.34);padding:24px 20px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.16);background:{{ b.cover }};transition:transform .3s" style-hover="transform:translateY(-5px)">
+              <span style="font-family:'Fraunces',serif;font-style:italic;font-size:11px;color:{{ b.faint }}">Narriva</span>
+              <div><div style="width:22px;height:1px;background:#B08D57;margin-bottom:12px"></div><div style="font-family:'Fraunces',serif;font-size:18px;line-height:1.14;font-weight:500;color:{{ b.ink }}">{{ b.title }}</div></div>
+            </div>
+            <div style="margin-top:12px;height:4px;border-radius:2px;background:rgba(22,22,22,0.1);overflow:hidden"><div style="height:100%;width:{{ b.pct }};background:#1E3A8A"></div></div>
+          </a>
+          <div style="margin-top:12px;font-family:'Fraunces',serif;font-size:16px;font-weight:500;color:#161616;line-height:1.2">{{ b.title }}</div>
+          <div style="font-size:12.5px;color:#8A857C;margin-top:3px">{{ b.author }}</div>
+          <div style="font-size:12.5px;color:{{ b.statusColor }};margin-top:8px">{{ b.status }}</div>
+          <a href="Narriva - Reader.dc.html" style="display:inline-block;margin-top:12px;font-size:13px;font-weight:500;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">{{ b.cta }} →</a>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    const C = { slate: { cover: '#283655', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.6)' }, forest: { cover: '#2E4034', ink: '#F1EEE2', faint: 'rgba(241,238,226,0.6)' }, ox: { cover: '#5A2A2A', ink: '#F3EAE2', faint: 'rgba(243,234,226,0.58)' }, char: { cover: '#252525', ink: '#EDEAE3', faint: 'rgba(237,234,227,0.5)' }, teal: { cover: '#36514E', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.6)' }, sand: { cover: '#C9B79C', ink: '#2A2419', faint: 'rgba(42,36,25,0.5)' } };
+    const mk = (c, title, author, pct, status, statusColor, cta) => ({ ...c, title, author, pct, status, statusColor, cta });
+    return {
+      library: [
+        mk(C.slate, 'The Salt Roads of Badagry', 'Adaeze Okonkwo', '42%', 'In progress · Chapter 6 of 14', '#1E3A8A', 'Continue reading'),
+        mk(C.ox, 'The Cartographer of Lost Wards', 'Ifeoma Nwosu', '100%', 'Finished', '#1F6F4A', 'Read again'),
+        mk(C.forest, 'Harmattan Sons', 'Tunde Bakare', '0%', 'Not started', '#8A857C', 'Start reading'),
+        mk(C.teal, 'What the River Keeps', 'Amara Diallo', '18%', 'In progress · Chapter 2 of 11', '#1E3A8A', 'Continue reading'),
+        mk(C.char, 'Small Mercies in Surulere', 'Chidi Eze', '0%', 'Not started', '#8A857C', 'Start reading'),
+        mk(C.sand, 'The Inheritance of Silence', 'Kwame Mensah', '74%', 'In progress · Chapter 9 of 12', '#1E3A8A', 'Continue reading')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

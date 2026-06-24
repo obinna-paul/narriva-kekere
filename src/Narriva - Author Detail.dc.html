@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+  .ph{background:repeating-linear-gradient(45deg,#ECE7DD,#ECE7DD 9px,#E6E0D4 9px,#E6E0D4 18px)}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:1140px;margin:0 auto;padding:34px 32px 0">
+    <div style="font-size:13px;color:#8A857C"><a href="Narriva - Authors.dc.html" style="color:#8A857C" style-hover="color:#1E3A8A">Authors</a> <span style="margin:0 8px;opacity:0.5">/</span> <span style="color:#55514A">Adaeze Okonkwo</span></div>
+  </div>
+
+  <header style="max-width:1140px;margin:0 auto;padding:40px 32px 72px;display:grid;grid-template-columns:34% 1fr;gap:56px;align-items:start">
+    <div class="ph" style="aspect-ratio:4/5;border-radius:4px;position:relative;overflow:hidden;box-shadow:0 18px 40px -22px rgba(22,22,22,0.3)">
+      <span style="position:absolute;left:14px;bottom:12px;font-family:'Inter',monospace;font-size:11px;color:#A99F8E">author photo</span>
+    </div>
+    <div>
+      <div style="width:36px;height:1px;background:#B08D57;margin-bottom:24px"></div>
+      <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:50px;line-height:1.04;letter-spacing:-0.02em;color:#161616">Adaeze Okonkwo</h1>
+      <p style="margin-top:16px;font-size:18px;font-style:italic;color:#1E3A8A;font-family:'Fraunces',serif">Writes literary fiction about Lagos's coastal underworld.</p>
+      <div style="margin-top:28px;font-size:16px;line-height:1.7;color:#2A2620;max-width:520px">
+        <p style="margin-bottom:18px">Adaeze Okonkwo was born in Badagry and raised between the salt flats and the city. She spent a decade as a journalist — covering shipping, smuggling, and the long memory of the coast — before turning to fiction.</p>
+        <p>Her debut novel, <span style="font-style:italic">The Salt Roads of Badagry</span>, draws on the world she grew up in: a place where a family's debts are measured in salt and silence. She is currently at work on her second novel.</p>
+      </div>
+      <div style="margin-top:28px;display:flex;gap:22px">
+        <a href="#" style="font-size:14px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">Website</a>
+        <a href="#" style="font-size:14px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">Instagram</a>
+        <a href="#" style="font-size:14px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">Twitter</a>
+      </div>
+    </div>
+  </header>
+
+  <section style="border-top:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1140px;margin:0 auto;padding:64px 32px 110px">
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;letter-spacing:-0.015em;color:#161616;margin-bottom:40px">Books by Adaeze Okonkwo</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:44px 40px">
+        <sc-for list="{{ books }}" as="b" hint-placeholder-count="3">
+          <a href="Narriva - Book Detail.dc.html" style="display:block">
+            <div style="aspect-ratio:3/4;border-radius:3px 5px 5px 3px;box-shadow:0 14px 32px -16px rgba(22,22,22,0.34);padding:30px 26px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.16);transition:transform .35s,box-shadow .35s;background:{{ b.cover }}" style-hover="transform:translateY(-6px);box-shadow:0 28px 48px -18px rgba(22,22,22,0.4)">
+              <span style="font-family:'Fraunces',serif;font-style:italic;font-size:12px;color:{{ b.faint }}">Narriva</span>
+              <div><div style="width:26px;height:1px;background:#B08D57;margin-bottom:15px"></div><div style="font-family:'Fraunces',serif;font-size:23px;line-height:1.13;font-weight:500;color:{{ b.ink }}">{{ b.title }}</div></div>
+            </div>
+            <div style="margin-top:18px;font-family:'Fraunces',serif;font-size:19px;font-weight:500;color:#161616">{{ b.title }}</div>
+            <div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:14px;font-weight:600;color:#161616">{{ b.price }}</span>
+              <span style="font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)">View →</span>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      books: [
+        { title: 'The Salt Roads of Badagry', price: '₦4,500', cover: '#283655', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.62)' },
+        { title: 'Brine & Ledger (forthcoming)', price: '2027', cover: '#36514E', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.6)' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

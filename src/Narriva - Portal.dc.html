@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#161616">Authors</a>
+        <a href="Narriva - Blog.dc.html" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="Narriva - Library.dc.html" style="font-size:15px;color:#161616">Library</a>
+        <div style="width:34px;height:34px;border-radius:50%;background:#1E3A8A;color:#FAF8F4;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;font-family:'Fraunces',serif">A</div>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:1080px;margin:0 auto;padding:56px 32px 100px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:20px;margin-bottom:14px">
+      <div>
+        <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">Author portal</div>
+        <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-0.015em;color:#161616">Welcome back, Adaeze</h1>
+      </div>
+      <!-- demo view switch -->
+      <div style="display:flex;gap:4px;background:rgba(22,22,22,0.05);border-radius:30px;padding:4px">
+        <button onClick="{{ showPre }}" style="cursor:pointer;border:none;font-size:13px;font-weight:500;padding:8px 16px;border-radius:30px;background:{{ preBg }};color:{{ preColor }}">Submission</button>
+        <button onClick="{{ showPost }}" style="cursor:pointer;border:none;font-size:13px;font-weight:500;padding:8px 16px;border-radius:30px;background:{{ postBg }};color:{{ postColor }}">In production</button>
+      </div>
+    </div>
+
+    <!-- PRE-ACCEPTANCE -->
+    <sc-if value="{{ preView }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:36px;display:flex;flex-direction:column;gap:20px">
+        <sc-for list="{{ submissions }}" as="s" hint-placeholder-count="2">
+          <div style="background:#fff;border:1px solid rgba(22,22,22,0.1);border-radius:8px;padding:32px 34px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start">
+            <div>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                <h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:500;color:#161616">{{ s.title }}</h2>
+                <span style="font-size:12px;font-weight:600;letter-spacing:0.03em;color:{{ s.statusColor }};background:{{ s.statusBg }};padding:5px 12px;border-radius:20px">{{ s.status }}</span>
+              </div>
+              <div style="margin-top:8px;font-size:13.5px;color:#8A857C">Submitted {{ s.date }}</div>
+              <p style="margin-top:16px;font-size:15px;line-height:1.65;color:#55514A;max-width:560px">{{ s.note }}</p>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#9A7B49;margin-bottom:8px">Stage</div>
+              <div style="display:flex;gap:6px;justify-content:flex-end">
+                <sc-for list="{{ s.dots }}" as="d" hint-placeholder-count="3"><span style="width:9px;height:9px;border-radius:50%;background:{{ d }}"></span></sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- POST-ACCEPTANCE -->
+    <sc-if value="{{ postView }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:36px">
+        <div style="background:#fff;border:1px solid rgba(22,22,22,0.1);border-radius:8px;padding:36px 38px">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:34px">
+            <h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:500;color:#161616">The Salt Roads of Badagry</h2>
+            <span style="font-size:12px;font-weight:600;color:#1E3A8A;background:rgba(30,58,138,0.08);padding:5px 12px;border-radius:20px">In production</span>
+          </div>
+          <!-- stepper -->
+          <div style="position:relative;margin-bottom:8px">
+            <div style="position:absolute;top:13px;left:8%;right:8%;height:2px;background:rgba(22,22,22,0.1)"></div>
+            <div style="position:absolute;top:13px;left:8%;width:42%;height:2px;background:#1E3A8A"></div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);position:relative">
+              <sc-for list="{{ stages }}" as="st" hint-placeholder-count="5">
+                <div style="text-align:center">
+                  <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ st.dotBg }};color:{{ st.dotColor }};border:2px solid {{ st.dotBorder }}">{{ st.mark }}</div>
+                  <div style="font-size:13.5px;font-weight:600;color:{{ st.labelColor }}">{{ st.label }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="margin-top:28px;padding:20px 24px;background:#F6F3ED;border-radius:6px">
+            <div style="font-size:13px;font-weight:600;color:#1E3A8A;margin-bottom:6px">Now: Design — cover direction</div>
+            <p style="font-size:14.5px;line-height:1.6;color:#55514A">Ireti is working up three cover routes based on the brief we agreed. You'll see them for feedback by the end of next week. Expected to wrap design in ~3 weeks.</p>
+          </div>
+        </div>
+
+        <!-- COMMUNICATION LOG -->
+        <div style="margin-top:32px">
+          <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:#161616;margin-bottom:22px">Updates from the team</h3>
+          <div style="position:relative;padding-left:34px">
+            <div style="position:absolute;left:9px;top:6px;bottom:6px;width:1px;background:rgba(22,22,22,0.12)"></div>
+            <sc-for list="{{ log }}" as="l" hint-placeholder-count="4">
+              <div style="position:relative;padding-bottom:28px">
+                <div style="position:absolute;left:-34px;top:3px;width:18px;height:18px;border-radius:50%;background:#FAF8F4;border:2px solid {{ l.dot }}"></div>
+                <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+                  <span style="font-size:14px;font-weight:600;color:#161616">{{ l.who }}</span>
+                  <span style="font-size:12.5px;color:#9A7B49">{{ l.when }}</span>
+                </div>
+                <p style="margin-top:6px;font-size:14.5px;line-height:1.6;color:#55514A;max-width:620px">{{ l.text }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { view: 'pre' };
+  renderVals() {
+    const pre = this.state.view === 'pre';
+    const active = { bg: '#fff', color: '#161616' };
+    const inactive = { bg: 'transparent', color: '#8A857C' };
+    const a = '#1E3A8A', mid = '#B08D57', off = 'rgba(22,22,22,0.12)';
+    return {
+      preView: pre, postView: !pre,
+      showPre: () => this.setState({ view: 'pre' }),
+      showPost: () => this.setState({ view: 'post' }),
+      preBg: pre ? active.bg : inactive.bg, preColor: pre ? active.color : inactive.color,
+      postBg: !pre ? active.bg : inactive.bg, postColor: !pre ? active.color : inactive.color,
+      submissions: [
+        { title: 'The Salt Roads of Badagry', date: 'March 2, 2026', status: 'Assessment ready', statusColor: '#1F6F4A', statusBg: 'rgba(31,111,74,0.1)', note: "Good news — we've read it and we'd love to work on it. Check your email for the full assessment and a proposed plan. Reply when you're ready to talk it through.", dots: [a, a, a] },
+        { title: 'Brine & Ledger', date: 'May 18, 2026', status: 'Being read', statusColor: '#9A7B49', statusBg: 'rgba(176,141,87,0.14)', note: "Your manuscript is with an editor now. We'll come back to you within six to eight weeks of submission with an assessment and a proposed plan.", dots: [a, a, off] }
+      ],
+      stages: [
+        { label: 'Submitted', mark: '✓', dotBg: a, dotColor: '#fff', dotBorder: a, labelColor: '#161616' },
+        { label: 'Editorial', mark: '✓', dotBg: a, dotColor: '#fff', dotBorder: a, labelColor: '#161616' },
+        { label: 'Design', mark: '3', dotBg: '#FAF8F4', dotColor: a, dotBorder: a, labelColor: '#161616' },
+        { label: 'Production', mark: '4', dotBg: '#FAF8F4', dotColor: '#A8A296', dotBorder: off, labelColor: '#A8A296' },
+        { label: 'Launched', mark: '5', dotBg: '#FAF8F4', dotColor: '#A8A296', dotBorder: off, labelColor: '#A8A296' }
+      ],
+      log: [
+        { who: 'Ireti Bankole · Design', when: 'Jun 18, 2026', dot: a, text: "Starting on cover routes this week. I've pulled the references you mentioned — the salt-flat photography direction is really promising. Three routes coming your way." },
+        { who: 'Tobi Williams · Editorial', when: 'Jun 9, 2026', dot: mid, text: 'Final line-edit pass is complete and signed off by you — thank you for the quick turnaround on chapter 14. Handing over to design now.' },
+        { who: 'Chinwe Obi · Managing Editor', when: 'May 2, 2026', dot: mid, text: "Plan agreed and contract signed. We're scheduling editorial to begin next week. I'll be your point of contact throughout — reach me any time." },
+        { who: 'Narriva', when: 'Apr 20, 2026', dot: off, text: 'Assessment delivered. We recommended a developmental pass on the middle third plus a full line edit, with a custom cover. Looking forward to building this one.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

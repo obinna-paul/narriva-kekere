@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#F5EBDD;color:#2A1A12;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#C75D2C;color:#F5EBDD}
+  textarea,input{font-family:inherit;border:none;outline:none;background:transparent;width:100%;color:#2A1A12;resize:none}
+  textarea::placeholder,input::placeholder{color:#B0A08F}
+  button{font-family:inherit}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F5EBDD;position:relative">
+
+  <!-- TOP BAR -->
+  <div style="position:sticky;top:0;z-index:20;background:rgba(245,235,221,0.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(42,26,18,0.08)">
+    <div style="padding:12px 16px;display:flex;align-items:center;gap:12px">
+      <button onClick="{{ toggleSidebar }}" aria-label="Menu" style="background:none;border:none;cursor:pointer;font-size:19px;color:#6A5446;flex:none">☰</button>
+      <a href="Kekere - Feed.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:#C75D2C;flex:none">Kekere</a>
+      <input value="{{ title }}" onInput="{{ setTitle }}" style="flex:1;font-family:'Fraunces',serif;font-weight:600;font-size:16px;color:#2A1A12;min-width:0">
+      <span style="flex:none;font-size:11px;font-weight:600;color:#1F4B4B;background:rgba(31,75,75,0.12);padding:4px 10px;border-radius:20px">Draft</span>
+    </div>
+    <div style="padding:0 16px 10px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;color:#A08C7C">{{ savedLabel }}</span>
+      <button onClick="{{ openSubmit }}" style="cursor:pointer;border:none;font-size:13.5px;font-weight:600;color:#fff;background:#C75D2C;padding:9px 18px;border-radius:8px" style-hover="background:#B14E22">Submit for review</button>
+    </div>
+  </div>
+
+  <!-- WRITING AREA -->
+  <main style="max-width:680px;margin:0 auto;padding:26px 22px 120px">
+    <div style="margin-bottom:24px">
+      <label style="display:block;font-size:12px;font-weight:600;color:#8A7565;margin-bottom:8px">One sharp sentence — what makes someone read this?</label>
+      <input value="{{ hook }}" onInput="{{ setHook }}" placeholder="Your hook line…" style="font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:#2A1A12;line-height:1.4">
+      <div style="margin-top:8px;height:1px;background:rgba(42,26,18,0.12)"></div>
+      <div style="margin-top:8px;text-align:right;font-size:12px;color:{{ hookCountColor }}">{{ hookCount }} / 150</div>
+    </div>
+
+    <textarea value="{{ body }}" onInput="{{ setBody }}" placeholder="Start writing your story…" rows="16" style="font-size:17px;line-height:1.75;min-height:340px"></textarea>
+  </main>
+
+  <!-- FOOTER STAT -->
+  <div style="position:fixed;bottom:0;left:0;right:0;z-index:15;background:rgba(245,235,221,0.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(42,26,18,0.08);padding:13px 20px;text-align:center">
+    <span style="font-size:13px;color:#8A7565">{{ words }} words · ~{{ readMins }} min read</span>
+  </div>
+
+  <!-- SIDEBAR -->
+  <sc-if value="{{ sidebarOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSidebar }}" style="position:fixed;inset:0;z-index:40;background:rgba(42,26,18,0.3)"></div>
+    <aside style="position:fixed;top:0;left:0;bottom:0;z-index:41;width:300px;max-width:84vw;background:#F5EBDD;box-shadow:18px 0 50px -20px rgba(42,26,18,0.4);padding:24px 22px;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+        <span style="font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:#2A1A12">Story settings</span>
+        <button onClick="{{ closeSidebar }}" style="background:none;border:none;cursor:pointer;font-size:20px;color:#8A7565">×</button>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#8A7565;margin-bottom:14px">Tier</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:30px">
+        <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.onClick }}" style="cursor:pointer;text-align:left;border:1.5px solid {{ t.border }};background:{{ t.bg }};border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:#2A1A12">{{ t.name }}</div>
+              <div style="font-size:12px;color:#8A7565;margin-top:2px">{{ t.range }}</div>
+            </div>
+            <span style="width:18px;height:18px;border-radius:50%;border:1.5px solid {{ t.dotBorder }};background:{{ t.dotBg }};flex:none"></span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#8A7565;margin-bottom:12px">Competition</div>
+      <div style="background:#fff;border:1px solid rgba(42,26,18,0.1);border-radius:12px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked style="width:17px;height:17px;accent-color:#C75D2C;width:auto">
+          <div>
+            <div style="font-size:14px;font-weight:600;color:#2A1A12">The Heat Season</div>
+            <div style="font-size:12px;color:#8A7565">Closes in 18 days</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </sc-if>
+
+  <!-- SUBMIT MODAL -->
+  <sc-if value="{{ submitOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSubmit }}" style="position:fixed;inset:0;z-index:50;background:rgba(42,26,18,0.4);display:flex;align-items:center;justify-content:center;padding:24px">
+      <div onClick="{{ stop }}" style="background:#F5EBDD;border-radius:20px;padding:30px 26px;max-width:360px;width:100%;box-shadow:0 30px 70px -20px rgba(42,26,18,0.5)">
+        <h2 style="font-family:'Fraunces',serif;font-weight:600;font-size:25px;color:#2A1A12">Ready for other eyes?</h2>
+        <p style="margin-top:14px;font-size:15px;line-height:1.6;color:#6A5446">Submitting doesn't mean it's perfect — it means you want feedback that's better than your own. We read everything that comes in, properly, within 5–7 business days.</p>
+        <div style="margin-top:26px;display:flex;gap:12px">
+          <button onClick="{{ closeSubmit }}" style="flex:1;cursor:pointer;border:1px solid rgba(42,26,18,0.16);background:transparent;color:#2A1A12;font-size:15px;font-weight:600;padding:14px;border-radius:10px">Cancel</button>
+          <button onClick="{{ closeSubmit }}" style="flex:1;cursor:pointer;border:none;color:#fff;background:#C75D2C;font-size:15px;font-weight:600;padding:14px;border-radius:10px">Submit</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    title: 'The Last Bus to Yaba',
+    hook: 'She missed it on purpose. He didn\u2019t.',
+    body: 'The 9:40 to Yaba was the last one that didn\u2019t smell of the day, and Ngozi had been catching it for three years specifically so she would never have to share it with the man who was now, impossibly, sitting across from her.\n\nHe hadn\u2019t seen her yet.',
+    sidebarOpen: false, submitOpen: false, tier: 'Standard'
+  };
+  renderVals() {
+    const words = this.state.body.trim() ? this.state.body.trim().split(/\s+/).length : 0;
+    const hookLen = this.state.hook.length;
+    const tierData = [
+      { name: 'Standard', range: '5–10 cowries to unlock' },
+      { name: 'Featured', range: '11–18 cowries to unlock' },
+      { name: 'Premium', range: '19–30 cowries to unlock' }
+    ];
+    return {
+      title: this.state.title, hook: this.state.hook, body: this.state.body,
+      setTitle: (e) => this.setState({ title: e.target.value }),
+      setHook: (e) => this.setState({ hook: e.target.value }),
+      setBody: (e) => this.setState({ body: e.target.value }),
+      hookCount: hookLen,
+      hookCountColor: hookLen > 150 ? '#C75D2C' : '#A08C7C',
+      words, readMins: Math.max(1, Math.round(words / 200)),
+      savedLabel: 'Saved',
+      sidebarOpen: this.state.sidebarOpen, submitOpen: this.state.submitOpen,
+      toggleSidebar: () => this.setState({ sidebarOpen: !this.state.sidebarOpen }),
+      closeSidebar: () => this.setState({ sidebarOpen: false }),
+      openSubmit: () => this.setState({ submitOpen: true }),
+      closeSubmit: () => this.setState({ submitOpen: false }),
+      stop: (e) => e.stopPropagation(),
+      tiers: tierData.map(t => {
+        const on = this.state.tier === t.name;
+        return { name: t.name, range: t.range,
+          border: on ? '#C75D2C' : 'rgba(42,26,18,0.12)',
+          bg: on ? 'rgba(199,93,44,0.06)' : '#fff',
+          dotBorder: on ? '#C75D2C' : 'rgba(42,26,18,0.25)',
+          dotBg: on ? '#C75D2C' : 'transparent',
+          onClick: () => this.setState({ tier: t.name }) };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

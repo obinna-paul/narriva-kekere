@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1A1A1A;color:#EDEAE3;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#1A1A1A;padding:64px 40px 100px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:#8A857C;font-weight:500;margin-bottom:18px">UI / UX Design — page directory</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:48px;letter-spacing:-0.02em;color:#FAF8F4;line-height:1.05">Narriva <span style="color:#6B675F">+</span> Kekere Stories</h1>
+    <p style="margin-top:18px;font-size:16px;line-height:1.6;color:#A8A296;max-width:600px">Two independent brands, one design effort. Every page below is a live, interactive screen. Click any to open it.</p>
+
+    <!-- NARRIVA -->
+    <div style="margin-top:64px;display:flex;align-items:center;gap:16px">
+      <div style="width:12px;height:12px;border-radius:2px;background:#1E3A8A"></div>
+      <h2 style="font-family:'Fraunces',serif;font-size:26px;font-weight:500;color:#FAF8F4">Narriva</h2>
+      <span style="font-size:13px;color:#8A857C">Publishing house &amp; bookstore · desktop-first</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    </div>
+
+    <sc-for list="{{ narrivaGroups }}" as="g" hint-placeholder-count="5">
+      <div style="margin-top:34px">
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#9A7B49;font-weight:600;margin-bottom:16px">{{ g.label }}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <sc-for list="{{ g.pages }}" as="p" hint-placeholder-count="4">
+            <a href="{{ p.href }}" style="display:block;background:#242424;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;transition:transform .2s,border-color .2s" style-hover="transform:translateY(-3px);border-color:#1E3A8A">
+              <div style="font-size:15px;font-weight:600;color:#FAF8F4">{{ p.name }}</div>
+              <div style="margin-top:6px;font-size:12.5px;line-height:1.45;color:#8A857C">{{ p.desc }}</div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+
+    <!-- KEKERE placeholder -->
+    <div style="margin-top:64px;display:flex;align-items:center;gap:16px">
+      <div style="width:12px;height:12px;border-radius:2px;background:#C75D2C"></div>
+      <h2 style="font-family:'Fraunces',serif;font-size:26px;font-weight:500;color:#FAF8F4">Kekere Stories</h2>
+      <span style="font-size:13px;color:#8A857C">Short-fiction app · mobile-first</span>
+      <div style="flex:1;height:1px;background:rgba(255,255,255,0.1)"></div>
+    </div>
+    <sc-for list="{{ kekereGroups }}" as="g" hint-placeholder-count="4">
+      <div style="margin-top:34px">
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#C9956F;font-weight:600;margin-bottom:16px">{{ g.label }}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <sc-for list="{{ g.pages }}" as="p" hint-placeholder-count="4">
+            <a href="{{ p.href }}" style="display:block;background:#242424;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:20px;transition:transform .2s,border-color .2s" style-hover="transform:translateY(-3px);border-color:#C75D2C">
+              <div style="font-size:15px;font-weight:600;color:#FAF8F4">{{ p.name }}</div>
+              <div style="margin-top:6px;font-size:12.5px;line-height:1.45;color:#8A857C">{{ p.desc }}</div>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      narrivaGroups: [
+        { label: 'Marketing & Conversion', pages: [
+          { name: 'Homepage', desc: 'Hero, featured books, process, authors, blog, CTA', href: 'Narriva - Home.dc.html' },
+          { name: 'About', desc: 'Mission, founder narrative, team grid', href: 'Narriva - About.dc.html' },
+          { name: 'How We Work', desc: 'Assessment, process, partnership', href: 'Narriva - How We Work.dc.html' },
+          { name: 'Submit Manuscript', desc: 'Interactive form + confirmation', href: 'Narriva - Submit.dc.html' }
+        ]},
+        { label: 'Services', pages: [
+          { name: 'Services Index', desc: 'Five-service overview', href: 'Narriva - Services.dc.html' },
+          { name: 'Service Detail', desc: 'Editorial — included, cost, FAQ accordion', href: 'Narriva - Service Detail.dc.html' }
+        ]},
+        { label: 'Commerce', pages: [
+          { name: 'Bookstore', desc: 'Filterable, sortable book grid', href: 'Narriva - Bookstore.dc.html' },
+          { name: 'Book Detail', desc: 'Hook, buy, synopsis, first chapter', href: 'Narriva - Book Detail.dc.html' },
+          { name: 'Ebook Reader', desc: 'Full reader — themes, settings, watermark', href: 'Narriva - Reader.dc.html' }
+        ]},
+        { label: 'Content & Authors', pages: [
+          { name: 'Authors Listing', desc: 'Author grid', href: 'Narriva - Authors.dc.html' },
+          { name: 'Author Detail', desc: 'Bio + books by author', href: 'Narriva - Author Detail.dc.html' },
+          { name: 'Blog Listing', desc: 'Filterable post grid + search', href: 'Narriva - Blog.dc.html' },
+          { name: 'Blog Post', desc: 'Long-form article + pull quote', href: 'Narriva - Blog Post.dc.html' }
+        ]},
+        { label: 'Account (Authenticated)', pages: [
+          { name: 'Author Portal', desc: 'Submission status + production timeline', href: 'Narriva - Portal.dc.html' },
+          { name: 'Account Library', desc: 'Purchased books + reading progress', href: 'Narriva - Library.dc.html' }
+        ]},
+        { label: 'Utility', pages: [
+          { name: 'Contact', desc: 'Details + contact form', href: 'Narriva - Contact.dc.html' },
+          { name: 'Help Center', desc: 'Tabbed FAQ accordion', href: 'Narriva - Help.dc.html' },
+          { name: 'Legal Template', desc: 'TOC + prose (Privacy / Terms / Agreement)', href: 'Narriva - Legal.dc.html' },
+          { name: '404', desc: 'Editorial not-found', href: 'Narriva - 404.dc.html' }
+        ]}
+      ],
+      kekereGroups: [
+        { label: 'Marketing & Auth', pages: [
+          { name: 'Home (Logged-out)', desc: 'Cinematic hero, story wall, competitions, writers', href: 'Kekere - Home.dc.html' },
+          { name: 'Sign in / Sign up', desc: 'Warm split auth, toggle', href: 'Kekere - Auth.dc.html' }
+        ]},
+        { label: 'Reading', pages: [
+          { name: 'Story Feed', desc: 'Netflix-style rows, filters, featured banner', href: 'Kekere - Feed.dc.html' },
+          { name: 'Story Reader', desc: 'Locked → unlock → read → finish; watermark', href: 'Kekere - Story Reader.dc.html' },
+          { name: 'Library', desc: 'Saved / Unlocked / Reading History tabs', href: 'Kekere - Library.dc.html' }
+        ]},
+        { label: 'Writing & Competitions', pages: [
+          { name: "Writer's Editor", desc: 'Hook, body, word count, tiers, submit modal', href: 'Kekere - Writer.dc.html' },
+          { name: 'Competitions', desc: 'Seasonal listing with status badges', href: 'Kekere - Competitions.dc.html' },
+          { name: 'Competition Detail', desc: 'Prompt, rules, prize, live countdown', href: 'Kekere - Competition Detail.dc.html' }
+        ]},
+        { label: 'Account & Utility', pages: [
+          { name: 'Cowries Wallet', desc: 'Balance, top-up sheet, transaction history', href: 'Kekere - Wallet.dc.html' },
+          { name: 'Profile', desc: 'Stats, edit profile view', href: 'Kekere - Profile.dc.html' },
+          { name: 'Help Center', desc: 'Tabbed FAQ, warm tone', href: 'Kekere - Help.dc.html' },
+          { name: '404', desc: 'Dark, on-brand not-found', href: 'Kekere - 404.dc.html' }
+        ]}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

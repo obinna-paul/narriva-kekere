@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <!-- WATERMARK -->
+  <div style="position:fixed;inset:-40% -10%;z-index:1;pointer-events:none;transform:rotate(-28deg);display:flex;flex-direction:column;gap:64px;overflow:hidden">
+    <sc-for list="{{ watermarkRows }}" as="row" hint-placeholder-count="14">
+      <div style="white-space:nowrap;font-size:15px;letter-spacing:0.3em;color:{{ watermarkColor }}">{{ row }}</div>
+    </sc-for>
+  </div>
+
+  <!-- WELCOME BANNER -->
+  <div style="position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY({{ welcomeY }});z-index:90;opacity:{{ welcomeOpacity }};transition:opacity .5s,transform .5s;pointer-events:none">
+    <div style="background:{{ panelBg }};border:1px solid {{ barBorder }};border-radius:30px;padding:10px 22px;box-shadow:0 12px 30px -10px rgba(0,0,0,0.2);font-size:14px;color:{{ pageText }}">Welcome back — you left off in Chapter {{ chapterNum }}</div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div style="position:fixed;top:0;left:0;right:0;z-index:80;transform:translateY({{ topBarY }});opacity:{{ chromeOpacity }};transition:transform .35s ease,opacity .35s ease;background:{{ barBg }};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid {{ barBorder }}">
+    <div style="max-width:1100px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Book Detail.dc.html" aria-label="Back to book page" style="display:flex;align-items:center;gap:9px;font-size:14px;color:{{ faintText }}" style-hover="color:{{ pageText }}"><span style="font-size:18px">←</span> Back</a>
+      <div style="font-size:14px;color:{{ pageText }};font-weight:500">The Salt Roads of Badagry <span style="color:{{ faintText }};font-weight:400">· Chapter {{ chapterNum }} of {{ totalChapters }}</span></div>
+      <button onClick="{{ toggleSettings }}" aria-label="Reader settings" style="background:transparent;border:none;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:{{ faintText }}" style-hover="background:{{ hoverBg }};color:{{ pageText }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H8a1.65 1.65 0 0 0 1-1.51V2a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V8a1.65 1.65 0 0 0 1.51 1H22a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- READING AREA -->
+  <main style="position:relative;z-index:5;max-width:680px;margin:0 auto;padding:128px 28px 200px">
+    <div style="text-align:center;margin-bottom:54px">
+      <div style="font-size:13px;letter-spacing:0.22em;text-transform:uppercase;color:{{ faintText }};margin-bottom:18px">Chapter {{ chapterNum }}</div>
+      <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:34px;color:{{ pageText }}">{{ chapterTitle }}</h1>
+      <div style="width:40px;height:1px;background:{{ ruleColor }};margin:28px auto 0"></div>
+    </div>
+    <div style="{{ proseStyle }}">
+      <sc-for list="{{ paragraphs }}" as="p" hint-placeholder-count="7">
+        <p style="margin-bottom:1.4em">{{ p }}</p>
+      </sc-for>
+    </div>
+  </main>
+
+  <!-- BOTTOM BAR -->
+  <div style="position:fixed;bottom:0;left:0;right:0;z-index:80;transform:translateY({{ bottomBarY }});opacity:{{ chromeOpacity }};transition:transform .35s ease,opacity .35s ease;background:{{ barBg }};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid {{ barBorder }}">
+    <div style="height:3px;background:{{ trackColor }}"><div style="height:100%;width:{{ progressPct }};background:{{ accent }};transition:width .15s linear"></div></div>
+    <div style="max-width:1100px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between">
+      <button onClick="{{ prevChapter }}" aria-label="Previous chapter" style="background:transparent;border:none;cursor:pointer;font-size:14px;color:{{ faintText }};display:flex;align-items:center;gap:7px;padding:8px 4px" style-hover="color:{{ pageText }}">← Previous</button>
+      <div style="font-size:13px;color:{{ faintText }}">Chapter {{ chapterNum }} / {{ totalChapters }} · ~{{ minsRemaining }} minutes remaining</div>
+      <button onClick="{{ nextChapter }}" aria-label="Next chapter" style="background:transparent;border:none;cursor:pointer;font-size:14px;color:{{ faintText }};display:flex;align-items:center;gap:7px;padding:8px 4px" style-hover="color:{{ pageText }}">Next →</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS SCRIM -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSettings }}" style="position:fixed;inset:0;z-index:95;background:rgba(0,0,0,0.18)"></div>
+  </sc-if>
+
+  <!-- SETTINGS PANEL -->
+  <aside style="position:fixed;top:0;right:0;bottom:0;z-index:96;width:340px;max-width:88vw;transform:translateX({{ panelX }});transition:transform .4s cubic-bezier(.2,.8,.2,1);background:{{ panelBg }};border-left:1px solid {{ barBorder }};box-shadow:-24px 0 60px -20px rgba(0,0,0,0.28);display:flex;flex-direction:column">
+    <div style="padding:24px 26px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid {{ barBorder }}">
+      <span style="font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:{{ pageText }}">Reading settings</span>
+      <button onClick="{{ closeSettings }}" aria-label="Close settings" style="background:transparent;border:none;cursor:pointer;font-size:20px;color:{{ faintText }};width:32px;height:32px" style-hover="color:{{ pageText }}">×</button>
+    </div>
+    <div style="padding:28px 26px;display:flex;flex-direction:column;gap:30px">
+
+      <div>
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:{{ faintText }};font-weight:600;margin-bottom:14px">Font size</div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ sizeOpts }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.onClick }}" style="flex:1;cursor:pointer;border-radius:3px;padding:11px 0;font-weight:500;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};font-size:{{ o.fs }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:{{ faintText }};font-weight:600;margin-bottom:14px">Font</div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ fontOpts }}" as="o" hint-placeholder-count="2">
+            <button onClick="{{ o.onClick }}" style="flex:1;cursor:pointer;border-radius:3px;padding:13px 0;font-size:15px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};font-family:{{ o.fam }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:{{ faintText }};font-weight:600;margin-bottom:14px">Line spacing</div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ spacingOpts }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.onClick }}" style="flex:1;cursor:pointer;border-radius:3px;padding:11px 0;font-size:13px;font-weight:500;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:{{ faintText }};font-weight:600;margin-bottom:14px">Theme</div>
+        <div style="display:flex;gap:10px">
+          <sc-for list="{{ themeOpts }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.onClick }}" style="flex:1;cursor:pointer;border-radius:4px;padding:14px 0 12px;border:1.5px solid {{ o.border }};background:transparent;display:flex;flex-direction:column;align-items:center;gap:9px">
+              <span style="width:30px;height:30px;border-radius:50%;border:1px solid {{ o.swatchBorder }};background:{{ o.swatch }}"></span>
+              <span style="font-size:12px;color:{{ o.color }};font-weight:500">{{ o.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    chromeVisible: true, settingsOpen: false, welcome: true,
+    fontSize: 'M', font: 'serif', spacing: 'comfortable', theme: 'light',
+    chapter: 1, progress: 0
+  };
+
+  componentDidMount() {
+    this._email = 'tinuke.reader@narriva.com';
+    this._total = 14;
+    this._showChrome();
+    this._welcomeT = setTimeout(() => this.setState({ welcome: false }), 1800);
+
+    this._onScroll = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      const p = h > 0 ? Math.min(1, window.scrollY / h) : 0;
+      this.setState({ progress: p });
+      this._showChrome();
+    };
+    this._onMove = () => this._showChrome();
+    this._onKey = (e) => {
+      if (e.key === 'ArrowRight') this._chapter(1);
+      else if (e.key === 'ArrowLeft') this._chapter(-1);
+    };
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    window.addEventListener('mousemove', this._onMove, { passive: true });
+    window.addEventListener('touchstart', this._onMove, { passive: true });
+    window.addEventListener('keydown', this._onKey);
+  }
+  componentWillUnmount() {
+    clearTimeout(this._welcomeT); clearTimeout(this._chromeT);
+    window.removeEventListener('scroll', this._onScroll);
+    window.removeEventListener('mousemove', this._onMove);
+    window.removeEventListener('touchstart', this._onMove);
+    window.removeEventListener('keydown', this._onKey);
+  }
+
+  _showChrome() {
+    if (!this.state.chromeVisible) this.setState({ chromeVisible: true });
+    clearTimeout(this._chromeT);
+    this._chromeT = setTimeout(() => {
+      if (!this.state.settingsOpen) this.setState({ chromeVisible: false });
+    }, 3000);
+  }
+  _chapter(d) {
+    const next = Math.min(this._total, Math.max(1, this.state.chapter + d));
+    if (next !== this.state.chapter) {
+      this.setState({ chapter: next, progress: 0 });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    this._showChrome();
+  }
+
+  _theme() {
+    const t = this.state.theme;
+    if (t === 'sepia') return { bg: '#F2E8D9', text: '#3A2E1A', panel: '#F8F0E2', bar: 'rgba(242,232,217,0.92)', border: 'rgba(58,46,26,0.16)', faint: '#8A7A5E', track: 'rgba(58,46,26,0.12)', accent: '#1E3A8A', rule: '#B08D57', hover: 'rgba(58,46,26,0.06)', wm: 'rgba(58,46,26,0.09)' };
+    if (t === 'dark') return { bg: '#141414', text: '#E8E0D0', panel: '#1F1F1F', bar: 'rgba(20,20,20,0.92)', border: 'rgba(232,224,208,0.14)', faint: '#928C7E', track: 'rgba(232,224,208,0.14)', accent: '#7D9BEC', rule: '#B08D57', hover: 'rgba(232,224,208,0.08)', wm: 'rgba(232,224,208,0.08)' };
+    return { bg: '#FAF8F4', text: '#161616', panel: '#FFFFFF', bar: 'rgba(250,248,244,0.92)', border: 'rgba(22,22,22,0.1)', faint: '#8A857C', track: 'rgba(22,22,22,0.1)', accent: '#1E3A8A', rule: '#B08D57', hover: 'rgba(22,22,22,0.05)', wm: 'rgba(22,22,22,0.08)' };
+  }
+
+  _pill(active, th) {
+    return active
+      ? { bg: th.accent, color: '#FAF8F4', border: th.accent }
+      : { bg: 'transparent', color: th.faint, border: th.border };
+  }
+
+  renderVals() {
+    const th = this._theme();
+    const sizePx = { S: 16, M: 18, L: 21, XL: 24 }[this.state.fontSize];
+    const lineH = { comfortable: 1.7, relaxed: 1.9, open: 2.15 }[this.state.spacing];
+    const fam = this.state.font === 'sans' ? "'Inter',sans-serif" : "'Fraunces',serif";
+    const remaining = (this._total - this.state.chapter + 1) * 9;
+
+    const wmRows = [];
+    for (let i = 0; i < 16; i++) wmRows.push((this._email + '    ').repeat(8));
+
+    const mk = (active, extra) => Object.assign(this._pill(active, th), extra);
+
+    const paras = [
+      "They buried her father on a Tuesday, in the kind of heat that made the gravediggers stop twice for water, and Tinuke understood for the first time that grief had a smell. It was salt. It was always going to be salt.",
+      "The Bashorun salt works had been failing for years — everyone in Badagry knew it, the way everyone knows the things a family will not say aloud — but the man himself had never failed at anything in the open. He paid his debts on the day they were due. He greeted his enemies by name.",
+      "When he died, three of those enemies came to the funeral and wept, and Tinuke watched them and thought: you are not crying for him. You are crying because now there is no one left who knows.",
+      "She found the ledger that night, in the false bottom of the drawer where he kept the good kola. It was bound in leather gone soft as skin, and the first page held a single line in her father's careful hand, dated forty years before she was born.",
+      "She read the name written there. Then she read the second name. By the third, her hands had begun to shake, and she had to set the book down on the table and stand at the window where the sea air could reach her.",
+      "Because the fourth name in her father's ledger of the betrayed was her mother's. And the fifth, written in fresher ink, in a hand that had not yet learned to be careful, was her own.",
+      "Outside, the tide was going out across the salt flats, the way it had every evening of her life, carrying off whatever the day had left at the water's edge. Tinuke stood and watched it go, and for the first time she let herself wonder what, exactly, her father had left at hers."
+    ];
+
+    return {
+      rootStyle: { minHeight: '100vh', background: th.bg, color: th.text, position: 'relative', overflowX: 'hidden', transition: 'background .3s,color .3s' },
+      proseStyle: { fontFamily: fam, fontSize: sizePx + 'px', lineHeight: lineH, color: th.text },
+      paragraphs: paras,
+      pageText: th.text, faintText: th.faint, barBg: th.bar, panelBg: th.panel, barBorder: th.border,
+      trackColor: th.track, accent: th.accent, ruleColor: th.rule, hoverBg: th.hover,
+      watermarkColor: th.wm, watermarkRows: wmRows,
+
+      chapterNum: this.state.chapter, totalChapters: this._total,
+      chapterTitle: this.state.chapter === 1 ? 'The Ledger' : this.state.chapter === 2 ? 'Low Tide' : 'A Name in Fresher Ink',
+      minsRemaining: remaining,
+      progressPct: Math.round(this.state.progress * 100) + '%',
+
+      topBarY: this.state.chromeVisible ? '0' : '-100%',
+      bottomBarY: this.state.chromeVisible ? '0' : '100%',
+      chromeOpacity: this.state.chromeVisible ? 1 : 0,
+      panelX: this.state.settingsOpen ? '0' : '100%',
+      welcomeOpacity: this.state.welcome ? 1 : 0,
+      welcomeY: this.state.welcome ? '0' : '-10px',
+
+      toggleSettings: () => this.setState({ settingsOpen: !this.state.settingsOpen }),
+      closeSettings: () => { this.setState({ settingsOpen: false }); this._showChrome(); },
+      prevChapter: () => this._chapter(-1),
+      nextChapter: () => this._chapter(1),
+
+      sizeOpts: ['S', 'M', 'L', 'XL'].map((k, i) => mk(this.state.fontSize === k, { label: k, fs: (12 + i * 1.5) + 'px', onClick: () => this.setState({ fontSize: k }) })),
+      fontOpts: [
+        mk(this.state.font === 'serif', { label: 'Serif', fam: "'Fraunces',serif", onClick: () => this.setState({ font: 'serif' }) }),
+        mk(this.state.font === 'sans', { label: 'Sans', fam: "'Inter',sans-serif", onClick: () => this.setState({ font: 'sans' }) })
+      ],
+      spacingOpts: [
+        mk(this.state.spacing === 'comfortable', { label: 'Comfortable', onClick: () => this.setState({ spacing: 'comfortable' }) }),
+        mk(this.state.spacing === 'relaxed', { label: 'Relaxed', onClick: () => this.setState({ spacing: 'relaxed' }) }),
+        mk(this.state.spacing === 'open', { label: 'Open', onClick: () => this.setState({ spacing: 'open' }) })
+      ],
+      themeOpts: [
+        { label: 'Light', swatch: '#FAF8F4', swatchBorder: 'rgba(0,0,0,0.15)', active: this.state.theme === 'light', border: this.state.theme === 'light' ? th.accent : th.border, color: th.text, onClick: () => this.setState({ theme: 'light' }) },
+        { label: 'Sepia', swatch: '#F2E8D9', swatchBorder: 'rgba(0,0,0,0.12)', active: this.state.theme === 'sepia', border: this.state.theme === 'sepia' ? th.accent : th.border, color: th.text, onClick: () => this.setState({ theme: 'sepia' }) },
+        { label: 'Dark', swatch: '#141414', swatchBorder: 'rgba(255,255,255,0.18)', active: this.state.theme === 'dark', border: this.state.theme === 'dark' ? th.accent : th.border, color: th.text, onClick: () => this.setState({ theme: 'dark' }) }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

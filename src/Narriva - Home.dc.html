@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+  .scrollx{scrollbar-width:thin;scrollbar-color:#d8d0c4 transparent}
+  .scrollx::-webkit-scrollbar{height:6px}
+  .scrollx::-webkit-scrollbar-thumb{background:#d8d0c4;border-radius:3px}
+  .ph{background:repeating-linear-gradient(45deg,#ECE7DD,#ECE7DD 9px,#E6E0D4 9px,#E6E0D4 18px)}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+
+  <!-- ===== NAV ===== -->
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="position:absolute;left:0;right:0;bottom:-1px;height:14px;pointer-events:none;background:linear-gradient(to bottom,rgba(22,22,22,0.05),transparent);opacity:{{ navShadow }}"></div>
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="#" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A;letter-spacing:-0.01em">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="#" style="font-size:15px;color:#161616">Books</a>
+        <div style="position:relative" onMouseEnter="{{ openServices }}" onMouseLeave="{{ closeServices }}">
+          <a href="#" style="font-size:15px;color:#161616;display:inline-flex;align-items:center;gap:6px">Services<span style="font-size:9px;opacity:0.5;transform:translateY(1px)">▾</span></a>
+          <sc-if value="{{ servicesOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:100%;left:-18px;padding-top:14px">
+              <div style="background:#FAF8F4;border:1px solid rgba(22,22,22,0.09);border-radius:4px;box-shadow:0 18px 50px -12px rgba(22,22,22,0.18);padding:10px;width:212px">
+                <sc-for list="{{ services }}" as="svc" hint-placeholder-count="5">
+                  <a href="#" style="display:block;padding:10px 14px;font-size:14px;color:#161616;border-radius:3px" style-hover="background:rgba(30,58,138,0.06);color:#1E3A8A">{{ svc }}</a>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <a href="#" style="font-size:15px;color:#161616">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="#" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px;letter-spacing:0.01em" style-hover="background:#162C6B">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <header style="max-width:1240px;margin:0 auto;padding:96px 32px 104px;display:grid;grid-template-columns:1.05fr 0.95fr;gap:64px;align-items:center">
+    <div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:30px">
+        <div style="width:36px;height:1px;background:#B08D57"></div>
+        <span style="font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:#9A7B49;font-weight:500">A publishing house</span>
+      </div>
+      <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:62px;line-height:1.04;letter-spacing:-0.02em;color:#161616">Some manuscripts<br>are written.<br><span style="font-style:italic;color:#1E3A8A">The good ones<br>get built.</span></h1>
+      <p style="margin-top:30px;font-size:18px;line-height:1.65;color:#3D3A35;max-width:480px">Narriva is a publishing house for authors at every stage — from a rough early draft to a manuscript nearly ready to go. We bring editorial care, design that competes internationally, and the team to take your book from where it is to where it needs to be.</p>
+      <div style="margin-top:38px;display:flex;align-items:center;gap:22px">
+        <a href="#" style="font-size:15px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:16px 28px;border-radius:2px" style-hover="background:#162C6B">Submit Your Manuscript</a>
+        <a href="#" style="font-size:15px;font-weight:500;color:#161616;padding:16px 4px;border-bottom:1px solid rgba(22,22,22,0.25)" style-hover="border-bottom-color:#1E3A8A;color:#1E3A8A">Browse the bookstore →</a>
+      </div>
+    </div>
+    <!-- composed book stack -->
+    <div style="position:relative;height:520px">
+      <div style="position:absolute;top:54px;left:8px;width:198px;height:300px;transform:rotate(-7deg)">
+        <div style="width:100%;height:100%;background:#36514E;border-radius:3px 5px 5px 3px;box-shadow:0 26px 50px -18px rgba(22,22,22,0.45);padding:26px 22px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.18)">
+          <span style="font-family:'Fraunces',serif;font-style:italic;font-size:11px;color:rgba(255,255,255,0.6)">Narriva</span>
+          <div><div style="font-family:'Fraunces',serif;font-size:23px;line-height:1.12;color:#F3EEE3;font-weight:500">What the River Keeps</div><div style="margin-top:12px;font-size:11px;letter-spacing:0.04em;color:rgba(243,238,227,0.62)">AMARA DIALLO</div></div>
+        </div>
+      </div>
+      <div style="position:absolute;bottom:30px;right:30px;width:198px;height:300px;transform:rotate(6deg)">
+        <div style="width:100%;height:100%;background:#5A2A2A;border-radius:3px 5px 5px 3px;box-shadow:0 26px 50px -18px rgba(22,22,22,0.45);padding:26px 22px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.18)">
+          <span style="font-family:'Fraunces',serif;font-style:italic;font-size:11px;color:rgba(255,255,255,0.6)">Narriva</span>
+          <div><div style="font-family:'Fraunces',serif;font-size:23px;line-height:1.12;color:#F3EEE3;font-weight:500">The Inheritance of Silence</div><div style="margin-top:12px;font-size:11px;letter-spacing:0.04em;color:rgba(243,238,227,0.62)">KWAME MENSAH</div></div>
+        </div>
+      </div>
+      <div style="position:absolute;top:96px;left:50%;transform:translateX(-50%);width:206px;height:312px;z-index:2">
+        <div style="width:100%;height:100%;background:#283655;border-radius:3px 6px 6px 3px;box-shadow:0 34px 60px -16px rgba(22,22,22,0.5);padding:30px 26px;display:flex;flex-direction:column;justify-content:space-between;border-left:5px solid rgba(0,0,0,0.2)">
+          <span style="font-family:'Fraunces',serif;font-style:italic;font-size:12px;color:rgba(255,255,255,0.6)">Narriva</span>
+          <div>
+            <div style="width:28px;height:1px;background:#B08D57;margin-bottom:16px"></div>
+            <div style="font-family:'Fraunces',serif;font-size:27px;line-height:1.1;color:#F3EEE3;font-weight:500">The Salt Roads of Badagry</div>
+            <div style="margin-top:14px;font-size:11px;letter-spacing:0.05em;color:rgba(243,238,227,0.62)">ADAEZE OKONKWO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== FEATURED BOOKS ===== -->
+  <section style="padding:30px 0 90px">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:34px">
+      <div>
+        <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">From the shelf</div>
+        <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-0.015em;color:#161616">Recently built</h2>
+      </div>
+      <a href="#" style="font-size:14px;color:#1E3A8A;font-weight:500;padding-bottom:3px;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">View the full bookstore →</a>
+    </div>
+    <div class="scrollx" style="display:flex;gap:30px;overflow-x:auto;padding:8px 32px 24px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ books }}" as="b" hint-placeholder-count="5">
+        <div style="flex:none;width:264px;scroll-snap-align:start">
+          <div style="aspect-ratio:3/4;border-radius:3px 5px 5px 3px;box-shadow:0 14px 30px -14px rgba(22,22,22,0.32);padding:26px 22px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.16);transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s;background:{{ b.cover }}" style-hover="transform:translateY(-8px);box-shadow:0 30px 50px -18px rgba(22,22,22,0.42)">
+            <span style="font-family:'Fraunces',serif;font-style:italic;font-size:11px;color:{{ b.faint }}">Narriva</span>
+            <div><div style="width:24px;height:1px;background:#B08D57;margin-bottom:13px"></div><div style="font-family:'Fraunces',serif;font-size:21px;line-height:1.14;font-weight:500;color:{{ b.ink }}">{{ b.title }}</div><div style="margin-top:11px;font-size:10px;letter-spacing:0.05em;color:{{ b.faint }}">{{ b.authorCaps }}</div></div>
+          </div>
+          <div style="margin-top:18px">
+            <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:500;color:#161616;line-height:1.2">{{ b.title }}</div>
+            <div style="margin-top:4px;font-size:13px;color:#8A857C">{{ b.author }}</div>
+            <div style="margin-top:10px;font-size:13.5px;font-style:italic;line-height:1.45;color:#4A463F">"{{ b.hook }}"</div>
+            <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:14px;font-weight:600;color:#161616">{{ b.price }}</span>
+              <div style="display:flex;gap:16px">
+                <a href="#" style="font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)" style-hover="border-bottom-color:#1E3A8A">Read a chapter</a>
+                <a href="#" style="font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)" style-hover="border-bottom-color:#1E3A8A">Buy</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <div style="flex:none;width:8px"></div>
+    </div>
+  </section>
+
+  <!-- ===== WHAT WE DO ===== -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07);background:#F6F3ED">
+    <div style="max-width:1240px;margin:0 auto;padding:88px 32px 96px">
+      <div style="max-width:620px;margin-bottom:58px">
+        <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">For authors</div>
+        <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;line-height:1.1;letter-spacing:-0.015em;color:#161616">What you get that a printer can't give you</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(22,22,22,0.09);border:1px solid rgba(22,22,22,0.09)">
+        <sc-for list="{{ offerings }}" as="o" hint-placeholder-count="6">
+          <div style="background:#F6F3ED;padding:34px 34px 38px">
+            <div style="font-family:'Fraunces',serif;font-size:15px;color:#B08D57;letter-spacing:0.02em;margin-bottom:20px">{{ o.num }}</div>
+            <h3 style="font-family:'Fraunces',serif;font-size:21px;font-weight:500;line-height:1.25;color:#161616;margin-bottom:12px">{{ o.title }}</h3>
+            <p style="font-size:14.5px;line-height:1.62;color:#55514A">{{ o.body }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:88px 32px 96px">
+      <div style="text-align:center;max-width:620px;margin:0 auto 64px">
+        <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">Process</div>
+        <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-0.015em;color:#161616">From manuscript to bookstore</h2>
+      </div>
+      <div style="position:relative">
+        <div style="position:absolute;top:19px;left:8%;right:8%;height:1px;background:rgba(30,58,138,0.2)"></div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:18px;position:relative">
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+            <div style="text-align:center">
+              <div style="width:40px;height:40px;border-radius:50%;background:#FAF8F4;border:1.5px solid #1E3A8A;color:#1E3A8A;font-family:'Fraunces',serif;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;margin:0 auto 22px">{{ s.n }}</div>
+              <h3 style="font-size:15px;font-weight:600;color:#161616;margin-bottom:8px">{{ s.title }}</h3>
+              <p style="font-size:13px;line-height:1.55;color:#6B675F;padding:0 6px">{{ s.body }}</p>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AUTHORS ===== -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07);background:#F6F3ED">
+    <div style="max-width:1240px;margin:0 auto;padding:88px 32px 96px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:46px">
+        <div>
+          <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">Built here</div>
+          <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-0.015em;color:#161616">Authors</h2>
+        </div>
+        <a href="#" style="font-size:14px;color:#1E3A8A;font-weight:500;padding-bottom:3px;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">All authors →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px">
+        <sc-for list="{{ authors }}" as="a" hint-placeholder-count="3">
+          <a href="#" style="display:block" style-hover="opacity:0.94">
+            <div class="ph" style="aspect-ratio:4/5;border-radius:3px;position:relative;overflow:hidden">
+              <span style="position:absolute;left:12px;bottom:10px;font-family:'Inter',monospace;font-size:10px;letter-spacing:0.05em;color:#A99F8E">author photo</span>
+            </div>
+            <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;color:#161616;margin-top:18px">{{ a.name }}</h3>
+            <p style="font-size:14px;font-style:italic;color:#6B675F;margin-top:6px;line-height:1.45">{{ a.desc }}</p>
+            <span style="display:inline-block;margin-top:12px;font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)">View author →</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== BLOG TEASER ===== -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:88px 32px 96px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:46px">
+        <div>
+          <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:14px">Reading &amp; writing</div>
+          <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:40px;letter-spacing:-0.015em;color:#161616">From the desk</h2>
+        </div>
+        <a href="#" style="font-size:14px;color:#1E3A8A;font-weight:500;padding-bottom:3px;border-bottom:1px solid rgba(30,58,138,0.3)" style-hover="border-bottom-color:#1E3A8A">All posts →</a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px">
+        <sc-for list="{{ posts }}" as="p" hint-placeholder-count="3">
+          <a href="#" style="display:block" style-hover="opacity:0.96">
+            <div class="ph" style="aspect-ratio:16/10;border-radius:3px;position:relative;overflow:hidden">
+              <span style="position:absolute;left:12px;bottom:10px;font-family:'Inter',monospace;font-size:10px;letter-spacing:0.05em;color:#A99F8E">editorial photo</span>
+            </div>
+            <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#1E3A8A;border:1px solid rgba(30,58,138,0.25);padding:4px 10px;border-radius:20px">{{ p.cat }}</span>
+              <span style="font-size:13px;color:#8A857C">{{ p.date }}</span>
+            </div>
+            <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:500;line-height:1.22;color:#161616;margin-top:14px">{{ p.title }}</h3>
+            <p style="font-size:14px;line-height:1.6;color:#55514A;margin-top:10px">{{ p.excerpt }}</p>
+            <span style="display:inline-block;margin-top:12px;font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)">Read more →</span>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SUBMISSION CTA ===== -->
+  <section style="background:#1E3A8A;color:#FAF8F4">
+    <div style="max-width:1240px;margin:0 auto;padding:104px 32px;text-align:center">
+      <div style="width:40px;height:1px;background:#B08D57;margin:0 auto 30px"></div>
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:46px;line-height:1.12;letter-spacing:-0.015em;max-width:680px;margin:0 auto">Ready to bring us your manuscript?</h2>
+      <p style="margin-top:22px;font-size:18px;line-height:1.6;color:rgba(250,248,244,0.78);max-width:520px;margin-left:auto;margin-right:auto">Tell us about your book. We'll read it, assess what it needs, and put together a plan.</p>
+      <a href="#" style="display:inline-block;margin-top:38px;font-size:15px;font-weight:500;color:#1E3A8A;background:#FAF8F4;padding:16px 32px;border-radius:2px" style-hover="background:#fff">Submit Your Manuscript</a>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:72px 32px 40px">
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1.2fr;gap:40px">
+        <div>
+          <div style="font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:#1E3A8A">Narriva</div>
+        </div>
+        <div>
+          <div style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:18px">Services</div>
+          <sc-for list="{{ services }}" as="svc" hint-placeholder-count="5"><a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">{{ svc }}</a></sc-for>
+        </div>
+        <div>
+          <div style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:18px">Bookstore</div>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">All books</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">By author</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">New this season</a>
+        </div>
+        <div>
+          <div style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:18px">Company</div>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">About</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">How We Work</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Blog</a>
+        </div>
+        <div>
+          <div style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:18px">Legal</div>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Privacy Policy</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Terms of Use</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Refund Policy</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Copyright Policy</a>
+          <a href="#" style="display:block;font-size:14px;color:#55514A;margin-bottom:11px" style-hover="color:#1E3A8A">Publishing Agreement</a>
+        </div>
+      </div>
+      <p style="font-family:'Fraunces',serif;font-style:italic;font-size:17px;color:#B08D57;margin-top:54px;max-width:560px;line-height:1.5">We work with authors at every stage — from a rough idea to a book worth reading.</p>
+      <div style="margin-top:46px;padding-top:28px;border-top:1px solid rgba(22,22,22,0.08);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div style="display:flex;gap:24px">
+          <a href="#" style="font-size:13px;color:#8A857C" style-hover="color:#161616">Instagram</a>
+          <a href="#" style="font-size:13px;color:#8A857C" style-hover="color:#161616">Twitter</a>
+          <a href="#" style="font-size:13px;color:#8A857C" style-hover="color:#161616">LinkedIn</a>
+        </div>
+        <div style="display:flex;gap:24px;align-items:center">
+          <span style="font-size:13px;color:#8A857C">© 2026 Narriva. All rights reserved.</span>
+          <a href="#" style="font-size:13px;color:#8A857C" style-hover="color:#161616">Visit Kekere Stories</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { navShadow: 0, servicesOpen: false };
+
+  componentDidMount() {
+    this._onScroll = () => {
+      const s = window.scrollY > 12 ? 1 : 0;
+      if (s !== this.state.navShadow) this.setState({ navShadow: s });
+    };
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+  }
+  componentWillUnmount() { window.removeEventListener('scroll', this._onScroll); }
+
+  renderVals() {
+    return {
+      navShadow: this.state.navShadow,
+      servicesOpen: this.state.servicesOpen,
+      openServices: () => this.setState({ servicesOpen: true }),
+      closeServices: () => this.setState({ servicesOpen: false }),
+      services: ['Publishing', 'Editorial', 'Design', 'Author Growth', 'Ghostwriting'],
+      books: [
+        { title: 'The Salt Roads of Badagry', author: 'Adaeze Okonkwo', authorCaps: 'ADAEZE OKONKWO', hook: "A smuggler's daughter inherits a ledger that names everyone her father ever betrayed.", price: '₦4,500', cover: '#283655', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.62)' },
+        { title: 'Harmattan Sons', author: 'Tunde Bakare', authorCaps: 'TUNDE BAKARE', hook: 'Three brothers bury their father and discover he buried something first.', price: '₦3,800', cover: '#2E4034', ink: '#F1EEE2', faint: 'rgba(241,238,226,0.62)' },
+        { title: 'The Cartographer of Lost Wards', author: 'Ifeoma Nwosu', authorCaps: 'IFEOMA NWOSU', hook: "She maps the parts of Lagos the government pretends aren't there.", price: '₦5,200', cover: '#5A2A2A', ink: '#F3EAE2', faint: 'rgba(243,234,226,0.6)' },
+        { title: 'Small Mercies in Surulere', author: 'Chidi Eze', authorCaps: 'CHIDI EZE', hook: 'A landlady, her tenants, and the slow arithmetic of forgiveness.', price: '₦4,000', cover: '#252525', ink: '#EDEAE3', faint: 'rgba(237,234,227,0.55)' },
+        { title: 'What the River Keeps', author: 'Amara Diallo', authorCaps: 'AMARA DIALLO', hook: 'A drowned village resurfaces in a drought, and so do its debts.', price: '₦4,800', cover: '#36514E', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.6)' },
+        { title: 'The Inheritance of Silence', author: 'Kwame Mensah', authorCaps: 'KWAME MENSAH', hook: 'A famous novelist dies, leaving his unpublished masterpiece to the son he never spoke to.', price: '₦3,500', cover: '#C9B79C', ink: '#2A2419', faint: 'rgba(42,36,25,0.55)' }
+      ],
+      offerings: [
+        { num: '01', title: 'We work with what you have', body: "Whether your manuscript is a rough first draft or nearly publication-ready, we meet you where you are and build from there." },
+        { num: '02', title: 'Real editorial work', body: "Developmental and line editing from people who've shaped the kind of book you're trying to write — not a proofreading pass dressed up as editing." },
+        { num: '03', title: 'Design that holds up next to anything on the shelf', body: 'Covers and interiors built to compete with traditional houses.' },
+        { num: '04', title: 'One team, start to finish', body: 'Editorial, design, ISBN, print-ready files, and launch handled by people who talk to each other.' },
+        { num: '05', title: 'A bookstore that actually sells', body: 'Your book lives on a storefront built to move copies, not a portfolio page.' },
+        { num: '06', title: 'A relationship, not a transaction', body: 'We stay invested in what happens after launch. Most publishers stop caring the day your book ships.' }
+      ],
+      steps: [
+        { n: '1', title: 'Submit', body: 'Send your manuscript and a short note on what it is and who it\'s for.' },
+        { n: '2', title: 'Assess', body: 'We read it and tell you what it needs — editorial depth, light copy editing, or in between.' },
+        { n: '3', title: 'Plan', body: 'We scope the work together and agree on the path to publication.' },
+        { n: '4', title: 'Build', body: 'Editorial passes, design, interior layout — the part that matters most.' },
+        { n: '5', title: 'Produce', body: 'ISBN, print-ready files, digital formatting, proofs.' },
+        { n: '6', title: 'Launch', body: 'Your book goes live in the bookstore with a plan behind it, not just a listing.' }
+      ],
+      authors: [
+        { name: 'Adaeze Okonkwo', desc: "Writes literary fiction about Lagos's coastal underworld." },
+        { name: 'Tunde Bakare', desc: "Family sagas set across Nigeria's oil-boom decades." },
+        { name: 'Ifeoma Nwosu', desc: 'Speculative fiction rooted in Yoruba cosmology.' }
+      ],
+      posts: [
+        { cat: 'Writing Craft', date: 'May 2026', title: 'Why your first chapter is probably your third', excerpt: 'The opening you agonised over is often setup the reader doesn\'t need. Here\'s how to find the real start.' },
+        { cat: 'Publishing Advice', date: 'Apr 2026', title: 'What a developmental edit actually changes', excerpt: 'Not commas. Structure, pacing, and the gap between what you meant and what\'s on the page.' },
+        { cat: 'Behind the Scenes', date: 'Apr 2026', title: 'Designing a cover that survives a thumbnail', excerpt: 'Most book covers are first seen at the size of a stamp. We design for that moment first.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

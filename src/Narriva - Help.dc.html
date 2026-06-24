@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#161616">Authors</a>
+        <a href="Narriva - Blog.dc.html" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <header style="max-width:760px;margin:0 auto;padding:80px 32px 40px;text-align:center">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:16px">Help center</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:48px;letter-spacing:-0.02em;color:#161616">How can we help?</h1>
+  </header>
+
+  <!-- TABS -->
+  <div style="max-width:760px;margin:0 auto;padding:0 32px 8px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.onClick }}" style="cursor:pointer;font-size:14px;font-weight:500;padding:10px 20px;border-radius:30px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }}">{{ t.label }}</button>
+    </sc-for>
+  </div>
+
+  <!-- ACCORDION -->
+  <section style="max-width:760px;margin:0 auto;padding:40px 32px 110px">
+    <div style="border-top:1px solid rgba(22,22,22,0.12)">
+      <sc-for list="{{ faqs }}" as="f" hint-placeholder-count="6">
+        <div style="border-bottom:1px solid rgba(22,22,22,0.12)">
+          <button onClick="{{ f.toggle }}" style="width:100%;background:transparent;border:none;cursor:pointer;text-align:left;padding:24px 0;display:flex;align-items:center;justify-content:space-between;gap:20px">
+            <span style="font-size:17px;font-weight:500;color:#161616;font-family:'Fraunces',serif">{{ f.q }}</span>
+            <span style="flex:none;font-size:22px;color:#1E3A8A;transform:rotate({{ f.rot }});transition:transform .25s">+</span>
+          </button>
+          <sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}">
+            <p style="font-size:15px;line-height:1.7;color:#55514A;padding:0 0 26px;max-width:640px">{{ f.a }}</p>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:48px;text-align:center;padding:36px;background:#F6F3ED;border-radius:8px">
+      <p style="font-size:16px;color:#2A2620">Still stuck? <a href="Narriva - Contact.dc.html" style="color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.3)">Get in touch</a> and a real person will help.</p>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { tab: 'For Authors', open: 0 };
+  renderVals() {
+    const data = {
+      'For Authors': [
+        { q: 'How do I submit my manuscript?', a: 'Head to the Submit page, tell us about your book, and upload your manuscript as a PDF or DOCX. We read every submission personally.' },
+        { q: 'How long until I hear back?', a: 'Most authors hear back within six to eight weeks of submission with an assessment and a proposed plan. If we have questions before then, we reach out.' },
+        { q: 'Do you reject manuscripts?', a: "We don't think of it as pass or fail. We assess what a manuscript needs and propose a path. Some need deep editorial work, some need a light pass — we tell you honestly which." },
+        { q: 'Do I keep the rights to my book?', a: 'Always. You hold your rights from start to finish. Our services are work on your manuscript, never an acquisition of it.' },
+        { q: 'Can I use my own editor or designer?', a: "Yes. Plenty of authors come to us for only part of the journey. We'll happily pick up where someone else left off." }
+      ],
+      'For Readers': [
+        { q: 'How do I read a book I bought?', a: 'Everything you buy lives in your Library, ready to read in your browser — no download required. Just press Continue reading.' },
+        { q: 'Can I read on my phone?', a: 'Yes. The reader works on any device and remembers where you left off, so you can switch between phone and laptop freely.' },
+        { q: 'Can I read a sample first?', a: 'Every book has its full first chapter available to read free on its detail page, logged in or not.' },
+        { q: 'Do books expire?', a: 'No. A book you buy is yours to keep and re-read as often as you like.' }
+      ],
+      'Account & Billing': [
+        { q: 'What payment methods do you accept?', a: 'We accept all major cards and local payment options at checkout. Prices are shown in naira.' },
+        { q: 'Can I get a refund?', a: 'See our Refund Policy for the full details. In short: if something went wrong with a purchase, contact us and we will make it right.' },
+        { q: 'How do I change my email or password?', a: 'Visit your account settings from the avatar menu. You can update your details there at any time.' }
+      ]
+    };
+    const tabs = Object.keys(data);
+    const cur = this.state.tab;
+    const list = data[cur].map((f, i) => ({
+      q: f.q, a: f.a, open: this.state.open === i, rot: this.state.open === i ? '45deg' : '0deg',
+      toggle: () => this.setState({ open: this.state.open === i ? -1 : i })
+    }));
+    return {
+      tabs: tabs.map(t => ({
+        label: t, bg: cur === t ? '#1E3A8A' : 'transparent', color: cur === t ? '#FAF8F4' : '#55514A',
+        border: cur === t ? '#1E3A8A' : 'rgba(22,22,22,0.16)',
+        onClick: () => this.setState({ tab: t, open: 0 })
+      })),
+      faqs: list
+    };
+  }
+}
+</script>
+</body>
+</html>
