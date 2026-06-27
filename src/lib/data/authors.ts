@@ -20,10 +20,20 @@ const authorSummarySelect = {
   avatar: true,
 } as const;
 
-/** "Authors" are Users with the WRITER role — there's no separate Author model. */
-export async function listAuthors(): Promise<AuthorSummary[]> {
+/**
+ * "Authors" are Users with the WRITER role — there's no separate Author
+ * model, and the same WRITER role is shared with Kekere story writers (one
+ * auth system, two brands). Public Narriva author listings need
+ * `withBooksOnly: true` so a writer who has only ever published Kekere
+ * stories doesn't show up as a Narriva "author" with an empty page — admin
+ * screens (picking an author for a new book, managing writer records) want
+ * every writer regardless, so the filter defaults off.
+ */
+export async function listAuthors({ withBooksOnly = false }: { withBooksOnly?: boolean } = {}): Promise<
+  AuthorSummary[]
+> {
   return prisma.user.findMany({
-    where: { role: "WRITER" },
+    where: { role: "WRITER", ...(withBooksOnly ? { books: { some: {} } } : {}) },
     select: authorSummarySelect,
     orderBy: { name: "asc" },
   });

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export interface ServiceFormValues {
   slug: string;
   title: string;
+  tagline: string;
   opening: string;
   included: string;
   closing: string;
@@ -21,6 +22,7 @@ export interface ServiceFormValues {
 const EMPTY: ServiceFormValues = {
   slug: "",
   title: "",
+  tagline: "",
   opening: "",
   included: "",
   closing: "",
@@ -68,6 +70,7 @@ export function ServiceForm({ mode, initial }: ServiceFormProps) {
       title: values.title,
       order: Number(values.order) || 0,
       content: {
+        tagline: values.tagline,
         opening: values.opening,
         included: parsePairs(values.included, ["title", "description"]),
         closing: values.closing,
@@ -114,6 +117,11 @@ export function ServiceForm({ mode, initial }: ServiceFormProps) {
             onChange={(e) => set("slug", e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="tagline">Tagline (short, italic, shown under the title)</Label>
+        <Input id="tagline" required value={values.tagline} onChange={(e) => set("tagline", e.target.value)} />
       </div>
 
       <div className="flex flex-col gap-1.5">

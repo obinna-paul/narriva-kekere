@@ -76,3 +76,22 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Thin custom scrollbar for horizontal-scroll rows (Featured Books, etc.) —
+   matches the design handoff's `.scrollx` treatment. */
+.scrollx {
+  scrollbar-width: thin;
+  scrollbar-color: #d8d0c4 transparent;
+}
+.scrollx::-webkit-scrollbar {
+  height: 6px;
+}
+.scrollx::-webkit-scrollbar-thumb {
+  background: #d8d0c4;
+  border-radius: 3px;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}

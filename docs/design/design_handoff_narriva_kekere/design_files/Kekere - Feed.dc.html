@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#F5EBDD;color:#2A1A12;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#C75D2C;color:#F5EBDD}
+  .sx{scrollbar-width:none}
+  .sx::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F5EBDD;padding-bottom:80px">
+
+  <!-- HEADER -->
+  <div style="position:sticky;top:0;z-index:30;background:rgba(245,235,221,0.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
+    <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:#C75D2C">Kekere</div>
+      <a href="Kekere - Wallet.dc.html" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid rgba(42,26,18,0.1);border-radius:30px;padding:7px 14px">
+        <svg width="15" height="15" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C"/><path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" stroke-width="1.1" fill="none"/></svg>
+        <span style="font-size:13px;font-weight:600;color:#2A1A12">340</span>
+      </a>
+    </div>
+    <!-- FILTER PILLS -->
+    <div class="sx" style="display:flex;gap:8px;overflow-x:auto;padding:4px 20px 14px">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+        <button onClick="{{ f.onClick }}" style="flex:none;cursor:pointer;font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:30px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }}">{{ f.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ROW: New this week -->
+  <section style="padding:20px 0 8px">
+    <h2 style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#2A1A12;padding:0 20px 14px">New stories this week</h2>
+    <div class="sx" style="display:flex;gap:14px;overflow-x:auto;padding:0 20px 4px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ rowNew }}" as="s" hint-placeholder-count="4">
+        <a href="Kekere - Story Reader.dc.html" style="flex:none;width:200px;scroll-snap-align:start;display:block">
+          <div style="height:124px;border-radius:14px;background:{{ s.pattern }};position:relative;overflow:hidden;box-shadow:0 8px 20px -10px rgba(42,26,18,0.4)" style-hover="filter:brightness(0.92)">
+            <span style="position:absolute;top:9px;left:9px;font-size:9.5px;font-weight:600;color:#fff;background:rgba(31,75,75,0.78);padding:3px 8px;border-radius:20px">{{ s.genre }}</span>
+            <sc-if value="{{ s.finishHigh }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:9px;right:9px;font-size:9.5px;font-weight:600;color:#fff;background:rgba(42,26,18,0.55);padding:3px 7px;border-radius:20px">{{ s.finish }}</span></sc-if>
+          </div>
+          <h3 style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1.2;color:#2A1A12;margin-top:10px">{{ s.title }}</h3>
+          <p style="font-size:12.5px;font-style:italic;color:#6A5446;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.hook }}</p>
+          <div style="margin-top:7px;font-size:12px;color:#8A7565"><span style="font-weight:600;color:{{ s.costColor }}">{{ s.cost }}</span> · {{ s.time }}</div>
+        </a>
+      </sc-for>
+      <div style="flex:none;width:6px"></div>
+    </div>
+  </section>
+
+  <!-- FEATURED BANNER -->
+  <section style="padding:18px 20px">
+    <a href="Kekere - Story Reader.dc.html" style="display:block;border-radius:18px;overflow:hidden;position:relative;height:220px;background:radial-gradient(circle at 70% 20%,#E2A565,#C75D2C 45%,#5A2410)">
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(42,26,18,0.9),rgba(42,26,18,0.1) 60%)"></div>
+      <div style="position:absolute;left:20px;right:20px;bottom:20px">
+        <span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:#E9C9A3">FEATURED TODAY</span>
+        <h3 style="font-family:'Fraunces',serif;font-size:25px;font-weight:600;color:#fff;margin-top:8px;line-height:1.12">Small Gods of Balogun Market</h3>
+        <p style="font-size:13.5px;font-style:italic;color:rgba(255,255,255,0.85);margin-top:6px">Every stall has a spirit. Mama Risi sells them back to you.</p>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:13px;font-weight:600;color:#2A1A12;background:#E9C9A3;padding:9px 18px;border-radius:8px">▶ Read</span>
+          <span style="font-size:12.5px;color:rgba(255,255,255,0.8)">15 cowries · 7 min · 91% finish</span>
+        </div>
+      </div>
+    </a>
+  </section>
+
+  <!-- ROW: Free reads -->
+  <section style="padding:8px 0">
+    <h2 style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#2A1A12;padding:0 20px 14px">Free reads — no cowries needed</h2>
+    <div class="sx" style="display:flex;gap:14px;overflow-x:auto;padding:0 20px 4px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ rowFree }}" as="s" hint-placeholder-count="4">
+        <a href="Kekere - Story Reader.dc.html" style="flex:none;width:200px;scroll-snap-align:start;display:block">
+          <div style="height:124px;border-radius:14px;background:{{ s.pattern }};position:relative;overflow:hidden;box-shadow:0 8px 20px -10px rgba(42,26,18,0.4)">
+            <span style="position:absolute;top:9px;left:9px;font-size:9.5px;font-weight:600;color:#fff;background:rgba(31,75,75,0.78);padding:3px 8px;border-radius:20px">{{ s.genre }}</span>
+            <span style="position:absolute;top:9px;right:9px;font-size:9.5px;font-weight:700;color:#1F4B4B;background:#E9C9A3;padding:3px 8px;border-radius:20px">FREE</span>
+          </div>
+          <h3 style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1.2;color:#2A1A12;margin-top:10px">{{ s.title }}</h3>
+          <p style="font-size:12.5px;font-style:italic;color:#6A5446;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.hook }}</p>
+          <div style="margin-top:7px;font-size:12px;color:#8A7565">{{ s.time }}</div>
+        </a>
+      </sc-for>
+      <div style="flex:none;width:6px"></div>
+    </div>
+  </section>
+
+  <!-- ROW: Lagos stories -->
+  <section style="padding:8px 0 16px">
+    <h2 style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;color:#2A1A12;padding:0 20px 14px">Lagos stories</h2>
+    <div class="sx" style="display:flex;gap:14px;overflow-x:auto;padding:0 20px 4px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ rowLagos }}" as="s" hint-placeholder-count="4">
+        <a href="Kekere - Story Reader.dc.html" style="flex:none;width:200px;scroll-snap-align:start;display:block">
+          <div style="height:124px;border-radius:14px;background:{{ s.pattern }};position:relative;overflow:hidden;box-shadow:0 8px 20px -10px rgba(42,26,18,0.4)">
+            <span style="position:absolute;top:9px;left:9px;font-size:9.5px;font-weight:600;color:#fff;background:rgba(31,75,75,0.78);padding:3px 8px;border-radius:20px">{{ s.genre }}</span>
+          </div>
+          <h3 style="font-family:'Fraunces',serif;font-size:16px;font-weight:600;line-height:1.2;color:#2A1A12;margin-top:10px">{{ s.title }}</h3>
+          <div style="margin-top:6px;font-size:12px;color:#8A7565"><span style="font-weight:600;color:{{ s.costColor }}">{{ s.cost }}</span> · {{ s.time }}</div>
+        </a>
+      </sc-for>
+      <div style="flex:none;width:6px"></div>
+    </div>
+  </section>
+
+  <!-- BOTTOM NAV -->
+  <nav style="position:fixed;bottom:0;left:0;right:0;z-index:40;background:rgba(245,235,221,0.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid rgba(42,26,18,0.1);padding:9px 8px 12px;display:flex;justify-content:space-around">
+    <a href="Kekere - Feed.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#C75D2C">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
+      <span style="font-size:10px;font-weight:600">Feed</span>
+    </a>
+    <a href="Kekere - Writer.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#A08C7C">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 L16 8 l3 3 L8 22 H5 Z"/><path d="M14 6 l3 3"/></svg>
+      <span style="font-size:10px;font-weight:500">Write</span>
+    </a>
+    <a href="Kekere - Competitions.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#A08C7C">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4 h12 v3 a6 6 0 0 1 -12 0 Z"/><path d="M12 13 v4 M9 21 h6 M9 21 a3 3 0 0 1 3 -4 M15 21 a3 3 0 0 0 -3 -4"/></svg>
+      <span style="font-size:10px;font-weight:500">Competitions</span>
+    </a>
+    <a href="Kekere - Wallet.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#A08C7C">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M16 12 h2"/></svg>
+      <span style="font-size:10px;font-weight:500">Wallet</span>
+    </a>
+    <a href="Kekere - Profile.dc.html" style="display:flex;flex-direction:column;align-items:center;gap:4px;color:#A08C7C">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21 a7 7 0 0 1 14 0"/></svg>
+      <span style="font-size:10px;font-weight:500">Profile</span>
+    </a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { filter: 'New' };
+  renderVals() {
+    const pats = {
+      orange: 'repeating-linear-gradient(45deg,#C75D2C 0 14px,#A84A20 14px 28px)',
+      teal: 'conic-gradient(from 30deg,#1F4B4B,#2E6A5E,#1F4B4B,#143838,#1F4B4B)',
+      radial: 'radial-gradient(circle at 30% 30%,#E2A565,#C75D2C 45%,#7A3415)',
+      tri: 'linear-gradient(135deg,#1F4B4B 0 50%,#E2A565 50% 100%)',
+      checker: 'conic-gradient(#C75D2C 0 25%,#E2A565 0 50%,#C75D2C 0 75%,#E2A565 0)',
+      stripe: 'repeating-linear-gradient(0deg,#2A1A12 0 7px,#3A2418 7px 14px)',
+      ring: 'repeating-radial-gradient(circle at 50% 50%,#E2A565 0 9px,#C75D2C 9px 18px)'
+    };
+    const filters = ['New', 'Trending', 'Free', 'Genre ▾'];
+    const cur = this.state.filter;
+    return {
+      filters: filters.map(f => ({
+        label: f,
+        bg: cur === f ? '#C75D2C' : '#fff',
+        color: cur === f ? '#fff' : '#6A5446',
+        border: cur === f ? '#C75D2C' : 'rgba(42,26,18,0.14)',
+        onClick: () => this.setState({ filter: f })
+      })),
+      rowNew: [
+        { genre: 'LOVE', title: 'The Last Bus to Yaba', hook: 'She missed it on purpose. He didn\u2019t.', cost: '12 cowries', costColor: '#C75D2C', time: '4 min', pattern: pats.radial, finishHigh: true, finish: '94% finish' },
+        { genre: 'SATIRE', title: 'Letters to NEPA', hook: 'He wrote the power company every day for a year.', cost: '6 cowries', costColor: '#C75D2C', time: '4 min', pattern: pats.stripe, finishHigh: false },
+        { genre: 'HISTORICAL', title: 'Cowrie', hook: 'Sold for a string of shells.', cost: '10 cowries', costColor: '#C75D2C', time: '8 min', pattern: pats.checker, finishHigh: true, finish: '88% finish' },
+        { genre: 'SPECULATIVE', title: 'The Mami Wata Line', hook: 'A phone number that only rings at high tide.', cost: '14 cowries', costColor: '#C75D2C', time: '6 min', pattern: pats.teal, finishHigh: false }
+      ],
+      rowFree: [
+        { genre: 'SPECULATIVE', title: 'What the Generator Knew', hook: 'It powers the houses with secrets.', time: '6 min', pattern: pats.teal },
+        { genre: 'HUMOUR', title: 'Danfo Diaries', hook: 'Twenty-two passengers, one missing wallet.', time: '3 min', pattern: pats.orange },
+        { genre: 'SLICE OF LIFE', title: 'Sunday Rice', hook: 'Three generations, one disputed recipe.', time: '5 min', pattern: pats.ring },
+        { genre: 'FLASH', title: 'Power Cut', hook: 'The whole street went quiet at once.', time: '2 min', pattern: pats.tri }
+      ],
+      rowLagos: [
+        { genre: 'CRIME', title: 'Third Mainland', hook: '', cost: '11 cowries', costColor: '#C75D2C', time: '7 min', pattern: pats.stripe },
+        { genre: 'LOVE', title: 'Owambe', hook: '', cost: '8 cowries', costColor: '#C75D2C', time: '5 min', pattern: pats.radial },
+        { genre: 'DRAMA', title: 'Landlord', hook: '', cost: '9 cowries', costColor: '#C75D2C', time: '6 min', pattern: pats.checker },
+        { genre: 'SLICE OF LIFE', title: 'Bus Stop', hook: '', cost: 'Free', costColor: '#1F6F4A', time: '4 min', pattern: pats.ring }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

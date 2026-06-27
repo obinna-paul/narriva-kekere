@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { InsufficientBalanceError, StoryNotAvailableError, unlockStory } from "@/lib/data/kekere-unlocks";
+import { creditReferrer } from "@/lib/data/kekere-referrals";
 
 export const POST = withAuth(
   async (_request, session, { params }: { params: { id: string } }) => {
     try {
       const result = await unlockStory(session.user.id, params.id);
+      creditReferrer(session.user.id).catch(() => {});
       return NextResponse.json(result);
     } catch (error) {
       if (error instanceof InsufficientBalanceError) {

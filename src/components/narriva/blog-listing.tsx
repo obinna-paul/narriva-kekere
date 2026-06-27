@@ -1,29 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Grid } from "@/components/ui/layout";
-import { Body } from "@/components/ui/typography";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils/cn";
+import { Search } from "lucide-react";
 import { BlogCard } from "@/components/narriva/blog-card";
-import { CategoryPill } from "@/components/narriva/category-pill";
+import { cn } from "@/lib/utils/cn";
 import { BLOG_CATEGORIES, type BlogCategory, type MockBlogPost } from "@/content/mock/narriva-blog";
 
-const ALL = "all";
-const PAGE_SIZE = 6;
+const ALL = "All";
 
 export interface BlogListingProps {
   posts: readonly MockBlogPost[];
 }
 
 /** Search and category filtering run entirely client-side against the
- * static mock array — real search/pagination against the database is a
- * later phase. */
+ * already-fetched posts — real pagination is a later phase. */
 export function BlogListing({ posts }: BlogListingProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<BlogCategory | typeof ALL>(ALL);
-  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -39,86 +32,71 @@ export function BlogListing({ posts }: BlogListingProps) {
       });
   }, [posts, search, category]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pagePosts = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  function selectCategory(next: BlogCategory | typeof ALL) {
-    setCategory(next);
-    setPage(1);
-  }
-
-  function updateSearch(value: string) {
-    setSearch(value);
-    setPage(1);
-  }
-
   return (
-    <div>
-      <Input
-        type="search"
-        value={search}
-        onChange={(e) => updateSearch(e.target.value)}
-        placeholder="Search posts"
-        aria-label="Search blog posts"
-        className="max-w-sm"
-      />
+    <>
+      <header className="mx-auto max-w-[1140px] px-8 pb-11 pt-20">
+        <div className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-accent-text)]">
+          Reading &amp; writing
+        </div>
+        <h1 className="font-[family-name:var(--font-display)] text-[52px] font-medium leading-tight tracking-[-0.02em] text-[var(--color-ink)]">
+          From the desk
+        </h1>
+        <p className="mt-4 max-w-[520px] text-[17px] text-[var(--color-muted)]">
+          Notes on craft, publishing, and the long work of making a book — from the people
+          who do it.
+        </p>
+      </header>
 
-      <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Filter by category">
-        <CategoryPill as="button" active={category === ALL} onClick={() => selectCategory(ALL)}>
-          All
-        </CategoryPill>
-        {BLOG_CATEGORIES.map((cat) => (
-          <CategoryPill
-            key={cat}
-            as="button"
-            active={category === cat}
-            onClick={() => selectCategory(cat)}
-          >
-            {cat}
-          </CategoryPill>
-        ))}
+      <div className="mx-auto flex max-w-[1140px] flex-wrap items-center justify-between gap-6 px-8 pb-11">
+        <div className="flex flex-wrap gap-2.5">
+          {([ALL, ...BLOG_CATEGORIES] as const).map((cat) => {
+            const active = category === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                aria-pressed={active}
+                className={cn(
+                  "rounded-full px-4 py-2.5 text-[13.5px] font-medium transition-colors",
+                  active
+                    ? "border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-bg)]"
+                    : "border border-[var(--color-ink)]/[0.16] bg-transparent text-[var(--color-muted)]"
+                )}
+              >
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="relative">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-[15px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#A8A296]"
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search the blog"
+            aria-label="Search blog posts"
+            className="w-[220px] rounded-full border border-[var(--color-ink)]/[0.16] bg-white py-2.5 pl-10 pr-[18px] text-sm text-[var(--color-ink)] outline-none focus:border-[var(--color-primary)]"
+          />
+        </div>
       </div>
 
-      <Body size="sm" className="mt-6 text-[var(--color-ink)]/60">
-        Showing {pagePosts.length} of {filtered.length} posts
-      </Body>
-
-      {pagePosts.length > 0 ? (
-        <Grid cols={3} gap="lg" className="mt-6">
-          {pagePosts.map((post) => (
-            <BlogCard key={post.slug} post={post} />
-          ))}
-        </Grid>
-      ) : (
-        <p className="mt-12 text-center text-[var(--color-ink)]/60">
-          No posts match your search.
-        </p>
-      )}
-
-      {totalPages > 1 && (
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <button
-            type="button"
-            disabled={currentPage === 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-[var(--color-ink)]/60">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={currentPage === totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
+      <section className="mx-auto max-w-[1140px] px-8 pb-[110px]">
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 gap-x-9 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((post) => (
+              <BlogCard key={post.slug} post={post} />
+            ))}
+          </div>
+        ) : (
+          <p className="py-16 text-center text-[var(--color-muted)]">No posts match your search.</p>
+        )}
+      </section>
+    </>
   );
 }

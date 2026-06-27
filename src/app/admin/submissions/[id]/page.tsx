@@ -66,6 +66,30 @@ export default async function AdminSubmissionDetailPage({
               {submission.userId ? "Linked" : "Guest submission (no account linked)"}
             </dd>
           </div>
+          {submission.genre && (
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink)]/50">
+                Genre
+              </dt>
+              <dd className="mt-1">{submission.genre}</dd>
+            </div>
+          )}
+          {submission.manuscriptStage && (
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink)]/50">
+                Manuscript stage
+              </dt>
+              <dd className="mt-1">{submission.manuscriptStage}</dd>
+            </div>
+          )}
+          {submission.supportNeeded.length > 0 && (
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-[var(--color-ink)]/50">
+                Support requested
+              </dt>
+              <dd className="mt-1">{submission.supportNeeded.join(", ")}</dd>
+            </div>
+          )}
         </dl>
         {submission.synopsis && (
           <div className="mt-4">

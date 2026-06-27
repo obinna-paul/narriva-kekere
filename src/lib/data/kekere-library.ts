@@ -48,3 +48,45 @@ export async function isStorySaved(userId: string, storyId: string): Promise<boo
   });
   return !!saved;
 }
+
+export interface ReadingHistoryItem {
+  story: StoryWithAuthor;
+  completed: boolean;
+  completedAt: Date | null;
+  scrollFraction: number;
+}
+
+export async function getReadingHistory(userId: string): Promise<ReadingHistoryItem[]> {
+  const [completions, progressRows] = await Promise.all([
+    prisma.storyCompletion.findMany({
+      where: { userId },
+      include: { story: { include: authorInclude } },
+      orderBy: { completedAt: "desc" },
+    }),
+    prisma.storyReadingProgress.findMany({
+      where: { userId, scrollFraction: { gt: 0 } },
+      include: { story: { include: authorInclude } },
+      orderBy: { updatedAt: "desc" },
+    }),
+  ]);
+
+  const completedIds = new Set(completions.map((c) => c.storyId));
+
+  const completedItems: ReadingHistoryItem[] = completions.map((c) => ({
+    story: c.story,
+    completed: true,
+    completedAt: c.completedAt,
+    scrollFraction: 1,
+  }));
+
+  const inProgressItems: ReadingHistoryItem[] = progressRows
+    .filter((p) => !completedIds.has(p.storyId))
+    .map((p) => ({
+      story: p.story,
+      completed: false,
+      completedAt: null,
+      scrollFraction: p.scrollFraction,
+    }));
+
+  return [...completedItems, ...inProgressItems];
+}

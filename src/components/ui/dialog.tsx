@@ -29,30 +29,37 @@ export const DialogOverlay = forwardRef<
 ));
 DialogOverlay.displayName = "DialogOverlay";
 
-export const DialogContent = forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-6 text-[var(--color-ink)] shadow-lg focus:outline-none data-[state=closed]:opacity-0 data-[state=open]:opacity-100",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-md p-1 text-[var(--color-ink)]/60 transition-colors hover:bg-[var(--color-ink)]/10 hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-        aria-label="Close dialog"
+export interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Some dialogs (e.g. a confirm prompt whose footer already has
+   * Cancel/Submit) don't want the corner ✕ as a second way to dismiss. */
+  showCloseButton?: boolean;
+}
+
+export const DialogContent = forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
+  ({ className, children, showCloseButton = true, ...props }, ref) => (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-card)] border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-6 text-[var(--color-ink)] shadow-lg focus:outline-none data-[state=closed]:opacity-0 data-[state=open]:opacity-100",
+          className
+        )}
+        {...props}
       >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            className="absolute right-4 top-4 rounded-md p-1 text-[var(--color-ink)]/60 transition-colors hover:bg-[var(--color-ink)]/10 hover:text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            aria-label="Close dialog"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  )
+);
 DialogContent.displayName = "DialogContent";
 
 export function DialogHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {

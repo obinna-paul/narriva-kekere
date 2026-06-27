@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: Kekere
+      - paragraph [ref=e7]: “Read in the time it takes to wait for a bus.”
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - button "Sign in" [ref=e10] [cursor=pointer]
+        - button "Create account" [ref=e11] [cursor=pointer]
+      - heading "Welcome back" [level=1] [ref=e32]
+      - paragraph [ref=e33]: Account created. Sign in below.
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]: Email
+          - textbox "Email" [ref=e16]:
+            - /placeholder: you@email.com
+            - text: new-kekere-2026@example.com
+        - generic [ref=e17]:
+          - generic [ref=e18]: Password
+          - textbox "Password" [ref=e19]:
+            - /placeholder: ••••••••
+            - text: password123
+          - generic [ref=e34]: Forgot password?
+        - button "Signing in…" [disabled] [ref=e35] [cursor=pointer]
+      - paragraph [ref=e22]: By continuing, you agree to Kekere's Terms of Use and Privacy Policy.
+  - alert [ref=e23]

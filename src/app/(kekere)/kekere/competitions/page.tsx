@@ -1,32 +1,45 @@
 import { KekereTheme } from "@/components/theme";
-import { KekereNav } from "@/components/kekere/kekere-nav";
+import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { CompetitionCard } from "@/components/kekere/competition-card";
 import { listCompetitions } from "@/lib/data/kekere-competitions";
 import { toMockCompetition } from "@/lib/adapters/kekere-competitions";
 
 export const dynamic = "force-dynamic";
 
+function daysUntil(deadline: Date): number {
+  return Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+}
+
 export default async function KekereCompetitionsPage() {
   const competitions = await listCompetitions();
-  // DRAFT competitions aren't public yet — they're admin previews only.
   const visible = competitions.filter((c) => c.status !== "DRAFT");
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
-        <KekereNav />
-        <main className="mx-auto max-w-5xl px-5 py-6 pb-28 sm:px-8 md:pb-12">
-          <h1 className="text-2xl font-bold">Competitions</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink)]/60">
-            One winner a season gets a real manuscript read at Narriva.
-          </p>
+      <div className="min-h-screen bg-[var(--color-bg)] pb-20 text-[var(--color-ink)]">
+        <KekereNavWrapper />
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {visible.map((competition) => (
-              <CompetitionCard key={competition.slug} competition={toMockCompetition(competition)} />
-            ))}
-          </div>
-        </main>
+        <header className="px-[22px] pb-[14px] pt-[26px]">
+          <p className="mb-[10px] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+            Competitions
+          </p>
+          <h1 className="font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.08] text-[var(--color-ink)]">
+            Enter the conversation
+          </h1>
+          <p className="mt-3 text-[14.5px] leading-[1.55] text-[var(--color-ink-muted)]">
+            Seasonal prompts, real prizes, and a manuscript read at Narriva for every winner.
+          </p>
+        </header>
+
+        <section className="flex flex-col gap-[18px] px-[22px] pb-[30px] pt-[14px]">
+          {visible.map((competition) => (
+            <CompetitionCard
+              key={competition.slug}
+              competition={toMockCompetition(competition)}
+              daysLeft={daysUntil(competition.deadline)}
+            />
+          ))}
+        </section>
       </div>
     </KekereTheme>
   );

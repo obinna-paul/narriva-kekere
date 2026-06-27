@@ -1,0 +1,46 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - link "Back to feed" [ref=e5] [cursor=pointer]:
+        - /url: /kekere/feed
+        - text: ←
+      - generic [ref=e6]:
+        - heading "How can we help?" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Ask us anything. We're friendly, promise.
+      - generic [ref=e9]:
+        - button "For Readers" [ref=e10] [cursor=pointer]
+        - button "For Writers" [active] [ref=e11] [cursor=pointer]
+        - button "Cowries & Wallet" [ref=e12] [cursor=pointer]
+        - button "Account" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e49]:
+            - button "How do I publish a story?" [ref=e50] [cursor=pointer]:
+              - generic [ref=e51]: How do I publish a story?
+              - generic [ref=e52]: +
+            - paragraph [ref=e53]: Open the writer's editor, write your story, set a tier, and submit for review. We read everything that comes in, properly, within five to seven business days.
+          - button "How do I earn from my writing?" [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]: How do I earn from my writing?
+            - generic [ref=e57]: +
+          - button "What are the tiers?" [ref=e59] [cursor=pointer]:
+            - generic [ref=e60]: What are the tiers?
+            - generic [ref=e61]: +
+        - paragraph [ref=e34]: Still need us? Message the team — a real person replies.
+    - contentinfo [ref=e36]:
+      - generic [ref=e37]:
+        - paragraph [ref=e38]: Kekere
+        - generic [ref=e39]:
+          - link "Help" [ref=e40] [cursor=pointer]:
+            - /url: /kekere/help
+          - link "Privacy" [ref=e41] [cursor=pointer]:
+            - /url: /kekere/privacy
+          - link "Terms" [ref=e42] [cursor=pointer]:
+            - /url: /kekere/terms
+        - generic [ref=e43]:
+          - generic [ref=e44]: Instagram
+          - generic [ref=e45]: Twitter
+        - generic [ref=e46]:
+          - text: Part of the
+          - link "Narriva group" [ref=e47] [cursor=pointer]:
+            - /url: /
+  - alert [ref=e48]

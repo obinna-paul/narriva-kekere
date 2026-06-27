@@ -20,6 +20,7 @@ export default async function EditServicePage({ params }: { params: { id: string
           initial={{
             slug: service.slug,
             title: service.title,
+            tagline: service.content.tagline ?? "",
             opening: service.content.opening,
             included: service.content.included
               .map((item) => `${item.title}|${item.description}`)

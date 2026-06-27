@@ -46,9 +46,9 @@ export function UnlockModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center justify-between rounded-lg bg-[var(--color-ink)]/[0.04] px-4 py-3">
+          <div className="flex items-center justify-between rounded-lg bg-[var(--color-primary-muted)] px-4 py-3">
             <span className="text-sm text-[var(--color-ink)]/70">Your balance</span>
-            <span className="font-semibold">{balance} cowries</span>
+            <span className="font-semibold text-[var(--color-primary)]">{balance} cowries</span>
           </div>
 
           {!canAfford && (

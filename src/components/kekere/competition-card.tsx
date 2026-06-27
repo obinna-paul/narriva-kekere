@@ -3,50 +3,66 @@ import { cn } from "@/lib/utils/cn";
 import type { MockCompetition } from "@/content/mock/kekere-competitions";
 
 const STATUS_STYLES: Record<MockCompetition["status"], string> = {
-  DRAFT: "bg-[var(--color-ink)]/10 text-[var(--color-ink)]/60",
-  OPEN: "bg-emerald-100 text-emerald-800",
-  JUDGING: "bg-amber-100 text-amber-800",
-  CLOSED: "bg-[var(--color-ink)]/10 text-[var(--color-ink)]/60",
-  COMPLETE: "bg-sky-100 text-sky-800",
+  DRAFT: "bg-[var(--color-ink)]/10 text-[var(--color-ink-muted)]",
+  OPEN: "bg-[#C75D2C] text-white",
+  JUDGING: "bg-[rgba(31,75,75,0.14)] text-[#1F4B4B]",
+  CLOSED: "bg-[rgba(42,26,18,0.08)] text-[#8A7565]",
+  COMPLETE: "bg-[#2A1A12] text-white",
+};
+
+const STATUS_LABELS: Record<MockCompetition["status"], string> = {
+  DRAFT: "Draft",
+  OPEN: "OPEN",
+  JUDGING: "JUDGING",
+  CLOSED: "CLOSED",
+  COMPLETE: "COMPLETE",
 };
 
 export interface CompetitionCardProps {
   competition: MockCompetition;
+  daysLeft?: number;
 }
 
-export function CompetitionCard({ competition }: CompetitionCardProps) {
+export function CompetitionCard({ competition, daysLeft }: CompetitionCardProps) {
+  const isOpen = competition.status === "OPEN";
+
   return (
     <Link
       href={`/kekere/competitions/${competition.slug}`}
-      className="block rounded-2xl border border-[var(--color-ink)]/10 p-5 transition-colors hover:border-[var(--color-primary)]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+      className="group block rounded-[18px] border border-[rgba(42,26,18,0.1)] bg-white p-6 shadow-[0_10px_26px_-16px_rgba(42,26,18,0.3)] transition-colors hover:border-[var(--color-primary)]"
     >
-      <span
-        className={cn(
-          "inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide",
-          STATUS_STYLES[competition.status]
+      <div className="mb-[14px] flex items-center justify-between gap-3">
+        <span
+          className={cn(
+            "rounded-[20px] px-3 py-[5px] text-[11px] font-semibold tracking-[0.03em]",
+            STATUS_STYLES[competition.status],
+          )}
+        >
+          {STATUS_LABELS[competition.status]}
+        </span>
+        {isOpen && daysLeft !== undefined && daysLeft > 0 && (
+          <span className="text-[12.5px] font-semibold text-[var(--color-primary)]">
+            {daysLeft} {daysLeft === 1 ? "day" : "days"} left
+          </span>
         )}
-      >
-        {competition.status}
-      </span>
-      <h3 className="mt-3 text-lg font-bold">{competition.title}</h3>
-      <p className="mt-1 text-sm font-medium text-[var(--color-primary)]">{competition.theme}</p>
-      <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-[var(--color-ink)]/60">
-        <div className="flex gap-1">
-          <dt className="font-medium">Deadline:</dt>
-          <dd>
-            {new Date(competition.deadline).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </dd>
-        </div>
-        <div className="flex gap-1">
-          <dt className="font-medium">Limit:</dt>
-          <dd>{competition.wordCountLimit.toLocaleString()} words</dd>
-        </div>
-      </dl>
-      <p className="mt-3 text-sm text-[var(--color-ink)]/75">{competition.prizeDescription}</p>
+      </div>
+
+      <h2 className="font-[family-name:var(--font-display)] text-[23px] font-semibold leading-[1.16] text-[var(--color-ink)]">
+        {competition.title}
+      </h2>
+
+      <p className="mt-[10px] text-[14.5px] leading-[1.55] text-[var(--color-ink-muted)]">
+        {competition.theme}
+      </p>
+
+      <div className="mt-4 flex items-center justify-between border-t border-[rgba(42,26,18,0.08)] pt-4">
+        <span className="text-[13px] text-[var(--color-ink-muted-2)]">
+          {competition.prizeDescription}
+        </span>
+        <span className="text-[13.5px] font-semibold text-[var(--color-primary)]">
+          See competition →
+        </span>
+      </div>
     </Link>
   );
 }

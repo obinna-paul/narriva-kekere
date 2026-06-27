@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Heading, Body } from "@/components/ui/typography";
-import { CategoryPill } from "@/components/narriva/category-pill";
+import { PhotoPlaceholder } from "@/components/narriva/photo-placeholder";
 import type { MockBlogPost } from "@/content/mock/narriva-blog";
 
 export interface BlogCardProps {
@@ -12,33 +11,24 @@ export function BlogCard({ post, className }: BlogCardProps) {
   return (
     <Link
       href={`/blog/${post.slug}`}
-      className={`flex flex-col gap-3 rounded-lg p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${className ?? ""}`}
+      className={`block opacity-100 transition-opacity hover:opacity-[0.96] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${className ?? ""}`}
     >
-      <div
-        aria-hidden="true"
-        className="flex h-40 items-center justify-center rounded-md p-4 text-center"
-        style={{ backgroundColor: post.coverColor }}
-      >
-        <span className="font-[family-name:var(--font-display)] text-lg font-semibold text-white">
-          {post.title}
+      <PhotoPlaceholder label="editorial photo" aspect="16/10" />
+      <div className="mt-[18px] flex items-center gap-3">
+        <span className="rounded-full border border-[var(--color-primary)]/25 px-2.5 py-1 text-[11px] uppercase tracking-[0.08em] text-[var(--color-primary)]">
+          {post.category}
+        </span>
+        <span className="text-[13px] text-[var(--color-muted-3)]">
+          {new Date(post.date).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
         </span>
       </div>
-      <div>
-        <CategoryPill>{post.category}</CategoryPill>
-      </div>
-      <time dateTime={post.date} className="text-sm text-[var(--color-ink)]/60">
-        {new Date(post.date).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
-      </time>
-      <Heading as="h3" size="h4" className="hover:underline">
+      <h3 className="mt-3.5 font-[family-name:var(--font-display)] text-[23px] font-medium leading-[1.2] text-[var(--color-ink)]">
         {post.title}
-      </Heading>
-      <Body size="sm" className="text-[var(--color-ink)]/70">
-        {post.excerpt}
-      </Body>
+      </h3>
+      <p className="mt-2.5 text-[14.5px] leading-[1.6] text-[var(--color-muted)]">{post.excerpt}</p>
+      <span className="mt-3 inline-block border-b border-[var(--color-primary)]/25 text-[13px] text-[var(--color-primary)]">
+        Read more →
+      </span>
     </Link>
   );
 }

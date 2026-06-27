@@ -7,10 +7,10 @@ export interface ProfileCardProps {
 
 export function ProfileCard({ profile, onEditClick }: ProfileCardProps) {
   return (
-    <div className="rounded-3xl bg-[var(--color-ink)]/[0.04] p-6 text-center">
+    <div className="animate-fade-in-up rounded-3xl bg-[var(--color-surface)] p-6 text-center shadow-sm shadow-black/5 ring-1 ring-[var(--color-border)]">
       <span
         aria-hidden="true"
-        className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
+        className="mx-auto flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md"
         style={{ backgroundColor: profile.avatarColor }}
       >
         {profile.name
@@ -19,13 +19,13 @@ export function ProfileCard({ profile, onEditClick }: ProfileCardProps) {
           .join("")}
       </span>
       <h1 className="mt-3 text-xl font-bold">{profile.name}</h1>
-      <p className="text-sm text-[var(--color-ink)]/50">{profile.email}</p>
+      <p className="text-sm text-[var(--color-ink-muted)]">{profile.email}</p>
       <p className="mx-auto mt-3 max-w-sm text-sm text-[var(--color-ink)]/75">{profile.bio}</p>
       {onEditClick && (
         <button
           type="button"
           onClick={onEditClick}
-          className="mt-4 rounded-full border border-[var(--color-ink)]/15 px-5 py-2 text-sm font-medium"
+          className="mt-4 rounded-full border border-[var(--color-border)] px-5 py-2 text-sm font-medium transition-colors hover:bg-[var(--color-primary-muted)] hover:text-[var(--color-primary)]"
         >
           Edit profile
         </button>

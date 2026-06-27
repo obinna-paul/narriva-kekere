@@ -9,9 +9,13 @@ export const GET = withAuth(async (request, session, { params }: { params: { id:
   const userId = session.user.id;
   const bookId = params.id;
 
-  const purchase = await getBookPurchase(userId, bookId);
-  if (!purchase) {
-    return NextResponse.json({ error: "Not purchased" }, { status: 403 });
+  // Admins can preview unpurchased content (e.g. right after uploading it)
+  // without needing a BookPurchase row of their own.
+  if (session.user.role !== "ADMIN") {
+    const purchase = await getBookPurchase(userId, bookId);
+    if (!purchase) {
+      return NextResponse.json({ error: "Not purchased" }, { status: 403 });
+    }
   }
 
   const book = await getBookById(bookId);

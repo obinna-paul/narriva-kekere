@@ -22,6 +22,10 @@ import { getToken } from "next-auth/jwt";
 // or library page makes no sense either, so these are gated the same way).
 const KEKERE_PROTECTED_PREFIXES = ["/kekere/wallet", "/kekere/library", "/kekere/profile", "/kekere/write"];
 
+// Narriva's equivalents: the ebook reader and purchased-book library need a
+// real identity (purchases and reading progress are per-user).
+const NARRIVA_PROTECTED_PREFIXES = ["/read", "/account"];
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
@@ -44,7 +48,8 @@ export async function middleware(request: NextRequest) {
   const isProtected =
     effectivePathname.startsWith("/admin") ||
     effectivePathname.startsWith("/portal") ||
-    KEKERE_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix));
+    KEKERE_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix)) ||
+    NARRIVA_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix));
 
   if (isProtected) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });

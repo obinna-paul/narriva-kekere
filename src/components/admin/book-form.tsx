@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import {
   Select,
   SelectContent,
@@ -14,6 +17,93 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+interface EbookStats {
+  ebookRef: string;
+  chapterCount: number;
+  wordCount: number;
+  estimatedReadTime: number;
+}
+
+function EbookUploadField({
+  bookId,
+  ebookRef,
+  chapterCount,
+  wordCount,
+  estimatedReadTime,
+  onUploaded,
+}: {
+  bookId: string;
+  ebookRef: string;
+  chapterCount: string;
+  wordCount: string;
+  estimatedReadTime: string;
+  onUploaded: (stats: EbookStats) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+
+      const res = await fetch(`/api/admin/books/${bookId}/ebook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(json),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Upload failed");
+      }
+
+      onUploaded(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't parse or upload that file");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-ink)]/10 p-4">
+      <Label htmlFor="ebookFile">Ebook content (JSON)</Label>
+      <input
+        id="ebookFile"
+        type="file"
+        accept="application/json"
+        onChange={handleFile}
+        disabled={uploading}
+        className="text-sm"
+      />
+      {uploading && <p className="text-sm text-[var(--color-ink)]/60">Uploading…</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {ebookRef && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--color-ink)]/70">
+          <span>
+            {chapterCount} chapters · {Number(wordCount).toLocaleString()} words · ~{estimatedReadTime} min
+          </span>
+          <Link
+            href={`/read/${bookId}`}
+            target="_blank"
+            className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+          >
+            Preview in reader
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export interface BookFormAuthor {
   id: string;
@@ -202,27 +292,25 @@ export function BookForm({ mode, bookId, authors, initial }: BookFormProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="ebookRef">Ebook R2 path</Label>
-          <Input id="ebookRef" required value={values.ebookRef} onChange={(e) => set("ebookRef", e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="chapterCount">Chapter count</Label>
-          <Input id="chapterCount" type="number" min="0" required value={values.chapterCount} onChange={(e) => set("chapterCount", e.target.value)} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wordCount">Word count</Label>
-          <Input id="wordCount" type="number" min="0" required value={values.wordCount} onChange={(e) => set("wordCount", e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="estimatedReadTime">Est. read time (minutes)</Label>
-          <Input id="estimatedReadTime" type="number" min="0" required value={values.estimatedReadTime} onChange={(e) => set("estimatedReadTime", e.target.value)} />
-        </div>
-      </div>
+      {mode === "edit" && bookId ? (
+        <EbookUploadField
+          bookId={bookId}
+          ebookRef={values.ebookRef}
+          chapterCount={values.chapterCount}
+          wordCount={values.wordCount}
+          estimatedReadTime={values.estimatedReadTime}
+          onUploaded={(stats) => {
+            set("ebookRef", stats.ebookRef);
+            set("chapterCount", String(stats.chapterCount));
+            set("wordCount", String(stats.wordCount));
+            set("estimatedReadTime", String(stats.estimatedReadTime));
+          }}
+        />
+      ) : (
+        <p className="rounded-lg bg-[var(--color-ink)]/[0.04] p-4 text-sm text-[var(--color-ink)]/60">
+          Save this book first, then come back to its edit page to upload the ebook content.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">

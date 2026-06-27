@@ -20,6 +20,9 @@ export interface ServiceFAQ {
 export interface ServiceContent {
   slug: string;
   name: string;
+  /** Short italic line shown right under the H1 in the header — distinct
+   * from `opening`, which is the longer paragraph further down the page. */
+  tagline: string;
   opening: string;
   included: readonly ServiceIncludedItem[];
   closing: string;
@@ -31,6 +34,7 @@ export const SERVICES: readonly ServiceContent[] = [
   {
     slug: "publishing",
     name: "Publishing",
+    tagline: "Everything between a finished manuscript and a book someone can hold, shelve, and recommend.",
     opening:
       "Publishing, to us, means everything between a finished manuscript and a book someone can hold, shelve, and recommend — editorial, design, production, and the launch itself, run by one team instead of four vendors who've never spoken to each other. If you're choosing between piecing this together yourself and handing it to us whole, this is the service that answers that question.",
     included: [
@@ -90,6 +94,7 @@ export const SERVICES: readonly ServiceContent[] = [
   {
     slug: "editorial",
     name: "Editorial Services",
+    tagline: "The work of making a good manuscript into the best version of itself.",
     opening:
       "A spellcheck pass is not editing. Editing is a stranger reading your book the way your reader eventually will, and telling you, specifically, where it stopped working. We offer three levels, and we'll tell you honestly which one your manuscript needs rather than upselling you into the most expensive one.",
     included: [
@@ -139,6 +144,7 @@ export const SERVICES: readonly ServiceContent[] = [
   {
     slug: "design",
     name: "Design",
+    tagline: "The two seconds it takes a reader to decide your book was made with care.",
     opening:
       "A reader decides whether to pick up your book in under two seconds, and almost none of that decision is made by reading. Design is cover, interior layout, and typesetting working together to signal, instantly, that this book was made with the same care as the writing inside it.",
     included: [
@@ -193,6 +199,7 @@ export const SERVICES: readonly ServiceContent[] = [
   {
     slug: "author-growth",
     name: "Author Growth",
+    tagline: "Making sure the readers who would love your book actually hear about it.",
     opening:
       "A book that launches quietly and a book that launches with momentum can be identical on the page and have completely different outcomes. Author Growth is the work of making sure people who would actually like your book hear about it — before, during, and well after release day.",
     included: [
@@ -215,6 +222,11 @@ export const SERVICES: readonly ServiceContent[] = [
         title: "Post-launch tracking",
         description:
           "Sales data and audience growth, reported back to you in plain language, not a dashboard you have to interpret yourself.",
+      },
+      {
+        title: "Author website",
+        description:
+          "A clean, professional author website — your home on the web. Built to showcase your books, your story, and how readers can reach you. Never a template you have to fight with.",
       },
     ],
     closing:
@@ -247,6 +259,7 @@ export const SERVICES: readonly ServiceContent[] = [
   {
     slug: "ghostwriting",
     name: "Ghostwriting",
+    tagline: "The book that exists clearly in your head and nowhere else yet.",
     opening:
       "Ghostwriting is for the book that exists clearly in your head and nowhere else yet — you have the story, the expertise, or the life that's worth a book, but not the time or the craft to spend six months drafting it yourself. We write it, in your voice, from material only you can provide.",
     included: [

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="#" style="font-size:15px;color:#161616">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <header style="max-width:720px;margin:0 auto;padding:84px 32px 0">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:18px">How we work</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:50px;line-height:1.05;letter-spacing:-0.02em;color:#161616">We meet a manuscript where it is</h1>
+    <p style="margin-top:24px;font-family:'Fraunces',serif;font-size:21px;line-height:1.65;color:#2A2620">Narriva's job is not to judge a manuscript pass or fail. It's to read it carefully, work out what it needs to become the best version of itself, and build from there. Some books need deep editorial work. Some need a light pass and a great cover. We tell you honestly which — and then we do it.</p>
+  </header>
+
+  <!-- WHAT WE LOOK AT -->
+  <section style="max-width:720px;margin:0 auto;padding:64px 32px 0">
+    <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:30px;color:#161616;letter-spacing:-0.01em;margin-bottom:8px">What we look at</h2>
+    <p style="font-size:15px;color:#8A857C;margin-bottom:30px">Not a checklist to pass — the things we read for when we're working out what a book needs.</p>
+    <div>
+      <sc-for list="{{ assess }}" as="a" hint-placeholder-count="4">
+        <div style="display:flex;gap:20px;padding:22px 0;border-bottom:1px solid rgba(22,22,22,0.08)">
+          <span style="flex:none;width:7px;height:7px;border-radius:50%;background:#B08D57;margin-top:9px"></span>
+          <div>
+            <div style="font-size:17px;font-weight:600;color:#161616;font-family:'Fraunces',serif">{{ a.t }}</div>
+            <div style="margin-top:6px;font-size:15px;line-height:1.65;color:#55514A">{{ a.d }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- AFTER YOU SUBMIT -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07);background:#F6F3ED;margin-top:80px">
+    <div style="max-width:760px;margin:0 auto;padding:80px 32px">
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:34px;color:#161616;letter-spacing:-0.015em;margin-bottom:12px">What happens after you submit</h2>
+      <p style="font-size:16px;line-height:1.6;color:#55514A;margin-bottom:48px;max-width:520px">Most authors hear back within six to eight weeks of submission with an assessment and a proposed plan. Here's the whole path.</p>
+      <div style="position:relative;padding-left:40px">
+        <div style="position:absolute;left:13px;top:8px;bottom:8px;width:1px;background:rgba(30,58,138,0.2)"></div>
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+          <div style="position:relative;padding-bottom:38px">
+            <div style="position:absolute;left:-40px;top:0;width:28px;height:28px;border-radius:50%;background:#F6F3ED;border:1.5px solid #1E3A8A;color:#1E3A8A;font-family:'Fraunces',serif;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ s.n }}</div>
+            <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+              <h3 style="font-size:19px;font-weight:600;color:#161616;font-family:'Fraunces',serif">{{ s.title }}</h3>
+              <span style="font-size:12.5px;color:#9A7B49;letter-spacing:0.02em">{{ s.time }}</span>
+            </div>
+            <p style="margin-top:8px;font-size:15px;line-height:1.65;color:#55514A;max-width:560px">{{ s.body }}</p>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW WE WORK WITH YOU -->
+  <section style="border-top:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:720px;margin:0 auto;padding:80px 32px 40px">
+      <h2 style="font-family:'Fraunces',serif;font-weight:500;font-size:34px;color:#161616;letter-spacing:-0.015em;margin-bottom:24px">How we work with you</h2>
+      <div style="font-family:'Fraunces',serif;font-size:20px;line-height:1.7;color:#2A2620">
+        <p style="margin-bottom:22px">You get a single point of contact who knows your book — not a relay of strangers. You have visibility into where things stand at every stage, and you have a real say in the decisions that matter: cover direction, title, how the book is positioned.</p>
+        <p>We build the book <span style="font-style:italic;color:#1E3A8A">with</span> you, not for you. That's the part most publishers skip, and it's the part that makes the difference.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width:720px;margin:0 auto;padding:30px 32px 100px;text-align:center">
+    <a href="Narriva - Submit.dc.html" style="display:inline-block;font-size:15px;font-weight:600;color:#FAF8F4;background:#1E3A8A;padding:16px 32px;border-radius:2px" style-hover="background:#162C6B">Submit your manuscript</a>
+  </section>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      assess: [
+        { t: 'Narrative structure', d: 'How the book is built — where it starts, how it moves, whether the shape serves the story or fights it.' },
+        { t: 'Prose quality', d: 'Sentence by sentence: rhythm, clarity, and whether the voice is doing what the author wants it to.' },
+        { t: 'Clarity of audience', d: "Who this book is for. The strongest manuscripts know their reader; we help the others find theirs." },
+        { t: 'Completeness', d: 'Where the manuscript actually is — a rough draft, a polished one, or something in between — so we can scope honestly.' }
+      ],
+      steps: [
+        { n: '1', title: 'Submit', time: 'Day one', body: "Send your manuscript and a short note on what it is and who it's for. We confirm we've got it the same day." },
+        { n: '2', title: 'Assess', time: '6–8 weeks', body: 'An editor reads the whole manuscript and writes you an honest assessment: what it needs, where it shines, and what we\u2019d recommend.' },
+        { n: '3', title: 'Plan', time: '1 week', body: 'We scope the work together and agree on the path from where the manuscript is to publication — timeline, services, and cost.' },
+        { n: '4', title: 'Build', time: '3–6 months', body: 'Editorial passes, design, interior layout. The longest part, and the part that matters most. You stay in the loop throughout.' },
+        { n: '5', title: 'Produce', time: '3–4 weeks', body: 'ISBN, print-ready files, digital formatting, and proofs. The unglamorous machinery that makes a book real.' },
+        { n: '6', title: 'Launch', time: 'Ongoing', body: 'Your book goes live in the bookstore with a plan behind it, not just a listing — and we stay invested in what happens next.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

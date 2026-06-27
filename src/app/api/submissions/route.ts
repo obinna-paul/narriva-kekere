@@ -26,6 +26,9 @@ export async function POST(request: Request) {
     manuscriptTitle: formData.get("manuscriptTitle"),
     synopsis: formData.get("synopsis"),
     targetAudience: formData.get("targetAudience"),
+    genre: formData.get("genre"),
+    manuscriptStage: formData.get("manuscriptStage"),
+    supportNeeded: formData.getAll("supportNeeded"),
     guidelinesAccepted: formData.get("guidelinesAccepted") === "true",
   };
 
@@ -61,7 +64,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { authorName, authorEmail, manuscriptTitle, synopsis, targetAudience } =
+  const { authorName, authorEmail, manuscriptTitle, synopsis, targetAudience, genre, manuscriptStage, supportNeeded } =
     parsedFields.data;
 
   const submission = await createSubmission({
@@ -72,6 +75,9 @@ export async function POST(request: Request) {
     manuscriptRef,
     synopsis,
     targetAudience,
+    genre,
+    manuscriptStage,
+    supportNeeded,
   });
 
   // Guest submissions aren't auto-linked if the same email later registers

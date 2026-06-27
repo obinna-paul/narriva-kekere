@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+  input{font-family:'Inter',sans-serif}
+  .ph{background:repeating-linear-gradient(45deg,#ECE7DD,#ECE7DD 9px,#E6E0D4 9px,#E6E0D4 18px)}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#161616">Authors</a>
+        <a href="Narriva - Blog.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <header style="max-width:1140px;margin:0 auto;padding:80px 32px 44px">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:16px">Reading &amp; writing</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:52px;letter-spacing:-0.02em;color:#161616">From the desk</h1>
+    <p style="margin-top:16px;font-size:17px;color:#55514A;max-width:520px">Notes on craft, publishing, and the long work of making a book — from the people who do it.</p>
+  </header>
+
+  <!-- FILTERS -->
+  <div style="max-width:1140px;margin:0 auto;padding:0 32px 44px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <sc-for list="{{ cats }}" as="c" hint-placeholder-count="5">
+        <button onClick="{{ c.onClick }}" style="cursor:pointer;font-size:13.5px;font-weight:500;padding:9px 16px;border-radius:30px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }}">{{ c.label }}</button>
+      </sc-for>
+    </div>
+    <div style="position:relative">
+      <input type="text" placeholder="Search the blog" style="font-size:14px;color:#161616;background:#fff;border:1px solid rgba(22,22,22,0.16);border-radius:30px;padding:10px 18px 10px 40px;width:220px;outline:none">
+      <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:14px;color:#A8A296">⌕</span>
+    </div>
+  </div>
+
+  <section style="max-width:1140px;margin:0 auto;padding:0 32px 110px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:40px 36px">
+      <sc-for list="{{ shown }}" as="p" hint-placeholder-count="6">
+        <a href="Narriva - Blog Post.dc.html" style="display:block" style-hover="opacity:0.96">
+          <div class="ph" style="aspect-ratio:16/10;border-radius:3px;position:relative;overflow:hidden">
+            <span style="position:absolute;left:12px;bottom:10px;font-family:'Inter',monospace;font-size:10px;color:#A99F8E">editorial photo</span>
+          </div>
+          <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+            <span style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#1E3A8A;border:1px solid rgba(30,58,138,0.25);padding:4px 10px;border-radius:20px">{{ p.cat }}</span>
+            <span style="font-size:13px;color:#8A857C">{{ p.date }}</span>
+          </div>
+          <h2 style="font-family:'Fraunces',serif;font-size:23px;font-weight:500;line-height:1.2;color:#161616;margin-top:14px">{{ p.title }}</h2>
+          <p style="font-size:14.5px;line-height:1.6;color:#55514A;margin-top:10px">{{ p.excerpt }}</p>
+          <span style="display:inline-block;margin-top:12px;font-size:13px;color:#1E3A8A;border-bottom:1px solid rgba(30,58,138,0.25)">Read more →</span>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { cat: 'All' };
+  renderVals() {
+    const posts = [
+      { cat: 'Writing Craft', date: 'May 2026', title: 'Why your first chapter is probably your third', excerpt: "The opening you agonised over is often setup the reader doesn't need. Here's how to find the real start." },
+      { cat: 'Publishing Advice', date: 'Apr 2026', title: 'What a developmental edit actually changes', excerpt: "Not commas. Structure, pacing, and the gap between what you meant and what's on the page." },
+      { cat: 'Behind the Scenes', date: 'Apr 2026', title: 'Designing a cover that survives a thumbnail', excerpt: 'Most book covers are first seen at the size of a stamp. We design for that moment first.' },
+      { cat: 'Author Spotlight', date: 'Mar 2026', title: 'Adaeze Okonkwo on writing the Lagos coast', excerpt: 'The debut novelist on salt, smuggling, and the family secrets that became her first book.' },
+      { cat: 'Writing Craft', date: 'Mar 2026', title: 'The middle is not a problem to survive', excerpt: 'Saggy second acts usually mean the book forgot what it wanted. A few ways to remind it.' },
+      { cat: 'Publishing Advice', date: 'Feb 2026', title: 'What it really costs to publish a book well', excerpt: 'An honest breakdown of where the money goes, and why the cheapest option rarely is.' }
+    ];
+    const cats = ['All', 'Writing Craft', 'Publishing Advice', 'Author Spotlight', 'Behind the Scenes'];
+    const cur = this.state.cat;
+    const shown = cur === 'All' ? posts : posts.filter(p => p.cat === cur);
+    return {
+      cats: cats.map(c => ({
+        label: c,
+        bg: cur === c ? '#1E3A8A' : 'transparent',
+        color: cur === c ? '#FAF8F4' : '#55514A',
+        border: cur === c ? '#1E3A8A' : 'rgba(22,22,22,0.16)',
+        onClick: () => this.setState({ cat: c })
+      })),
+      shown
+    };
+  }
+}
+</script>
+</body>
+</html>

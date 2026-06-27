@@ -62,6 +62,19 @@ export function renderSimpleMarkdown(content: string): ReactNode[] {
           </h2>
         );
       }
+      if (/^-{3,}$/.test(block)) {
+        return <hr key={key} className="my-2 border-[var(--color-ink)]/15" />;
+      }
+      if (block.startsWith("> ")) {
+        return (
+          <blockquote
+            key={key}
+            className="border-l-2 border-[var(--color-ink)]/20 pl-4 italic text-[var(--color-ink)]/75"
+          >
+            {renderInline(block.slice(2), key)}
+          </blockquote>
+        );
+      }
       return <p key={key}>{renderInline(block, key)}</p>;
     });
 }

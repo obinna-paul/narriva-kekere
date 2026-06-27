@@ -1,23 +1,18 @@
 import { NarrivaTheme } from "@/components/theme";
-import { Container, Section } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AuthorDetailLoading() {
   return (
     <NarrivaTheme>
       <main>
-        <Section>
-          <Container>
-            <div className="flex items-center gap-6">
-              <Skeleton className="h-28 w-28 shrink-0 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-10 w-64" />
-                <Skeleton className="mt-3 h-5 w-full max-w-md" />
-              </div>
-            </div>
-            <Skeleton className="mt-10 h-24 w-full max-w-2xl" />
-          </Container>
-        </Section>
+        <div className="mx-auto grid max-w-[1140px] gap-14 px-8 py-10 pb-[72px] lg:grid-cols-[34%_1fr]">
+          <Skeleton className="aspect-[4/5] w-full rounded" />
+          <div>
+            <Skeleton className="h-12 w-72" />
+            <Skeleton className="mt-4 h-5 w-80" />
+            <Skeleton className="mt-7 h-24 w-full max-w-[520px]" />
+          </div>
+        </div>
       </main>
     </NarrivaTheme>
   );

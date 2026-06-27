@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+  select{font-family:'Inter',sans-serif;-webkit-appearance:none;appearance:none}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+
+  <!-- NAV -->
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A;letter-spacing:-0.01em">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#1E3A8A;font-weight:500">Books</a>
+        <a href="#" style="font-size:15px;color:#161616">Services</a>
+        <a href="#" style="font-size:15px;color:#161616">Authors</a>
+        <a href="#" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="#" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px" style-hover="background:#162C6B">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <header style="max-width:1240px;margin:0 auto;padding:72px 32px 36px">
+    <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:16px">The bookstore</div>
+    <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:52px;letter-spacing:-0.02em;color:#161616">Every book, built here</h1>
+    <p style="margin-top:18px;font-size:17px;line-height:1.6;color:#55514A;max-width:520px">Read in your browser, no download required. Every title was edited, designed, and produced by the Narriva team.</p>
+  </header>
+
+  <!-- FILTER BAR -->
+  <div style="position:sticky;top:74px;z-index:40;background:rgba(250,248,244,0.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(22,22,22,0.07);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="position:relative">
+          <select value="{{ genre }}" onChange="{{ setGenre }}" style="font-size:14px;color:#161616;background:transparent;border:1px solid rgba(22,22,22,0.16);border-radius:2px;padding:10px 34px 10px 14px;cursor:pointer">
+            <sc-for list="{{ genreOptions }}" as="g" hint-placeholder-count="6"><option value="{{ g }}">{{ g }}</option></sc-for>
+          </select>
+          <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:9px;opacity:0.5;pointer-events:none">▾</span>
+        </div>
+        <div style="font-size:13px;color:#8A857C;border:1px solid rgba(22,22,22,0.12);border-radius:2px;padding:10px 14px;background:rgba(22,22,22,0.02)">Format · Ebook</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:13px;color:#8A857C">{{ count }} books</span>
+        <div style="width:1px;height:18px;background:rgba(22,22,22,0.12)"></div>
+        <div style="position:relative">
+          <select value="{{ sort }}" onChange="{{ setSort }}" style="font-size:14px;color:#161616;background:transparent;border:1px solid rgba(22,22,22,0.16);border-radius:2px;padding:10px 34px 10px 14px;cursor:pointer">
+            <option value="newest">Sort · Newest</option>
+            <option value="az">Sort · A–Z</option>
+            <option value="price">Sort · Price</option>
+          </select>
+          <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:9px;opacity:0.5;pointer-events:none">▾</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <section style="max-width:1240px;margin:0 auto;padding:54px 32px 96px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:48px 40px">
+      <sc-for list="{{ shown }}" as="b" hint-placeholder-count="9">
+        <a href="Narriva - Book Detail.dc.html" style="display:block">
+          <div style="position:relative;overflow:hidden">
+            <div style="aspect-ratio:3/4;border-radius:3px 5px 5px 3px;box-shadow:0 14px 32px -16px rgba(22,22,22,0.34);padding:30px 26px;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid rgba(0,0,0,0.16);transition:transform .35s cubic-bezier(.2,.7,.3,1),box-shadow .35s;background:{{ b.cover }}" style-hover="transform:translateY(-6px);box-shadow:0 28px 48px -18px rgba(22,22,22,0.4)">
+              <span style="font-family:'Fraunces',serif;font-style:italic;font-size:12px;color:{{ b.faint }}">Narriva</span>
+              <div><div style="width:26px;height:1px;background:#B08D57;margin-bottom:15px"></div><div style="font-family:'Fraunces',serif;font-size:24px;line-height:1.13;font-weight:500;color:{{ b.ink }}">{{ b.title }}</div><div style="margin-top:13px;font-size:10px;letter-spacing:0.06em;color:{{ b.faint }}">{{ b.authorCaps }}</div></div>
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+            <div style="flex:1">
+              <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:500;color:#161616;line-height:1.18">{{ b.title }}</div>
+              <div style="margin-top:5px;font-size:13.5px;color:#8A857C">{{ b.author }}</div>
+              <div style="margin-top:10px;font-size:13.5px;font-style:italic;line-height:1.45;color:#4A463F">"{{ b.hook }}"</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:15px;font-weight:600;color:#161616">{{ b.price }}</span>
+            <span style="font-size:13px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:9px 20px;border-radius:2px" style-hover="background:#162C6B">Buy</span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:#B08D57">We work with authors at every stage — from a rough idea to a book worth reading.</span>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { genre: 'All genres', sort: 'newest' };
+
+  renderVals() {
+    const all = [
+      { title: 'The Salt Roads of Badagry', author: 'Adaeze Okonkwo', authorCaps: 'ADAEZE OKONKWO', hook: "A smuggler's daughter inherits a ledger that names everyone her father ever betrayed.", price: '₦4,500', p: 4500, genre: 'Literary Fiction', cover: '#283655', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.62)' },
+      { title: 'Harmattan Sons', author: 'Tunde Bakare', authorCaps: 'TUNDE BAKARE', hook: 'Three brothers bury their father and discover he buried something first.', price: '₦3,800', p: 3800, genre: 'Family Saga', cover: '#2E4034', ink: '#F1EEE2', faint: 'rgba(241,238,226,0.62)' },
+      { title: 'The Cartographer of Lost Wards', author: 'Ifeoma Nwosu', authorCaps: 'IFEOMA NWOSU', hook: "She maps the parts of Lagos the government pretends aren't there.", price: '₦5,200', p: 5200, genre: 'Speculative', cover: '#5A2A2A', ink: '#F3EAE2', faint: 'rgba(243,234,226,0.6)' },
+      { title: 'Small Mercies in Surulere', author: 'Chidi Eze', authorCaps: 'CHIDI EZE', hook: 'A landlady, her tenants, and the slow arithmetic of forgiveness.', price: '₦4,000', p: 4000, genre: 'Literary Fiction', cover: '#252525', ink: '#EDEAE3', faint: 'rgba(237,234,227,0.55)' },
+      { title: 'What the River Keeps', author: 'Amara Diallo', authorCaps: 'AMARA DIALLO', hook: 'A drowned village resurfaces in a drought, and so do its debts.', price: '₦4,800', p: 4800, genre: 'Literary Fiction', cover: '#36514E', ink: '#F3EEE3', faint: 'rgba(243,238,227,0.6)' },
+      { title: 'The Inheritance of Silence', author: 'Kwame Mensah', authorCaps: 'KWAME MENSAH', hook: 'A famous novelist leaves his unpublished masterpiece to the son he never spoke to.', price: '₦3,500', p: 3500, genre: 'Literary Fiction', cover: '#C9B79C', ink: '#2A2419', faint: 'rgba(42,36,25,0.55)' },
+      { title: 'Praise Songs for the Living', author: 'Ngozi Achebe', authorCaps: 'NGOZI ACHEBE', hook: 'A funeral becomes a reunion no one in the family actually wanted.', price: '₦4,200', p: 4200, genre: 'Family Saga', cover: '#4A2F4A', ink: '#F1E9F0', faint: 'rgba(241,233,240,0.58)' },
+      { title: 'The Lagos Hours', author: 'Femi Adeyemi', authorCaps: 'FEMI ADEYEMI', hook: 'Twelve strangers, one citywide blackout, the longest night of the year.', price: '₦4,600', p: 4600, genre: 'Literary Fiction', cover: '#1F3A3A', ink: '#E9F0EE', faint: 'rgba(233,240,238,0.58)' },
+      { title: 'Gods of the Third Mainland', author: 'Zainab Bello', authorCaps: 'ZAINAB BELLO', hook: "When the bridge collapses, the city's old spirits wake up angry.", price: '₦5,000', p: 5000, genre: 'Speculative', cover: '#6B3A1F', ink: '#F2E7DC', faint: 'rgba(242,231,220,0.55)' }
+    ];
+    const g = this.state.genre;
+    let list = g === 'All genres' ? all.slice() : all.filter(b => b.genre === g);
+    if (this.state.sort === 'az') list.sort((a, b) => a.title.localeCompare(b.title));
+    else if (this.state.sort === 'price') list.sort((a, b) => a.p - b.p);
+    return {
+      genre: this.state.genre, sort: this.state.sort,
+      genreOptions: ['All genres', 'Literary Fiction', 'Family Saga', 'Speculative'],
+      setGenre: (e) => this.setState({ genre: e.target.value }),
+      setSort: (e) => this.setState({ sort: e.target.value }),
+      shown: list, count: list.length
+    };
+  }
+}
+</script>
+</body>
+</html>

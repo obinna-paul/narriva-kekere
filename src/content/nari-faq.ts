@@ -34,7 +34,7 @@ export const NARI_FAQ: readonly NariFAQEntry[] = [
     answer:
       "Read our submission guidelines first, then submit your manuscript through our submission form — it asks for your manuscript title, a synopsis, who the book is for, and the file itself (PDF or Word).",
     links: [
-      { label: "Submission guidelines", href: "/standards" },
+      { label: "Submission guidelines", href: "/how-we-work-together" },
       { label: "Submit your manuscript", href: "/submit" },
     ],
   },
@@ -104,6 +104,24 @@ export const NARI_FAQ: readonly NariFAQEntry[] = [
     ],
     answer:
       "From submission to bookstore: typically 6-12 months, depending on the book's needs. First response on a submission takes 6-8 weeks.",
+  },
+  {
+    id: "not-ready-yet",
+    question: "What if my manuscript isn't ready yet?",
+    keywords: [
+      "not ready",
+      "rejected",
+      "rejection",
+      "declined",
+      "decline",
+      "turned down",
+      "good enough",
+      "needs work",
+      "not accepted",
+    ],
+    answer:
+      "We don't turn manuscripts away. If yours needs work before it's ready for production, our editorial team will tell you exactly what it needs and offer our editing services — developmental editing, line editing, whatever it takes — to get it there.",
+    links: [{ label: "See how we work together", href: "/how-we-work-together" }],
   },
   {
     id: "self-publish-later",

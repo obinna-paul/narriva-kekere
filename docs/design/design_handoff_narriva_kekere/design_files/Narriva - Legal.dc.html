@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#FAF8F4;color:#161616;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#1E3A8A;color:#FAF8F4}
+  html{scroll-behavior:smooth}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#FAF8F4">
+  <nav style="position:sticky;top:0;z-index:50;background:rgba(250,248,244,0.9);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(22,22,22,0.07)">
+    <div style="max-width:1240px;margin:0 auto;padding:0 32px;height:74px;display:flex;align-items:center;justify-content:space-between">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:#1E3A8A">Narriva</a>
+      <div style="display:flex;align-items:center;gap:38px">
+        <a href="Narriva - Bookstore.dc.html" style="font-size:15px;color:#161616">Books</a>
+        <a href="Narriva - Services.dc.html" style="font-size:15px;color:#161616">Services</a>
+        <a href="Narriva - Authors.dc.html" style="font-size:15px;color:#161616">Authors</a>
+        <a href="Narriva - Blog.dc.html" style="font-size:15px;color:#161616">Blog</a>
+        <div style="width:1px;height:22px;background:rgba(22,22,22,0.12)"></div>
+        <a href="#" style="font-size:15px;color:#161616">Sign in</a>
+        <a href="Narriva - Submit.dc.html" style="font-size:14px;font-weight:500;color:#FAF8F4;background:#1E3A8A;padding:11px 20px;border-radius:2px">Submit Your Manuscript</a>
+      </div>
+    </div>
+  </nav>
+
+  <div style="max-width:980px;margin:0 auto;padding:72px 32px 110px;display:grid;grid-template-columns:240px 1fr;gap:56px;align-items:start">
+    <!-- TOC -->
+    <aside style="position:sticky;top:104px">
+      <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#9A7B49;font-weight:600;margin-bottom:18px">On this page</div>
+      <nav style="display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ sections }}" as="s" hint-placeholder-count="6">
+          <a href="#{{ s.id }}" style="font-size:14px;color:#55514A;line-height:1.4" style-hover="color:#1E3A8A">{{ s.title }}</a>
+        </sc-for>
+      </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <article>
+      <div style="font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:#9A7B49;font-weight:500;margin-bottom:16px">Legal</div>
+      <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:42px;letter-spacing:-0.02em;color:#161616">{{ docTitle }}</h1>
+      <p style="margin-top:12px;font-size:14px;color:#8A857C">Last updated 14 June 2026</p>
+
+      <!-- Publishing-Agreement-only banner -->
+      <sc-if value="{{ isAgreement }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:30px;background:#FBF3D9;border:1px solid #E8D9A0;border-radius:6px;padding:22px 26px">
+          <p style="font-size:15px;line-height:1.6;color:#5A4A1E">This page describes what our Publishing Agreement covers. The actual contract is provided and signed separately.</p>
+        </div>
+      </sc-if>
+
+      <div style="margin-top:36px">
+        <sc-for list="{{ sections }}" as="s" hint-placeholder-count="6">
+          <section id="{{ s.id }}" style="padding-top:18px;margin-bottom:40px;scroll-margin-top:100px">
+            <h2 style="font-family:'Fraunces',serif;font-size:24px;font-weight:500;color:#161616;margin-bottom:16px">{{ s.title }}</h2>
+            <sc-for list="{{ s.paras }}" as="p" hint-placeholder-count="2">
+              <p style="font-size:16px;line-height:1.75;color:#3A352E;margin-bottom:16px">{{ p }}</p>
+            </sc-for>
+          </section>
+        </sc-for>
+      </div>
+    </article>
+  </div>
+
+  <footer style="background:#FAF8F4;border-top:1px solid rgba(22,22,22,0.08)">
+    <div style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px">
+      <a href="Narriva - Home.dc.html" style="font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#1E3A8A">Narriva</a>
+      <span style="font-size:13px;color:#8A857C">© 2026 Narriva</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900},&quot;docTitle&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Privacy Policy&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;isAgreement&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const isAgreement = this.props.isAgreement ?? false;
+    return {
+      isAgreement,
+      docTitle: this.props.docTitle ?? 'Privacy Policy',
+      sections: [
+        { id: 'intro', title: '1. Introduction', paras: ['This policy explains what information Narriva collects, why we collect it, and what we do with it. We keep it short and in plain language, because legal documents should be readable.', 'By using Narriva, you agree to the practices described here. If anything is unclear, contact us — we would rather explain than have you guess.'] },
+        { id: 'collect', title: '2. What we collect', paras: ['We collect the information you give us — your name, email, and the manuscripts or messages you send — and basic technical data about how you use the site, so we can keep it working well.'] },
+        { id: 'use', title: '3. How we use it', paras: ['We use your information to provide our services: to read and assess your manuscript, to keep your library and reading progress, and to communicate with you about your book. We do not sell your data.'] },
+        { id: 'manuscripts', title: '4. Your manuscripts', paras: ['Your manuscript is yours. We treat every submission as confidential, share it only with the team working on it, and never use it for anything other than the work you have asked us to do.'] },
+        { id: 'rights', title: '5. Your rights', paras: ['You can ask to see, correct, or delete the personal information we hold about you at any time. Email us and we will action it promptly.'] },
+        { id: 'contact', title: '6. Contact', paras: ['Questions about this policy can be sent to hello@narriva.com. A real person reads that inbox.'] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

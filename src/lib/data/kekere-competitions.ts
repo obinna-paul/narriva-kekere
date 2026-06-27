@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { submitStory } from "@/lib/data/kekere-stories";
 import type { Competition, CompetitionEntry, CompetitionStatus, Story } from "@prisma/client";
+import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 export class CompetitionNotFoundError extends Error {
   constructor() {
@@ -57,6 +58,36 @@ export async function getPublicWinners(competitionId: string): Promise<WinnerEnt
     include: winnerInclude,
     orderBy: { placement: "asc" },
   });
+}
+
+export interface AllWinnerEntry {
+  story: StoryWithAuthor;
+  placement: number;
+  competitionTitle: string;
+}
+
+const storyWithAuthorInclude = {
+  author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+} as const;
+
+export async function getAllWinners(): Promise<AllWinnerEntry[]> {
+  const entries = await prisma.competitionEntry.findMany({
+    where: {
+      competition: { status: "COMPLETE" },
+      placement: { not: null },
+    },
+    include: {
+      story: { include: storyWithAuthorInclude },
+      competition: { select: { title: true } },
+    },
+    orderBy: { placement: "asc" },
+  });
+
+  return entries.map((e) => ({
+    story: e.story,
+    placement: e.placement!,
+    competitionTitle: e.competition.title,
+  }));
 }
 
 /** Admin-only — every entry, any status, regardless of where judging stands

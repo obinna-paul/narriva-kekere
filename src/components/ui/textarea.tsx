@@ -22,7 +22,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-invalid={!!error || undefined}
           aria-describedby={messageId}
           className={cn(
-            "w-full resize-y rounded-md border border-[var(--color-ink)]/20 bg-[var(--color-bg)] px-3 py-2 text-base text-[var(--color-ink)] placeholder:text-[var(--color-ink)]/40 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50",
+            "w-full resize-y rounded-[var(--radius-input)] border border-[var(--color-ink)]/20 bg-[var(--color-bg)] px-3 py-2 text-base text-[var(--color-ink)] placeholder:text-[var(--color-ink)]/40 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50",
             error && "border-red-500 focus:ring-red-500",
             className
           )}

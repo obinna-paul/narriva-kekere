@@ -16,8 +16,10 @@ export interface MockCompetition {
   themeDescription: string;
   deadline: string;
   prizeDescription: string;
+  prizeAmount?: string;
   wordCountLimit: number;
   status: CompetitionStatus;
+  rules?: readonly string[];
   pastWinners?: readonly MockCompetitionWinner[];
 }
 
@@ -31,8 +33,15 @@ export const MOCK_COMPETITIONS: readonly MockCompetition[] = [
     deadline: "2026-08-15",
     prizeDescription:
       "The winning story's author gets a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
+    prizeAmount: "₦150,000",
     wordCountLimit: 3000,
     status: "OPEN",
+    rules: [
+      "3,000 words maximum. Shorter is welcome.",
+      "Open to writers across Africa and the diaspora.",
+      "Previously unpublished stories only.",
+      "One entry per writer. Submit through the writer's editor.",
+    ],
   },
   {
     slug: "first-light-2026",
@@ -43,8 +52,15 @@ export const MOCK_COMPETITIONS: readonly MockCompetition[] = [
     deadline: "2026-07-01",
     prizeDescription:
       "The winning story's author gets a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
+    prizeAmount: "₦120,000",
     wordCountLimit: 2500,
     status: "JUDGING",
+    rules: [
+      "2,500 words maximum. Shorter is welcome.",
+      "Open to writers across Africa and the diaspora.",
+      "Previously unpublished stories only.",
+      "One entry per writer. Submit through the writer's editor.",
+    ],
   },
   {
     slug: "small-gods-2025",
@@ -55,6 +71,7 @@ export const MOCK_COMPETITIONS: readonly MockCompetition[] = [
     deadline: "2025-12-10",
     prizeDescription:
       "The winning story's author got a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
+    prizeAmount: "₦100,000",
     wordCountLimit: 3000,
     status: "CLOSED",
     pastWinners: [
@@ -74,6 +91,7 @@ export const MOCK_COMPETITIONS: readonly MockCompetition[] = [
     deadline: "2025-09-20",
     prizeDescription:
       "The winning story's author got a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
+    prizeAmount: "₦100,000",
     wordCountLimit: 2500,
     status: "CLOSED",
     pastWinners: [

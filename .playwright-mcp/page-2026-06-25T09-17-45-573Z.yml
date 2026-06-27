@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - main [ref=e3]:
+      - link "Back to feed" [ref=e5] [cursor=pointer]:
+        - /url: /kekere/feed
+        - text: ←
+      - generic [ref=e6]:
+        - heading "How can we help?" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Ask us anything. We're friendly, promise.
+      - generic [ref=e9]:
+        - button "For Readers" [ref=e10] [cursor=pointer]
+        - button "For Writers" [ref=e11] [cursor=pointer]
+        - button "Cowries & Wallet" [ref=e12] [cursor=pointer]
+        - button "Account" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - button "What are cowries?" [ref=e17] [cursor=pointer]:
+              - generic [ref=e18]: What are cowries?
+              - generic [ref=e19]: +
+            - paragraph [ref=e20]: Cowries are how you unlock stories on Kekere. Some stories are free; others cost a few cowries, and that goes straight to supporting the writer. Top up any time from your wallet.
+          - button "How long are the stories?" [ref=e22] [cursor=pointer]:
+            - generic [ref=e23]: How long are the stories?
+            - generic [ref=e24]: +
+          - button "Can I read offline?" [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: Can I read offline?
+            - generic [ref=e28]: +
+          - button "What does the completion rate mean?" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: What does the completion rate mean?
+            - generic [ref=e32]: +
+        - paragraph [ref=e34]: Still need us? Message the team — a real person replies.
+    - contentinfo [ref=e36]:
+      - generic [ref=e37]:
+        - paragraph [ref=e38]: Kekere
+        - generic [ref=e39]:
+          - link "Help" [ref=e40] [cursor=pointer]:
+            - /url: /kekere/help
+          - link "Privacy" [ref=e41] [cursor=pointer]:
+            - /url: /kekere/privacy
+          - link "Terms" [ref=e42] [cursor=pointer]:
+            - /url: /kekere/terms
+        - generic [ref=e43]:
+          - generic [ref=e44]: Instagram
+          - generic [ref=e45]: Twitter
+        - generic [ref=e46]:
+          - text: Part of the
+          - link "Narriva group" [ref=e47] [cursor=pointer]:
+            - /url: /
+  - alert [ref=e48]

@@ -12,6 +12,9 @@ export const submissionFormSchema = z.object({
   manuscriptTitle: z.string().min(1, "Manuscript title is required").max(300),
   synopsis: z.string().min(1, "A short synopsis is required").max(5000),
   targetAudience: z.string().min(1, "Tell us who this is for").max(1000),
+  genre: z.string().min(1, "Select a genre").max(100),
+  manuscriptStage: z.string().min(1, "Select where your manuscript is").max(100),
+  supportNeeded: z.array(z.string().min(1)).default([]),
   guidelinesAccepted: z.literal(true, {
     message: "You must confirm you've read the submission guidelines",
   }),

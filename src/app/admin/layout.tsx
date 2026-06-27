@@ -11,6 +11,9 @@ const NAV_LINKS = [
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/services", label: "Services" },
   { href: "/admin/submissions", label: "Submissions" },
+  { href: "/admin/purchases", label: "Purchases" },
+  { href: "/admin/transactions", label: "Transactions" },
+  { href: "/admin/account-deletions", label: "Account Deletions" },
   { href: "/admin/kekere/stories", label: "Kekere Stories" },
   { href: "/admin/kekere/competitions", label: "Kekere Competitions" },
 ];

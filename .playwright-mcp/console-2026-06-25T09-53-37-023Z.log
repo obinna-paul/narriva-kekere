@@ -1,0 +1,345 @@
+[   14897ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/kekere/feed:0
+[   21401ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:38559
+[   22431ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22433ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22434ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22434ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22435ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22435ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22435ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22436ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22437ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22476ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22477ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22479ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22479ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22479ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22480ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22480ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22480ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22480ms] Error: 
+Invalid `prisma.story.findMany()` invocation:
+
+
+Can't reach database server at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech:5432`.
+    at $n.handleRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\HP\Documents\narriva-kekere\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async Promise.all (index 0)
+    at async listStoriesTrending (webpack-internal:///(rsc)/./src/lib/data/kekere-stories.ts:124:45)
+    at async Promise.all (index 1)
+    at async KekereFeedPage (webpack-internal:///(rsc)/./src/app/(kekere)/kekere/feed/page.tsx:30:66)
+[   22303ms] [ERROR] The above error occurred in the <NotFoundErrorBoundary> component:
+
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at div
+    at KekereLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ReactDevOverlay. @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   22790ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.handleRequestError&arguments=&lineNumber=121&column=7315:0
+[   22902ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.handleAndLogRequestError&arguments=&lineNumber=121&column=6623:0
+[   22930ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.request&arguments=&lineNumber=121&column=6307:0
+[   23001ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=async+l&arguments=&lineNumber=130&column=9633:0
+[   23688ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.handleRequestError&arguments=&lineNumber=121&column=7315:0
+[   23732ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.handleAndLogRequestError&arguments=&lineNumber=121&column=6623:0
+[   23926ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=%24n.request&arguments=&lineNumber=121&column=6307:0
+[   23974ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/__nextjs_original-stack-frame?isServer=false&isEdgeServer=false&isAppDirectory=true&errorMessage=Error%3A+%0AInvalid+%60prisma.story.findMany%28%29%60+invocation%3A%0A%0A%0ACan%27t+reach+database+server+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60%0A%0APlease+make+sure+your+database+server+is+running+at+%60ep-wispy-night-adtfa06n-pooler.c-2.us-east-1.aws.neon.tech%3A5432%60.&file=C%3A%5CUsers%5CHP%5CDocuments%5Cnarriva-kekere%5Cnode_modules%5C%40prisma%5Cclient%5Cruntime%5Clibrary.js&methodName=async+l&arguments=&lineNumber=130&column=9633:0

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 export async function getKekereUserProfile(userId: string) {
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true, bio: true, avatarColor: true },
+    select: { name: true, email: true, bio: true, avatarColor: true, bankName: true, bankAccountNumber: true, bankAccountName: true },
   });
 }
 
@@ -55,4 +55,27 @@ export async function getReaderStats(userId: string): Promise<ReaderStats> {
   ]);
 
   return { storiesRead, savedCount };
+}
+
+export async function updateKekereProfile(
+  userId: string,
+  data: {
+    name: string;
+    bio: string;
+    bankName?: string | null;
+    bankAccountNumber?: string | null;
+    bankAccountName?: string | null;
+  },
+) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      name: data.name,
+      bio: data.bio,
+      ...(data.bankName !== undefined ? { bankName: data.bankName } : {}),
+      ...(data.bankAccountNumber !== undefined ? { bankAccountNumber: data.bankAccountNumber } : {}),
+      ...(data.bankAccountName !== undefined ? { bankAccountName: data.bankAccountName } : {}),
+    },
+    select: { name: true, bio: true },
+  });
 }

@@ -12,7 +12,16 @@ function isRecentlyPublished(publishedAt: Date): boolean {
   return Date.now() - publishedAt.getTime() < NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 }
 
-/** @param trending Whether this story is part of a trending-sorted result set. */
+/**
+ * Feed cards (StoryCard) never render `paragraphs` — they only show
+ * hookLine/cover/stats — so this deliberately does NOT include the story
+ * body at all. `listStories()` returns the full Prisma row regardless of
+ * unlock status (it has no reason to gate, since it's a list query), so if
+ * this adapter put `story.body` into the result, the public, unauthenticated
+ * feed endpoint (GET /api/kekere/stories) would leak the full text of every
+ * paid story to anyone — bypassing the cowrie paywall entirely. Use
+ * toReaderStoryData for the one place a real (gated) body is needed.
+ */
 export function toFeedStoryData(story: StoryWithAuthor, trending = false): MockStory {
   const publishedAt = story.publishedAt ?? story.createdAt;
 
@@ -32,7 +41,7 @@ export function toFeedStoryData(story: StoryWithAuthor, trending = false): MockS
     isTrending: trending,
     coverColor: story.coverColor,
     publishedAt: publishedAt.toISOString(),
-    paragraphs: story.body.split("\n\n"),
+    paragraphs: [],
   };
 }
 

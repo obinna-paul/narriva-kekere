@@ -5,8 +5,13 @@ import { cn } from "@/lib/utils/cn";
 
 // Brand-neutral: font comes from --font-display / --font-body, set by a theme
 // wrapper (NarrivaTheme / KekereTheme). Never import Fraunces or Inter here.
+// Display weight is also theme-driven (--font-display-weight) — per the
+// design handoff, Kekere's Fraunces use is deliberately heavier (600/700)
+// than Narriva's (400/500), even though both reference the same font family.
 function fontVar(font: "display" | "body") {
-  return font === "display" ? "font-[family-name:var(--font-display)]" : "font-[family-name:var(--font-body)]";
+  return font === "display"
+    ? "font-[family-name:var(--font-display)] font-[var(--font-display-weight)]"
+    : "font-[family-name:var(--font-body)]";
 }
 
 const headingVariants = cva("text-[var(--color-ink)]", {

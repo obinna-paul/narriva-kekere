@@ -12,6 +12,7 @@ const includedItemSchema = z.object({ title: z.string().min(1), description: z.s
 const faqSchema = z.object({ question: z.string().min(1), answer: z.string().min(1) });
 
 const contentSchema = z.object({
+  tagline: z.string().min(1).optional(),
   opening: z.string().min(1),
   included: z.array(includedItemSchema),
   closing: z.string().min(1),

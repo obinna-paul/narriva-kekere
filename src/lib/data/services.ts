@@ -2,6 +2,9 @@ import { prisma } from "@/lib/db/prisma";
 import type { Prisma, Service } from "@prisma/client";
 
 export interface ServiceContentJson {
+  /** Optional since it postdates this field's introduction — older rows
+   * saved before then simply don't have it yet. */
+  tagline?: string;
   opening: string;
   included: { title: string; description: string }[];
   closing: string;

@@ -21,7 +21,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-ink)]/10 bg-[var(--color-bg)] pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="flex items-stretch justify-between">
         {NAV_ITEMS.map((item) => {
@@ -33,11 +33,11 @@ export function BottomNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
-                  active ? "text-[var(--color-primary)]" : "text-[var(--color-ink)]/50"
+                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-200",
+                  active ? "text-[var(--color-primary)]" : "text-[var(--color-ink-muted)]"
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <Icon className={cn("h-5 w-5 transition-transform duration-200", active && "scale-110")} aria-hidden="true" />
                 {item.label}
               </Link>
             </li>

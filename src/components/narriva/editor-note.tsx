@@ -1,25 +1,23 @@
-import { Quote } from "lucide-react";
-import { Heading, Body } from "@/components/ui/typography";
-
 export interface EditorNoteProps {
   text: string;
   editor: string;
 }
 
-/** Signed editor's note — "why we published this" — visually set apart with a tinted block. */
+/** Signed editor's note — "why we published this" — gold left-rule on a
+ * warm tint, per the design handoff. */
 export function EditorNote({ text, editor }: EditorNoteProps) {
   return (
-    <div className="rounded-lg border-l-4 border-[var(--color-accent)] bg-[var(--color-accent)]/10 p-6 sm:p-8">
-      <div className="flex items-center gap-2 text-[var(--color-accent)]">
-        <Quote className="h-5 w-5" aria-hidden="true" />
-        <Heading as="h3" size="h4" font="body">
-          Why we published this
-        </Heading>
+    <div
+      className="rounded-r border-l-[3px] border-[var(--color-accent)] p-[30px] sm:p-[34px]"
+      style={{ backgroundColor: "rgba(176,141,87,0.08)" }}
+    >
+      <div className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent-text)]">
+        Why we published this
       </div>
-      <Body size="lg" font="display" className="mt-4 italic">
+      <p className="font-[family-name:var(--font-display)] text-[19px] italic leading-[1.6] text-[#3A2E1A]">
         {text}
-      </Body>
-      <p className="mt-4 text-sm text-[var(--color-ink)]/60">— {editor}</p>
+      </p>
+      <p className="mt-[18px] text-sm text-[#7A6748]">— {editor}</p>
     </div>
   );
 }

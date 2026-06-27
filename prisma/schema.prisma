@@ -41,6 +41,17 @@ model User {
   termsAcceptedAt     DateTime?
   deletionRequestedAt DateTime?
 
+  // Bank details for writer withdrawals (cowry → NGN via Paystack Transfers).
+  bankName          String?
+  bankAccountNumber String?
+  bankAccountName   String?
+
+  // Referral system — each user gets a unique code on signup.
+  // `referredBy` stores the inviter's referral code (not userId), so the
+  // inviter can be found even if they change their slug/name later.
+  referralCode String? @unique
+  referredBy   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -53,6 +64,10 @@ model User {
   bookPurchases      BookPurchase[]
   bookReadingProgress BookReadingProgress[]
   books              Book[]              @relation("BookAuthor")
+  storyRatings       StoryRating[]
+  storyCompletions   StoryCompletion[]
+  storyReadingProgress StoryReadingProgress[]
+  projects          AuthorProject[]
 }
 
 model Wallet {
@@ -72,6 +87,9 @@ enum TransactionType {
   UNLOCK
   REFUND
   WITHDRAWAL
+  TIP
+  REFERRAL
+  READ_REWARD
 }
 
 enum TransactionStatus {
@@ -158,6 +176,9 @@ model Story {
   unlocks            StoryUnlock[]
   competitionEntries CompetitionEntry[]
   savedBy            SavedStory[]
+  ratings            StoryRating[]
+  completions        StoryCompletion[]
+  readingProgress    StoryReadingProgress[]
 
   @@index([authorId])
 }
@@ -243,6 +264,12 @@ model NarrivaSubmission {
   manuscriptRef   String
   synopsis        String?
   targetAudience  String?
+  genre           String?
+  manuscriptStage String?
+  // What kind of support the author thinks they need (developmental
+  // editing, line editing, cover design, etc.) — their own guess, not a
+  // commitment; the actual plan comes out of our assessment.
+  supportNeeded   String[] @default([])
 
   status        NarrivaSubmissionStatus @default(RECEIVED)
   reviewerNotes String?
@@ -304,6 +331,7 @@ model Book {
 
   orderItems OrderItem[]
   purchases  BookPurchase[]
+  sales      BookSale[]
   readingProgress BookReadingProgress[]
 
   @@index([authorId])
@@ -383,6 +411,41 @@ model SavedStory {
   @@unique([userId, storyId])
 }
 
+model StoryRating {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId  String
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  rating   Int      // 1–5
+  ratedAt  DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+model StoryCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+model StoryReadingProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId        String
+  story          Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  scrollFraction Float    @default(0) // 0.0–1.0
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, storyId])
+}
+
 // Narriva blog (Phase 7) — added here since it didn't exist in the Phase 1
 // schema; the mock posts from Phase 6 seed into this model.
 
@@ -439,4 +502,119 @@ model Service {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Manual admin actions worth a paper trail — currently just BookPurchase
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // e.g. "APPROVE_WITHDRAWAL", "MANUAL_CREDIT"
+  target    String?  // user/story/transaction id
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+model NariConversation {
+  id             String   @id @default(cuid())
+  sessionId      String   // ties multiple messages into one conversation
+  role           String   // "user" | "nari"
+  message        String
+  language       String   @default("en")
+  classifiedLead Boolean  @default(false)
+  leadSummary    String?
+  createdAt      DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([classifiedLead])
+  @@index([createdAt])
+}
+
+enum ProjectStage {
+  INQUIRY
+  CONTRACT_SENT
+  ONBOARDING
+  MANUSCRIPT_REVIEW
+  DEVELOPMENTAL_EDIT
+  COPYEDIT
+  COVER_DESIGN
+  INTERIOR_TYPESET
+  AUTHOR_REVIEW
+  PROOFREAD
+  PRINTING
+  MARKETING
+  RELEASED
+}
+
+enum ProjectType {
+  FULL_PUBLISHING
+  EDITORIAL
+  COVER_DESIGN
+  GHOSTWRITING
+  AUTHOR_GROWTH
+}
+
+model AuthorProject {
+  id          String       @id @default(cuid())
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title       String       // book/project title
+  type        ProjectType
+  stage       ProjectStage @default(INQUIRY)
+  stageNote   String?      // admin note visible to author
+  notes       String?      // admin-only internal notes
+  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime     @default(now())
+
+  deliverables Deliverable[]
+
+  @@index([authorId])
+  @@index([stage])
+}
+
+enum DeliverableType {
+  COVER
+  MANUSCRIPT
+  INTERIOR_LAYOUT
+  MARKETING_ASSET
+  CONTRACT
+  OTHER
+}
+
+enum DeliverableStatus {
+  PENDING_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+model Deliverable {
+  id             String             @id @default(cuid())
+  projectId      String
+  project        AuthorProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  fileUrl        String?            // uploaded file URL
+  type           DeliverableType
+  status         DeliverableStatus  @default(PENDING_REVIEW)
+  authorComment  String?            // author's feedback
+  adminNotes     String?            // admin's internal notes
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model BookSale {
+  id         String   @id @default(cuid())
+  bookId     String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+  amountNgn  Float    // price in NGN
+  royaltyNgn Float?   // author's share in NGN (80% of amountNgn for platform sales)
+  saleType   String   @default("EBOOK") // EBOOK, PRINT
+  saleSource String   @default("NARRIVA_PLATFORM") // NARRIVA_PLATFORM, AMAZON, OTHER
+  saleDate   DateTime @default(now())
+
+  @@index([bookId])
+  @@index([saleDate])
 }

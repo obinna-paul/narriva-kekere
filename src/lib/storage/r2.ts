@@ -76,6 +76,24 @@ export async function getEbookContent(key: string): Promise<EbookContent> {
   return JSON.parse(text) as EbookContent;
 }
 
+/** Uploads structured ebook JSON to R2, keyed by book id. Overwrites any
+ * existing content at that key — re-uploading is how an admin corrects a
+ * book's content after the fact. */
+export async function uploadEbookJson(bookId: string, content: EbookContent): Promise<string> {
+  const key = `ebooks/${bookId}.json`;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: JSON.stringify(content),
+      ContentType: "application/json",
+    })
+  );
+
+  return key;
+}
+
 /** Fetches a single chapter from ebook content in R2. */
 export async function getEbookChapter(
   key: string,

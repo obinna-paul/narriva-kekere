@@ -154,6 +154,7 @@ async function seedServices() {
   for (let index = 0; index < SERVICES.length; index++) {
     const service = SERVICES[index];
     const content = {
+      tagline: service.tagline,
       opening: service.opening,
       included: service.included,
       closing: service.closing,

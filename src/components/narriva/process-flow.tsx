@@ -1,5 +1,3 @@
-import { Heading, Body } from "@/components/ui/typography";
-
 export interface ProcessStep {
   title: string;
   description: string;
@@ -25,47 +23,45 @@ export function ProcessFlow({ steps }: ProcessFlowProps) {
             {i < steps.length - 1 && (
               <span
                 aria-hidden="true"
-                className="absolute left-[19px] top-10 h-[calc(100%+1rem)] w-px bg-[var(--color-ink)]/15"
+                className="absolute left-5 top-10 h-[calc(100%+1rem)] w-px bg-[var(--color-primary)]/20"
               />
             )}
             <span
               aria-hidden="true"
-              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-primary)] bg-[var(--color-bg)] font-[family-name:var(--font-display)] font-semibold text-[var(--color-primary)]"
+              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[var(--color-primary)] bg-[var(--color-bg)] font-[family-name:var(--font-display)] text-base font-semibold text-[var(--color-primary)]"
             >
               {i + 1}
             </span>
-            <div className="pt-1.5">
-              <Heading as="h3" size="h4">
-                {step.title}
-              </Heading>
-              <Body size="sm" className="mt-1 text-[var(--color-ink)]/70">
+            <div className="pt-1">
+              <h3 className="text-[15px] font-semibold text-[var(--color-ink)]">{step.title}</h3>
+              <p className="mt-2 text-[13px] leading-[1.55] text-[var(--color-muted-2)]">
                 {step.description}
-              </Body>
+              </p>
             </div>
           </li>
         ))}
       </ol>
 
       {/* Desktop: horizontal flow */}
-      <ol className="relative hidden grid-cols-6 gap-4 md:grid">
+      <ol className="relative hidden grid-cols-6 gap-[18px] md:grid">
         <span
           aria-hidden="true"
-          className="absolute left-[8.33%] right-[8.33%] top-5 h-px bg-[var(--color-ink)]/15"
+          className="absolute left-[8%] right-[8%] top-5 h-px bg-[var(--color-primary)]/20"
         />
         {steps.map((step, i) => (
           <li key={step.title} className="relative flex flex-col items-center text-center">
             <span
               aria-hidden="true"
-              className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-primary)] bg-[var(--color-bg)] font-[family-name:var(--font-display)] font-semibold text-[var(--color-primary)]"
+              className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-[1.5px] border-[var(--color-primary)] bg-[var(--color-bg)] font-[family-name:var(--font-display)] text-base font-semibold text-[var(--color-primary)]"
             >
               {i + 1}
             </span>
-            <Heading as="h3" size="h4" className="mt-4">
+            <h3 className="mt-[22px] text-[15px] font-semibold text-[var(--color-ink)]">
               {step.title}
-            </Heading>
-            <Body size="sm" className="mt-1 text-[var(--color-ink)]/70">
+            </h3>
+            <p className="mt-2 px-1.5 text-[13px] leading-[1.55] text-[var(--color-muted-2)]">
               {step.description}
-            </Body>
+            </p>
           </li>
         ))}
       </ol>

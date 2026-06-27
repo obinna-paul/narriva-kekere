@@ -11,6 +11,7 @@ export interface MockEditorNote {
 }
 
 export interface MockBook {
+  id: string;
   slug: string;
   title: string;
   authorSlug: string;
@@ -33,6 +34,7 @@ export interface MockBook {
 
 export const MOCK_BOOKS: readonly MockBook[] = [
   {
+    id: "the-quiet-half",
     slug: "the-quiet-half",
     title: "The Quiet Half",
     authorSlug: "ngozi-adeyemi",
@@ -59,6 +61,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "the-currency-of-small-lies",
     slug: "the-currency-of-small-lies",
     title: "The Currency of Small Lies",
     authorSlug: "ngozi-adeyemi",
@@ -85,6 +88,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "lagos-after-dark",
     slug: "lagos-after-dark",
     title: "Lagos After Dark",
     authorSlug: "tunde-bakare",
@@ -111,6 +115,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "the-cartographer-of-small-things",
     slug: "the-cartographer-of-small-things",
     title: "The Cartographer of Small Things",
     authorSlug: "funmilayo-okechukwu",
@@ -136,6 +141,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "lectures-to-no-one",
     slug: "lectures-to-no-one",
     title: "Lectures to No One",
     authorSlug: "funmilayo-okechukwu",
@@ -161,6 +167,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "salt-and-harmattan",
     slug: "salt-and-harmattan",
     title: "Salt and Harmattan",
     authorSlug: "ifeoma-chukwu",
@@ -186,6 +193,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "what-the-river-kept",
     slug: "what-the-river-kept",
     title: "What the River Kept",
     authorSlug: "ifeoma-chukwu",
@@ -211,6 +219,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "harvest-of-quiet-years",
     slug: "harvest-of-quiet-years",
     title: "Harvest of Quiet Years",
     authorSlug: "ifeoma-chukwu",
@@ -236,6 +245,7 @@ export const MOCK_BOOKS: readonly MockBook[] = [
     },
   },
   {
+    id: "the-understudy",
     slug: "the-understudy",
     title: "The Understudy",
     authorSlug: "tunde-bakare",

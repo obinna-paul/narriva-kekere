@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth, getCurrentSession } from "@/lib/auth/middleware";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   StoryForbiddenError,
   StoryIllegalStateError,
@@ -11,6 +12,8 @@ import {
   updateStory,
 } from "@/lib/data/kekere-stories";
 
+const RATE_LIMIT = { limit: 100, windowMs: 5 * 60 * 1000 }; // 100 req / 5 min
+
 /**
  * Serves two different audiences through one endpoint: a public/logged-in
  * reader (getStoryForReader — PUBLISHED only, body gated by unlock status),
@@ -18,9 +21,32 @@ import {
  * (getStoryForAuthor — any status, full body, no gating, since it's theirs).
  * Falls through to the author path only when the reader path comes back
  * empty, so a stranger can never use this to peek at someone else's draft.
+ *
+ * Hardening (not a security boundary on its own — layered on top of the
+ * unlock-status gating above, which is the actual control):
+ * - Rate limited per identity (user id if logged in, else IP) — bulk/
+ *   automated scraping of many stories in a short window gets throttled.
+ * - Referer check: requests claiming to come from a different origin are
+ *   rejected. A missing Referer is allowed through (some browsers/privacy
+ *   extensions strip it for legitimate same-site fetches), so this is a
+ *   deterrent against obvious cross-origin scraping, not a hard boundary.
  */
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const session = await getCurrentSession();
+
+  const rateLimitKey = session?.user?.id ?? `ip:${getClientIp(request)}`;
+  const rateLimit = checkRateLimit(`story-content:${rateLimitKey}`, RATE_LIMIT);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
+  if (!isAllowedReferer(request)) {
+    return NextResponse.json({ error: "Story not found" }, { status: 404 });
+  }
+
   const readerStory = await getStoryForReader(params.id, session?.user?.id);
   if (readerStory) {
     return NextResponse.json({ story: readerStory });
@@ -36,6 +62,23 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   }
 
   return NextResponse.json({ error: "Story not found" }, { status: 404 });
+}
+
+function getClientIp(request: Request): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+}
+
+function isAllowedReferer(request: Request): boolean {
+  const referer = request.headers.get("referer");
+  if (!referer) return true;
+
+  try {
+    const refererOrigin = new URL(referer).origin;
+    const requestOrigin = new URL(request.url).origin;
+    return refererOrigin === requestOrigin;
+  } catch {
+    return true;
+  }
 }
 
 const updateStorySchema = z.object({

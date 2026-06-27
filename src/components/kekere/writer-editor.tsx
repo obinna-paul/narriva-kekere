@@ -2,18 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label, Body } from "@/components/ui/typography";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +19,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseTier } from "@/content/decisions";
 
-const HOOK_LINE_NUDGE_LENGTH = 90;
+const HOOK_LINE_LIMIT = 150;
 const WORDS_PER_MINUTE = 200;
 const AUTOSAVE_DEBOUNCE_MS = 2000;
 
@@ -48,6 +42,7 @@ export interface WriterEditorProps {
    * competition back up by on reload. */
   competitionSlug?: string;
   competitionTitle?: string;
+  competitionDeadlineLabel?: string;
   /** Continuing an existing draft, e.g. from /write?id=abc123. */
   initialStoryId?: string;
 }
@@ -62,13 +57,16 @@ function tierToLower(tier: DbTier): LowercaseTier {
 
 const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED"];
 
+// Draft/Submitted/Reviewing read as "in our hands, nothing to do" — the same
+// teal the design uses for its one "Draft" pill example. Revisions is the
+// only status that means "come back and act," so it gets the brand orange.
 const STATUS_STYLES: Record<Status, string> = {
-  DRAFT: "bg-[var(--color-ink)]/10 text-[var(--color-ink)]/70",
-  SUBMITTED: "bg-amber-100 text-amber-800",
-  REVIEWING: "bg-amber-100 text-amber-800",
-  REVISIONS_REQUESTED: "bg-orange-100 text-orange-800",
-  PUBLISHED: "bg-emerald-100 text-emerald-800",
-  REJECTED: "bg-red-100 text-red-700",
+  DRAFT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
+  SUBMITTED: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
+  REVIEWING: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
+  REVISIONS_REQUESTED: "bg-[var(--color-primary-muted)] text-[var(--color-primary)]",
+  PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
+  REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
 };
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -80,10 +78,13 @@ const STATUS_LABELS: Record<Status, string> = {
   REJECTED: "Not accepted",
 };
 
+const TIERS: DbTier[] = ["STANDARD", "FEATURED", "PREMIUM"];
+
 export function WriterEditor({
   competitionId,
   competitionSlug,
   competitionTitle,
+  competitionDeadlineLabel,
   initialStoryId,
 }: WriterEditorProps) {
   const router = useRouter();
@@ -100,6 +101,7 @@ export function WriterEditor({
   ]);
   const [status, setStatus] = useState<Status>("DRAFT");
   const [moderationNotes, setModerationNotes] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -233,164 +235,135 @@ export function WriterEditor({
     setConfirmOpen(false);
   }
 
+  const savedLabel =
+    saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn't save" : saveState === "saved" ? "Saved" : "";
+
   if (loading) {
-    return <div className="mx-auto max-w-2xl px-5 py-8 text-sm text-[var(--color-ink)]/50">Loading…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--color-ink-muted)]">
+        Loading…
+      </div>
+    );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-8 pb-28 sm:px-8 md:pb-12">
-      <div className="flex items-center justify-between gap-3">
-        <span
-          className={cn(
-            "rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide",
-            STATUS_STYLES[status]
-          )}
-        >
-          {STATUS_LABELS[status]}
-        </span>
-        <div className="flex items-center gap-3 text-xs text-[var(--color-ink)]/50">
-          <AnimatePresence mode="wait">
-            {saveState !== "idle" && isEditable && (
-              <motion.span
-                key={saveState}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={saveState === "error" ? "text-red-600" : undefined}
-              >
-                {saveState === "saving" ? "Saving…" : saveState === "error" ? "Couldn't save" : "Saved"}
-              </motion.span>
-            )}
-          </AnimatePresence>
-          <span>{wordCount} words</span>
-          <span>~{readingTimeMinutes} min read</span>
-        </div>
-      </div>
-
-      {status === "REVISIONS_REQUESTED" && moderationNotes && (
-        <div className="mt-4 rounded-lg border-l-4 border-orange-400 bg-orange-50 px-4 py-3">
-          <p className="text-sm font-semibold text-orange-900">Feedback from the editorial team</p>
-          <Body size="sm" className="mt-1 text-orange-800">
-            {moderationNotes}
-          </Body>
-        </div>
-      )}
-
-      {status === "REJECTED" && moderationNotes && (
-        <div className="mt-4 rounded-lg border-l-4 border-red-400 bg-red-50 px-4 py-3">
-          <p className="text-sm font-semibold text-red-900">Why this wasn&apos;t accepted</p>
-          <Body size="sm" className="mt-1 text-red-800">
-            {moderationNotes}
-          </Body>
-        </div>
-      )}
-
-      {justSubmitted && (
-        <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Submitted. We read everything within 5-7 business days.
-        </div>
-      )}
-
-      {competitionTitle && (
-        <div className="mt-4 rounded-lg bg-[var(--color-primary)]/10 px-4 py-2 text-sm font-medium text-[var(--color-primary)]">
-          Submitting for: {competitionTitle}
-        </div>
-      )}
-
-      {!isEditable && (
-        <p className="mt-4 text-sm text-[var(--color-ink)]/50">
-          This story can&apos;t be edited while it&apos;s {STATUS_LABELS[status].toLowerCase()}.
-        </p>
-      )}
-
-      <fieldset disabled={!isEditable} className="contents">
-        <div className="mt-6 flex flex-col gap-1.5">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
+    <div className="min-h-screen bg-[var(--color-bg)]">
+      <div className="sticky top-0 z-20 border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]/95 backdrop-blur-md">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Story settings"
+            className="flex-none text-[19px] text-[var(--color-ink-muted)]"
+          >
+            ☰
+          </button>
+          <Link
+            href="/kekere/feed"
+            className="flex-none font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-primary)]"
+          >
+            Kekere
+          </Link>
+          <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled story"
-            className="border-none bg-transparent px-0 text-2xl font-bold focus-visible:ring-0 disabled:opacity-60"
+            disabled={!isEditable}
+            aria-label="Story title"
+            className="min-w-0 flex-1 bg-transparent font-[family-name:var(--font-display)] text-base font-semibold text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
           />
+          <span
+            className={cn(
+              "flex-none rounded-full px-2.5 py-1 text-[11px] font-semibold",
+              STATUS_STYLES[status]
+            )}
+          >
+            {STATUS_LABELS[status]}
+          </span>
         </div>
-
-        <div className="mt-4 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="hookLine">Hook line</Label>
-            <span
-              className={cn(
-                "text-xs",
-                hookLine.length > HOOK_LINE_NUDGE_LENGTH
-                  ? "text-amber-600"
-                  : "text-[var(--color-ink)]/40"
-              )}
+        <div className="flex items-center justify-between px-4 pb-2.5">
+          <span className="text-xs text-[var(--color-ink-muted-3)]">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={savedLabel}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={saveState === "error" ? "text-[#A13A3A]" : undefined}
+              >
+                {isEditable ? savedLabel : ""}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+          {isEditable && (
+            <button
+              type="button"
+              disabled={!title || wordCount === 0}
+              onClick={() => setConfirmOpen(true)}
+              className="rounded-[8px] bg-[var(--color-primary)] px-[18px] py-[9px] text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-50"
             >
-              {hookLine.length}/{HOOK_LINE_NUDGE_LENGTH}
-            </span>
-          </div>
-          <Input
-            id="hookLine"
-            value={hookLine}
-            onChange={(e) => setHookLine(e.target.value)}
-            placeholder="One sharp sentence that makes someone stop scrolling."
-          />
-          {hookLine.length > HOOK_LINE_NUDGE_LENGTH && (
-            <p className="text-xs text-amber-600">
-              Sharper is shorter — most hook lines that work are under {HOOK_LINE_NUDGE_LENGTH} characters.
-            </p>
+              {status === "REVISIONS_REQUESTED" ? "Resubmit for review" : "Submit for review"}
+            </button>
           )}
         </div>
+      </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tier">Tier</Label>
-            <Select value={tier} onValueChange={(v) => setTier(v as DbTier)}>
-              <SelectTrigger id="tier">
-                <SelectValue>{tier[0] + tier.slice(1).toLowerCase()}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {(["STANDARD", "FEATURED", "PREMIUM"] as const).map((t) => {
-                  const [min, max] = STORY_TIER_RANGES[tierToLower(t)];
-                  return (
-                    <SelectItem key={t} value={t}>
-                      {t[0] + t.slice(1).toLowerCase()} ({min}-{max} cowries)
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+      <main className="mx-auto max-w-[680px] px-[22px] pb-[120px] pt-[26px]">
+        {status === "REVISIONS_REQUESTED" && moderationNotes && (
+          <div className="mb-6 rounded-lg border-l-4 border-[var(--color-primary)] bg-[var(--color-primary-muted)] px-4 py-3">
+            <p className="text-sm font-semibold text-[var(--color-ink)]">Feedback from the editorial team</p>
+            <p className="mt-1 text-sm text-[var(--color-ink)]/80">{moderationNotes}</p>
           </div>
+        )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label as="span">Writing mode</Label>
-            <div className="flex rounded-md bg-[var(--color-ink)]/[0.06] p-1">
-              {(["scroll", "chapters"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  disabled={!isEditable}
-                  onClick={() => setMode(m)}
-                  className={cn(
-                    "flex-1 rounded-sm py-1.5 text-sm font-medium capitalize transition-colors",
-                    mode === m ? "bg-[var(--color-bg)] shadow-sm" : "text-[var(--color-ink)]/60"
-                  )}
-                >
-                  {m === "scroll" ? "Single scroll" : "Chapters"}
-                </button>
-              ))}
+        {status === "REJECTED" && moderationNotes && (
+          <div className="mb-6 rounded-lg border-l-4 border-[#A13A3A] bg-[rgba(193,58,58,0.08)] px-4 py-3">
+            <p className="text-sm font-semibold text-[#A13A3A]">Why this wasn&apos;t accepted</p>
+            <p className="mt-1 text-sm text-[var(--color-ink)]/80">{moderationNotes}</p>
+          </div>
+        )}
+
+        {justSubmitted && (
+          <div className="mb-6 rounded-lg bg-[rgba(31,111,74,0.1)] px-4 py-3 text-sm text-[var(--color-success)]">
+            Submitted. We read everything within 5–7 business days.
+          </div>
+        )}
+
+        {!isEditable && !justSubmitted && (
+          <p className="mb-6 text-sm text-[var(--color-ink-muted-3)]">
+            This story can&apos;t be edited while it&apos;s {STATUS_LABELS[status].toLowerCase()}.
+          </p>
+        )}
+
+        <fieldset disabled={!isEditable} className="contents">
+          <div className="mb-6">
+            <label className="mb-2 block text-xs font-semibold text-[var(--color-ink-muted-2)]">
+              One sharp sentence — what makes someone read this?
+            </label>
+            <Input
+              value={hookLine}
+              onChange={(e) => setHookLine(e.target.value)}
+              placeholder="Your hook line…"
+              className="h-auto border-none bg-transparent px-0 font-[family-name:var(--font-display)] text-[19px] italic leading-[1.4] text-[var(--color-ink)] focus:ring-0 disabled:opacity-60"
+            />
+            <div className="mt-2 h-px bg-[var(--color-ink)]/[0.12]" />
+            <div
+              className={cn(
+                "mt-2 text-right text-xs",
+                hookLine.length > HOOK_LINE_LIMIT ? "text-[var(--color-primary)]" : "text-[var(--color-ink-muted-3)]"
+              )}
+            >
+              {hookLine.length} / {HOOK_LINE_LIMIT}
             </div>
           </div>
-        </div>
 
-        <div className="mt-6">
           {mode === "scroll" ? (
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Start writing…"
-              rows={18}
-              className="border-none bg-transparent px-0 text-lg leading-relaxed focus-visible:ring-0 disabled:opacity-60"
+              placeholder="Start writing your story…"
+              rows={16}
+              className="min-h-[340px] resize-none border-none bg-transparent px-0 text-[17px] leading-[1.75] text-[var(--color-ink)] focus:ring-0 disabled:opacity-60"
             />
           ) : (
             <div className="flex flex-col gap-8">
@@ -399,14 +372,14 @@ export function WriterEditor({
                   <Input
                     value={chapter.title}
                     onChange={(e) => updateChapter(chapter.id, { title: e.target.value })}
-                    className="border-none bg-transparent px-0 text-lg font-semibold focus-visible:ring-0"
+                    className="h-auto border-none bg-transparent px-0 font-[family-name:var(--font-display)] text-lg font-semibold focus:ring-0"
                   />
                   <Textarea
                     value={chapter.content}
                     onChange={(e) => updateChapter(chapter.id, { content: e.target.value })}
                     placeholder="Start writing this chapter…"
                     rows={10}
-                    className="mt-2 border-none bg-transparent px-0 text-lg leading-relaxed focus-visible:ring-0"
+                    className="mt-2 resize-none border-none bg-transparent px-0 text-[17px] leading-[1.75] focus:ring-0"
                   />
                 </div>
               ))}
@@ -415,44 +388,144 @@ export function WriterEditor({
               </Button>
             </div>
           )}
-        </div>
-      </fieldset>
+        </fieldset>
+      </main>
 
-      {isEditable && (
-        <div className="mt-8 flex justify-end">
-          <Button
-            type="button"
-            size="lg"
-            disabled={!title || wordCount === 0}
-            onClick={() => setConfirmOpen(true)}
-          >
-            {status === "REVISIONS_REQUESTED" ? "Resubmit for review" : "Submit for review"}
-          </Button>
-        </div>
-      )}
+      <div className="fixed inset-x-0 bottom-0 z-[15] border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]/95 py-[13px] text-center backdrop-blur-md">
+        <span className="text-[13px] text-[var(--color-ink-muted-2)]">
+          {wordCount} words · ~{readingTimeMinutes} min read
+        </span>
+      </div>
+
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left">
+          <div className="mb-7 flex items-center justify-between">
+            <span className="font-[family-name:var(--font-display)] text-[19px] font-semibold text-[var(--color-ink)]">
+              Story settings
+            </span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close"
+              className="text-xl text-[var(--color-ink-muted-2)]"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="mb-3.5 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+            Tier
+          </div>
+          <div className="mb-[30px] flex flex-col gap-2.5">
+            {TIERS.map((t) => {
+              const active = tier === t;
+              const [min, max] = STORY_TIER_RANGES[tierToLower(t)];
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={!isEditable}
+                  onClick={() => setTier(t)}
+                  className={cn(
+                    "flex items-center justify-between rounded-xl border-[1.5px] px-4 py-3.5 text-left transition-colors disabled:opacity-60",
+                    active
+                      ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
+                      : "border-[var(--color-ink)]/[0.12] bg-[var(--color-surface)]"
+                  )}
+                >
+                  <div>
+                    <div className="text-[15px] font-semibold text-[var(--color-ink)]">
+                      {t[0] + t.slice(1).toLowerCase()}
+                    </div>
+                    <div className="mt-0.5 text-xs text-[var(--color-ink-muted-2)]">
+                      {min}–{max} cowries to unlock
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "h-[18px] w-[18px] flex-none rounded-full border-[1.5px]",
+                      active ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-ink)]/25 bg-transparent"
+                    )}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+            Format
+          </div>
+          <div className="mb-[30px] flex rounded-md bg-[var(--color-ink)]/[0.06] p-1">
+            {(["scroll", "chapters"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                disabled={!isEditable}
+                onClick={() => setMode(m)}
+                className={cn(
+                  "flex-1 rounded-sm py-1.5 text-sm font-medium capitalize transition-colors disabled:opacity-60",
+                  mode === m ? "bg-[var(--color-bg)] shadow-sm" : "text-[var(--color-ink-muted-2)]"
+                )}
+              >
+                {m === "scroll" ? "Single scroll" : "Chapters"}
+              </button>
+            ))}
+          </div>
+
+          {competitionTitle && (
+            <>
+              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+                Competition
+              </div>
+              <div className="rounded-xl border border-[var(--color-ink)]/10 bg-[var(--color-surface)] px-4 py-3.5">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-[17px] w-[17px] flex-none items-center justify-center rounded-[4px] bg-[var(--color-primary)] text-[10px] text-white"
+                  >
+                    ✓
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--color-ink)]">{competitionTitle}</div>
+                    {competitionDeadlineLabel && (
+                      <div className="text-xs text-[var(--color-ink-muted-2)]">{competitionDeadlineLabel}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.18 }}
-          >
-            <DialogHeader>
-              <DialogTitle>Ready for other eyes?</DialogTitle>
-              <DialogDescription>
-                Submitting doesn&apos;t mean it&apos;s perfect — it means you want feedback
-                that&apos;s better than your own. We read everything that comes through,
-                properly. We read everything within 5-7 business days.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setConfirmOpen(false)}>
-                Not yet
-              </Button>
-              <Button onClick={confirmSubmit}>Submit for review</Button>
-            </DialogFooter>
-          </motion.div>
+        <DialogContent showCloseButton={false} className="max-w-[360px] rounded-[20px] p-[30px_26px]">
+          <DialogHeader className="mb-0 pr-0">
+            <DialogTitle className="font-[family-name:var(--font-display)] text-[25px] font-semibold text-[var(--color-ink)]">
+              Ready for other eyes?
+            </DialogTitle>
+            <DialogDescription className="mt-3.5 text-[15px] leading-[1.6] text-[var(--color-ink-muted)]">
+              Submitting doesn&apos;t mean it&apos;s perfect — it means you want feedback that&apos;s
+              better than your own. We read everything that comes in, properly, within 5–7
+              business days.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-[26px] flex-row gap-3">
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(false)}
+              className={cn(buttonVariants({ variant: "secondary" }), "flex-1 rounded-[10px]")}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmSubmit}
+              className={cn(buttonVariants({ variant: "primary" }), "flex-1 rounded-[10px]")}
+            >
+              Submit
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

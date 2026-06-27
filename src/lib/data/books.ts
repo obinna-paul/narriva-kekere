@@ -21,6 +21,7 @@ export interface ListBooksParams {
   genre?: string;
   authorSlug?: string;
   newOnly?: boolean;
+  sort?: "newest" | "az" | "price";
   page?: number;
   pageSize?: number;
 }
@@ -43,11 +44,20 @@ export async function listBooks(params: ListBooksParams = {}): Promise<ListBooks
     ...(params.authorSlug ? { author: { slug: params.authorSlug } } : {}),
   };
 
+  let orderBy: Prisma.BookOrderByWithRelationInput;
+  if (params.sort === "az") {
+    orderBy = { title: "asc" };
+  } else if (params.sort === "price") {
+    orderBy = { price: "asc" };
+  } else {
+    orderBy = { publishedAt: "desc" };
+  }
+
   const [books, total] = await Promise.all([
     prisma.book.findMany({
       where,
       include: authorInclude,
-      orderBy: { publishedAt: "desc" },
+      orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -199,6 +209,7 @@ export interface PurchasedBookItem {
   title: string;
   coverImageRef: string;
   authorName: string;
+  chapterCount: number;
   purchasedAt: Date;
   progress: {
     currentChapter: number;
@@ -238,7 +249,59 @@ export async function getPurchasedBooksWithProgress(
     title: p.book.title,
     coverImageRef: p.book.coverImageRef,
     authorName: p.book.author.name,
+    chapterCount: p.book.chapterCount,
     purchasedAt: p.purchasedAt,
     progress: p.book.readingProgress[0] ?? null,
   }));
+}
+
+export interface AdminPurchaseRow {
+  id: string;
+  userEmail: string;
+  bookTitle: string;
+  paymentReference: string;
+  purchasedAt: Date;
+}
+
+export async function listAllPurchases(): Promise<AdminPurchaseRow[]> {
+  const purchases = await prisma.bookPurchase.findMany({
+    include: {
+      user: { select: { email: true } },
+      book: { select: { title: true } },
+    },
+    orderBy: { purchasedAt: "desc" },
+    take: 200,
+  });
+
+  return purchases.map((p) => ({
+    id: p.id,
+    userEmail: p.user.email,
+    bookTitle: p.book.title,
+    paymentReference: p.paymentReference,
+    purchasedAt: p.purchasedAt,
+  }));
+}
+
+/** Goodwill access removal — no Paystack refund call, since there's no
+ * physical/digital product to return. Logged to AdminAuditLog for reconciliation. */
+export async function revokeBookPurchase(
+  purchaseId: string,
+  adminId: string,
+  note?: string
+): Promise<void> {
+  const purchase = await prisma.bookPurchase.findUnique({ where: { id: purchaseId } });
+  if (!purchase) return;
+
+  await prisma.$transaction([
+    prisma.bookPurchase.delete({ where: { id: purchaseId } }),
+    prisma.adminAuditLog.create({
+      data: {
+        adminId,
+        action: "REVOKE_BOOK_PURCHASE",
+        targetType: "BookPurchase",
+        targetId: purchaseId,
+        note: note ?? `Revoked access to bookId=${purchase.bookId} for userId=${purchase.userId}`,
+      },
+    }),
+  ]);
 }

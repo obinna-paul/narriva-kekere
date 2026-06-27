@@ -15,6 +15,10 @@ export const KEKERE_GENRES = [
   "Horror",
   "Drama",
   "Comedy",
+  "Erotica",
+  "Lagos",
+  "Crime",
+  "Historical Fiction",
 ] as const;
 
 export type KekereGenre = (typeof KEKERE_GENRES)[number];

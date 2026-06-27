@@ -16,6 +16,9 @@ export interface CreateSubmissionInput {
   manuscriptRef: string;
   synopsis?: string;
   targetAudience?: string;
+  genre?: string;
+  manuscriptStage?: string;
+  supportNeeded?: string[];
 }
 
 export async function createSubmission(

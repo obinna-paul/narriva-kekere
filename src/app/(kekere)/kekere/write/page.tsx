@@ -1,9 +1,14 @@
 import { KekereTheme } from "@/components/theme";
-import { KekereNav } from "@/components/kekere/kekere-nav";
 import { WriterEditor } from "@/components/kekere/writer-editor";
 import { getCompetitionBySlug } from "@/lib/data/kekere-competitions";
 
 export const dynamic = "force-dynamic";
+
+function closesInLabel(deadline: Date): string {
+  const days = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "Closing soon";
+  return `Closes in ${days} day${days === 1 ? "" : "s"}`;
+}
 
 export default async function KekereWritePage({
   searchParams,
@@ -16,15 +21,15 @@ export default async function KekereWritePage({
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
-        <KekereNav />
-        <WriterEditor
-          competitionId={competition?.id}
-          competitionSlug={searchParams.competition}
-          competitionTitle={competition?.title}
-          initialStoryId={searchParams.id}
-        />
-      </div>
+      {/* Its own universe, per the design handoff — no global nav here, just
+          the in-editor "Kekere" wordmark (links back to the feed). */}
+      <WriterEditor
+        competitionId={competition?.id}
+        competitionSlug={searchParams.competition}
+        competitionTitle={competition?.title}
+        competitionDeadlineLabel={competition ? closesInLabel(competition.deadline) : undefined}
+        initialStoryId={searchParams.id}
+      />
     </KekereTheme>
   );
 }

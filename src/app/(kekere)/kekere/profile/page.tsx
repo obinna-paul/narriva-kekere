@@ -1,5 +1,5 @@
 import { KekereTheme } from "@/components/theme";
-import { KekereNav } from "@/components/kekere/kekere-nav";
+import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { ProfileView } from "@/components/kekere/profile-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
@@ -30,12 +30,15 @@ export default async function KekereProfilePage() {
   return (
     <KekereTheme>
       <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
-        <KekereNav />
+        <KekereNavWrapper />
         <ProfileView
           name={profile?.name ?? ""}
           email={profile?.email ?? ""}
           bio={profile?.bio ?? ""}
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
+          bankName={profile?.bankName ?? null}
+          bankAccountNumber={profile?.bankAccountNumber ?? null}
+          bankAccountName={profile?.bankAccountName ?? null}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
           readingStats={readerStats}

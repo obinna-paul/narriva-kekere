@@ -16,10 +16,10 @@ interface NariMessage {
 }
 
 /**
- * Site-wide floating widget. Nari is intentionally narrow — every answer
- * comes from POST /api/nari/ask, which only ever returns content from the
- * fixed FAQ knowledge base or the exact fallback message. This component
- * never generates or alters answer text itself.
+ * Site-wide floating widget. Nari is powered by GPT-4o-mini with a
+ * comprehensive system prompt covering all of Narriva's services and
+ * publishing knowledge. Falls back to keyword matching when the AI is
+ * unavailable for any reason.
  */
 export function NariWidget() {
   const [open, setOpen] = useState(false);
@@ -27,6 +27,15 @@ export function NariWidget() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const sessionId = useRef(
+    typeof window !== "undefined"
+      ? localStorage.getItem("nari-sid") ?? crypto.randomUUID()
+      : crypto.randomUUID(),
+  );
+  if (typeof window !== "undefined") {
+    localStorage.setItem("nari-sid", sessionId.current);
+  }
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -49,11 +58,13 @@ export function NariWidget() {
     setQuestion("");
     setLoading(true);
 
+    const history = messages.map((m) => ({ role: m.role, text: m.text }));
+
     try {
       const res = await fetch("/api/nari/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: trimmed }),
+        body: JSON.stringify({ question: trimmed, history, sessionId: sessionId.current }),
       });
       const data = await res.json();
 
@@ -116,7 +127,13 @@ export function NariWidget() {
                         : "bg-[var(--color-ink)]/[0.06] text-[var(--color-ink)]"
                     )}
                   >
-                    <p>{message.text}</p>
+                    <div
+                      className="text-sm whitespace-pre-wrap leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: message.text
+                          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="font-semibold text-[var(--color-primary)] underline">$1</a>'),
+                      }}
+                    />
                     {message.links && message.links.length > 0 && (
                       <div className="mt-2 flex flex-col gap-1.5">
                         {message.links.map((link) => (
@@ -141,8 +158,13 @@ export function NariWidget() {
               ))}
               {loading && (
                 <li className="flex justify-start">
-                  <div className="rounded-lg bg-[var(--color-ink)]/[0.06] px-3 py-2 text-sm text-[var(--color-ink)]/50">
-                    Thinking…
+                  <div className="flex items-center gap-2 rounded-lg bg-[var(--color-ink)]/[0.06] px-4 py-3 text-sm text-[var(--color-ink)]/60">
+                    <span className="flex gap-1">
+                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "0ms" }} />
+                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "150ms" }} />
+                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "300ms" }} />
+                    </span>
+                    Nari is thinking
                   </div>
                 </li>
               )}

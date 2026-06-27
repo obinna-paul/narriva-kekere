@@ -22,6 +22,7 @@ const CATEGORY_LABEL: Record<DbBlogPost["category"], MockBlogPost["category"]> =
 
 export function toBookCardData(book: BookWithAuthor): MockBook {
   return {
+    id: book.id,
     slug: book.slug,
     title: book.title,
     authorSlug: book.author.slug ?? book.author.id,
@@ -95,6 +96,9 @@ export function toServiceContent(service: ServiceWithContent): ServiceContent {
   return {
     slug: service.slug,
     name: service.title,
+    // Falls back gracefully for any Service row saved before this field
+    // existed — content is a free-form JSON blob, not a migrated column.
+    tagline: service.content.tagline ?? "",
     opening: service.content.opening,
     included: service.content.included,
     closing: service.content.closing,

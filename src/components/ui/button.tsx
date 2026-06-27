@@ -3,11 +3,13 @@ import type { ButtonHTMLAttributes } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
-// Brand-neutral: colours come from CSS variables (--color-primary, --color-bg,
-// --color-ink, --color-accent) set by a theme wrapper such as NarrivaTheme or
-// KekereTheme (src/components/theme). Never hard-code a brand colour here.
+// Brand-neutral: colours and radius come from CSS variables (--color-primary,
+// --color-bg, --color-ink, --color-accent, --radius-button) set by a theme
+// wrapper such as NarrivaTheme or KekereTheme (src/components/theme). Per the
+// design handoff, radius is a real brand signal — Narriva's buttons are sharp
+// (2px), Kekere's are soft (10px) — never hard-code either here.
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium font-[family-name:var(--font-body)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-button)] font-medium font-[family-name:var(--font-body)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
