@@ -45,7 +45,7 @@ const MIN_WITHDRAWAL_COWRIES = 10;
 export async function requestWithdrawal(userId: string) {
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
-    if (!wallet || wallet.balance < MIN_WITHDRAWAL_COWRIES) {
+    if (!wallet || wallet.spendingBalance < MIN_WITHDRAWAL_COWRIES) {
       throw new Error(`Minimum withdrawal is ${MIN_WITHDRAWAL_COWRIES} cowries`);
     }
 
@@ -58,12 +58,12 @@ export async function requestWithdrawal(userId: string) {
       throw new Error("Please add your bank details in your profile first");
     }
 
-    const cowries = wallet.balance;
+    const cowries = wallet.spendingBalance;
     const ngnAmount = cowries * 50;
 
     await tx.wallet.update({
       where: { userId },
-      data: { balance: 0 },
+      data: { spendingBalance: 0 },
     });
 
     await tx.transaction.create({

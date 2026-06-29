@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
+import { sendEmail } from "@/lib/email/send";
 import {
   getSubmissionById,
   setReviewerNotes,
@@ -55,6 +56,15 @@ export const PATCH = withAuth(
     }
 
     submission = await getSubmissionById(params.id);
+
+    if (parsed.data.status === "DECLINED" && submission) {
+      await sendEmail({
+        to: submission.authorEmail,
+        subject: `Update on your manuscript submission — ${submission.manuscriptTitle}`,
+        body: `Hi ${submission.authorName},\n\nThank you for submitting "${submission.manuscriptTitle}" to Narriva. After careful review, we've decided not to move forward with this manuscript at this time.\n\n${parsed.data.reviewerNotes ? `Editor's note: ${parsed.data.reviewerNotes}` : "We wish you the best with your writing."}`,
+      });
+    }
+
     return NextResponse.json({ submission });
   },
   { roles: ["ADMIN"] }

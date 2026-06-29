@@ -1,5 +1,6 @@
 import { NarrivaTheme } from "@/components/theme";
 import { ContactForm } from "@/components/narriva/contact-form";
+import { CalendlyWidget } from "@/components/narriva/calendly-widget";
 
 export const metadata = { title: "Contact — Narriva" };
 
@@ -34,13 +35,7 @@ export default function ContactPage() {
             </p>
 
             {calendlyUrl ? (
-              <div className="mt-6">
-                <div
-                  className="calendly-inline-widget rounded-lg border border-[var(--color-border)]"
-                  data-url={calendlyUrl}
-                  style={{ minWidth: "320px", height: "520px" }}
-                />
-              </div>
+              <CalendlyWidget url={calendlyUrl} />
             ) : (
               <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-alt)] p-6">
                 <p className="text-[14.5px] leading-[1.6] text-[var(--color-muted)]">

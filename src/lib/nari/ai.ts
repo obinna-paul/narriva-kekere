@@ -81,10 +81,23 @@ function normalize(text: string): string {
 export function matchNariFAQKeywords(
   question: string,
 ): { answer: string; links: { label: string; href: string }[] } | null {
+  return matchNariFAQ(question, NARI_FAQ);
+}
+
+export interface NariFaqEntry {
+  answer: string;
+  links?: { label: string; href: string }[];
+  keywords: string[];
+}
+
+export function matchNariFAQ(
+  question: string,
+  entries: NariFaqEntry[],
+): { answer: string; links: { label: string; href: string }[] } | null {
   const normalized = normalize(question);
   if (!normalized) return null;
 
-  const scored = NARI_FAQ.map((entry) => {
+  const scored = entries.map((entry) => {
     const score = entry.keywords.reduce(
       (total, keyword) =>
         total + (normalized.includes(keyword.toLowerCase()) ? 1 : 0),

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { StoryIllegalStateError, StoryNotFoundError } from "@/lib/data/kekere-stories";
+import { createNotification } from "@/lib/notifications/create";
+import { generateStoryAudio } from "@/lib/audio/generate";
 import type { Story, StoryTier } from "@prisma/client";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
@@ -58,34 +60,68 @@ export async function decideStoryModeration(
   const plagiarismFlagged = input.plagiarismFlagged ?? story.plagiarismFlagged;
 
   switch (input.action) {
-    case "approve":
-      return prisma.story.update({
+    case "approve": {
+      const updated = await prisma.story.update({
         where: { id },
         data: {
           status: "PUBLISHED",
           publishedAt: new Date(),
+          isDraft: false,
           tier: input.tier ?? story.tier,
           cowrieCost: input.cowrieCost ?? story.cowrieCost,
           plagiarismFlagged,
         },
       });
+      await createNotification({
+        userId: updated.authorId,
+        type: "STORY_APPROVED",
+        title: "Your story has been published!",
+        body:
+          `"${updated.title}" is now live on Kekere Stories` +
+          (updated.cowrieCost === 0 ? " as a free read." : ` at ${updated.cowrieCost} cowries.`),
+        link: `/kekere/story/${updated.id}`,
+      });
+      // Fire-and-forget — narration audio can take a while to generate
+      // (multiple TTS calls for longer stories) and must not block the
+      // publish response.
+      generateStoryAudio(updated.id).catch(console.error);
+      return updated;
+    }
 
-    case "request_revisions":
+    case "request_revisions": {
       if (!input.moderationNotes) {
         throw new StoryIllegalStateError("moderationNotes is required to request revisions.");
       }
-      return prisma.story.update({
+      const updated = await prisma.story.update({
         where: { id },
         data: { status: "REVISIONS_REQUESTED", moderationNotes: input.moderationNotes, plagiarismFlagged },
       });
+      await createNotification({
+        userId: updated.authorId,
+        type: "STORY_REVISIONS_REQUESTED",
+        title: "Revisions requested for your story",
+        body: `Our editor has reviewed "${updated.title}" and has some feedback. Tap to see what needs to change.`,
+        link: `/kekere/write?id=${updated.id}`,
+      });
+      return updated;
+    }
 
-    case "reject":
+    case "reject": {
       if (!input.moderationNotes) {
         throw new StoryIllegalStateError("moderationNotes is required to reject a story.");
       }
-      return prisma.story.update({
+      const updated = await prisma.story.update({
         where: { id },
         data: { status: "REJECTED", moderationNotes: input.moderationNotes, plagiarismFlagged },
       });
+      await createNotification({
+        userId: updated.authorId,
+        type: "STORY_REJECTED",
+        title: "Story not accepted this time",
+        body: `"${updated.title}" wasn't the right fit for us right now. We've sent you feedback by email.`,
+        link: `/kekere/write?id=${updated.id}`,
+      });
+      return updated;
+    }
   }
 }

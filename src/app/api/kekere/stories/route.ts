@@ -5,12 +5,13 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { createStory, listStories } from "@/lib/data/kekere-stories";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
+import { getFeatureFlag } from "@/lib/settings/get";
+import { isValidTiptapDoc, ensureParagraphIds, countWords, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 
 const WORDS_PER_MINUTE = 200;
 
-function estimateReadingTime(body: string): number {
-  const words = body.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(words / WORDS_PER_MINUTE));
+function estimateReadingTime(wordCount: number): number {
+  return Math.max(1, Math.round(wordCount / WORDS_PER_MINUTE));
 }
 
 export async function GET(request: Request) {
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
 const createStorySchema = z.object({
   title: z.string().min(1).max(200),
   hookLine: z.string().min(1).max(300),
-  body: z.string().min(1),
+  body: z.any().refine(isValidTiptapDoc, "body must be a valid Tiptap document"),
   genre: z.string().optional(),
   tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]).optional(),
   cowrieCost: z.number().int().min(0).optional(),
@@ -63,8 +64,16 @@ const createStorySchema = z.object({
 // nothing here (these endpoints check authorship, not role, for
 // permissions) and keeps the role meaningful for whatever reads it later.
 export const POST = withAuth(async (request, session) => {
-  const body = await request.json();
-  const parsed = createStorySchema.safeParse(body);
+  const submissionsEnabled = await getFeatureFlag("story_submissions", true);
+  if (!submissionsEnabled) {
+    return NextResponse.json(
+      { error: "story_submissions_disabled", message: "This feature is temporarily unavailable." },
+      { status: 403 },
+    );
+  }
+
+  const requestBody = await request.json();
+  const parsed = createStorySchema.safeParse(requestBody);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid input", details: parsed.error.flatten() },
@@ -72,9 +81,16 @@ export const POST = withAuth(async (request, session) => {
     );
   }
 
+  // Never save a paragraph without an id — paragraph comments/reactions
+  // (later phases) key off it, and pasted content may not carry one.
+  const body = ensureParagraphIds(parsed.data.body as TiptapDoc);
+  const wordCount = countWords(body);
+
   const story = await createStory(session.user.id, {
     ...parsed.data,
-    readingTime: estimateReadingTime(parsed.data.body),
+    body,
+    wordCount,
+    readingTime: estimateReadingTime(wordCount),
   });
 
   if (session.user.role === "READER") {

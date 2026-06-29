@@ -1,21 +1,77 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { createHmac } from "node:crypto";
 
 import { prisma } from "@/lib/db/prisma";
 
-// Shared auth: one account works on both narriva.com and kekere.narriva.com.
-// In production the session cookie is scoped to the shared parent domain so
-// a login on either brand carries over to the other. Locally there's no
-// shared parent domain (localhost vs kekere.localhost), so the cookie domain
-// is left unset and falls back to per-host cookies during development.
 const isProduction = process.env.NODE_ENV === "production";
 const sharedCookieDomain = isProduction ? ".narriva.com" : undefined;
 
+const IMPERSONATION_SECRET =
+  process.env.NEXTAUTH_SECRET ?? "impersonation-fallback-secret";
+
+function signImpersonationPayload(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString(
+    "base64url",
+  );
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signTarget = `${header}.${body}`;
+  const hmac = createHmac("sha256", IMPERSONATION_SECRET);
+  hmac.update(signTarget);
+  const signature = hmac.digest("base64url");
+  return `${signTarget}.${signature}`;
+}
+
+function verifyImpersonationPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const signTarget = `${parts[0]}.${parts[1]}`;
+    const hmac = createHmac("sha256", IMPERSONATION_SECRET);
+    hmac.update(signTarget);
+    const expected = hmac.digest("base64url");
+
+    if (expected !== parts[2]) return null;
+
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf-8"),
+    ) as Record<string, unknown>;
+
+    if (payload.expiresAt && Date.now() > (payload.expiresAt as number)) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function getImpersonationFromCookies(request: Request) {
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const match = cookieHeader.match(
+    /impersonation_token=([^;]+)/,
+  );
+  if (!match) return null;
+
+  const payload = verifyImpersonationPayload(match[1]);
+  if (!payload) return null;
+
+  return {
+    id: payload.impersonatedUserId as string,
+    isImpersonated: true as const,
+    actualAdminId: payload.impersonatingAdminId as string,
+  };
+}
+
+export function extractImpersonation(request: Request) {
+  return getImpersonationFromCookies(request);
+}
+
 export const authOptions: NextAuthOptions = {
   session: {
-    // Credentials provider doesn't populate database sessions automatically,
-    // so this must be "jwt" rather than "database".
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
@@ -50,10 +106,32 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            password: true,
+            suspended: true,
+            suspendedUntil: true,
+          },
         });
 
-        if (!user) {
-          return null;
+        if (!user) return null;
+
+        if (user.suspended) {
+          if (user.suspendedUntil && user.suspendedUntil.getTime() < Date.now()) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                suspended: false,
+                suspensionReason: null,
+                suspendedUntil: null,
+              },
+            });
+          } else {
+            return null;
+          }
         }
 
         const isValidPassword = await bcrypt.compare(
@@ -61,9 +139,7 @@ export const authOptions: NextAuthOptions = {
           user.password,
         );
 
-        if (!isValidPassword) {
-          return null;
-        }
+        if (!isValidPassword) return null;
 
         return {
           id: user.id,
@@ -91,3 +167,5 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+export { signImpersonationPayload, verifyImpersonationPayload };

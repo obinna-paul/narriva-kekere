@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 
-import { authOptions } from "@/lib/auth/options";
+import { authOptions, extractImpersonation } from "@/lib/auth/options";
 import { type Role, hasRole } from "@/lib/auth/roles";
 
 /** Reads the session in a route handler / server component. Returns null if unauthenticated. */
@@ -13,6 +13,9 @@ export async function getCurrentSession(): Promise<Session | null> {
 /**
  * Wraps a route handler so it 401s when unauthenticated and 403s when the
  * session doesn't have one of the required roles.
+ *
+ * Supports impersonation: if an impersonation_token cookie is present and
+ * valid, the session user is replaced with the impersonated user.
  *
  * Usage: export const POST = withAuth(async (req, session) => { ... })
  */
@@ -26,6 +29,16 @@ export function withAuth<T extends unknown[]>(
 ) {
   return async (request: Request, ...rest: T): Promise<Response> => {
     const session = await getCurrentSession();
+
+    const impersonation = extractImpersonation(request);
+    if (impersonation && session?.user) {
+      session.user = {
+        ...session.user,
+        id: impersonation.id,
+        isImpersonated: true,
+        actualAdminId: impersonation.actualAdminId,
+      };
+    }
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

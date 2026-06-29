@@ -52,6 +52,11 @@ model User {
   referralCode String? @unique
   referredBy   String?
 
+  // Account suspension — admin-managed, checked in auth callback.
+  suspended        Boolean   @default(false)
+  suspensionReason String?
+  suspendedUntil   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -67,14 +72,61 @@ model User {
   storyRatings       StoryRating[]
   storyCompletions   StoryCompletion[]
   storyReadingProgress StoryReadingProgress[]
-  projects          AuthorProject[]
+  authorProjects     AuthorProject[]
+  tipsSent             Tip[]                 @relation("TipReader")
+  tipsReceived         Tip[]                 @relation("TipWriter")
+  referralCodeRecord   ReferralCode?
+  referralsSent        Referral[]            @relation("ReferralsSent")
+  referralReceived     Referral?             @relation("ReferralReceived")
+  writerBankDetails    WriterBankDetails?
+  withdrawalRequests   WithdrawalRequest[]
+  deliverableComments  DeliverableComment[]
+  projectMessages      ProjectMessage[]
+  nariConversations    NariConversation[]
+  kekereContracts      KekereContract[]
+  notifications        Notification[]
+  paragraphComments    ParagraphComment[]
+  paragraphReactions   ParagraphReaction[]
+}
+
+enum NotificationType {
+  STORY_SUBMITTED
+  STORY_APPROVED
+  STORY_REVISIONS_REQUESTED
+  STORY_REJECTED
+  CONTRACT_RECEIVED
+  COMPETITION_RESULT
+  REFERRAL_REWARD_EARNED
+  WITHDRAWAL_PROCESSED
+  WITHDRAWAL_REJECTED
+  VERSION_RESTORED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
 }
 
 model Wallet {
   id      String @id @default(cuid())
   userId  String @unique
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance Int    @default(0)
+
+  // Cowries from top-ups, completion bonuses, and referral rewards. Used to
+  // unlock stories and tip writers. Never withdrawable.
+  spendingBalance Int @default(0)
+  // Cowries earned by writers from their 70% share of story unlocks and from
+  // tips received. The withdrawable balance.
+  earnedBalance   Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -90,12 +142,23 @@ enum TransactionType {
   TIP
   REFERRAL
   READ_REWARD
+  COMPLETION_BONUS
+  TIP_SENT
+  TIP_RECEIVED
+  REFERRAL_REWARD
+  EARNINGS_CREDIT
+  PLATFORM_EARNINGS
 }
 
 enum TransactionStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+enum WalletField {
+  SPENDING
+  EARNED
 }
 
 model Transaction {
@@ -109,10 +172,16 @@ model Transaction {
   paymentReference String?
   status           TransactionStatus @default(PENDING)
   description      String?
+  // Which wallet bucket this transaction affected. Nullable so pre-migration
+  // transactions (recorded against the old single `balance` field) don't
+  // need a backfilled value.
+  walletField      WalletField?
 
   createdAt DateTime @default(now())
 
   @@index([walletId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 // Kekere Stories
@@ -133,6 +202,13 @@ enum StoryTier {
   PREMIUM
 }
 
+enum AudioGenerationStatus {
+  NOT_GENERATED
+  GENERATING
+  GENERATED
+  FAILED
+}
+
 model Story {
   id       String @id @default(cuid())
   authorId String
@@ -140,10 +216,36 @@ model Story {
 
   title    String
   hookLine String
-  // Paragraphs joined by a blank line ("\n\n") — same convention as
-  // BlogPost.content (Phase 7) — so the "first ~10%" preview gate in
-  // src/lib/utils/text-preview.ts can split on it consistently.
-  body     String
+  // A Tiptap document ({ type: "doc", content: [...] }) — every paragraph
+  // node carries a stable attrs.id (see src/lib/tiptap/doc-utils.ts), which
+  // paragraph comments/reactions (later phases) key off of. Never hand-edit;
+  // always go through ensureParagraphIds() before persisting.
+  body        Json
+  // Bumped if the Tiptap document shape changes in a future format
+  // migration — lets old rows be detected and re-migrated rather than
+  // assumed to already match the current shape.
+  bodyVersion Int @default(1)
+  // Maintained server-side on every save (see ensureParagraphIds/countWords
+  // in doc-utils.ts) — never trust a client-supplied word count.
+  wordCount   Int @default(0)
+  // Bumped only by a body-content save (not title/hookLine/tier-only saves)
+  // — doubles as the optimistic-concurrency watermark StoryEditor's
+  // conflict detection compares against, and as the autosave display
+  // ("Saved 2 min ago"). Null until the first body save.
+  lastSavedAt DateTime?
+  // False once published — kept distinct from `status` because a
+  // REVISIONS_REQUESTED story is still a draft for restore-eligibility
+  // purposes (see StoryVersion restore) even though it has left DRAFT.
+  isDraft     Boolean @default(true)
+
+  // OpenAI-generated narration audio (see src/lib/audio/generate.ts) — R2
+  // path, not a public URL; signed URLs are minted per-request. Triggered
+  // automatically on publish, falls back to browser Web Speech API client
+  // -side until/if generation completes.
+  audioRef              String?
+  audioGeneratedAt      DateTime?
+  audioDurationSecs     Int?
+  audioGenerationStatus AudioGenerationStatus @default(NOT_GENERATED)
 
   // Free-text genre and a placeholder cover colour — no real cover image
   // pipeline yet, same placeholder-block approach used everywhere else in
@@ -163,6 +265,7 @@ model Story {
   completionRate    Float?
   moderationNotes   String?
   plagiarismFlagged Boolean @default(false)
+  featured          Boolean @default(false)
 
   // Set on the DRAFT/REVISIONS_REQUESTED → SUBMITTED transition — used to
   // order the admin moderation queue oldest-first by actual submission time,
@@ -179,8 +282,64 @@ model Story {
   ratings            StoryRating[]
   completions        StoryCompletion[]
   readingProgress    StoryReadingProgress[]
+  tips               Tip[]
+  platformEarnings   PlatformEarnings[]
+  versions           StoryVersion[]
+  paragraphComments  ParagraphComment[]
+  paragraphReactions ParagraphReaction[]
 
   @@index([authorId])
+}
+
+model ParagraphComment {
+  id          String   @id @default(cuid())
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  // The UUID from the paragraph's attrs.id in the Tiptap doc (see
+  // src/lib/tiptap/doc-utils.ts) — not a foreign key, since paragraph ids
+  // live inside Story.body's JSON, not their own table.
+  paragraphId String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([storyId, paragraphId])
+  @@index([storyId, createdAt])
+}
+
+model ParagraphReaction {
+  id          String   @id @default(cuid())
+  storyId     String
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  paragraphId String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // A single emoji character from ALLOWED_REACTION_EMOJIS (see
+  // src/lib/tiptap/reaction-emojis.ts) — validated at the API layer, not
+  // by the database.
+  emoji       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([storyId, paragraphId, userId])
+  @@index([storyId, paragraphId])
+}
+
+model StoryVersion {
+  id            String   @id @default(cuid())
+  storyId       String
+  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  // The full Tiptap document at this point in time.
+  content       Json
+  wordCount     Int
+  label         String
+  savedAt       DateTime @default(now())
+
+  @@unique([storyId, versionNumber])
+  @@index([storyId, savedAt])
 }
 
 model StoryUnlock {
@@ -192,6 +351,196 @@ model StoryUnlock {
   unlockedAt DateTime @default(now())
 
   @@unique([userId, storyId])
+  @@index([userId])
+  @@index([storyId])
+}
+
+// The following models (through SubmissionUpdate below) were found missing
+// from this file — referenced by other models/relations but never defined
+// — while the underlying tables still existed in the database untouched.
+// Reconstructed here from a live introspection of the actual columns,
+// foreign keys, and indexes so the schema matches what's really deployed.
+
+model SavedStory {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String
+  story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  savedAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+model StoryRating {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String
+  story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  rating  Int // 1–5
+  ratedAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+}
+
+model StoryCompletion {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId       String
+  story         Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  completedAt   DateTime @default(now())
+  bonusCredited Boolean  @default(false)
+
+  @@unique([userId, storyId])
+}
+
+model Tip {
+  id       String   @id @default(cuid())
+  readerId String
+  reader   User     @relation("TipReader", fields: [readerId], references: [id], onDelete: Cascade)
+  writerId String
+  writer   User     @relation("TipWriter", fields: [writerId], references: [id], onDelete: Cascade)
+  storyId  String
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tippedAt DateTime @default(now())
+
+  @@unique([readerId, storyId])
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  createdAt DateTime @default(now())
+}
+
+enum ReferralStatus {
+  PENDING
+  REWARDED
+}
+
+model Referral {
+  id             String         @id @default(cuid())
+  referrerId     String
+  referrer       User           @relation("ReferralsSent", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String         @unique
+  referredUser   User           @relation("ReferralReceived", fields: [referredUserId], references: [id], onDelete: Cascade)
+  codeUsed       String
+  status         ReferralStatus @default(PENDING)
+  rewardedAt     DateTime?
+  createdAt      DateTime       @default(now())
+}
+
+model Book {
+  id       String @id @default(cuid())
+  slug     String @unique
+  title    String
+  authorId String
+  author   User   @relation("BookAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  genre         String
+  hookLine      String
+  synopsis      String
+  excerpt       String[]
+  coverImageRef String
+  price         Float
+  editorNote            String?
+  editorNoteAttribution String?
+
+  ebookRef          String
+  chapterCount      Int @default(0)
+  wordCount         Int @default(0)
+  estimatedReadTime Int @default(0) // minutes
+
+  featured     Boolean @default(false)
+  isNewRelease Boolean @default(false)
+
+  publishedAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems      OrderItem[]
+  purchases       BookPurchase[]
+  sales           BookSale[]
+  readingProgress BookReadingProgress[]
+
+  @@index([authorId])
+}
+
+model Order {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalNgn         Float
+  paymentReference String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId  String
+  book    Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  priceNgn Float
+
+  @@index([orderId])
+  @@index([bookId])
+}
+
+model BookPurchase {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  paymentReference String
+  purchasedAt      DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+model BookReadingProgress {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId String
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  currentChapter        Int      @default(1)
+  currentScrollPosition Int      @default(0) // pixel offset within chapter
+  lastReadAt            DateTime
+  completedChapterIds   Int[] // chapter indices the user has finished
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([bookId])
+}
+
+model SubmissionUpdate {
+  id           String            @id @default(cuid())
+  submissionId String
+  submission   NarrivaSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  note      String
+  createdAt DateTime @default(now())
+
+  @@index([submissionId])
 }
 
 enum CompetitionStatus {
@@ -278,160 +627,66 @@ model NarrivaSubmission {
   submittedAt DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  updates SubmissionUpdate[]
+  updates       SubmissionUpdate[]
+  authorProject AuthorProject?
 
   @@index([userId])
+  @@index([status])
 }
 
-// Dated communication-log entries shown in the Author Portal after
-// acceptance (Phase 8) — posted by admins from /admin/submissions.
-model SubmissionUpdate {
-  id           String            @id @default(cuid())
-  submissionId String
-  submission   NarrivaSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+model WriterBankDetails {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankName      String
+  bankCode      String
+  accountNumber String
+  accountName   String
+  verifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  note      String
+  withdrawalRequests WithdrawalRequest[]
+}
+
+enum WithdrawalRequestStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+model WithdrawalRequest {
+  id                   String                  @id @default(cuid())
+  userId               String
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cowriesAmount        Int
+  ngnAmount            Float
+  bankDetailsId        String
+  bankDetails          WriterBankDetails       @relation(fields: [bankDetailsId], references: [id], onDelete: Cascade)
+  status               WithdrawalRequestStatus @default(PENDING)
+  paystackTransferCode String?
+  paystackTransferRef  String?
+  adminNote            String?
+  rejectionReason      String?
+  requestedAt          DateTime                @default(now())
+  processedAt          DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model PlatformEarnings {
+  id        String   @id @default(cuid())
+  storyId   String
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  unlockId  String   @unique
+  cowries   Int
   createdAt DateTime @default(now())
 
-  @@index([submissionId])
-}
-
-model Book {
-  id       String @id @default(cuid())
-  slug     String @unique
-  title    String
-  authorId String
-  author   User   @relation("BookAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-
-  genre         String
-  hookLine      String
-  synopsis      String
-  excerpt       String[]
-  coverImageRef String
-  price         Float
-  editorNote            String?
-  editorNoteAttribution String?
-
-  // Ebook content stored in Cloudflare R2; never served as a downloadable file.
-  ebookRef          String
-  chapterCount      Int    @default(0)
-  wordCount         Int    @default(0)
-  estimatedReadTime Int    @default(0) // minutes
-
-  // Drives the homepage "Featured Books" carousel and bookstore "new
-  // releases" filter (Phase 3/4/7) — editorial flags, not derived from dates,
-  // since a book's launch push doesn't always line up with its print date.
-  featured     Boolean @default(false)
-  isNewRelease Boolean @default(false)
-
-  publishedAt DateTime
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  orderItems OrderItem[]
-  purchases  BookPurchase[]
-  sales      BookSale[]
-  readingProgress BookReadingProgress[]
-
-  @@index([authorId])
-}
-
-model BookPurchase {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookId String
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  paymentReference String
-  purchasedAt      DateTime @default(now())
-
-  @@unique([userId, bookId])
-  @@index([userId])
-  @@index([bookId])
-}
-
-model BookReadingProgress {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookId String
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  currentChapter      Int   @default(1)
-  currentScrollPosition Int @default(0) // pixel offset within chapter
-  lastReadAt          DateTime
-  completedChapterIds Int[] // chapter indices the user has finished
-
-  @@unique([userId, bookId])
-  @@index([userId])
-  @@index([bookId])
-}
-
-// Narriva bookstore purchases — a purchase record is created when a user
-// buys an ebook, granting them in-platform reading access only.
-model Order {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  totalNgn         Float
-  paymentReference String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items OrderItem[]
-
-  @@index([userId])
-}
-
-model OrderItem {
-  id      String @id @default(cuid())
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  bookId  String
-  book    Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-
-  priceNgn Float
-
-  @@index([orderId])
-  @@index([bookId])
-}
-
-model SavedStory {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storyId String
-  story   Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  savedAt DateTime @default(now())
-
-  @@unique([userId, storyId])
-}
-
-model StoryRating {
-  id       String   @id @default(cuid())
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storyId  String
-  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  rating   Int      // 1–5
-  ratedAt  DateTime @default(now())
-
-  @@unique([userId, storyId])
-}
-
-model StoryCompletion {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storyId     String
-  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  completedAt DateTime @default(now())
-
-  @@unique([userId, storyId])
+  @@index([storyId])
 }
 
 model StoryReadingProgress {
@@ -501,6 +756,17 @@ model Service {
   order   Int    @default(0)
 
   createdAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NariFaqItem {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  keywords  String[]
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
@@ -514,94 +780,224 @@ model AdminAuditLog {
   createdAt DateTime @default(now())
 }
 
-model NariConversation {
-  id             String   @id @default(cuid())
-  sessionId      String   // ties multiple messages into one conversation
-  role           String   // "user" | "nari"
-  message        String
-  language       String   @default("en")
-  classifiedLead Boolean  @default(false)
-  leadSummary    String?
-  createdAt      DateTime @default(now())
+model AdminAction {
+  id           String   @id @default(cuid())
+  adminId      String
+  targetUserId String
+  action       String
+  detail       Json?
+  createdAt    DateTime @default(now())
 
-  @@index([sessionId])
-  @@index([classifiedLead])
-  @@index([createdAt])
+  @@index([targetUserId])
+}
+
+model NariConversation {
+  id           String    @id @default(cuid())
+  sessionId    String    @unique
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Full conversation as an array of {role, content, timestamp}.
+  messages     Json
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  durationSecs Int?
+
+  intel NariConversationIntel?
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+enum IntentLevel {
+  HIGH
+  MEDIUM
+  LOW
+  BROWSING
+}
+
+model NariConversationIntel {
+  id                 String           @id @default(cuid())
+  conversationId     String           @unique
+  conversation       NariConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  visitorName        String?
+  visitorEmail       String?
+  manuscriptTopic    String?
+  manuscriptStatus   String?
+  wordCount          String?
+  servicesInterest   String[]
+  timelineSignal     String?
+  budgetSignal       String?
+  painPoints         String?
+  competitorMentions String[]
+  intentLevel        IntentLevel      @default(LOW)
+  extractedAt        DateTime         @default(now())
+  leadId             String?
+  lead               NariLead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([intentLevel])
+}
+
+enum NariLeadStatus {
+  NEW
+  CONTACTED
+  IN_DISCUSSION
+  SUBMITTED
+  WON
+  LOST
+}
+
+model NariLead {
+  id              String         @id @default(cuid())
+  name            String?
+  email           String?
+  manuscriptTopic String?
+  intentLevel     IntentLevel    @default(MEDIUM)
+  status          NariLeadStatus @default(NEW)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  conversationIntels NariConversationIntel[]
 }
 
 enum ProjectStage {
-  INQUIRY
-  CONTRACT_SENT
-  ONBOARDING
-  MANUSCRIPT_REVIEW
-  DEVELOPMENTAL_EDIT
-  COPYEDIT
-  COVER_DESIGN
-  INTERIOR_TYPESET
-  AUTHOR_REVIEW
-  PROOFREAD
-  PRINTING
-  MARKETING
-  RELEASED
-}
-
-enum ProjectType {
-  FULL_PUBLISHING
+  ASSESSMENT
   EDITORIAL
-  COVER_DESIGN
-  GHOSTWRITING
-  AUTHOR_GROWTH
+  DESIGN
+  PRODUCTION
+  LAUNCHED
 }
 
 model AuthorProject {
-  id          String       @id @default(cuid())
-  authorId    String
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title       String       // book/project title
-  type        ProjectType
-  stage       ProjectStage @default(INQUIRY)
-  stageNote   String?      // admin note visible to author
-  notes       String?      // admin-only internal notes
-  updatedAt   DateTime     @updatedAt
-  createdAt   DateTime     @default(now())
+  id               String            @id @default(cuid())
+  submissionId     String            @unique
+  submission       NarrivaSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookTitle        String
+  coverImageRef    String?
+  currentStage     ProjectStage      @default(ASSESSMENT)
+  // Short admin-written status message shown to the author.
+  statusNote       String?
+  expectedPubDate  DateTime?
+  isbn             String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  deliverables Deliverable[]
+  deliverables ProjectDeliverable[]
+  messages     ProjectMessage[]
+  documents    ProjectDocument[]
+  tasks        ProjectTask[]
 
-  @@index([authorId])
-  @@index([stage])
-}
-
-enum DeliverableType {
-  COVER
-  MANUSCRIPT
-  INTERIOR_LAYOUT
-  MARKETING_ASSET
-  CONTRACT
-  OTHER
+  @@index([userId])
+  @@index([currentStage])
 }
 
 enum DeliverableStatus {
-  PENDING_REVIEW
-  APPROVED
+  DRAFT
+  FOR_REVIEW
   CHANGES_REQUESTED
+  APPROVED
 }
 
-model Deliverable {
-  id             String             @id @default(cuid())
-  projectId      String
-  project        AuthorProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title          String
-  description    String?
-  fileUrl        String?            // uploaded file URL
-  type           DeliverableType
-  status         DeliverableStatus  @default(PENDING_REVIEW)
-  authorComment  String?            // author's feedback
-  adminNotes     String?            // admin's internal notes
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+model ProjectDeliverable {
+  id         String            @id @default(cuid())
+  projectId  String
+  project    AuthorProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label      String
+  stage      ProjectStage
+  status     DeliverableStatus @default(DRAFT)
+  // The admin user's name (display string, not a relation).
+  uploadedBy String
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  versions DeliverableVersion[]
+  comments DeliverableComment[]
 
   @@index([projectId])
   @@index([status])
+}
+
+model DeliverableVersion {
+  id             String             @id @default(cuid())
+  deliverableId  String
+  deliverable    ProjectDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  versionNumber  Int
+  fileRef        String // R2 path
+  fileType       String
+  fileSizeBytes  Int?
+  uploadedBy     String
+  uploadedAt     DateTime           @default(now())
+
+  @@index([deliverableId])
+}
+
+model DeliverableComment {
+  id            String             @id @default(cuid())
+  deliverableId String
+  deliverable   ProjectDeliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorRole    String
+  body          String
+  // Internal comments are never shown to the author.
+  isInternal    Boolean            @default(false)
+  isKeyDecision Boolean            @default(false)
+  createdAt     DateTime           @default(now())
+
+  @@index([deliverableId])
+}
+
+model ProjectMessage {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     AuthorProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorRole  String
+  body        String
+  isInternal  Boolean       @default(false)
+  isPinned    Boolean       @default(false)
+  pinnedLabel String?
+  createdAt   DateTime      @default(now())
+
+  @@index([projectId])
+}
+
+model ProjectDocument {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    AuthorProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label      String
+  fileRef    String
+  fileType   String
+  uploadedBy String
+  uploadedAt DateTime      @default(now())
+
+  @@index([projectId])
+}
+
+enum ProjectTaskStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETE
+}
+
+model ProjectTask {
+  id          String            @id @default(cuid())
+  projectId   String
+  project     AuthorProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  assignedTo  String
+  dueDate     DateTime?
+  status      ProjectTaskStatus @default(OPEN)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([projectId])
 }
 
 model BookSale {
@@ -617,4 +1013,64 @@ model BookSale {
 
   @@index([bookId])
   @@index([saleDate])
+}
+
+model KekereContractTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  contractType String
+  // Full contract text with {{variable}} placeholders.
+  body         String
+  // Names of the variables used in `body`.
+  variables    String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contracts KekereContract[]
+}
+
+enum KekereContractStatus {
+  PENDING
+  SIGNED
+  DECLINED
+  EXPIRED
+  VOIDED
+}
+
+model KekereContract {
+  id            String                  @id @default(cuid())
+  templateId    String
+  template      KekereContractTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  writerId      String
+  writer        User                    @relation(fields: [writerId], references: [id], onDelete: Cascade)
+  // Rendered contract with variables substituted.
+  body          String
+  status        KekereContractStatus    @default(PENDING)
+  signedName    String?
+  signedAt      DateTime?
+  signerIp      String?
+  signedPdfRef  String?
+  declinedAt    DateTime?
+  declineReason String?
+  expiresAt     DateTime?
+  sentAt        DateTime                @default(now())
+
+  @@index([writerId])
+  @@index([status])
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  enabled     Boolean  @default(true)
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model PlatformSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }

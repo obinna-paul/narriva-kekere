@@ -180,10 +180,9 @@ export async function submitStoryToCompetition(
     throw new CompetitionEntryError("A rejected story can't be entered into a competition.");
   }
 
-  const wordCount = story.body.trim().split(/\s+/).filter(Boolean).length;
-  if (wordCount > competition.wordCountLimit) {
+  if (story.wordCount > competition.wordCountLimit) {
     throw new CompetitionEntryError(
-      `This competition has a ${competition.wordCountLimit.toLocaleString()}-word limit — your story is ${wordCount.toLocaleString()} words.`
+      `This competition has a ${competition.wordCountLimit.toLocaleString()}-word limit — your story is ${story.wordCount.toLocaleString()} words.`
     );
   }
 

@@ -43,7 +43,7 @@ export default async function KekereFeedPage() {
         allStories={allStories}
         featuredStory={featuredStory}
         winnerStories={winnerStories}
-        balance={wallet?.balance ?? 0}
+        balance={wallet?.spendingBalance ?? 0}
       />
     </KekereTheme>
   );

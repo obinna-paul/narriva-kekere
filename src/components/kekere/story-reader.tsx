@@ -3,9 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2 } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { WatermarkOverlay } from "@/components/kekere/watermark-overlay";
+import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
+import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
+import { CommentPanel } from "@/components/kekere/CommentPanel";
+import { useParagraphComments } from "@/components/kekere/use-paragraph-comments";
+import { useParagraphReactions } from "@/components/kekere/use-paragraph-reactions";
+import { EmojiFloat } from "@/components/kekere/EmojiFloat";
+import { FloatingEmojiPicker } from "@/components/kekere/FloatingEmojiPicker";
+import { StoryAudioPlayer } from "@/components/kekere/StoryAudioPlayer";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export interface StoryReaderProps {
@@ -46,6 +54,16 @@ export function StoryReader({
   const [tipped, setTipped] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
   const [showNoCowryModal, setShowNoCowryModal] = useState(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const comments = useParagraphComments(story.id, unlocked);
+  const commentCounts = Object.fromEntries(
+    Object.entries(comments.commentsByParagraph).map(([id, g]) => [id, g.count])
+  );
+  const reactions = useParagraphReactions(story.id, unlocked);
+  const selectedReaction = comments.selectedParagraphId
+    ? reactions.reactionsByParagraph[comments.selectedParagraphId]?.userReaction ?? null
+    : null;
 
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   const progressTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -335,6 +353,23 @@ export function StoryReader({
             {story.title}
           </div>
           <div className="flex flex-none gap-[14px]">
+            {unlocked && (
+              <button
+                type="button"
+                aria-label={comments.panelOpen ? "Close comments" : "Open comments"}
+                aria-pressed={comments.panelOpen}
+                onClick={() => comments.setPanelOpen((v) => !v)}
+                className="bg-none text-[17px] transition-colors hover:text-[var(--color-primary)]"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: comments.panelOpen ? "var(--color-primary)" : "var(--color-ink-muted)",
+                }}
+              >
+                <MessageCircle className="h-[17px] w-[17px]" />
+              </button>
+            )}
             <button
               type="button"
               aria-label={saved ? "Remove bookmark" : "Bookmark"}
@@ -359,8 +394,12 @@ export function StoryReader({
         </div>
       </div>
 
+      <div className={cn(comments.panelOpen && unlocked && "md:flex md:items-start md:justify-center md:gap-6")}>
       <main
-        className="relative z-[5] mx-auto max-w-[620px] px-6 pb-20"
+        className={cn(
+          "relative z-[5] mx-auto max-w-[620px] px-6 pb-20",
+          comments.panelOpen && unlocked && "md:mx-0"
+        )}
         style={{ paddingTop: 78 }}
       >
         <div className="mb-[30px]">
@@ -382,14 +421,28 @@ export function StoryReader({
         >
           {unlocked ? (
             <div className="flex flex-col">
-              {story.paragraphs.map((p, i) => {
-                const key = `p-${i}`;
-                return (
-                  <p key={key} className="mb-[1.3em]">
-                    {p}
-                  </p>
-                );
-              })}
+              <div ref={contentRef} className="relative">
+                {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
+                <ParagraphCommentIndicators
+                  containerRef={contentRef}
+                  commentCounts={commentCounts}
+                  selectedParagraphId={comments.selectedParagraphId}
+                  onSelectParagraph={comments.selectParagraph}
+                  onOpenComments={comments.openComments}
+                />
+                <EmojiFloat containerRef={contentRef} reactionsByParagraph={reactions.reactionsByParagraph} />
+              </div>
+
+              {comments.selectedParagraphId && !comments.panelOpen && (
+                <FloatingEmojiPicker
+                  containerRef={contentRef}
+                  paragraphId={comments.selectedParagraphId}
+                  userReaction={selectedReaction}
+                  onSelect={(emoji) => reactions.setReaction(comments.selectedParagraphId!, emoji)}
+                  onRemove={() => reactions.removeReaction(comments.selectedParagraphId!)}
+                  onDismiss={comments.deselect}
+                />
+              )}
 
               <div className="pt-[30px] text-center">
                 <button
@@ -403,20 +456,9 @@ export function StoryReader({
             </div>
           ) : (
             <>
-              {story.paragraphs.slice(0, -1).map((p, i) => {
-                const key = `p-${i}`;
-                return (
-                  <p key={key} className="mb-[1.3em]">
-                    {p}
-                  </p>
-                );
-              })}
-
-              {story.paragraphs.length > 0 && (
+              {story.bodyDoc && (
                 <div className="relative">
-                  <p className="mb-[1.3em]">
-                    {story.paragraphs[story.paragraphs.length - 1]}
-                  </p>
+                  <StoryReaderContent doc={story.bodyDoc} />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[160px] bg-gradient-to-b from-transparent to-[var(--color-bg)]" />
                 </div>
               )}
@@ -485,6 +527,29 @@ export function StoryReader({
           )}
         </div>
       </main>
+
+      {unlocked && (
+        <CommentPanel
+          open={comments.panelOpen}
+          onClose={() => comments.setPanelOpen(false)}
+          selectedParagraphId={comments.selectedParagraphId}
+          comments={comments.selectedGroup?.comments}
+          unlocked={unlocked}
+          posting={comments.posting}
+          error={comments.error}
+          onPost={comments.postComment}
+          pendingNewCount={comments.pendingNewCount}
+          onApplyPending={comments.applyPending}
+          userReaction={selectedReaction}
+          onSelectEmoji={(emoji) => reactions.setReaction(comments.selectedParagraphId!, emoji)}
+          onRemoveEmoji={() => reactions.removeReaction(comments.selectedParagraphId!)}
+        />
+      )}
+
+      {unlocked && (
+        <StoryAudioPlayer storyId={story.id} bodyDoc={story.bodyDoc} containerRef={contentRef} />
+      )}
+      </div>
     </div>
   );
 }

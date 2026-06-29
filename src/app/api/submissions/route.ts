@@ -5,6 +5,7 @@ import { createSubmission, listSubmissions } from "@/lib/data/submissions";
 import { manuscriptFileSchema, submissionFormSchema } from "@/lib/validation/submissions";
 import { uploadManuscript } from "@/lib/storage/r2";
 import { sendEmail } from "@/lib/email/send";
+import { getFeatureFlag } from "@/lib/settings/get";
 import type { NarrivaSubmissionStatus } from "@prisma/client";
 
 export const GET = withAuth(
@@ -18,6 +19,14 @@ export const GET = withAuth(
 );
 
 export async function POST(request: Request) {
+  const submissionsEnabled = await getFeatureFlag("manuscript_submissions", true);
+  if (!submissionsEnabled) {
+    return NextResponse.json(
+      { error: "manuscript_submissions_disabled", message: "This feature is temporarily unavailable." },
+      { status: 403 },
+    );
+  }
+
   const formData = await request.formData();
 
   const fields = {

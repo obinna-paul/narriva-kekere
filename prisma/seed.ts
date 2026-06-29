@@ -192,7 +192,7 @@ async function seedKekereAuthors() {
         password: passwordHash,
         role: "WRITER",
         avatarColor: story.coverColor,
-        wallet: { create: { balance: 0 } },
+        wallet: { create: { spendingBalance: 0 } },
       },
     });
   }
@@ -291,6 +291,40 @@ async function seedCompetitions() {
   }
 }
 
+const FEATURE_FLAGS = [
+  { key: "cowrie_withdrawals", enabled: true, description: "Allows writers to request cowrie withdrawals" },
+  { key: "story_submissions", enabled: true, description: "Allows writers to submit stories for review" },
+  { key: "manuscript_submissions", enabled: true, description: "Allows authors to submit manuscripts to Narriva" },
+  { key: "referral_program", enabled: true, description: "Enables referral codes and rewards" },
+];
+
+const PLATFORM_SETTINGS = [
+  { key: "monthly_revenue_target_ngn", value: "500000" },
+  { key: "writer_earnings_rate", value: "0.70" },
+  { key: "referral_reward_cowries", value: "3" },
+  { key: "completion_bonus_cowries", value: "1" },
+  { key: "tip_amount_cowries", value: "1" },
+  { key: "withdrawal_rate_ngn_per_cowrie", value: "50" },
+];
+
+async function seedPlatformConfig() {
+  for (const flag of FEATURE_FLAGS) {
+    await prisma.featureFlag.upsert({
+      where: { key: flag.key },
+      update: {},
+      create: flag,
+    });
+  }
+
+  for (const setting of PLATFORM_SETTINGS) {
+    await prisma.platformSetting.upsert({
+      where: { key: setting.key },
+      update: {},
+      create: setting,
+    });
+  }
+}
+
 async function main() {
   console.log("Seeding authors…");
   const authorIdBySlug = await seedAuthors();
@@ -312,6 +346,9 @@ async function main() {
 
   console.log("Seeding Kekere competitions…");
   await seedCompetitions();
+
+  console.log("Seeding feature flags and platform settings…");
+  await seedPlatformConfig();
 
   console.log("Done.");
 }

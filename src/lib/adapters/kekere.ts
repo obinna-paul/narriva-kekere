@@ -22,7 +22,7 @@ function isRecentlyPublished(publishedAt: Date): boolean {
  * paid story to anyone — bypassing the cowrie paywall entirely. Use
  * toReaderStoryData for the one place a real (gated) body is needed.
  */
-export function toFeedStoryData(story: StoryWithAuthor, trending = false): MockStory {
+export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending = false): MockStory {
   const publishedAt = story.publishedAt ?? story.createdAt;
 
   return {
@@ -42,15 +42,16 @@ export function toFeedStoryData(story: StoryWithAuthor, trending = false): MockS
     coverColor: story.coverColor,
     publishedAt: publishedAt.toISOString(),
     paragraphs: [],
+    bodyDoc: null,
   };
 }
 
 /**
- * For the reader: `story.body` here is ALREADY the right text for the
- * requester (full body if unlocked, server-truncated preview if not — see
- * getStoryForReader). The resulting paragraphs array should be rendered
- * as-is; the reader must NOT re-derive a "preview" from it client-side.
+ * For the reader: `story.body` here is ALREADY the right doc for the
+ * requester (full doc if unlocked, server-truncated preview doc if not —
+ * see getStoryForReader). Rendered as-is by the Tiptap reader; the reader
+ * must NOT re-derive a "preview" from it client-side.
  */
 export function toReaderStoryData(story: StoryForReader): MockStory {
-  return { ...toFeedStoryData(story), paragraphs: story.body.split("\n\n") };
+  return { ...toFeedStoryData(story), bodyDoc: story.body };
 }

@@ -43,6 +43,10 @@ export interface MockStory {
   /** Full body, paragraph by paragraph. The reader shows roughly the first
    * 10% (by character count) before gating the rest. */
   paragraphs: readonly string[];
+  /** Real stories only — the Tiptap document the reader actually renders
+   * (see toReaderStoryData). Already truncated server-side when locked.
+   * null for the static mock catalog, which only ever populates `paragraphs`. */
+  bodyDoc: import("@/lib/tiptap/doc-utils").TiptapDoc | null;
 }
 
 function costInTier(tier: StoryTier, position: number): number {
@@ -74,6 +78,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "\"I know,\" she said, and got off anyway, at her own stop, for the first time since March, and stood on the pavement watching the bus pull away toward the place she'd been hiding for six months without telling anyone she was hiding at all.",
       "Her phone buzzed. Her husband, asking what was for dinner. She typed back: I'm coming home. She meant it two ways, and only one of them was about dinner.",
     ],
+    bodyDoc: null,
   },
   {
     id: "jollof-wars",
@@ -98,6 +103,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "What followed was forty minutes of triage — fresh stock, a second pot borrowed from a neighbor who would absolutely hear about this later, and a level of teamwork the two sisters hadn't managed since their own joint birthday party in 2009.",
       "By the time the bride arrived, the rice was, against all odds and a great deal of shouting, perfect. Nobody at the reception ever learned how close they'd come to a wedding remembered for the wrong reasons.",
     ],
+    bodyDoc: null,
   },
   {
     id: "what-the-okada-driver-saw",
@@ -122,6 +128,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Sule drove anyway. Nine years on this route had taught him that some questions cost more than the fare was worth, and that the safest thing a man could do, sometimes, was simply not ask the second one.",
       "He dropped him at a junction instead of the imaginary address, took the money without counting it, and rode home a different way than usual — a small, deliberate detour around whatever had been chasing a stranger through Surulere at midnight.",
     ],
+    bodyDoc: null,
   },
   {
     id: "her-mothers-tongue",
@@ -145,6 +152,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "\"Just teach me what you remember,\" her daughter said, and Obianuju realized, with a feeling close to vertigo, that what she remembered and what she'd buried were not, after thirty years, easily told apart anymore.",
       "She started with the easy words. Mmiri. Nri. Ụlọ. Her daughter wrote them down like things that might disappear if not captured fast enough, and Obianuju understood, watching her, that they already nearly had.",
     ],
+    bodyDoc: null,
   },
   {
     id: "the-generator-diaries",
@@ -168,6 +176,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "By the time the generator finally died — properly died, parts-needed died — the group chat had survived two near-fights, one engagement announcement, and exactly one extremely ill-advised attempt by Flat 2 to sell expired insurance to the whole compound.",
       "They bought a new generator together within the week. Nobody discussed it. Everybody just sent money, the way people do when the alternative is admitting how much they'd actually miss the group chat.",
     ],
+    bodyDoc: null,
   },
   {
     id: "aunty-ngozis-last-wedding",
@@ -191,6 +200,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Her best friend asked, gently, if she was sure. Ngozi said she'd been sure about other people's certainty for eleven weddings running, and it was, frankly, her turn to find out what it felt like from the inside.",
       "The wedding had no flowers at all, in the end — a small joke only she and the groom understood — and by every measure Ngozi had spent a decade refining, it was the best one she'd ever planned.",
     ],
+    bodyDoc: null,
   },
   {
     id: "lagos-4am",
@@ -214,6 +224,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "At four, the city was almost gentle. The bridge over the lagoon held a kind of quiet she'd never once heard described in the songs written about this place, all of which seemed to assume Lagos only existed loud.",
       "She'd thought, for a while, about writing it down — the actual four o'clock city, the one that belonged briefly to people like her — and tonight, walking home past the bread sellers, she finally started, in her head, to find the words.",
     ],
+    bodyDoc: null,
   },
   {
     id: "the-boy-who-counted-stars",
@@ -237,6 +248,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "He told no one, because who tells anyone a star is missing, but he kept counting, every night after, watching the gap where it had been like a held breath.",
       "Forty nights later, a new light appeared two degrees to the left of where the old one had been — fainter, but unmistakably there — and Tunde, who had never believed in anything astronomers couldn't explain, decided that some things were allowed to simply move.",
     ],
+    bodyDoc: null,
   },
   {
     id: "nkem-and-the-quiet-house",
@@ -260,6 +272,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "The first week, she told herself the sounds were pipes. The second week, she stopped telling herself anything, and simply started leaving a light on in the room she didn't use, the way her grandmother used to leave food out for visitors who weren't, strictly speaking, going to knock.",
       "By the third week, the sounds had stopped entirely, and Nkem understood, in a way she chose not to examine too closely, that the house had simply been waiting for someone to acknowledge that it wasn't empty, and was, for now, satisfied.",
     ],
+    bodyDoc: null,
   },
   {
     id: "three-calls-from-my-father",
@@ -283,6 +296,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "This year the third call came in August, during a downpour I could hear on his end of the line too, four hundred kilometers away, and he asked nothing in particular and said even less, and stayed on the phone for eleven minutes anyway.",
       "I didn't ask why he calls when it rains. Some things are easier to keep as a small mystery you're fond of than as a question with an answer that might disappoint you.",
     ],
+    bodyDoc: null,
   },
   {
     id: "the-wig-shop-on-allen-avenue",
@@ -306,6 +320,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Today's customer wanted a simple bob and left, forty minutes later, with the bob, a 20% discount she hadn't asked for, and the unshakeable knowledge that her ex-boyfriend's new girlfriend had been in twice last week asking pointed questions about extensions.",
       "\"You didn't hear it from me,\" Mama Kemi said, as she said to everyone, every time, while ringing up a sale that had somehow taken forty minutes for one bob.",
     ],
+    bodyDoc: null,
   },
   {
     id: "what-we-buried-in-bonny",
@@ -330,6 +345,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "At the graveside, the eldest sister said the thing none of them had said aloud in eighteen years: that their mother's death was the reason their father had stayed, all this time, on an island none of his children had wanted to inherit.",
       "Nobody disagreed. They buried him anyway, on the island, beside her, and went back to the mainland that evening lighter by exactly one argument they'd been carrying, unspoken, since they were children.",
     ],
+    bodyDoc: null,
   },
   {
     id: "love-logged-off",
@@ -353,6 +369,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "She booked the bus ticket without telling him. Six hours to his city, a plan that terrified her slightly more than she let on, and a single text sent from the bus station: I'm here. Come as you are, I already know who that is.",
       "He came as he was. It turned out to be exactly who she'd already fallen for, which was, she realized watching him walk toward her, the only version that had ever actually been real.",
     ],
+    bodyDoc: null,
   },
   {
     id: "the-interview",
@@ -376,6 +393,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "This time, she answered differently — not the rehearsed failure story she'd used the last three times, but a true one, small and unflattering and never meant for an interview panel.",
       "The interviewer's pen stopped. For the first time in four attempts, he looked up from the form instead of through it, and said, \"That's the first real answer anyone's given me all year.\" She didn't get the job. She got something stranger: a phone call, two weeks later, for a different position entirely, one that had never been advertised.",
     ],
+    bodyDoc: null,
   },
   {
     id: "salt-for-the-sea-widow",
@@ -399,6 +417,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "The new bride in the village, married in from elsewhere, didn't leave salt, because nobody had told her to, and that was the year three boats came back empty that should not have.",
       "By the next new moon she'd been told, in the careful unspecific way village knowledge travels, and she left her salt like everyone else, and never once asked why, because some answers are kept exactly that vague on purpose, and a smart woman learns when not to make someone say it plainly.",
     ],
+    bodyDoc: null,
   },
 ] as const;
 

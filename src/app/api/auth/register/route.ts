@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
-import { generateReferralCode } from "@/lib/data/kekere-referrals";
+import { ensureReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
+import { getFeatureFlag } from "@/lib/settings/get";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
 
   const remoteIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (!(await verifyTurnstileToken(turnstileToken, remoteIp))) {
-    return NextResponse.json({ error: "Verification failed � please try again" }, { status: 400 });
+    return NextResponse.json({ error: "Verification failed — please try again" }, { status: 400 });
   }
 
   if (!termsAccepted) {
@@ -41,20 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let referredBy: string | null = null;
-  if (referralCode && referralCode.trim()) {
-    const inviter = await prisma.user.findUnique({
-      where: { referralCode: referralCode.trim() },
-      select: { id: true },
-    });
-    if (!inviter) {
-      return NextResponse.json({ error: "Invalid referral code" }, { status: 400 });
-    }
-    referredBy = referralCode.trim();
-  }
-
   const hashedPassword = await bcrypt.hash(password, 12);
-  const userReferralCode = generateReferralCode(name);
 
   try {
     const user = await prisma.user.create({
@@ -63,14 +52,35 @@ export async function POST(request: Request) {
         name,
         password: hashedPassword,
         termsAcceptedAt: new Date(),
-        referralCode: userReferralCode,
-        referredBy,
-        wallet: { create: { balance: 0 } },
+        wallet: { create: {} },
       },
-      select: { id: true, email: true, name: true, role: true, referralCode: true },
+      select: { id: true, email: true, name: true, role: true },
     });
 
-    return NextResponse.json({ user }, { status: 201 });
+    const newReferralCode = await ensureReferralCodeForUser(user.id);
+    // Kept in sync with ReferralCode.code so the existing wallet-page
+    // "Your referral code" display (which still reads this legacy column)
+    // doesn't regress now that code generation/lookup has moved to the
+    // dedicated ReferralCode model.
+    await prisma.user.update({ where: { id: user.id }, data: { referralCode: newReferralCode } });
+
+    // The /invite/[code] link sets this cookie; a manually-typed code in
+    // the signup form arrives in the request body instead. Either is
+    // resolved through the same lookup — an invalid or self-referral code
+    // is silently ignored, never a registration error.
+    const cookieCode = (await cookies()).get("referral_code")?.value;
+    const codeToUse = cookieCode ?? referralCode;
+    if (codeToUse) {
+      const referralEnabled = await getFeatureFlag("referral_program", true);
+      if (referralEnabled) {
+        await recordReferralFromCode(codeToUse, user.id);
+      }
+    }
+
+    return NextResponse.json(
+      { user: { ...user, referralCode: newReferralCode } },
+      { status: 201 },
+    );
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

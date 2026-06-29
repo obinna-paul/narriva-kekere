@@ -10,7 +10,20 @@ import { cn } from "@/lib/utils/cn";
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD";
+  type:
+    | "TOP_UP"
+    | "UNLOCK"
+    | "REFUND"
+    | "WITHDRAWAL"
+    | "TIP"
+    | "REFERRAL"
+    | "READ_REWARD"
+    | "COMPLETION_BONUS"
+    | "TIP_SENT"
+    | "TIP_RECEIVED"
+    | "REFERRAL_REWARD"
+    | "EARNINGS_CREDIT"
+    | "PLATFORM_EARNINGS";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;

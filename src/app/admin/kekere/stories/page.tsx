@@ -60,7 +60,7 @@ export default async function AdminKekereStoriesPage() {
                     : "—"}
                 </td>
                 <td className="px-4 py-3 text-[var(--color-ink)]/70">
-                  {story.body.trim().split(/\s+/).filter(Boolean).length.toLocaleString()}
+                  {story.wordCount.toLocaleString()}
                 </td>
                 <td className="px-4 py-3">
                   <Link

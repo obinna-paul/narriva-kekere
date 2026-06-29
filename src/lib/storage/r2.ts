@@ -49,6 +49,37 @@ export async function getManuscriptDownloadUrl(key: string): Promise<string> {
   );
 }
 
+/** Signed download URL for author portal files (deliverables, documents).
+ *  Expires in 15 minutes. */
+export async function getPortalFileDownloadUrl(key: string): Promise<string> {
+  return getSignedUrl(
+    r2Client,
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+    { expiresIn: 60 * 15 }
+  );
+}
+
+/** Uploads a deliverable or document file to the portal/ prefix in R2.
+ *  Returns the object key stored in the database. */
+export async function uploadPortalFile(
+  buffer: Buffer,
+  filename: string,
+  contentType: string
+): Promise<string> {
+  const key = `portal/${crypto.randomUUID()}-${filename}`;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+    })
+  );
+
+  return key;
+}
+
 export interface EbookChapter {
   index: number;
   title: string;
@@ -101,4 +132,32 @@ export async function getEbookChapter(
 ): Promise<EbookChapter | null> {
   const content = await getEbookContent(key);
   return content.chapters.find((c) => c.index === chapterIndex) ?? null;
+}
+
+/** Uploads generated TTS narration audio for a story. Overwrites any
+ * existing file at the same key — re-generation (Phase B6) replaces the
+ * old audio rather than accumulating orphaned files. */
+export async function uploadStoryAudio(storyId: string, buffer: Buffer): Promise<string> {
+  const key = `audio/stories/${storyId}.mp3`;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: "audio/mpeg",
+    })
+  );
+
+  return key;
+}
+
+/** Signed playback URL for a story's narration audio — long enough for a
+ * full reading/listening session, short enough to deter link sharing. */
+export async function getStoryAudioUrl(key: string): Promise<string> {
+  return getSignedUrl(
+    r2Client,
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+    { expiresIn: 60 * 60 * 4 }
+  );
 }

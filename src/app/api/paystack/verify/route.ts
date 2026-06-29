@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { verifyTransaction } from "@/lib/paystack/client";
-import { processWalletTopup } from "@/lib/data/payments";
+import { creditTopUp } from "@/lib/economy/cowries";
+import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 
 /**
@@ -12,7 +13,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile/verify";
  * (src/app/api/webhooks/paystack) on purpose: this is the fast path the
  * client calls right after the checkout popup closes, the webhook is the
  * eventual-consistency safety net. Both call the same idempotent
- * processWalletTopup(), so whichever fires first does the crediting.
+ * creditTopUp(), so whichever fires first does the crediting.
  */
 const verifySchema = z.object({
   reference: z.string().min(1),
@@ -31,7 +32,7 @@ export const POST = withAuth(async (request, session) => {
     );
   }
 
-  const { reference, packageIndex, turnstileToken } = parsed.data;
+  const { reference, turnstileToken } = parsed.data;
 
   const remoteIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (!(await verifyTurnstileToken(turnstileToken, remoteIp))) {
@@ -49,6 +50,14 @@ export const POST = withAuth(async (request, session) => {
     return NextResponse.json({ error: "Payment not successful" }, { status: 402 });
   }
 
-  const result = await processWalletTopup(reference, session.user.id, packageIndex);
+  // Matched against the amount Paystack actually settled, not the client's
+  // packageIndex — see /api/webhooks/paystack for the same rule.
+  const paidNGN = verification.amount / 100;
+  const pkg = COWRIE_TOPUP_PACKAGES.find((p) => p.priceNGN === paidNGN);
+  if (!pkg) {
+    return NextResponse.json({ error: "Paid amount doesn't match any top-up package" }, { status: 400 });
+  }
+
+  const result = await creditTopUp(session.user.id, pkg.cowries + pkg.bonusCowries, reference);
   return NextResponse.json(result);
 });

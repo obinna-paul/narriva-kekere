@@ -6,11 +6,21 @@ import {
   StoryNotFoundError,
   submitStory,
 } from "@/lib/data/kekere-stories";
+import { createNotification } from "@/lib/notifications/create";
 
 export const POST = withAuth(
   async (_request, session, { params }: { params: { id: string } }) => {
     try {
       const story = await submitStory(params.id, session.user.id);
+
+      await createNotification({
+        userId: story.authorId,
+        type: "STORY_SUBMITTED",
+        title: "Story submitted for review",
+        body: `Your story "${story.title}" is now being reviewed. We'll come back to you within 5–7 business days.`,
+        link: `/kekere/write?id=${story.id}`,
+      });
+
       return NextResponse.json({ story });
     } catch (error) {
       if (error instanceof StoryNotFoundError) {

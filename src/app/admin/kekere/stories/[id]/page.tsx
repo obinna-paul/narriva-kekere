@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Heading, Body } from "@/components/ui/typography";
 import { getModerationQueueItem } from "@/lib/data/kekere-moderation";
 import { KekereStoryDecision } from "@/components/admin/kekere-story-decision";
-import { renderSimpleMarkdown } from "@/lib/utils/markdown";
+import { docToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,8 @@ export default async function AdminKekereStoryDetailPage({
   const story = await getModerationQueueItem(params.id);
   if (!story) notFound();
 
-  const wordCount = story.body.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = story.wordCount;
+  const bodyHtml = docToHtml(story.body as unknown as TiptapDoc);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
@@ -65,9 +66,10 @@ export default async function AdminKekereStoryDetailPage({
           />
         </div>
 
-        <div className="mt-8 flex flex-col gap-4 rounded-lg border border-[var(--color-ink)]/10 p-6 text-base leading-relaxed">
-          {renderSimpleMarkdown(story.body)}
-        </div>
+        <div
+          className="mt-8 flex flex-col gap-4 rounded-lg border border-[var(--color-ink)]/10 p-6 text-base leading-relaxed [&_strong]:font-bold [&_em]:italic [&_u]:underline"
+          dangerouslySetInnerHTML={{ __html: bodyHtml }}
+        />
       </div>
 
       <aside className="flex flex-col gap-4 text-sm">

@@ -61,3 +61,99 @@ export function verifyWebhookSignature(rawBody: string, signatureHeader: string 
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
+
+function authHeader(): Record<string, string> {
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("PAYSTACK_SECRET_KEY is not configured");
+  }
+  return { Authorization: `Bearer ${secretKey}` };
+}
+
+export type BankResolveResult =
+  | { verified: true; accountName: string }
+  | { verified: false; message: string };
+
+/**
+ * Resolves a bank account name from account number + bank code, used to
+ * confirm a writer's payout details before money ever moves. Never throws —
+ * a failed resolution (bad account, Paystack outage) is a normal outcome
+ * the caller still saves bank details for, just unverified.
+ */
+export async function resolveBankAccount(
+  accountNumber: string,
+  bankCode: string
+): Promise<BankResolveResult> {
+  try {
+    const res = await fetch(
+      `${PAYSTACK_BASE_URL}/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`,
+      { headers: authHeader() }
+    );
+    const body = await res.json();
+    if (!res.ok || !body?.status || !body?.data?.account_name) {
+      return { verified: false, message: body?.message ?? `Resolution failed with status ${res.status}` };
+    }
+    return { verified: true, accountName: body.data.account_name as string };
+  } catch (error) {
+    return { verified: false, message: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+export interface CreateTransferRecipientInput {
+  accountName: string;
+  accountNumber: string;
+  bankCode: string;
+}
+
+/**
+ * Creates a Paystack Transfer Recipient — a prerequisite for every transfer,
+ * not cached, since bank details can change between withdrawals.
+ */
+export async function createTransferRecipient(input: CreateTransferRecipientInput): Promise<string> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/transferrecipient`, {
+    method: "POST",
+    headers: { ...authHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "nuban",
+      name: input.accountName,
+      account_number: input.accountNumber,
+      bank_code: input.bankCode,
+      currency: "NGN",
+    }),
+  });
+
+  const body = await res.json();
+  if (!res.ok || !body?.status || !body?.data?.recipient_code) {
+    throw new Error(body?.message ?? `Transfer recipient creation failed with status ${res.status}`);
+  }
+  return body.data.recipient_code as string;
+}
+
+export interface InitiateTransferResult {
+  transferCode: string;
+  reference: string;
+}
+
+/** Initiates the actual payout. amountKobo must already be rounded to the nearest kobo. */
+export async function initiateTransfer(
+  recipientCode: string,
+  amountKobo: number,
+  reason: string
+): Promise<InitiateTransferResult> {
+  const res = await fetch(`${PAYSTACK_BASE_URL}/transfer`, {
+    method: "POST",
+    headers: { ...authHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      source: "balance",
+      amount: amountKobo,
+      recipient: recipientCode,
+      reason,
+    }),
+  });
+
+  const body = await res.json();
+  if (!res.ok || !body?.status) {
+    throw new Error(body?.message ?? `Transfer initiation failed with status ${res.status}`);
+  }
+  return { transferCode: body.data.transfer_code as string, reference: body.data.reference as string };
+}

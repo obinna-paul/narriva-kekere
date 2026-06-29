@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
+import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { Prisma, Story, StoryStatus, StoryTier } from "@prisma/client";
 
 export class StoryNotFoundError extends Error {
@@ -173,8 +174,9 @@ async function isStoryUnlockedFor(
 
 export { isStoryUnlockedFor as isStoryUnlocked };
 
-export interface StoryForReader extends StoryWithAuthor {
+export interface StoryForReader extends Omit<StoryWithAuthor, "body"> {
   unlocked: boolean;
+  body: TiptapDoc;
 }
 
 /**
@@ -192,7 +194,8 @@ export async function getStoryForReader(
   if (!story || story.status !== "PUBLISHED") return null;
 
   const unlocked = await isStoryUnlockedFor(story, userId);
-  return { ...story, unlocked, body: unlocked ? story.body : previewFraction(story.body) };
+  const body = story.body as unknown as TiptapDoc;
+  return { ...story, unlocked, body: unlocked ? body : previewFraction(body) };
 }
 
 /** No status filter — for the author viewing/editing their own story
@@ -217,13 +220,17 @@ export async function listStoriesByAuthor(authorId: string): Promise<StoryWithAu
 export interface StoryDraftInput {
   title: string;
   hookLine: string;
-  body: string;
+  body: TiptapDoc;
+  wordCount: number;
   readingTime: number;
   genre?: string;
   tier?: StoryTier;
   cowrieCost?: number;
   isSerialized?: boolean;
   chapters?: Prisma.InputJsonValue;
+  /** Set only alongside a body save — the autosave watermark StoryEditor's
+   * conflict detection compares against. See PUT /api/kekere/stories/[id]. */
+  lastSavedAt?: Date;
 }
 
 export async function createStory(authorId: string, input: StoryDraftInput): Promise<Story> {
@@ -233,7 +240,8 @@ export async function createStory(authorId: string, input: StoryDraftInput): Pro
       authorId,
       title: input.title,
       hookLine: input.hookLine,
-      body: input.body,
+      body: input.body as unknown as Prisma.InputJsonValue,
+      wordCount: input.wordCount,
       readingTime: input.readingTime,
       genre: input.genre,
       tier,
@@ -264,6 +272,7 @@ export async function updateStory(
     where: { id },
     data: {
       ...input,
+      body: input.body as unknown as Prisma.InputJsonValue | undefined,
       cowrieCost: input.tier && input.cowrieCost === undefined
         ? defaultCowrieCostForTier(input.tier)
         : input.cowrieCost,

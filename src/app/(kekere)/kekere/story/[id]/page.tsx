@@ -30,7 +30,7 @@ export default async function KekereStoryPage({ params }: { params: { id: string
         isLoggedIn={!!userId}
         userEmail={session?.user?.email ?? undefined}
         initialUnlocked={dbStory.unlocked}
-        initialBalance={wallet?.balance ?? 0}
+        initialBalance={wallet?.spendingBalance ?? 0}
         initialSaved={saved}
         initialRating={rating ?? undefined}
       />

@@ -29,11 +29,12 @@ SheetOverlay.displayName = "SheetOverlay";
 
 export interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
-  side?: "left" | "bottom";
+  side?: "left" | "right" | "bottom";
 }
 
 const SIDE_CLASSES: Record<NonNullable<SheetContentProps["side"]>, string> = {
   left: "inset-y-0 left-0 h-full w-[300px] max-w-[84vw] data-[state=closed]:-translate-x-full data-[state=open]:translate-x-0 [box-shadow:18px_0_50px_-20px_rgba(42,26,18,0.4)]",
+  right: "inset-y-0 right-0 h-full w-[360px] max-w-[88vw] data-[state=closed]:translate-x-full data-[state=open]:translate-x-0 [box-shadow:-18px_0_50px_-20px_rgba(42,26,18,0.4)]",
   bottom:
     "inset-x-0 bottom-0 max-h-[88vh] rounded-t-[20px] data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
 };

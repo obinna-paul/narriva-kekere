@@ -32,3 +32,25 @@ export const STORY_TIER_RANGES: Record<StoryTier, readonly [number, number]> = {
   featured: [40, 60],
   premium: [70, 100],
 } as const;
+
+// Cowrie economy constants — see docs/Narriva_Todays_Decisions_And_Specs.md.
+// Mirrors the seeded PlatformSetting rows (writer_earnings_rate,
+// completion_bonus_cowries, tip_amount_cowries); keep both in sync if either
+// changes.
+export const WRITER_EARNINGS_RATE = 0.7 as const;
+export const COMPLETION_BONUS_COWRIES = 1 as const;
+export const TIP_AMOUNT_COWRIES = 1 as const;
+export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;
+
+// Story pricing: admin sets cost at publish time. Free stories cost 0,
+// paid stories cost 2–6 cowries (inclusive). The old tier-based ranges
+// (STANDARD 10-30, FEATURED 40-60, PREMIUM 70-100) are replaced.
+// Tier is now an editorial classification decoupled from price.
+export const STORY_COWRIE_RANGE = {
+  free: 0,
+  min_paid: 2,
+  max_paid: 6,
+} as const;
+
+/** Average reading speed for time estimates. Used across writer UI + reader display. */
+export const READING_WPM = 238 as const;

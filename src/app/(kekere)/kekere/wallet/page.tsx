@@ -27,7 +27,7 @@ export default async function KekereWalletPage() {
     : [null, null];
 
   const referralEarnings = wallet?.transactions
-    .filter((t) => t.type === "REFERRAL")
+    .filter((t) => t.type === "REFERRAL" || t.type === "REFERRAL_REWARD")
     .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
 
   const readRewardEarnings = wallet?.transactions
@@ -43,7 +43,7 @@ export default async function KekereWalletPage() {
       <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
         <KekereNavWrapper />
         <WalletView
-          balance={wallet?.balance ?? 0}
+          balance={wallet?.spendingBalance ?? 0}
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
           hasBankDetails={!!user?.bankAccountNumber && !!user?.bankName}

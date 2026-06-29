@@ -283,13 +283,16 @@ export async function listAllPurchases(): Promise<AdminPurchaseRow[]> {
 }
 
 /** Goodwill access removal — no Paystack refund call, since there's no
- * physical/digital product to return. Logged to AdminAuditLog for reconciliation. */
+ *  physical/digital product to return. Logged to AdminAuditLog for reconciliation. */
 export async function revokeBookPurchase(
   purchaseId: string,
   adminId: string,
   note?: string
 ): Promise<void> {
-  const purchase = await prisma.bookPurchase.findUnique({ where: { id: purchaseId } });
+  const purchase = await prisma.bookPurchase.findUnique({
+    where: { id: purchaseId },
+    include: { book: { select: { title: true } } },
+  });
   if (!purchase) return;
 
   await prisma.$transaction([
@@ -301,6 +304,15 @@ export async function revokeBookPurchase(
         targetType: "BookPurchase",
         targetId: purchaseId,
         note: note ?? `Revoked access to bookId=${purchase.bookId} for userId=${purchase.userId}`,
+      },
+    }),
+    prisma.bookPurchaseRevocation.create({
+      data: {
+        bookId: purchase.bookId,
+        userId: purchase.userId,
+        bookTitle: purchase.book.title,
+        adminId,
+        adminNote: note ?? null,
       },
     }),
   ]);
