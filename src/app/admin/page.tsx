@@ -1,65 +1,150 @@
-import Link from "next/link";
-import { prisma } from "@/lib/db/prisma";
-import { getAdminOverview } from "@/lib/data/admin-analytics";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useCallback, useEffect, useState } from "react";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { AdminTopBar } from "@/components/admin/admin-top-bar";
+import { CommandCenter } from "@/components/admin/views/command-center";
+import { TrafficGrowth } from "@/components/admin/views/traffic-growth";
+import { BookSalesView } from "@/components/admin/views/book-sales";
+import { SubmissionsView } from "@/components/admin/views/submissions";
+import { AuthorProjectsView } from "@/components/admin/views/author-projects";
+import { NariIntelligence } from "@/components/admin/views/nari-intelligence";
+import { StoryReviewQueue } from "@/components/admin/views/story-review-queue";
+import { Performance } from "@/components/admin/views/performance";
+import { CompetitionsView } from "@/components/admin/views/competitions";
+import { ContractsView } from "@/components/admin/views/contracts";
+import { CowrieEconomy } from "@/components/admin/views/cowrie-economy";
+import { WithdrawalsView } from "@/components/admin/views/withdrawals";
+import { UserAnalytics } from "@/components/admin/views/user-analytics";
+import { AllUsers } from "@/components/admin/views/all-users";
+import { SettingsView } from "@/components/admin/views/settings";
+import { SkeletonKpiCard } from "@/components/admin/admin-skeleton";
 
-export default async function AdminDashboard() {
-  const stats = await getAdminOverview();
-  const recentLeads = await prisma.nariConversation.findMany({
-    where: { classifiedLead: true },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+type View = 
+  | "command-center" | "traffic" | "book-sales" | "submissions" 
+  | "author-projects" | "nari-intelligence" | "story-review" 
+  | "performance" | "competitions" | "contracts" | "cowrie-economy"
+  | "withdrawals" | "user-analytics" | "all-users" | "settings";
+
+const VIEW_META: Record<View, { section: string; subsection: string; title: string }> = {
+  "command-center": { section: "Overview", subsection: "", title: "Command Center" },
+  "traffic": { section: "Narriva", subsection: "Analytics", title: "Traffic & Growth" },
+  "book-sales": { section: "Narriva", subsection: "", title: "Book Sales" },
+  "submissions": { section: "Narriva", subsection: "", title: "Manuscript Submissions" },
+  "author-projects": { section: "Narriva", subsection: "", title: "Author Projects" },
+  "nari-intelligence": { section: "Narriva", subsection: "", title: "Nari Intelligence" },
+  "story-review": { section: "Kekere", subsection: "", title: "Story Review Queue" },
+  "performance": { section: "Kekere", subsection: "", title: "Trending & Performance" },
+  "competitions": { section: "Kekere", subsection: "", title: "Competitions" },
+  "contracts": { section: "Kekere", subsection: "", title: "Publishing Contracts" },
+  "cowrie-economy": { section: "Kekere", subsection: "", title: "Cowrie Economy" },
+  "withdrawals": { section: "Kekere", subsection: "", title: "Withdrawal Requests" },
+  "user-analytics": { section: "Kekere", subsection: "", title: "User Analytics" },
+  "all-users": { section: "Platform", subsection: "", title: "All Users" },
+  "settings": { section: "Platform", subsection: "", title: "Settings" },
+};
+
+interface DashboardData {
+  kpiCards: Record<string, number>;
+  pendingActionsBreakdown: Record<string, number>;
+  revenueChart: { daily: Array<{ date: string; narrivaNgn: number; kekereNgn: number }> };
+  userGrowthChart: { daily: Array<{ date: string; newUsers: number }> };
+  activityFeed: Array<{ id: string; type: string; description: string; timestamp: string; link: string }>;
+}
+
+export default function AdminPage() {
+  const [view, setView] = useState<View>("command-center");
+  const [range, setRange] = useState("30d");
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const meta = VIEW_META[view];
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/command-center");
+      if (!res.ok) throw new Error("Failed to load dashboard data");
+      setData(await res.json());
+    } catch (err) {
+      setError((err as Error).message);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const pendingBreakdown = data?.pendingActionsBreakdown ?? {
+    storiesAwaitingReview: 0,
+    authorChangeRequests: 0,
+    withdrawalsPending: 0,
+    contractsUnsigned7Plus: 0,
+    nariHighIntentUnread: 0,
+  };
+
+  const navCounts: Record<string, number> = {
+    "submissions": 0,
+    "story-review": pendingBreakdown.storiesAwaitingReview,
+    "withdrawals": pendingBreakdown.withdrawalsPending,
+  };
+
+  function renderView() {
+    if (loading) {
+      return (
+        <div className="grid grid-cols-3 gap-[14px] px-[34px] py-[30px]">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-[15px] text-[#646B73]">Couldn't load dashboard data.</p>
+          <button onClick={fetchData} className="mt-3 rounded-[8px] bg-[#1A1C20] px-4 py-2 text-[13px] font-medium text-white">Retry</button>
+        </div>
+      );
+    }
+
+    if (!data) return null;
+
+    switch (view) {
+      case "command-center": return <CommandCenter data={data} />;
+      case "traffic": return <TrafficGrowth />;
+      case "book-sales": return <BookSalesView />;
+      case "submissions": return <SubmissionsView />;
+      case "author-projects": return <AuthorProjectsView />;
+      case "nari-intelligence": return <NariIntelligence />;
+      case "story-review": return <StoryReviewQueue />;
+      case "performance": return <Performance />;
+      case "competitions": return <CompetitionsView />;
+      case "contracts": return <ContractsView />;
+      case "cowrie-economy": return <CowrieEconomy />;
+      case "withdrawals": return <WithdrawalsView />;
+      case "user-analytics": return <UserAnalytics />;
+      case "all-users": return <AllUsers />;
+      case "settings": return <SettingsView />;
+    }
+  }
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: "32px", maxWidth: "1100px", margin: "0 auto", background: "#f8f6f3", minHeight: "100vh" }}>
-      <h1 style={{ fontSize: "28px", fontWeight: 700, marginBottom: "4px" }}>Dashboard</h1>
-      <p style={{ color: "#888", fontSize: "14px", marginBottom: "32px" }}>Narriva admin</p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px", marginBottom: "40px" }}>
-        {[
-          { label: "Users", value: stats.totalUsers, color: "#1F4B4B" },
-          { label: "Leads", value: stats.totalLeads, color: "#C75D2C" },
-          { label: "Projects", value: stats.totalProjects, color: "#1F6F4A" },
-          { label: "Books", value: stats.totalBooks, color: "#5A3A2A" },
-          { label: "New signups (7d)", value: stats.signups7d, color: "#8B5E3C" },
-          { label: "Revenue (30d)", value: `₦${stats.revenue30d.toLocaleString()}`, color: "#2E6A5E" },
-          { label: "Sales (30d)", value: stats.salesCount30d, color: "#3A5A4A" },
-        ].map((stat) => (
-          <div key={stat.label} style={{ background: "#fff", borderRadius: "12px", border: "1px solid #eee", padding: "20px" }}>
-            <p style={{ fontSize: "12px", color: "#888", textTransform: "uppercase", marginBottom: "4px" }}>{stat.label}</p>
-            <p style={{ fontSize: "28px", fontWeight: 700, color: stat.color }}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
-        <div>
-          <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
-            <Link href="/admin/projects" style={{ padding: "8px 20px", borderRadius: "8px", background: "#C75D2C", color: "#fff", fontWeight: 600, textDecoration: "none", fontSize: "14px" }}>Projects</Link>
-            <Link href="/admin/leads" style={{ padding: "8px 20px", borderRadius: "8px", border: "1px solid #ddd", color: "#333", fontWeight: 600, textDecoration: "none", fontSize: "14px" }}>Leads</Link>
-            <Link href="/admin/sales" style={{ padding: "8px 20px", borderRadius: "8px", border: "1px solid #ddd", color: "#333", fontWeight: 600, textDecoration: "none", fontSize: "14px" }}>Sales</Link>
-          </div>
-        </div>
-
-        <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #eee", padding: "20px" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: 600, marginBottom: "16px" }}>Recent Leads</h2>
-          {recentLeads.length === 0 ? (
-            <p style={{ color: "#999", fontSize: "14px" }}>No leads yet</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {recentLeads.map((lead) => (
-                <div key={lead.id} style={{ fontSize: "13px" }}>
-                  <p style={{ fontWeight: 500 }}>{lead.leadSummary || "No summary"}</p>
-                  <p style={{ color: "#999", fontSize: "11px" }}>
-                    {lead.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+    <div className="flex min-h-screen">
+      <AdminSidebar
+        activeView={view}
+        onNavigate={(key) => setView(key as View)}
+        counts={navCounts}
+      />
+      <div className="flex-1 ml-[248px]">
+        <AdminTopBar
+          section={meta.section}
+          subsection={meta.subsection}
+          title={meta.title}
+          range={range}
+          onRangeChange={setRange}
+        />
+        {renderView()}
       </div>
     </div>
   );

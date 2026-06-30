@@ -3,27 +3,13 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
-import { WalletBalance } from "@/components/kekere/wallet-balance";
-import { TopUpModal } from "@/components/kekere/top-up-modal";
+import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { TopUpModal } from "@/components/kekere/top-up-modal";
 
 export interface WalletTransactionView {
   id: string;
-  type:
-    | "TOP_UP"
-    | "UNLOCK"
-    | "REFUND"
-    | "WITHDRAWAL"
-    | "TIP"
-    | "REFERRAL"
-    | "READ_REWARD"
-    | "COMPLETION_BONUS"
-    | "TIP_SENT"
-    | "TIP_RECEIVED"
-    | "REFERRAL_REWARD"
-    | "EARNINGS_CREDIT"
-    | "PLATFORM_EARNINGS";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "COMPLETION_BONUS" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -32,9 +18,11 @@ export interface WalletTransactionView {
 }
 
 export interface WalletViewProps {
-  balance: number;
+  spendingBalance: number;
+  earnedBalance: number;
   userId: string;
   userEmail: string;
+  isWriter: boolean;
   transactions: readonly WalletTransactionView[];
   hasBankDetails: boolean;
   referralCode: string | null;
@@ -43,6 +31,8 @@ export interface WalletViewProps {
   tipEarnings: number;
 }
 
+const NAIRA_RATE = 50;
+
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   navigator.clipboard.writeText(text).then(() => {
     setCopied(true);
@@ -50,182 +40,168 @@ function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   }).catch(() => {});
 }
 
+const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = {
+  TOP_UP: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  UNLOCK: { icon: ArrowUpRight, color: "#8A7565" },
+  WITHDRAWAL: { icon: ArrowUpRight, color: "#8A7565" },
+  REFERRAL_REWARD: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  COMPLETION_BONUS: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  TIP_SENT: { icon: ArrowUpRight, color: "#8A7565" },
+};
+
+function TxIcon({ type }: { type: string }) {
+  const def = TX_ICONS[type] ?? { icon: ArrowDownLeft, color: "#8A7565" };
+  const Icon = def.icon;
+  return (
+    <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[12px] bg-[rgba(42,26,18,0.06)]" style={{ color: def.color }}>
+      <Icon size={16} />
+    </div>
+  );
+}
+
+function TxLabel(type: string): string {
+  const map: Record<string, string> = {
+    TOP_UP: "Top-up", UNLOCK: "Story unlock", WITHDRAWAL: "Withdrawal",
+    REFERRAL_REWARD: "Referral reward", COMPLETION_BONUS: "Completion bonus",
+    TIP_SENT: "Tip sent", TIP_RECEIVED: "Tip received",
+    EARNINGS_CREDIT: "Earnings", REFERRAL: "Referral",
+    READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
+  };
+  return map[type] ?? type;
+}
+
+function getWalletForTx(type: string): string | null {
+  if (["TOP_UP", "UNLOCK", "TIP_SENT", "COMPLETION_BONUS", "REFERRAL_REWARD"].includes(type)) return "Spending";
+  if (["EARNINGS_CREDIT", "WITHDRAWAL", "TIP_RECEIVED"].includes(type)) return "Earned";
+  return null;
+}
+
 export function WalletView({
-  balance,
-  userId,
-  userEmail,
-  transactions,
-  hasBankDetails,
-  referralCode,
-  referralEarnings,
-  readRewardEarnings,
-  tipEarnings,
+  spendingBalance, earnedBalance, userId, userEmail, isWriter,
+  transactions, hasBankDetails, referralCode, referralEarnings, readRewardEarnings, tipEarnings,
 }: WalletViewProps) {
   const router = useRouter();
   const [showTopUp, setShowTopUp] = useState(false);
-  const [withdrawing, setWithdrawing] = useState(false);
-  const [withdrawError, setWithdrawError] = useState<string | null>(null);
-  const [withdrawSuccess, setWithdrawSuccess] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  async function handleWithdraw() {
-    setWithdrawing(true);
-    setWithdrawError(null);
-    const res = await fetch("/api/kekere/wallet/withdraw", { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setWithdrawError(data.error ?? "Couldn't process withdrawal.");
-      setWithdrawing(false);
-      setConfirmOpen(false);
-      return;
-    }
-    setWithdrawSuccess(true);
-    setWithdrawing(false);
-    setConfirmOpen(false);
-    router.refresh();
-  }
+  const nairaValue = earnedBalance * NAIRA_RATE;
 
   return (
-    <main className="mx-auto max-w-2xl px-5 py-6 pb-28 sm:px-8 md:pb-12">
-      <h1 className="text-2xl font-bold">Wallet</h1>
+    <div className="mx-auto max-w-[402px] px-[22px] pb-[120px] pt-6">
+      <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#2A1A12] tracking-[-0.01em]">Wallet</h1>
 
-      <div className="mt-5">
-        <WalletBalance balance={balance} onTopUpClick={() => setShowTopUp(true)} />
-      </div>
-
-      {showTopUp && (
-        <TopUpModal
-          userId={userId}
-          userEmail={userEmail}
-          onClose={() => setShowTopUp(false)}
-          onSuccess={() => { setShowTopUp(false); router.refresh(); }}
-        />
-      )}
-
-      <div className="mt-4">
-        {withdrawSuccess ? (
-          <p className="rounded-xl bg-[rgba(31,111,74,0.1)] px-4 py-3 text-sm text-[var(--color-success)]">
-            Withdrawal request submitted. We'll transfer ?{(balance * 50).toLocaleString()} to your bank within 3–5 business days.
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            disabled={!hasBankDetails}
-            className="w-full cursor-pointer rounded-xl border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {hasBankDetails
-              ? balance > 0
-                ? `Withdraw ${balance} cowries (?${(balance * 50).toLocaleString()})`
-                : "Nothing to withdraw yet"
-              : "Add your bank details in your profile to withdraw"}
-          </button>
-        )}
-      </div>
-
-      <p className="mt-3 text-center text-xs text-[var(--color-ink-muted-3)]">
-        Minimum withdrawal: 10 cowries (?500). Processed within 3–5 business days.
-      </p>
-
-      <section className="mt-8 rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white p-5">
-        <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--color-ink)]">
-          How to earn cowries
-        </h2>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl bg-[rgba(31,75,75,0.06)] px-4 py-4 text-center">
-            <p className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-accent)]">
-              +{readRewardEarnings}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-ink-muted-2)]">Finish paid stories</p>
-          </div>
-          <div className="rounded-xl bg-[rgba(199,93,44,0.06)] px-4 py-4 text-center">
-            <p className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-primary)]">
-              +{referralEarnings}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-ink-muted-2)]">Invite friends</p>
-          </div>
-          <div className="rounded-xl bg-[rgba(31,111,74,0.06)] px-4 py-4 text-center">
-            <p className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-success)]">
-              +{tipEarnings}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-ink-muted-2)]">Reader tips</p>
-          </div>
-        </div>
-
-        {referralCode && (
-          <div className="mt-5 rounded-xl bg-[rgba(199,93,44,0.04)] px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
-              Your referral code
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="flex-1 rounded-lg bg-white px-3 py-[10px] text-[17px] font-bold tracking-[0.06em] text-[var(--color-primary)]">
-                {referralCode}
-              </code>
+      {/* Two-balance cards */}
+      <div className="mt-5 flex flex-col gap-[14px]">
+        {/* Earned balance card (writer primary) */}
+        {isWriter && (
+          <div className="overflow-hidden rounded-[20px] shadow-[0_6px_30px_rgba(42,26,18,0.12)]" style={{ background: "linear-gradient(135deg, #1F8A5B 0%, #176E48 100%)" }}>
+            <div className="px-5 py-5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-medium text-white/80">Earned balance · Withdrawable</span>
+                <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold text-white">Writer</span>
+              </div>
+              <div className="mt-3 font-[family-name:var(--font-display)] text-[36px] font-semibold text-white tracking-[-0.01em]">
+                {earnedBalance.toLocaleString()} <span className="text-[24px]">cowries</span>
+              </div>
+              <div className="mt-1 text-[15px] text-white/70">~&#8358;{nairaValue.toLocaleString()}</div>
               <button
                 type="button"
-                onClick={() => copyToClipboard(referralCode, setCopied)}
-                className="flex-none cursor-pointer rounded-lg bg-[var(--color-primary)] px-4 py-[10px] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                onClick={() => router.push("/kekere/wallet/withdraw")}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-white py-3 text-[14px] font-semibold text-[#176E48] transition-opacity hover:opacity-90"
               >
-                {copied ? "Copied!" : "Copy"}
+                Withdraw to bank <ArrowRight size={15} />
               </button>
             </div>
-            <p className="mt-2 text-xs text-[var(--color-ink-muted-3)]">
-              Share this code. When a friend signs up with it and reads a paid story, you both earn 1 cowry.
-            </p>
           </div>
         )}
-      </section>
 
-      <h2 className="mt-8 text-lg font-bold">Transaction history</h2>
-      <div className="mt-3 flex flex-col gap-2">
-        {transactions.length === 0 && (
-          <p className="py-8 text-center text-sm text-[var(--color-ink)]/50">No transactions yet.</p>
-        )}
-        {transactions.map((tx) => (
-          <div key={tx.id} className="flex items-center justify-between rounded-xl border border-[var(--color-ink)]/10 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className={cn("flex h-9 w-9 items-center justify-center rounded-full", tx.amountCowries > 0 ? "bg-emerald-100 text-emerald-700" : "bg-[var(--color-ink)]/10 text-[var(--color-ink)]/60")}>
-                {tx.amountCowries > 0 ? <ArrowDownLeft className="h-4 w-4" aria-hidden="true" /> : <ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">{tx.description ?? tx.type}</p>
-                  {tx.status === "PENDING" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Pending</span>}
-                </div>
-                <p className="text-xs text-[var(--color-ink)]/50">{new Date(tx.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
-              </div>
+        {/* Spending balance card */}
+        <div className="overflow-hidden rounded-[20px] bg-[#2A1A12] shadow-[0_6px_30px_rgba(42,26,18,0.12)]">
+          <div className="px-5 py-5">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-medium text-[#A08C7C]">Spending balance</span>
+              <span className="text-[19px] text-[#E9A56B]">&#9670;</span>
             </div>
-            <span className={cn("font-semibold", tx.amountCowries > 0 ? "text-emerald-700" : "text-[var(--color-ink)]/70")}>{tx.amountCowries > 0 ? "+" : ""}{tx.amountCowries}</span>
+            <div className="mt-3 font-[family-name:var(--font-display)] text-[36px] font-semibold text-white tracking-[-0.01em]">
+              {spendingBalance.toLocaleString()} <span className="text-[24px] text-[#A08C7C]">cowries</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTopUp(true)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#C75D2C] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <Zap size={15} /> Top up
+            </button>
           </div>
-        ))}
-      </div>
-
-      {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,18,0.5)] px-6">
-          {balance < 10 ? (
-            <div className="w-full max-w-[340px] rounded-[20px] bg-white p-[26px] text-center shadow-[0_20px_50px_-16px_rgba(42,26,18,0.4)]">
-              <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">Oops!</h3>
-              <p className="mt-3 text-sm leading-[1.55] text-[var(--color-ink-muted)]">Looks like you don't have up to 10 cowries yet. But don't worry, you can earn some cowries.</p>
-              <div className="mt-5 flex gap-3">
-                <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 cursor-pointer rounded-[10px] border border-[rgba(42,26,18,0.14)] bg-transparent px-4 py-[12px] text-sm font-semibold text-[var(--color-ink-muted)]">Back to feed</button>
-                <Link href="/kekere/wallet" className="flex-1 rounded-[10px] bg-[var(--color-primary)] px-4 py-[12px] text-center text-sm font-semibold text-white">Earn cowries</Link>
-              </div>
-            </div>
-          ) : (
-            <div className="w-full max-w-[340px] rounded-[20px] bg-white p-[26px] text-center shadow-[0_20px_50px_-16px_rgba(42,26,18,0.4)]">
-              <h3 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">Withdraw {balance} cowries?</h3>
-              <p className="mt-3 text-sm leading-[1.55] text-[var(--color-ink-muted)]">?{(balance * 50).toLocaleString()} will be sent to your bank account. You can't undo this — your balance will go to zero and the transfer takes 3–5 business days.</p>
-              {withdrawError && <p className="mt-3 rounded-lg bg-[rgba(193,58,58,0.08)] px-3 py-2 text-sm text-[#A13A3A]">{withdrawError}</p>}
-              <div className="mt-5 flex gap-3">
-                <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 cursor-pointer rounded-[10px] border border-[rgba(42,26,18,0.14)] bg-transparent px-4 py-[12px] text-sm font-semibold text-[var(--color-ink-muted)]">Cancel</button>
-                <button type="button" disabled={withdrawing} onClick={handleWithdraw} className="flex-1 cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-[12px] text-sm font-semibold text-white disabled:opacity-50">{withdrawing ? "Processing…" : "Confirm"}</button>
+          {/* Reader view — minimal earned row */}
+          {!isWriter && (
+            <div className="border-t border-white/10 px-5 py-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#A08C7C]">Earned balance · {earnedBalance} cowries</span>
+                <span className="text-[12px] text-white/50">Publish a story to start earning</span>
               </div>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Quick actions */}
+      {referralCode && (
+        <div className="mt-[14px]">
+          <Link href="/kekere/invite" className="flex items-center justify-between rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 transition-colors hover:border-[#C75D2C]/30">
+            <div className="flex items-center gap-3">
+              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[#C75D2C]/10 text-[#C75D2C]">
+                <Zap size={16} />
+              </div>
+              <div>
+                <div className="text-[14px] font-medium text-[#2A1A12]">Invite friends, earn cowries</div>
+                <div className="text-[12px] text-[#8A7565]">{referralEarnings} cowries earned</div>
+              </div>
+            </div>
+            <ArrowRight size={16} className="text-[#8A7565]" />
+          </Link>
+        </div>
       )}
-    </main>
+
+      {/* Transaction history */}
+      <div className="mt-[24px]">
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">History</h2>
+        <div className="flex flex-col gap-[2px]">
+          {transactions.length === 0 && (
+            <p className="py-8 text-center text-[14px] text-[#8A7565]">No transactions yet</p>
+          )}
+          {transactions.map((tx) => {
+            const isCredit = tx.amountCowries > 0;
+            const wallet = isWriter ? getWalletForTx(tx.type) : null;
+            return (
+              <div key={tx.id} className="flex items-center gap-3 rounded-[13px] px-3 py-3 transition-colors hover:bg-[rgba(42,26,18,0.03)]">
+                <TxIcon type={tx.type} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-medium text-[#2A1A12]">{TxLabel(tx.type)}</div>
+                  <div className="flex items-center gap-2 text-[12px] text-[#8A7565]">
+                    <span>{tx.description}</span>
+                    {wallet && <span className="text-[#A08C7C]">· {wallet}</span>}
+                    {tx.status === "PENDING" && (
+                      <span className="rounded-full bg-[#B7791F]/15 px-2 py-0.5 text-[11px] font-medium text-[#B7791F]">Pending</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-none text-right">
+                  <div className={cn("text-[14px] font-semibold", isCredit ? "text-[#1F8A5B]" : "text-[#8A7565]")}>
+                    {isCredit ? "+" : ""}{tx.amountCowries}
+                  </div>
+                  <div className="text-[11px] text-[#A08C7C]">{new Date(tx.date).toLocaleDateString()}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top-up modal */}
+      {showTopUp && <TopUpModal onClose={() => setShowTopUp(false)} />}
+    </div>
   );
 }

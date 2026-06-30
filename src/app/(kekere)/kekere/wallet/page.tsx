@@ -17,6 +17,7 @@ export default async function KekereWalletPage() {
         prisma.user.findUnique({
           where: { id: userId },
           select: {
+            role: true,
             bankAccountNumber: true,
             bankName: true,
             referralCode: true,
@@ -38,14 +39,18 @@ export default async function KekereWalletPage() {
     .filter((t) => t.type === "TIP" && t.amountCowries > 0)
     .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
 
+  const isWriter = user?.role === "WRITER" || user?.role === "ADMIN";
+
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
+      <div className="min-h-screen bg-[#F5EBDD]">
         <KekereNavWrapper />
         <WalletView
-          balance={wallet?.spendingBalance ?? 0}
+          spendingBalance={wallet?.spendingBalance ?? 0}
+          earnedBalance={wallet?.earnedBalance ?? 0}
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
+          isWriter={isWriter}
           hasBankDetails={!!user?.bankAccountNumber && !!user?.bankName}
           referralCode={user?.referralCode ?? null}
           referralEarnings={referralEarnings}

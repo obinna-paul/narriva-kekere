@@ -1,0 +1,42 @@
+import { notFound, redirect } from "next/navigation";
+import { KekereTheme } from "@/components/theme";
+import { StoryCompletionScreen } from "@/components/kekere/story-completion-screen";
+import { getCurrentSession } from "@/lib/auth/middleware";
+import { getStoryForReader } from "@/lib/data/kekere-stories";
+import { getWalletForUser } from "@/lib/data/kekere-wallet";
+import { prisma } from "@/lib/db/prisma";
+
+export const dynamic = "force-dynamic";
+
+export default async function KekereStoryCompletePage({ params }: { params: { id: string } }) {
+  const session = await getCurrentSession();
+  if (!session?.user?.id) redirect("/login");
+
+  const story = await getStoryForReader(params.id, session.user.id);
+  if (!story) notFound();
+
+  const [wallet, referrer] = await Promise.all([
+    getWalletForUser(session.user.id),
+    prisma.referralCode.findUnique({ where: { userId: session.user.id }, select: { code: true } }),
+  ]);
+
+  const alreadyTipped = wallet?.transactions.some((t) => t.type === "TIP_SENT" && t.description?.includes(params.id));
+
+  return (
+    <KekereTheme>
+      <div className="min-h-screen bg-[#F5EBDD]">
+        <StoryCompletionScreen
+          storyId={params.id}
+          storyTitle={story.title}
+          authorName={story.authorName ?? "Unknown"}
+          spendingBalance={wallet?.spendingBalance ?? 0}
+          tipSent={!!alreadyTipped}
+          rating={0}
+          referralCode={referrer?.code ?? null}
+          onTip={async () => {}}
+          onRate={async () => {}}
+        />
+      </div>
+    </KekereTheme>
+  );
+}

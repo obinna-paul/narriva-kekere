@@ -45,10 +45,28 @@ const config: Config = {
         "kekere-dark-2": "#3A2418",
         "kekere-gold": "#E08A4A",
         "kekere-gold-light": "#E9C9A3",
+
+        // Admin-dashboard palette — neutral, never Narriva blue or Kekere orange as UI chrome.
+        "admin-bg": "#F4F5F7",
+        "admin-surface": "#FFFFFF",
+        "admin-sidebar": "#15171C",
+        "admin-ink": "#1A1C20",
+        "admin-ink-2": "#3A3F47",
+        "admin-secondary": "#646B73",
+        "admin-muted": "#8B919A",
+        "admin-muted-2": "#9AA0A8",
+        "admin-positive": "#1F8A5B",
+        "admin-warning": "#B7791F",
+        "admin-negative": "#C0392B",
+        "admin-narriva": "#1E3A8A",
+        "admin-kekere": "#C75D2C",
+        "admin-purple": "#6B21A8",
+        "admin-row-hover": "#FBFBFC",
       },
       fontFamily: {
         display: ["var(--font-fraunces)"],
         body: ["var(--font-inter)"],
+        mono: ["var(--font-ibm-plex-mono)", "monospace"],
       },
       backgroundImage: {
         "kekere-texture":
@@ -66,6 +84,7 @@ const config: Config = {
         "fade-in-up": "fadeInUp 0.5s ease-out",
         "fade-in": "fadeIn 0.3s ease-out",
         "scale-in": "scaleIn 0.2s ease-out",
+        "fade-out": "fadeOut 3s ease-out forwards",
       },
       keyframes: {
         fadeInUp: {
@@ -79,6 +98,11 @@ const config: Config = {
         scaleIn: {
           from: { opacity: "0", transform: "scale(0.97)" },
           to: { opacity: "1", transform: "scale(1)" },
+        },
+        fadeOut: {
+          "0%": { opacity: "1" },
+          "80%": { opacity: "0" },
+          "100%": { opacity: "0" },
         },
       },
     },

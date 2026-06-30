@@ -325,6 +325,23 @@ async function seedPlatformConfig() {
   }
 }
 
+async function seedAdminUser() {
+  const passwordHash = await bcrypt.hash("admin123!", 10);
+  await prisma.user.upsert({
+    where: { email: "admin@narriva.com" },
+    update: { role: "ADMIN", emailVerified: new Date() },
+    create: {
+      email: "admin@narriva.com",
+      name: "Admin",
+      password: passwordHash,
+      role: "ADMIN",
+      emailVerified: new Date(),
+      wallet: { create: {} },
+      termsAcceptedAt: new Date(),
+    },
+  });
+}
+
 async function main() {
   console.log("Seeding authors…");
   const authorIdBySlug = await seedAuthors();
@@ -349,6 +366,9 @@ async function main() {
 
   console.log("Seeding feature flags and platform settings…");
   await seedPlatformConfig();
+
+  console.log("Seeding admin user…");
+  await seedAdminUser();
 
   console.log("Done.");
 }

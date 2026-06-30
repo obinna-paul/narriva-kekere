@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "@/styles/globals.css";
 
 // Both brands use these fonts independently — that is a practical engineering
@@ -17,6 +17,13 @@ const inter = Inter({
   display: "swap",
 });
 
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Narriva",
   description: "Narriva and Kekere Stories",
@@ -29,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${fraunces.variable} ${inter.variable} antialiased`}>
+      <body className={`${fraunces.variable} ${inter.variable} ${ibmPlexMono.variable} antialiased`}>
         {children}
       </body>
     </html>
