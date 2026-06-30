@@ -114,6 +114,7 @@ export const authOptions: NextAuthOptions = {
             password: true,
             suspended: true,
             suspendedUntil: true,
+            emailVerified: true,
           },
         });
 
@@ -140,6 +141,12 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isValidPassword) return null;
+
+        // Block login for unverified email addresses — the user must verify
+        // their email via the OTP sent during registration before they can
+        // authenticate. This check runs AFTER the password check so we don't
+        // leak which emails exist in the database.
+        if (!user.emailVerified) return null;
 
         return {
           id: user.id,

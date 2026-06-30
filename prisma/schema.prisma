@@ -36,7 +36,9 @@ model User {
   avatarColor  String?
   socialLinks  Json?
 
-  emailVerified       DateTime?
+  emailVerified                DateTime?
+  emailVerificationCode        String?
+  emailVerificationExpiresAt   DateTime?
   // Legal consent timestamp and account deletion flow — built out in Phase 16.
   termsAcceptedAt     DateTime?
   deletionRequestedAt DateTime?
