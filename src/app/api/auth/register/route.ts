@@ -8,7 +8,6 @@ import { prisma } from "@/lib/db/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 import { ensureReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
 import { getFeatureFlag } from "@/lib/settings/get";
-import { createAndSendOtp } from "@/lib/auth/verify-email";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -53,6 +52,7 @@ export async function POST(request: Request) {
         name,
         password: hashedPassword,
         termsAcceptedAt: new Date(),
+        emailVerified: new Date(),
         wallet: { create: {} },
       },
       select: { id: true, email: true, name: true, role: true },
@@ -78,15 +78,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send verification OTP immediately after registration — the user
-    // cannot log in until they verify their email address.
-    await createAndSendOtp(user.id, email, name);
-
     return NextResponse.json(
-      {
-        user: { ...user, referralCode: newReferralCode },
-        emailVerificationRequired: true,
-      },
+      { user: { ...user, referralCode: newReferralCode } },
       { status: 201 },
     );
   } catch (error) {

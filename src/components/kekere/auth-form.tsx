@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { TurnstileWidget } from "@/components/shared/turnstile-widget";
 import { TermsModal } from "@/components/shared/terms-modal";
@@ -22,6 +23,7 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [referralCode, setReferralCode] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -93,8 +95,8 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
     }
 
     try { localStorage.setItem("kekere_welcome_new_user", "1"); } catch {}
-    setSuccess("Account created. Sign in below.");
-    setMode("signin");
+    setSuccess("Account created! Sign in below.");
+    switchMode("signin");
     setPassword("");
   }
 
@@ -139,7 +141,6 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
           {success}
         </p>
       )}
-
       {error && (
         <p className="mb-4 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
           {error}
@@ -219,18 +220,29 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
           >
             Password
           </label>
-          <input
-            id="auth-password"
-            type="password"
-            autoComplete={mode === "signin" ? "current-password" : "new-password"}
-            required
-            minLength={mode === "signup" ? 8 : undefined}
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-4 py-[14px] text-[15px] text-[var(--color-ink)] placeholder:text-[#A89684] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(199,93,44,0.12)]"
-            style={{ fontFamily: "var(--font-body)" }}
-          />
+          <div className="relative">
+            <input
+              id="auth-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              required
+              minLength={mode === "signup" ? 8 : undefined}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-4 py-[14px] pr-[46px] text-[15px] text-[var(--color-ink)] placeholder:text-[#A89684] transition-colors focus:border-[var(--color-primary)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(199,93,44,0.12)]"
+              style={{ fontFamily: "var(--font-body)" }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              tabIndex={-1}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A08C7C] transition-colors hover:text-[var(--color-ink)]"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {mode === "signin" && (
             <div className="mt-2 text-right">
               <span className="text-[13px] font-medium text-[var(--color-primary)]">
