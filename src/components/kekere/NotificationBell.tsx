@@ -2,19 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Bell,
-  CheckCircle,
-  PenLine,
-  XCircle,
-  Clock,
-  FileText,
-  Coins,
-  ArrowDownCircle,
-  AlertCircle,
-  History,
-  type LucideIcon,
-} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const POLL_INTERVAL_MS = 60000;
@@ -41,28 +28,31 @@ interface Notification {
   createdAt: string;
 }
 
-const TYPE_ICONS: Record<NotificationType, { icon: LucideIcon; className: string }> = {
-  STORY_APPROVED: { icon: CheckCircle, className: "text-[var(--color-success)]" },
-  STORY_REVISIONS_REQUESTED: { icon: PenLine, className: "text-[var(--color-primary)]" },
-  STORY_REJECTED: { icon: XCircle, className: "text-[var(--color-ink-muted)]" },
-  STORY_SUBMITTED: { icon: Clock, className: "text-blue-600" },
-  CONTRACT_RECEIVED: { icon: FileText, className: "text-blue-600" },
-  COMPETITION_RESULT: { icon: FileText, className: "text-blue-600" },
-  REFERRAL_REWARD_EARNED: { icon: Coins, className: "text-amber-500" },
-  WITHDRAWAL_PROCESSED: { icon: ArrowDownCircle, className: "text-[var(--color-success)]" },
-  WITHDRAWAL_REJECTED: { icon: AlertCircle, className: "text-[var(--color-ink-muted)]" },
-  VERSION_RESTORED: { icon: History, className: "text-[var(--color-ink-muted-2)]" },
+// Glyph characters in tinted circles — matches the design spec exactly
+const TYPE_CONFIG: Record<NotificationType, { glyph: string; bg: string; fg: string }> = {
+  STORY_APPROVED:            { glyph: "✓", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
+  STORY_REVISIONS_REQUESTED: { glyph: "✎", bg: "rgba(199,122,30,.16)", fg: "#A8690F" },
+  STORY_REJECTED:            { glyph: "✕", bg: "rgba(42,26,18,.08)",    fg: "rgba(42,26,18,.5)" },
+  STORY_SUBMITTED:           { glyph: "↗", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
+  CONTRACT_RECEIVED:         { glyph: "✶", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
+  COMPETITION_RESULT:        { glyph: "★", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
+  REFERRAL_REWARD_EARNED:    { glyph: "◆", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
+  WITHDRAWAL_PROCESSED:      { glyph: "₦", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
+  WITHDRAWAL_REJECTED:       { glyph: "✕", bg: "rgba(42,26,18,.08)",    fg: "rgba(42,26,18,.5)" },
+  VERSION_RESTORED:          { glyph: "⟲", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
 };
 
 function formatRelativeTime(iso: string): string {
   const diffSec = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diffSec < 60) return "just now";
+  if (diffSec < 45) return "Just now";
+  if (diffSec < 90) return "1 minute ago";
   const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  if (diffMin < 60) return `${diffMin} minutes ago`;
   const diffHr = Math.round(diffMin / 60);
   if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
   const diffDay = Math.round(diffHr / 24);
-  return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+  if (diffDay === 1) return "Yesterday";
+  return `${diffDay} days ago`;
 }
 
 export function NotificationBell() {
@@ -70,7 +60,10 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
+  // Swipe-to-dismiss state (mobile, pointer events)
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const startXRef = useRef(0);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -80,8 +73,7 @@ export function NotificationBell() {
       setNotifications(data.notifications);
       setUnreadCount(data.unreadCount);
     } catch {
-      // Polling is best-effort — a failed fetch just leaves the existing
-      // badge/list as-is until the next successful poll.
+      // Best-effort poll — stale badge is acceptable until next tick.
     }
   }, []);
 
@@ -95,25 +87,22 @@ export function NotificationBell() {
     };
   }, [fetchNotifications]);
 
-  useEffect(() => {
-    if (!open) return;
-    function close(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
-  async function handleSelect(notification: Notification) {
-    setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
-    if (!notification.read) {
+  async function handleSelect(n: Notification) {
+    if (dragId) return; // ignore tap if mid-swipe
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    if (!n.read) {
       setUnreadCount((prev) => Math.max(0, prev - 1));
-      fetch(`/api/kekere/notifications/${notification.id}/read`, { method: "PUT" }).catch(() => {});
+      fetch(`/api/kekere/notifications/${n.id}/read`, { method: "PUT" }).catch(() => {});
     }
     setOpen(false);
-    if (notification.link) router.push(notification.link);
+    if (n.link) router.push(n.link);
+  }
+
+  function handleDismiss(id: string) {
+    const n = notifications.find((x) => x.id === id);
+    if (n && !n.read) setUnreadCount((prev) => Math.max(0, prev - 1));
+    setNotifications((prev) => prev.filter((x) => x.id !== id));
+    fetch(`/api/kekere/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   }
 
   async function handleMarkAllRead() {
@@ -122,22 +111,52 @@ export function NotificationBell() {
     try {
       await fetch("/api/kekere/notifications/read-all", { method: "PUT" });
     } catch {
-      // Best-effort — a brief mismatch between local state and the server
-      // self-corrects on the next 60s poll.
+      // Self-corrects on next poll.
     }
   }
 
+  // Swipe gesture — touch devices only (pointerType === "touch")
+  function onPointerDown(id: string, e: React.PointerEvent<HTMLDivElement>) {
+    if (e.pointerType !== "touch") return;
+    startXRef.current = e.clientX;
+    setDragId(id);
+    setDragDx(0);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragId || e.pointerType !== "touch") return;
+    setDragDx(Math.min(0, e.clientX - startXRef.current));
+  }
+
+  function onPointerUp(id: string) {
+    if (!dragId) return;
+    if (dragDx < -90) handleDismiss(id);
+    setDragId(null);
+    setDragDx(0);
+  }
+
   return (
-    <div ref={ref} className="relative">
+    <>
+      {/* Bell button — 40×40, rounded-[11px], filled orange when open */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
-        className="relative flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]"
+        aria-expanded={open}
+        className={cn(
+          "relative flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border transition-colors",
+          open
+            ? "border-[#C75D2C] bg-[#C75D2C] text-white"
+            : "border-[rgba(42,26,18,.12)] bg-white text-[#2A1A12] hover:border-[rgba(42,26,18,.2)]"
+        )}
       >
-        <Bell size={19} />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
         {unreadCount > 0 && (
-          <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-[10px] font-bold leading-none text-white">
+          <span className="absolute -right-[3px] -top-[3px] flex min-w-[18px] items-center justify-center rounded-full border-2 border-[#FBF5EC] bg-[#C75D2C] px-1 pb-px text-[10.5px] font-bold leading-none text-white" style={{ height: 18 }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -145,71 +164,171 @@ export function NotificationBell() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40 bg-[var(--color-ink)]/20 md:hidden" aria-hidden="true" />
+          {/* Keyframe animations — injected once when drawer opens */}
+          <style>{`
+            @keyframes notifDrawerIn { from { transform: translateX(28px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes notifSheetUp  { from { transform: translateY(100%); }             to { transform: translateY(0); } }
+            @keyframes notifFadeIn   { from { opacity: 0; }                              to { opacity: 1; } }
+            .notif-sheet  { animation: notifSheetUp  .3s cubic-bezier(.2,.8,.2,1); }
+            @media (min-width: 768px) {
+              .notif-sheet { animation: notifDrawerIn .28s ease; }
+            }
+          `}</style>
+
+          {/* Backdrop */}
+          <div
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40"
+            style={{ background: "rgba(42,26,18,.3)", animation: "notifFadeIn .2s ease" }}
+          />
+
+          {/* Drawer — mobile: bottom sheet · desktop: right-side panel */}
           <div
             className={cn(
-              "fixed inset-x-0 bottom-0 z-50 max-h-[80vh] rounded-t-[20px] bg-[var(--color-bg)] p-5 shadow-[0_-18px_50px_-20px_rgba(42,26,18,0.4)]",
-              "md:absolute md:inset-x-auto md:bottom-auto md:right-0 md:top-full md:mt-2 md:max-h-[70vh] md:w-[380px] md:rounded-xl md:border md:border-[var(--color-ink)]/10 md:shadow-[0_20px_50px_-20px_rgba(42,26,18,0.3)]"
+              "notif-sheet",
+              "fixed z-50 flex flex-col bg-[#FBF5EC]",
+              // Mobile — bottom sheet
+              "inset-x-0 bottom-0 max-h-[80%] rounded-t-[20px] shadow-[0_-14px_44px_rgba(42,26,18,.25)]",
+              // Desktop — right panel
+              "md:inset-x-auto md:bottom-0 md:right-0 md:top-0 md:w-[396px] md:max-h-none md:rounded-none md:border-l md:border-[rgba(42,26,18,.12)] md:shadow-[-12px_0_40px_rgba(42,26,18,.16)]"
             )}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+            {/* Mobile drag handle */}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="flex w-full justify-center py-[9px] pb-1 md:hidden"
+              aria-label="Close notifications"
+            >
+              <span className="h-1 w-10 rounded-full bg-[rgba(42,26,18,.2)]" />
+            </button>
+
+            {/* Header */}
+            <div className="flex-none flex items-center justify-between border-b border-[rgba(42,26,18,.1)] px-4 py-[14px]">
+              <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12]">
                 Notifications
               </span>
-              <button
-                type="button"
-                onClick={handleMarkAllRead}
-                className="text-xs font-semibold text-[var(--color-primary)] hover:underline"
-              >
-                Mark all as read
-              </button>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="border-none bg-transparent text-[12.5px] font-semibold text-[#C75D2C]"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[rgba(42,26,18,.05)] text-[15px] text-[#2A1A12]"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            <div className="flex max-h-[60vh] flex-col gap-0.5 overflow-y-auto md:max-h-[55vh]">
-              {notifications.length === 0 && (
-                <p className="py-8 text-center text-sm text-[var(--color-ink-muted-2)]">
-                  Nothing yet — we&apos;ll let you know when something happens.
+            {/* Empty state */}
+            {notifications.length === 0 && (
+              <div className="flex flex-1 flex-col items-center justify-center gap-[14px] px-8 py-11 text-center">
+                <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[rgba(31,75,75,.1)] text-[#1F4B4B]">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+                <p className="font-[family-name:var(--font-display)] text-[16px] font-semibold text-[#2A1A12]">
+                  You&apos;re all caught up
                 </p>
-              )}
-              {notifications.map((n) => {
-                const { icon: Icon, className } = TYPE_ICONS[n.type];
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => handleSelect(n)}
-                    className={cn(
-                      "relative flex items-start gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:bg-[var(--color-ink)]/[0.04]",
-                      !n.read && "bg-[var(--color-primary-muted)]/40"
-                    )}
-                  >
-                    {!n.read && (
-                      <span className="absolute left-1 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[var(--color-primary)]" />
-                    )}
-                    <Icon size={18} className={cn("mt-0.5 flex-none", className)} aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          "text-[13.5px] leading-snug text-[var(--color-ink)]",
-                          !n.read && "font-semibold"
-                        )}
+                <p className="max-w-[250px] text-[13.5px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+                  Notifications about your stories will appear here.
+                </p>
+              </div>
+            )}
+
+            {/* Notification list */}
+            {notifications.length > 0 && (
+              <div className="flex-1 overflow-y-auto py-[6px]">
+                {notifications.map((n) => {
+                  const { glyph, bg, fg } = TYPE_CONFIG[n.type];
+                  const dx = dragId === n.id ? dragDx : 0;
+                  const isDragging = dragId === n.id;
+
+                  return (
+                    <div key={n.id} className="relative overflow-hidden">
+                      {/* Red "Delete" background — revealed on swipe */}
+                      <div className="absolute inset-0 flex items-center justify-end pr-[22px] bg-[#B3371D] text-[12.5px] font-bold text-white">
+                        Delete
+                      </div>
+
+                      {/* Row content — slides left on swipe */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelect(n)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSelect(n)}
+                        onPointerDown={(e) => onPointerDown(n.id, e)}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={() => onPointerUp(n.id)}
+                        className="relative flex cursor-pointer gap-3 px-4 py-[13px]"
+                        style={{
+                          background: n.read ? "#FBF5EC" : "rgba(199,93,44,.05)",
+                          borderBottom: "1px solid rgba(42,26,18,.06)",
+                          transform: `translateX(${dx}px)`,
+                          transition: isDragging ? "none" : "transform .15s ease",
+                          touchAction: "pan-y",
+                        }}
                       >
-                        {n.title}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-[var(--color-ink-muted-2)]">
-                        {n.body}
-                      </p>
-                      <p className="mt-1 text-[11px] text-[var(--color-ink-muted-3)]">
-                        {formatRelativeTime(n.createdAt)}
-                      </p>
+                        {/* Glyph icon in tinted circle */}
+                        <span
+                          className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full text-[17px] font-bold"
+                          style={{ background: bg, color: fg }}
+                        >
+                          {glyph}
+                        </span>
+
+                        {/* Text content */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-2">
+                            <span
+                              className={cn(
+                                "flex-1 text-[13.5px] leading-[1.35]",
+                                n.read ? "font-medium text-[rgba(42,26,18,.7)]" : "font-bold text-[#2A1A12]"
+                              )}
+                            >
+                              {n.title}
+                            </span>
+                            {!n.read && (
+                              <span className="mt-1 h-2 w-2 flex-none rounded-full bg-[#C75D2C]" />
+                            )}
+                          </div>
+                          <p className="mt-[3px] text-[12.5px] leading-[1.45] text-[rgba(42,26,18,.6)]">
+                            {n.body}
+                          </p>
+                          <p className="mt-[5px] text-[11px] text-[rgba(42,26,18,.42)]">
+                            {formatRelativeTime(n.createdAt)}
+                          </p>
+                        </div>
+
+                        {/* Desktop dismiss X — shown on hover via group */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDismiss(n.id); }}
+                          aria-label="Dismiss"
+                          className="hidden self-start rounded-[6px] border-none bg-transparent p-[5px] text-[13px] text-[rgba(42,26,18,.35)] hover:bg-[rgba(42,26,18,.08)] hover:text-[#B3371D] md:block"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }

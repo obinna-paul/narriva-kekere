@@ -9,7 +9,7 @@ import { TopUpModal } from "@/components/kekere/top-up-modal";
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "COMPLETION_BONUS" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -27,7 +27,6 @@ export interface WalletViewProps {
   hasBankDetails: boolean;
   referralCode: string | null;
   referralEarnings: number;
-  readRewardEarnings: number;
   tipEarnings: number;
 }
 
@@ -45,7 +44,6 @@ const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = 
   UNLOCK: { icon: ArrowUpRight, color: "#8A7565" },
   WITHDRAWAL: { icon: ArrowUpRight, color: "#8A7565" },
   REFERRAL_REWARD: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  COMPLETION_BONUS: { icon: ArrowDownLeft, color: "#1F8A5B" },
   EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_SENT: { icon: ArrowUpRight, color: "#8A7565" },
@@ -64,7 +62,7 @@ function TxIcon({ type }: { type: string }) {
 function TxLabel(type: string): string {
   const map: Record<string, string> = {
     TOP_UP: "Top-up", UNLOCK: "Story unlock", WITHDRAWAL: "Withdrawal",
-    REFERRAL_REWARD: "Referral reward", COMPLETION_BONUS: "Completion bonus",
+    REFERRAL_REWARD: "Referral reward",
     TIP_SENT: "Tip sent", TIP_RECEIVED: "Tip received",
     EARNINGS_CREDIT: "Earnings", REFERRAL: "Referral",
     READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
@@ -73,14 +71,14 @@ function TxLabel(type: string): string {
 }
 
 function getWalletForTx(type: string): string | null {
-  if (["TOP_UP", "UNLOCK", "TIP_SENT", "COMPLETION_BONUS", "REFERRAL_REWARD"].includes(type)) return "Spending";
+  if (["TOP_UP", "UNLOCK", "TIP_SENT", "REFERRAL_REWARD"].includes(type)) return "Spending";
   if (["EARNINGS_CREDIT", "WITHDRAWAL", "TIP_RECEIVED"].includes(type)) return "Earned";
   return null;
 }
 
 export function WalletView({
   spendingBalance, earnedBalance, userId, userEmail, isWriter,
-  transactions, hasBankDetails, referralCode, referralEarnings, readRewardEarnings, tipEarnings,
+  transactions, hasBankDetails, referralCode, referralEarnings, tipEarnings,
 }: WalletViewProps) {
   const router = useRouter();
   const [showTopUp, setShowTopUp] = useState(false);
@@ -201,7 +199,14 @@ export function WalletView({
       </div>
 
       {/* Top-up modal */}
-      {showTopUp && <TopUpModal onClose={() => setShowTopUp(false)} />}
+      {showTopUp && (
+        <TopUpModal
+          userId={userId}
+          userEmail={userEmail}
+          onClose={() => setShowTopUp(false)}
+          onSuccess={() => { setShowTopUp(false); router.refresh(); }}
+        />
+      )}
     </div>
   );
 }

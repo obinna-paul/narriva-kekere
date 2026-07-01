@@ -2,16 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { STORY_COWRIE_RANGE } from "@/content/decisions";
 import { sendEmail } from "@/lib/email/send";
 import { createNotification } from "@/lib/notifications/create";
 import { generateStoryAudio } from "@/lib/audio/generate";
 
 const publishSchema = z.object({
-  isFree: z.boolean(),
-  cowrieCost: z.number().int().optional(),
+  cowrieCost: z.number().int().min(1).max(10),
   tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]),
   noteToWriter: z.string().optional(),
+  tagIds: z.array(z.string()).min(1, "Select at least one tag"),
 });
 
 export const PUT = withAuth(
@@ -42,54 +41,44 @@ export const PUT = withAuth(
       );
     }
 
-    const { isFree, cowrieCost, tier, noteToWriter } = parsed.data;
-
-    let finalCost: number;
-    if (isFree) {
-      finalCost = STORY_COWRIE_RANGE.free;
-    } else {
-      if (
-        cowrieCost === undefined ||
-        cowrieCost < STORY_COWRIE_RANGE.min_paid ||
-        cowrieCost > STORY_COWRIE_RANGE.max_paid
-      ) {
-        return NextResponse.json(
-          {
-            error: `cowrieCost must be between ${STORY_COWRIE_RANGE.min_paid} and ${STORY_COWRIE_RANGE.max_paid} for paid stories.`,
-          },
-          { status: 400 },
-        );
-      }
-      finalCost = cowrieCost;
-    }
+    const { cowrieCost, tier, noteToWriter, tagIds } = parsed.data;
+    const finalCost = cowrieCost;
 
     const moderationNotes = noteToWriter
       ? [story.moderationNotes, noteToWriter].filter(Boolean).join("\n\n")
       : story.moderationNotes;
 
-    await prisma.story.update({
-      where: { id },
-      data: {
-        status: "PUBLISHED",
-        cowrieCost: finalCost,
-        tier,
-        publishedAt: new Date(),
-        moderationNotes: moderationNotes || null,
-        isDraft: false,
-      },
-    });
+    await prisma.$transaction([
+      prisma.story.update({
+        where: { id },
+        data: {
+          status: "PUBLISHED",
+          cowrieCost: finalCost,
+          tier,
+          publishedAt: new Date(),
+          moderationNotes: moderationNotes || null,
+          isDraft: false,
+        },
+      }),
+      // Replace all existing tags atomically
+      prisma.storyTag.deleteMany({ where: { storyId: id } }),
+      prisma.storyTag.createMany({
+        data: tagIds.map((tagId) => ({ storyId: id, tagId })),
+        skipDuplicates: true,
+      }),
+    ]);
 
     await sendEmail({
       to: story.author.email,
       subject: "Your story has been published!",
-      body: `Hi ${story.author.name},\n\nYour story "${story.title}" has been reviewed and published on Kekere Stories. It costs ${isFree ? "free (0 cowries)" : `${finalCost} cowries`} to read.\n\nView your story at: kekere.narriva.com/stories/${story.id}${noteToWriter ? `\n\nNote from the editor: ${noteToWriter}` : ""}`,
+      body: `Hi ${story.author.name},\n\nYour story "${story.title}" has been reviewed and published on Kekere Stories. It costs ${finalCost} cowries to read.\n\nView your story at: kekere.narriva.com/stories/${story.id}${noteToWriter ? `\n\nNote from the editor: ${noteToWriter}` : ""}`,
     });
 
     await createNotification({
       userId: story.authorId,
       type: "STORY_APPROVED",
       title: "Your story has been published!",
-      body: `"${story.title}" is now live on Kekere Stories` + (isFree ? " as a free read." : ` at ${finalCost} cowries.`),
+      body: `"${story.title}" is now live on Kekere Stories at ${finalCost} cowries.`,
       link: `/kekere/story/${story.id}`,
     });
 

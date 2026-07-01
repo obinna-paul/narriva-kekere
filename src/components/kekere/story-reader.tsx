@@ -68,13 +68,37 @@ export function StoryReader({
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   const progressTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastProgressSaved = useRef(0);
+  const pendingFrac = useRef<number | null>(null);
+
+  const flushProgress = useCallback(() => {
+    if (pendingFrac.current === null) return;
+    const frac = pendingFrac.current;
+    pendingFrac.current = null;
+    clearTimeout(progressTimer.current);
+    const body = JSON.stringify({ scrollFraction: frac });
+    if (typeof navigator.sendBeacon === "function") {
+      navigator.sendBeacon(
+        `/api/kekere/stories/${story.id}/progress`,
+        new Blob([body], { type: "application/json" }),
+      );
+    } else {
+      fetch(`/api/kekere/stories/${story.id}/progress`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, [story.id]);
 
   const saveProgress = useCallback(
     (frac: number) => {
       if (!isLoggedIn || frac <= lastProgressSaved.current + 0.05) return;
       lastProgressSaved.current = frac;
+      pendingFrac.current = frac;
       clearTimeout(progressTimer.current);
       progressTimer.current = setTimeout(() => {
+        pendingFrac.current = null;
         fetch(`/api/kekere/stories/${story.id}/progress`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -105,15 +129,17 @@ export function StoryReader({
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("mousemove", showChrome, { passive: true });
     window.addEventListener("touchstart", showChrome, { passive: true });
+    window.addEventListener("beforeunload", flushProgress);
 
     return () => {
       clearTimeout(hideTimer.current);
-      clearTimeout(progressTimer.current);
+      flushProgress();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("mousemove", showChrome);
       window.removeEventListener("touchstart", showChrome);
+      window.removeEventListener("beforeunload", flushProgress);
     };
-  }, [showChrome, saveProgress]);
+  }, [showChrome, saveProgress, flushProgress]);
 
   function requireLogin() {
     router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
@@ -546,8 +572,8 @@ export function StoryReader({
         />
       )}
 
-      {unlocked && (
-        <StoryAudioPlayer storyId={story.id} bodyDoc={story.bodyDoc} containerRef={contentRef} />
+      {unlocked && isLoggedIn && (
+        <StoryAudioPlayer storyId={story.id} storyTitle={story.title} bodyDoc={story.bodyDoc} containerRef={contentRef} />
       )}
       </div>
     </div>

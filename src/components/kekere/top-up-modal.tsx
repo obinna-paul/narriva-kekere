@@ -14,6 +14,8 @@ export interface TopUpModalProps {
   onSuccess: () => void;
 }
 
+const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModalProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -23,7 +25,7 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
 
   async function handlePay() {
     if (selected === null) return;
-    if (!turnstileToken) {
+    if (turnstileEnabled && !turnstileToken) {
       setError("Please complete the verification check.");
       return;
     }
@@ -78,9 +80,11 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
           <TopUpSelector selected={selected} onSelect={setSelected} />
         </div>
 
-        <div className="mt-4">
-          <TurnstileWidget onVerify={setTurnstileToken} />
-        </div>
+        {turnstileEnabled && (
+          <div className="mt-4">
+            <TurnstileWidget onVerify={setTurnstileToken} />
+          </div>
+        )}
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 

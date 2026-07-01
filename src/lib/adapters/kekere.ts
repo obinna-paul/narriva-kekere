@@ -33,7 +33,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
     authorId: story.author.id,
     genre: story.genre,
     tier: story.tier.toLowerCase() as MockStory["tier"],
-    isFree: story.cowrieCost === 0,
+    isFree: false,
     cowrieCost: story.cowrieCost,
     readingTimeMinutes: story.readingTime,
     completionRate: story.completionRate ?? 0,
@@ -43,6 +43,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
     publishedAt: publishedAt.toISOString(),
     paragraphs: [],
     bodyDoc: null,
+    tags: story.tags.map((st) => st.tag.slug),
   };
 }
 

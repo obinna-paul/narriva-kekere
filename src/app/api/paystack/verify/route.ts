@@ -19,7 +19,7 @@ const verifySchema = z.object({
   reference: z.string().min(1),
   type: z.literal("wallet_topup"),
   packageIndex: z.number().int().min(0),
-  turnstileToken: z.string().min(1),
+  turnstileToken: z.string().optional().nullable(),
 });
 
 export const POST = withAuth(async (request, session) => {
@@ -34,8 +34,12 @@ export const POST = withAuth(async (request, session) => {
 
   const { reference, turnstileToken } = parsed.data;
 
+  // Turnstile is required in production; in dev it is optional (widget may
+  // not be configured). verifyTurnstileToken() already returns true when
+  // TURNSTILE_SECRET_KEY is unset in non-production environments.
   const remoteIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  if (!(await verifyTurnstileToken(turnstileToken, remoteIp))) {
+  const tokenToVerify = turnstileToken ?? "";
+  if (!(await verifyTurnstileToken(tokenToVerify, remoteIp))) {
     return NextResponse.json({ error: "Verification failed — please try again" }, { status: 400 });
   }
 

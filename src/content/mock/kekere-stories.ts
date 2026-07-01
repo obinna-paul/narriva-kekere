@@ -1,11 +1,9 @@
 /**
  * Static mock data for Kekere Stories. Backend wiring (real Story/User
  * records, Prisma) is Phase 11 — until then every page in src/app/(kekere)
- * reads from here. Cowrie costs are drawn from STORY_TIER_RANGES in
- * decisions.ts so they stay consistent with the locked business numbers
- * instead of being invented per story.
+ * reads from here. All stories are paid; costs are 1–10 cowries.
  */
-import { STORY_TIER_RANGES, type StoryTier } from "@/content/decisions";
+import type { StoryTier } from "@/content/decisions";
 
 export const KEKERE_GENRES = [
   "Literary Fiction",
@@ -47,11 +45,12 @@ export interface MockStory {
    * (see toReaderStoryData). Already truncated server-side when locked.
    * null for the static mock catalog, which only ever populates `paragraphs`. */
   bodyDoc: import("@/lib/tiptap/doc-utils").TiptapDoc | null;
+  /** Tag slugs assigned by admin at publish time. Empty array for mock/legacy stories. */
+  tags: string[];
 }
 
-function costInTier(tier: StoryTier, position: number): number {
-  const [min, max] = STORY_TIER_RANGES[tier];
-  return Math.round(min + (max - min) * position);
+function storyPrice(_tier: StoryTier, position: number): number {
+  return Math.max(1, Math.min(10, Math.round(1 + position * 9)));
 }
 
 export const MOCK_STORIES: readonly MockStory[] = [
@@ -64,7 +63,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Drama",
     tier: "standard",
     isFree: false,
-    cowrieCost: costInTier("standard", 0.2),
+    cowrieCost: storyPrice("standard", 0.2),
     readingTimeMinutes: 5,
     completionRate: 88,
     isNew: true,
@@ -79,6 +78,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Her phone buzzed. Her husband, asking what was for dinner. She typed back: I'm coming home. She meant it two ways, and only one of them was about dinner.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "jollof-wars",
@@ -89,7 +89,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Comedy",
     tier: "standard",
     isFree: false,
-    cowrieCost: costInTier("standard", 0.6),
+    cowrieCost: storyPrice("standard", 0.6),
     readingTimeMinutes: 6,
     completionRate: 94,
     isNew: false,
@@ -104,6 +104,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "By the time the bride arrived, the rice was, against all odds and a great deal of shouting, perfect. Nobody at the reception ever learned how close they'd come to a wedding remembered for the wrong reasons.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "what-the-okada-driver-saw",
@@ -114,7 +115,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Thriller",
     tier: "featured",
     isFree: false,
-    cowrieCost: costInTier("featured", 0.25),
+    cowrieCost: storyPrice("featured", 0.25),
     readingTimeMinutes: 9,
     completionRate: 91,
     isNew: false,
@@ -129,6 +130,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "He dropped him at a junction instead of the imaginary address, took the money without counting it, and rode home a different way than usual — a small, deliberate detour around whatever had been chasing a stranger through Surulere at midnight.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "her-mothers-tongue",
@@ -139,7 +141,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Literary Fiction",
     tier: "premium",
     isFree: false,
-    cowrieCost: costInTier("premium", 0.3),
+    cowrieCost: storyPrice("premium", 0.3),
     readingTimeMinutes: 12,
     completionRate: 85,
     isNew: false,
@@ -153,6 +155,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "She started with the easy words. Mmiri. Nri. Ụlọ. Her daughter wrote them down like things that might disappear if not captured fast enough, and Obianuju understood, watching her, that they already nearly had.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "the-generator-diaries",
@@ -162,8 +165,8 @@ export const MOCK_STORIES: readonly MockStory[] = [
     authorId: "tobi-lawal",
     genre: "Comedy",
     tier: "standard",
-    isFree: true,
-    cowrieCost: 0,
+    isFree: false,
+    cowrieCost: 2,
     readingTimeMinutes: 4,
     completionRate: 96,
     isNew: true,
@@ -177,6 +180,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "They bought a new generator together within the week. Nobody discussed it. Everybody just sent money, the way people do when the alternative is admitting how much they'd actually miss the group chat.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "aunty-ngozis-last-wedding",
@@ -187,7 +191,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Drama",
     tier: "standard",
     isFree: false,
-    cowrieCost: costInTier("standard", 0.8),
+    cowrieCost: storyPrice("standard", 0.8),
     readingTimeMinutes: 7,
     completionRate: 82,
     isNew: false,
@@ -201,6 +205,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "The wedding had no flowers at all, in the end — a small joke only she and the groom understood — and by every measure Ngozi had spent a decade refining, it was the best one she'd ever planned.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "lagos-4am",
@@ -211,7 +216,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Literary Fiction",
     tier: "featured",
     isFree: false,
-    cowrieCost: costInTier("featured", 0.55),
+    cowrieCost: storyPrice("featured", 0.55),
     readingTimeMinutes: 8,
     completionRate: 90,
     isNew: false,
@@ -225,6 +230,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "She'd thought, for a while, about writing it down — the actual four o'clock city, the one that belonged briefly to people like her — and tonight, walking home past the bread sellers, she finally started, in her head, to find the words.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "the-boy-who-counted-stars",
@@ -234,8 +240,8 @@ export const MOCK_STORIES: readonly MockStory[] = [
     authorId: "kelechi-obi",
     genre: "Speculative Fiction",
     tier: "standard",
-    isFree: true,
-    cowrieCost: 0,
+    isFree: false,
+    cowrieCost: 3,
     readingTimeMinutes: 5,
     completionRate: 93,
     isNew: true,
@@ -249,6 +255,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Forty nights later, a new light appeared two degrees to the left of where the old one had been — fainter, but unmistakably there — and Tunde, who had never believed in anything astronomers couldn't explain, decided that some things were allowed to simply move.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "nkem-and-the-quiet-house",
@@ -259,7 +266,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Horror",
     tier: "premium",
     isFree: false,
-    cowrieCost: costInTier("premium", 0.6),
+    cowrieCost: storyPrice("premium", 0.6),
     readingTimeMinutes: 11,
     completionRate: 79,
     isNew: false,
@@ -273,6 +280,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "By the third week, the sounds had stopped entirely, and Nkem understood, in a way she chose not to examine too closely, that the house had simply been waiting for someone to acknowledge that it wasn't empty, and was, for now, satisfied.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "three-calls-from-my-father",
@@ -283,7 +291,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Drama",
     tier: "standard",
     isFree: false,
-    cowrieCost: costInTier("standard", 0.0),
+    cowrieCost: storyPrice("standard", 0.0),
     readingTimeMinutes: 4,
     completionRate: 89,
     isNew: false,
@@ -297,6 +305,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "I didn't ask why he calls when it rains. Some things are easier to keep as a small mystery you're fond of than as a question with an answer that might disappoint you.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "the-wig-shop-on-allen-avenue",
@@ -307,7 +316,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Comedy",
     tier: "featured",
     isFree: false,
-    cowrieCost: costInTier("featured", 0.7),
+    cowrieCost: storyPrice("featured", 0.7),
     readingTimeMinutes: 6,
     completionRate: 95,
     isNew: false,
@@ -321,6 +330,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "\"You didn't hear it from me,\" Mama Kemi said, as she said to everyone, every time, while ringing up a sale that had somehow taken forty minutes for one bob.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "what-we-buried-in-bonny",
@@ -331,7 +341,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Literary Fiction",
     tier: "premium",
     isFree: false,
-    cowrieCost: costInTier("premium", 0.9),
+    cowrieCost: storyPrice("premium", 0.9),
     readingTimeMinutes: 13,
     completionRate: 81,
     isNew: false,
@@ -346,6 +356,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "Nobody disagreed. They buried him anyway, on the island, beside her, and went back to the mainland that evening lighter by exactly one argument they'd been carrying, unspoken, since they were children.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "love-logged-off",
@@ -356,7 +367,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Romance",
     tier: "standard",
     isFree: false,
-    cowrieCost: costInTier("standard", 0.4),
+    cowrieCost: storyPrice("standard", 0.4),
     readingTimeMinutes: 6,
     completionRate: 92,
     isNew: true,
@@ -370,6 +381,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "He came as he was. It turned out to be exactly who she'd already fallen for, which was, she realized watching him walk toward her, the only version that had ever actually been real.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "the-interview",
@@ -379,8 +391,8 @@ export const MOCK_STORIES: readonly MockStory[] = [
     authorId: "tunde-afolabi",
     genre: "Thriller",
     tier: "standard",
-    isFree: true,
-    cowrieCost: 0,
+    isFree: false,
+    cowrieCost: 2,
     readingTimeMinutes: 5,
     completionRate: 87,
     isNew: false,
@@ -394,6 +406,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "The interviewer's pen stopped. For the first time in four attempts, he looked up from the form instead of through it, and said, \"That's the first real answer anyone's given me all year.\" She didn't get the job. She got something stranger: a phone call, two weeks later, for a different position entirely, one that had never been advertised.",
     ],
     bodyDoc: null,
+    tags: [],
   },
   {
     id: "salt-for-the-sea-widow",
@@ -404,7 +417,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
     genre: "Horror",
     tier: "featured",
     isFree: false,
-    cowrieCost: costInTier("featured", 0.85),
+    cowrieCost: storyPrice("featured", 0.85),
     readingTimeMinutes: 9,
     completionRate: 84,
     isNew: false,
@@ -418,6 +431,7 @@ export const MOCK_STORIES: readonly MockStory[] = [
       "By the next new moon she'd been told, in the careful unspecific way village knowledge travels, and she left her salt like everyone else, and never once asked why, because some answers are kept exactly that vague on purpose, and a smart woman learns when not to make someone say it plainly.",
     ],
     bodyDoc: null,
+    tags: [],
   },
 ] as const;
 

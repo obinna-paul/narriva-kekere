@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import type { UserRole } from "@prisma/client";
 
-const VALID_ROLES: UserRole[] = ["READER", "WRITER", "AUTHOR", "ADMIN"];
+const VALID_ROLES: UserRole[] = ["READER", "WRITER", "ADMIN"];
 
 export const GET = withAuth(
   async (request) => {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-import { FEED_GENRES } from "@/content/feed-categories";
+import { STORY_TAGS } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
-import type { WinnerStory } from "@/app/(kekere)/kekere/feed/page";
+import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -21,7 +22,7 @@ function thumbnailPattern(seed: string): string {
   return patterns[i % patterns.length];
 }
 
-function RowCard({ story }: { story: MockStory }) {
+function RowCard({ story, badge }: { story: MockStory; badge?: string }) {
   return (
     <Link
       href={`/kekere/story/${story.id}`}
@@ -35,12 +36,12 @@ function RowCard({ story }: { story: MockStory }) {
         <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
           {story.genre.toUpperCase()}
         </span>
-        {story.isFree && (
-          <span className="absolute right-[9px] top-[9px] rounded-[20px] bg-[var(--color-sand-accent)] px-2 py-[3px] text-[9.5px] font-bold text-[var(--color-accent)]">
-            FREE
+        {badge && (
+          <span className="absolute bottom-[9px] left-[9px] rounded-[20px] bg-[rgba(199,93,44,0.88)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
+            {badge}
           </span>
         )}
-        {story.completionRate > 0.8 && (
+        {!badge && story.completionRate > 0.8 && (
           <span className="absolute bottom-[9px] right-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
             {Math.round(story.completionRate * 100)}% finish
           </span>
@@ -53,8 +54,8 @@ function RowCard({ story }: { story: MockStory }) {
         {story.hookLine}
       </p>
       <p className="mt-[7px] text-xs text-[var(--color-ink-muted-2)]">
-        <span className={cn("font-semibold", story.isFree ? "text-[var(--color-success)]" : "text-[var(--color-primary)]")}>
-          {story.isFree ? "Free" : `${story.cowrieCost} cowries`}
+        <span className="font-semibold text-[var(--color-primary)]">
+          {story.cowrieCost} cowries
         </span>
         {" · "}
         {story.readingTimeMinutes} min
@@ -63,13 +64,31 @@ function RowCard({ story }: { story: MockStory }) {
   );
 }
 
-function StoryRow({ title, stories }: { title: string; stories: readonly MockStory[] }) {
+function StoryRow({
+  title,
+  stories,
+  seeMoreHref,
+}: {
+  title: string;
+  stories: readonly MockStory[];
+  seeMoreHref?: string;
+}) {
   if (stories.length === 0) return null;
   return (
     <section className="py-2">
-      <h2 className="px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
-        {title}
-      </h2>
+      <div className="flex items-center justify-between px-5 pb-[14px]">
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+          {title}
+        </h2>
+        {seeMoreHref && (
+          <Link
+            href={seeMoreHref}
+            className="text-[12.5px] font-semibold text-[var(--color-primary)] hover:opacity-80"
+          >
+            See more →
+          </Link>
+        )}
+      </div>
       <div
         className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
         style={{ scrollSnapType: "x mandatory" }}
@@ -83,81 +102,43 @@ function StoryRow({ title, stories }: { title: string; stories: readonly MockSto
   );
 }
 
-function storyMatchesGenre(story: MockStory, genreLabel: string): boolean {
-  const g = story.genre.toLowerCase();
-  const label = genreLabel.toLowerCase();
-
-  if (label === "general fiction") return true;
-
-  if (label === "romance" && (g.includes("romance") || g.includes("love"))) return true;
-  if (label === "thriller" && g.includes("thriller")) return true;
-  if (label === "speculative fiction" && (g.includes("speculative") || g.includes("sci-fi") || g.includes("science fiction"))) return true;
-  if (label === "horror" && g.includes("horror")) return true;
-  if (label === "drama" && g.includes("drama")) return true;
-  if (label === "comedy" && (g.includes("comedy") || g.includes("humour"))) return true;
-  if (label === "erotica" && g.includes("erotica")) return true;
-  if (label === "lagos" && (g.includes("lagos") || story.hookLine.toLowerCase().includes("lagos"))) return true;
-  if (label === "crime" && (g.includes("crime") || g.includes("thriller"))) return true;
-  if (label === "historical fiction" && (g.includes("historical") || g.includes("history"))) return true;
-
-  return g.includes(label);
-}
-
 export interface FeedContentProps {
-  allStories: readonly MockStory[];
+  trending: readonly MockStory[];
   featuredStory: MockStory | null;
   winnerStories: readonly WinnerStory[];
+  inProgressStories: readonly MockStory[];
+  recommendedStories: readonly MockStory[];
+  tagRows: readonly FeedTagRow[];
   balance: number;
 }
 
-export function FeedContent({ allStories, featuredStory, winnerStories, balance }: FeedContentProps) {
-  const [showFreeOnly, setShowFreeOnly] = useState(false);
-  const [selectedGenre, setSelectedGenre] = useState("General Fiction");
-  const [genreOpen, setGenreOpen] = useState(false);
+export function FeedContent({
+  trending,
+  featuredStory,
+  winnerStories,
+  inProgressStories,
+  recommendedStories,
+  tagRows,
+  balance,
+}: FeedContentProps) {
+  const [tagOpen, setTagOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  // Close dropdown on outside click
   useEffect(() => {
-    if (!genreOpen) return;
+    if (!tagOpen) return;
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setGenreOpen(false);
+        setTagOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [genreOpen]);
-
-  const genreStories = useMemo(() => {
-    let base = selectedGenre === "General Fiction"
-      ? allStories
-      : allStories.filter((s) => storyMatchesGenre(s, selectedGenre));
-    if (showFreeOnly) base = base.filter((s) => s.isFree);
-    return base;
-  }, [allStories, selectedGenre, showFreeOnly]);
-
-  const genreConfig = useMemo(
-    () => FEED_GENRES.find((g) => g.label === selectedGenre) ?? FEED_GENRES[0],
-    [selectedGenre],
-  );
-
-  const rows = useMemo(() => {
-    if (showFreeOnly) {
-      const free = genreStories;
-      return free.length > 0 ? [{ name: "Free reads", stories: free }] : [];
-    }
-
-    return genreConfig.rows.map((row) => {
-      let filtered = genreStories;
-      if (row.freeOnly) filtered = filtered.filter((s) => s.isFree);
-      if (row.genre) filtered = filtered.filter((s) => storyMatchesGenre(s, row.genre!));
-      const stories = filtered.slice(0, 6);
-      return { name: row.name, stories };
-    });
-  }, [genreStories, genreConfig, showFreeOnly]);
+  }, [tagOpen]);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] pb-20 text-[var(--color-ink)]">
+      {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
         <div className="flex items-center justify-between px-5 pb-3 pt-4">
           <span className="font-[family-name:var(--font-display)] text-[21px] font-semibold text-[var(--color-primary)]">
@@ -175,68 +156,32 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
           </Link>
         </div>
 
+        {/* Browse by tag dropdown */}
         <div className="flex items-center gap-2 px-5 pb-[14px] pt-1">
-          <button
-            type="button"
-            onClick={() => setShowFreeOnly(false)}
-            className={cn(
-              "flex-none cursor-pointer rounded-[30px] border px-4 py-[8px] text-[13.5px] font-semibold transition-colors",
-              !showFreeOnly
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)]",
-            )}
-          >
-            Browse
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowFreeOnly(true)}
-            className={cn(
-              "flex-none cursor-pointer rounded-[30px] border px-4 py-[8px] text-[13.5px] font-semibold transition-colors",
-              showFreeOnly
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)]",
-            )}
-          >
-            Free
-          </button>
-
           <div ref={dropdownRef} className="relative flex-none">
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setGenreOpen(!genreOpen);
-              }}
-              className={cn(
-                "flex cursor-pointer items-center gap-1 rounded-[30px] border px-4 py-[8px] text-[13.5px] font-semibold transition-colors",
-                selectedGenre !== "General Fiction"
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                  : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)]",
-              )}
+              onClick={() => setTagOpen(!tagOpen)}
+              className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
             >
-              {selectedGenre} ▾
+              Browse by tag ▾
             </button>
-            {genreOpen && (
-              <div className="absolute left-0 top-full z-50 mt-1 max-h-[340px] w-[220px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
-                {FEED_GENRES.map((g) => (
+            {tagOpen && (
+              <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
+                {STORY_TAGS.map((tag) => (
                   <button
-                    key={g.label}
+                    key={tag.slug}
                     type="button"
                     onClick={() => {
-                      setSelectedGenre(g.label);
-                      setGenreOpen(false);
-                      setShowFreeOnly(false);
+                      setTagOpen(false);
+                      router.push(`/kekere/tag/${tag.slug}`);
                     }}
-                    className={cn(
-                      "block w-full rounded-xl px-3 py-[10px] text-left text-[13.5px] font-semibold transition-colors",
-                      selectedGenre === g.label
-                        ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]"
-                        : "text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,0.04)]",
-                    )}
+                    className="block w-full rounded-xl px-3 py-[9px] text-left text-[13px] font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[rgba(42,26,18,0.04)] hover:text-[var(--color-ink)]"
                   >
-                    {g.label}
+                    {tag.label}
+                    <span className="ml-2 text-[11px] text-[var(--color-ink-muted-2)]">
+                      — {tag.description}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -245,7 +190,8 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
         </div>
       </div>
 
-      {!showFreeOnly && winnerStories.length > 0 && (
+      {/* 1. Winners' Circle */}
+      {winnerStories.length > 0 && (
         <section className="py-2">
           <h2 className="flex items-center gap-2 px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
             <span aria-hidden="true" className="text-2xl">&#127942;</span>
@@ -289,10 +235,8 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
                 <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] italic leading-[1.35] text-[var(--color-ink-muted)]">
                   {story.hookLine}
                 </p>
-                <p className="mt-[7px] text-xs text-[var(--color-ink-muted-2)]">
-                  <span className="font-semibold text-[var(--color-primary)]">
-                    {story.competitionTitle}
-                  </span>
+                <p className="mt-[7px] text-xs font-semibold text-[var(--color-primary)]">
+                  {story.competitionTitle}
                 </p>
               </Link>
             ))}
@@ -301,7 +245,8 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
         </section>
       )}
 
-      {!showFreeOnly && featuredStory && (
+      {/* 2. Featured Story */}
+      {featuredStory && (
         <section className="px-5 py-[18px]">
           <Link
             href={`/kekere/story/${featuredStory.id}`}
@@ -316,13 +261,19 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
               <h3 className="mt-2 font-[family-name:var(--font-display)] text-[25px] font-semibold leading-[1.12] text-white">
                 {featuredStory.title}
               </h3>
-              <p className="mt-[6px] text-[13.5px] italic text-[rgba(255,255,255,0.85)]">{featuredStory.hookLine}</p>
+              <p className="mt-[6px] text-[13.5px] italic text-[rgba(255,255,255,0.85)]">
+                {featuredStory.hookLine}
+              </p>
               <div className="mt-[14px] flex items-center gap-3">
-                <span className="rounded-lg bg-[var(--color-sand-accent)] px-[18px] py-[9px] text-[13px] font-semibold text-[#2A1A12]">▶ Read</span>
+                <span className="rounded-lg bg-[var(--color-sand-accent)] px-[18px] py-[9px] text-[13px] font-semibold text-[#2A1A12]">
+                  ▶ Read
+                </span>
                 <span className="text-[12.5px] text-[rgba(255,255,255,0.8)]">
-                  {featuredStory.isFree ? "Free" : `${featuredStory.cowrieCost} cowries`}
-                  {" · "}{featuredStory.readingTimeMinutes} min{" · "}
-                  {Math.round(featuredStory.completionRate * 100)}% finish
+                  {featuredStory.cowrieCost} cowries
+                  {" · "}{featuredStory.readingTimeMinutes} min
+                  {featuredStory.completionRate > 0 && (
+                    <>{" · "}{Math.round(featuredStory.completionRate * 100)}% finish</>
+                  )}
                 </span>
               </div>
             </div>
@@ -330,13 +281,50 @@ export function FeedContent({ allStories, featuredStory, winnerStories, balance 
         </section>
       )}
 
-      {rows.map((row) => (
-        <StoryRow key={row.name} title={row.name} stories={row.stories} />
+      {/* 3. Continue Reading (only if user has in-progress stories) */}
+      {inProgressStories.length > 0 && (
+        <section className="py-2">
+          <div className="flex items-center justify-between px-5 pb-[14px]">
+            <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+              Continue reading
+            </h2>
+          </div>
+          <div
+            className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
+            style={{ scrollSnapType: "x mandatory" }}
+          >
+            {inProgressStories.map((story) => (
+              <RowCard key={story.id} story={story} badge="Continue" />
+            ))}
+            <div className="w-[6px] flex-none" />
+          </div>
+        </section>
+      )}
+
+      {/* 4. Now Trending */}
+      <StoryRow title="Now trending" stories={trending} />
+
+      {/* 5. We think you'll love these (only if recommendations exist) */}
+      {recommendedStories.length > 0 && (
+        <StoryRow
+          title="We think you will love these"
+          stories={recommendedStories}
+        />
+      )}
+
+      {/* 6. Tag-based rows */}
+      {tagRows.map((row) => (
+        <StoryRow
+          key={row.slug}
+          title={row.feedHeading}
+          stories={row.stories}
+          seeMoreHref={`/kekere/tag/${row.slug}`}
+        />
       ))}
 
-      {rows.every((r) => r.stories.length === 0) && (
-        <p className="px-5 py-12 text-center text-sm text-[var(--color-ink)]/50">
-          No stories match this genre yet — try another.
+      {tagRows.length === 0 && trending.length === 0 && (
+        <p className="px-5 py-16 text-center text-sm text-[var(--color-ink)]/50">
+          Stories are being added soon. Check back shortly.
         </p>
       )}
     </div>

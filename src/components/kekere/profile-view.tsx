@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+import { DraftBadge } from "@/components/kekere/DraftBadge";
 
 type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED";
 
@@ -346,19 +347,24 @@ export function ProfileView(props: ProfileViewProps) {
                     <Link
                       key={story.id}
                       href={href}
-                      className="flex items-center justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-[rgba(42,26,18,0.08)] transition-colors hover:ring-[var(--color-primary)]/40"
+                      className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-[rgba(42,26,18,0.08)] transition-colors hover:ring-[var(--color-primary)]/40"
                     >
-                      <span className="font-medium text-[var(--color-ink)]">
+                      <span className="min-w-0 flex-1 font-medium text-[var(--color-ink)] truncate">
                         {story.title || "Untitled story"}
                       </span>
-                      <span
-                        className={cn(
-                          "flex-none rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-                          STATUS_STYLES[story.status]
+                      <div className="flex flex-none items-center gap-2">
+                        {EDITABLE_STATUSES.includes(story.status) && (
+                          <DraftBadge storyId={story.id} />
                         )}
-                      >
-                        {STATUS_LABELS[story.status]}
-                      </span>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                            STATUS_STYLES[story.status]
+                          )}
+                        >
+                          {STATUS_LABELS[story.status]}
+                        </span>
+                      </div>
                     </Link>
                   );
                 })}

@@ -25,18 +25,15 @@ export class CommentNotFoundError extends Error {
 const COMMENTS_PER_PARAGRAPH = 50;
 
 /**
- * True if userId can read/comment on this story right now: it's free, they
- * wrote it, or they hold a StoryUnlock for it. Mirrors isStoryUnlockedFor in
- * kekere-stories.ts, kept separate since the comment endpoints only need
- * this narrow boolean check, not a full story-for-reader payload.
+ * True if userId can read/comment on this story right now: they wrote it,
+ * or they hold a StoryUnlock for it (includes first-story-free grants).
  */
 export async function verifyStoryAccess(userId: string, storyId: string): Promise<boolean> {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
-    select: { cowrieCost: true, authorId: true },
+    select: { authorId: true },
   });
   if (!story) return false;
-  if (story.cowrieCost === 0) return true;
   if (story.authorId === userId) return true;
 
   const unlock = await prisma.storyUnlock.findUnique({

@@ -7,6 +7,7 @@ import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 const authorInclude = {
   author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  tags: { include: { tag: true } },
 } as const;
 
 /** Stories awaiting an admin decision — SUBMITTED is the literal queue;
@@ -77,8 +78,7 @@ export async function decideStoryModeration(
         type: "STORY_APPROVED",
         title: "Your story has been published!",
         body:
-          `"${updated.title}" is now live on Kekere Stories` +
-          (updated.cowrieCost === 0 ? " as a free read." : ` at ${updated.cowrieCost} cowries.`),
+          `"${updated.title}" is now live on Kekere Stories at ${updated.cowrieCost} cowries.`,
         link: `/kekere/story/${updated.id}`,
       });
       // Fire-and-forget — narration audio can take a while to generate

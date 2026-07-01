@@ -20,7 +20,7 @@ export interface StoryCardProps {
  * corner tag. Free stories keep the full-colour cover as the reward signal.
  */
 export function StoryCard({ story, className }: StoryCardProps) {
-  const locked = !story.isFree;
+  const locked = true; // all stories are paid
 
   return (
     <Link
@@ -59,20 +59,14 @@ export function StoryCard({ story, className }: StoryCardProps) {
           )}
         </div>
 
-        {locked ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-gold)] shadow-lg">
-              <Lock className="h-5 w-5 text-[var(--color-maroon-deep)]" aria-hidden="true" />
-            </span>
-            <span className="rounded-full bg-[var(--color-gold)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-maroon-deep)]">
-              {story.cowrieCost} Cowries
-            </span>
-          </div>
-        ) : (
-          <span className="absolute right-3 top-3 rounded-full bg-[var(--color-gold)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-maroon-deep)] shadow-sm">
-            Free
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-gold)] shadow-lg">
+            <Lock className="h-5 w-5 text-[var(--color-maroon-deep)]" aria-hidden="true" />
           </span>
-        )}
+          <span className="rounded-full bg-[var(--color-gold)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-maroon-deep)]">
+            {story.cowrieCost} Cowries
+          </span>
+        </div>
 
         <div
           className={cn(

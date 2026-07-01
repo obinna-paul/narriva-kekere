@@ -11,22 +11,15 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { getSettingNumber } from "@/lib/settings/get";
 import {
-  COMPLETION_BONUS_COWRIES,
   TIP_AMOUNT_COWRIES,
   WRITER_EARNINGS_RATE,
 } from "@/content/decisions";
 
 export type UnlockResult =
-  | { success: true; cowriesSpent: number; writerShare: number; platformShare: number; balance: number }
+  | { success: true; cowriesSpent: number; writerShare: number; platformShare: number; balance: number; firstStoryFree?: boolean }
   | { already_unlocked: true; balance: number }
   | { insufficient_balance: true; balance: number; needed: number }
   | { error: "story_not_available" };
-
-export type CompletionResult =
-  | { success: true; bonusCowries: number }
-  | { already_credited: true }
-  | { error: "not_unlocked" }
-  | { error: "story_not_found" };
 
 export type TipResult =
   | { success: true }
@@ -45,9 +38,9 @@ export type ReferralRewardResult =
   | { already_rewarded: true }
   | { error: "referral_not_found" };
 
-/** Cowries already paid for a story unlock by this reader, or false if free/owned/unlocked by neither. */
-async function isAlreadyUnlocked(userId: string, storyId: string, story: { cowrieCost: number; authorId: string }) {
-  if (story.cowrieCost === 0 || story.authorId === userId) return true;
+/** Returns true if the reader already has access: they authored it, or have an unlock record. */
+async function isAlreadyUnlocked(userId: string, storyId: string, story: { authorId: string }) {
+  if (story.authorId === userId) return true;
   const existing = await prisma.storyUnlock.findUnique({
     where: { userId_storyId: { userId, storyId } },
   });
@@ -60,7 +53,7 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
     select: { id: true, title: true, authorId: true, cowrieCost: true, status: true },
   });
 
-  if (!story || story.status !== "PUBLISHED" || story.cowrieCost <= 0) {
+  if (!story || story.status !== "PUBLISHED" || story.cowrieCost < 1) {
     return { error: "story_not_available" };
   }
 
@@ -76,6 +69,33 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
 
   if (existingUnlock) {
     return { already_unlocked: true, balance: readerWallet.spendingBalance };
+  }
+
+  // First-story-free benefit: new users get their first unlock at no cost.
+  const reader = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { freeReadUsed: true },
+  });
+
+  if (reader && !reader.freeReadUsed) {
+    const storyUnlockId = randomUUID();
+    await prisma.$transaction([
+      prisma.storyUnlock.create({
+        data: { id: storyUnlockId, userId, storyId, unlockedAt: new Date() },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { freeReadUsed: true },
+      }),
+    ]);
+    return {
+      success: true,
+      cowriesSpent: 0,
+      writerShare: 0,
+      platformShare: 0,
+      balance: readerWallet.spendingBalance,
+      firstStoryFree: true,
+    };
   }
 
   if (readerWallet.spendingBalance < story.cowrieCost) {
@@ -146,61 +166,6 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
     platformShare,
     balance: readerWallet.spendingBalance - story.cowrieCost,
   };
-}
-
-export async function creditCompletionBonus(userId: string, storyId: string): Promise<CompletionResult> {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    select: { id: true, title: true, authorId: true, cowrieCost: true },
-  });
-  if (!story) return { error: "story_not_found" };
-
-  const unlocked = await isAlreadyUnlocked(userId, storyId, story);
-  if (!unlocked) return { error: "not_unlocked" };
-
-  const existingCompletion = await prisma.storyCompletion.findUnique({
-    where: { userId_storyId: { userId, storyId } },
-  });
-  if (existingCompletion?.bonusCredited) return { already_credited: true };
-
-  if (story.cowrieCost === 0) {
-    // Free stories are tracked as completed but never carry a bonus.
-    await prisma.storyCompletion.upsert({
-      where: { userId_storyId: { userId, storyId } },
-      create: { userId, storyId },
-      update: {},
-    });
-    return { success: true, bonusCowries: 0 };
-  }
-
-  const bonus = await getSettingNumber("completion_bonus_cowries", COMPLETION_BONUS_COWRIES);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.storyCompletion.upsert({
-      where: { userId_storyId: { userId, storyId } },
-      create: { userId, storyId, bonusCredited: true },
-      update: { bonusCredited: true },
-    });
-
-    const wallet = await tx.wallet.upsert({
-      where: { userId },
-      create: { userId, spendingBalance: bonus },
-      update: { spendingBalance: { increment: bonus } },
-    });
-
-    await tx.transaction.create({
-      data: {
-        walletId: wallet.id,
-        type: "COMPLETION_BONUS",
-        amountCowries: bonus,
-        walletField: "SPENDING",
-        description: `Completion bonus: ${story.title}`,
-        status: "COMPLETED",
-      },
-    });
-  });
-
-  return { success: true, bonusCowries: bonus };
 }
 
 export async function sendTip(readerId: string, storyId: string): Promise<TipResult> {

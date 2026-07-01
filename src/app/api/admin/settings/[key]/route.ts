@@ -7,7 +7,6 @@ const ALLOWED_KEYS = [
   "monthly_revenue_target_ngn",
   "writer_earnings_rate",
   "referral_reward_cowries",
-  "completion_bonus_cowries",
   "tip_amount_cowries",
   "withdrawal_rate_ngn_per_cowrie",
 ];
@@ -23,7 +22,6 @@ function validateValue(key: string, value: string): string | null {
       if (isNaN(num) || num < 0.01 || num > 0.99) return "Must be a float between 0.01 and 0.99.";
       break;
     case "referral_reward_cowries":
-    case "completion_bonus_cowries":
     case "tip_amount_cowries":
       if (!Number.isInteger(num) || num < 1 || num > 50) return "Must be an integer between 1 and 50.";
       break;

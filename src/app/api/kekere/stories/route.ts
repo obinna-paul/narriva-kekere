@@ -18,7 +18,6 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const tier = (url.searchParams.get("tier") as StoryTier | null) ?? undefined;
   const genre = url.searchParams.get("genre") ?? undefined;
-  const freeOnly = url.searchParams.get("free") === "true";
   const search = url.searchParams.get("search") ?? undefined;
   const sort = url.searchParams.get("sort") === "trending" ? "trending" : "recent";
   const page = Number(url.searchParams.get("page") ?? "1");
@@ -29,7 +28,6 @@ export async function GET(request: Request) {
   const result = await listStories({
     tier,
     genre,
-    freeOnly,
     search,
     sort,
     page,

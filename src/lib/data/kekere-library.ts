@@ -3,6 +3,7 @@ import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 const authorInclude = {
   author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  tags: { include: { tag: true } },
 } as const;
 
 export interface UserLibrary {

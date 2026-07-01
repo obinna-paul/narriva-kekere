@@ -68,6 +68,7 @@ export interface AllWinnerEntry {
 
 const storyWithAuthorInclude = {
   author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  tags: { include: { tag: true } },
 } as const;
 
 export async function getAllWinners(): Promise<AllWinnerEntry[]> {

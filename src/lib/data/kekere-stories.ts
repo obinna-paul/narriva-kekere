@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
-import type { Prisma, Story, StoryStatus, StoryTier } from "@prisma/client";
+import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
 
 export class StoryNotFoundError extends Error {
   constructor() {
@@ -34,10 +34,12 @@ function defaultCowrieCostForTier(tier: StoryTier): number {
 
 const authorInclude = {
   author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  tags: { include: { tag: true } },
 } as const;
 
 export type StoryWithAuthor = Story & {
   author: { id: string; name: string; slug: string | null; avatarColor: string | null };
+  tags: Array<{ tag: Tag }>;
 };
 
 export interface ListStoriesParams {
@@ -49,13 +51,7 @@ export interface ListStoriesParams {
   sort?: "recent" | "trending";
   page?: number;
   pageSize?: number;
-  /** Beyond the spec's literal filter list (tier/status/search) — added
-   * because the Phase 10 feed UI already shipped a genre selector and a
-   * "Free" quick-filter pill backed by real per-story data (genre column,
-   * cowrieCost === 0), so it was cheap to back them with real filtering
-   * instead of leaving them client-only. */
   genre?: string;
-  freeOnly?: boolean;
 }
 
 export interface ListStoriesResult {
@@ -78,8 +74,7 @@ export async function listStories(params: ListStoriesParams = {}): Promise<ListS
     status,
     ...(params.tier ? { tier: params.tier } : {}),
     ...(params.genre ? { genre: params.genre } : {}),
-    ...(params.freeOnly ? { cowrieCost: 0 } : {}),
-    ...(params.search
+...(params.search
       ? {
           OR: [
             { title: { contains: params.search, mode: "insensitive" } },
@@ -162,7 +157,6 @@ async function isStoryUnlockedFor(
   story: Pick<Story, "id" | "cowrieCost" | "authorId">,
   userId?: string
 ): Promise<boolean> {
-  if (story.cowrieCost === 0) return true;
   if (!userId) return false;
   if (story.authorId === userId) return true;
 
@@ -306,4 +300,166 @@ export async function submitStory(id: string, authorId: string): Promise<Story> 
     where: { id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
   });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Feed-specific data fetchers (used by the server-component feed page)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Stories the user has opened but not finished: 5–90% read, not completed. */
+export async function getInProgressStories(userId: string): Promise<StoryWithAuthor[]> {
+  const progress = await prisma.storyReadingProgress.findMany({
+    where: {
+      userId,
+      scrollFraction: { gte: 0.05, lte: 0.9 },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 10,
+    select: { storyId: true },
+  });
+
+  const completedIds = await prisma.storyCompletion.findMany({
+    where: { userId, storyId: { in: progress.map((p) => p.storyId) } },
+    select: { storyId: true },
+  });
+  const completedSet = new Set(completedIds.map((c) => c.storyId));
+
+  const ids = progress.map((p) => p.storyId).filter((id) => !completedSet.has(id));
+  if (ids.length === 0) return [];
+
+  const stories = await prisma.story.findMany({
+    where: { id: { in: ids }, status: "PUBLISHED" },
+    include: authorInclude,
+  });
+
+  const pos = new Map(ids.map((id, i) => [id, i]));
+  return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
+}
+
+/**
+ * Stories the system thinks the user will love, based on tag overlap with
+ * stories they have completed. Excludes already-read stories.
+ */
+export async function getRecommendedStories(userId: string, limit = 12): Promise<StoryWithAuthor[]> {
+  const completions = await prisma.storyCompletion.findMany({
+    where: { userId },
+    select: { storyId: true },
+  });
+  const completedIds = completions.map((c) => c.storyId);
+  if (completedIds.length === 0) return [];
+
+  const completedTags = await prisma.storyTag.findMany({
+    where: { storyId: { in: completedIds } },
+    select: { tagId: true },
+  });
+
+  if (completedTags.length === 0) return [];
+
+  const tagIds = Array.from(new Set(completedTags.map((t) => t.tagId)));
+
+  const unlocks = await prisma.storyUnlock.findMany({
+    where: { userId },
+    select: { storyId: true },
+  });
+  const unlockedIds = unlocks.map((u) => u.storyId);
+  const excludeIds = new Set([...completedIds, ...unlockedIds]);
+
+  const candidates = await prisma.storyTag.findMany({
+    where: {
+      tagId: { in: tagIds },
+      storyId: { notIn: Array.from(excludeIds) },
+      story: { status: "PUBLISHED" },
+    },
+    select: { storyId: true, tagId: true },
+  });
+
+  const scoreMap = new Map<string, number>();
+  for (const c of candidates) {
+    scoreMap.set(c.storyId, (scoreMap.get(c.storyId) ?? 0) + 1);
+  }
+
+  const topIds = Array.from(scoreMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([id]) => id);
+
+  if (topIds.length === 0) return [];
+
+  const stories = await prisma.story.findMany({
+    where: { id: { in: topIds } },
+    include: authorInclude,
+  });
+
+  const pos = new Map(topIds.map((id, i) => [id, i]));
+  return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
+}
+
+/** Stories grouped by tag slug, for the tag rows on the feed.
+ *  Returns only tags that have at least one published story, in the order supplied. */
+export async function getFeedTagRows(
+  tagSlugs: readonly string[],
+  limit = 8
+): Promise<Array<{ slug: string; storyIds: string[] }>> {
+  const tags = await prisma.tag.findMany({
+    where: { slug: { in: Array.from(tagSlugs) } },
+    select: { id: true, slug: true },
+  });
+
+  const results = await Promise.all(
+    tags.map(async (tag) => {
+      const rows = await prisma.storyTag.findMany({
+        where: { tagId: tag.id, story: { status: "PUBLISHED" } },
+        select: { storyId: true },
+        take: limit,
+      });
+      return { slug: tag.slug, storyIds: rows.map((r) => r.storyId) };
+    })
+  );
+
+  const order = new Map(tagSlugs.map((slug, i) => [slug, i]));
+  return results
+    .filter((r) => r.storyIds.length > 0)
+    .sort((a, b) => (order.get(a.slug) ?? 99) - (order.get(b.slug) ?? 99));
+}
+
+/** Fetch full story rows for a set of IDs, preserving the given order. */
+export async function getStoriesByIds(ids: string[]): Promise<StoryWithAuthor[]> {
+  if (ids.length === 0) return [];
+  const stories = await prisma.story.findMany({
+    where: { id: { in: ids }, status: "PUBLISHED" },
+    include: authorInclude,
+  });
+  const pos = new Map(ids.map((id, i) => [id, i]));
+  return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
+}
+
+/** Stories for a tag browse page (/kekere/tag/[slug]). */
+export async function listStoriesByTag(
+  slug: string,
+  page = 1,
+  pageSize = 12
+): Promise<ListStoriesResult> {
+  const tag = await prisma.tag.findUnique({ where: { slug } });
+  if (!tag) return { stories: [], total: 0, page, pageSize, totalPages: 0 };
+
+  const [storiesRaw, total] = await Promise.all([
+    prisma.story.findMany({
+      where: { status: "PUBLISHED", tags: { some: { tagId: tag.id } } },
+      include: authorInclude,
+      orderBy: { publishedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.story.count({
+      where: { status: "PUBLISHED", tags: { some: { tagId: tag.id } } },
+    }),
+  ]);
+
+  return {
+    stories: storiesRaw,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }

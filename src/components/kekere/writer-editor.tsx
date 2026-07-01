@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import { History, X, ScanEye, Maximize2, Minimize2, Download, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -125,11 +124,14 @@ export function WriterEditor({
   const [selectedVersion, setSelectedVersion] = useState<{
     id: string;
     versionNumber: number;
+    wordCount?: number;
     label: string;
     savedAt: string;
     content: TiptapDoc;
   } | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [restoreToast, setRestoreToast] = useState(false);
 
   // Feature 1 — distraction-free mode
   const focusModeRef = useRef(false);
@@ -418,22 +420,34 @@ export function WriterEditor({
         { method: "POST" }
       );
       if (res.ok) {
-        window.location.reload();
+        setRestoreToast(true);
+        setTimeout(() => window.location.reload(), 1600);
       }
     } finally {
       setRestoring(false);
     }
   }
 
-  // Feature 3 — hook line counter styling
-  function hookLineCounterStyle() {
-    const len = hookLine.length;
-    if (len >= HOOK_LINE_HARD) return { className: "text-[#C13A3A]", label: `Over limit — ${len}/${HOOK_LINE_HARD}` };
-    if (len >= HOOK_LINE_SOFT) return { className: "text-[var(--color-primary)]", label: `${len}/${HOOK_LINE_HARD} — Getting long — hooks work best under ${HOOK_LINE_SOFT} characters` };
-    return { className: "text-[var(--color-ink-muted-3)]", label: `${len}/${HOOK_LINE_HARD}` };
-  }
-
-  const hookCounter = hookLineCounterStyle();
+  // B7.2 — hook line counter (left note + right count, each in context colour)
+  const hookLen = hookLine.length;
+  const hookCountColor =
+    hookLen >= HOOK_LINE_HARD
+      ? "text-[#B3371D]"
+      : hookLen >= HOOK_LINE_SOFT
+        ? "text-[#C77A1E]"
+        : "text-[rgba(42,26,18,.45)]";
+  const hookNoteColor =
+    hookLen >= HOOK_LINE_HARD
+      ? "text-[#B3371D]"
+      : hookLen >= HOOK_LINE_SOFT
+        ? "text-[#C77A1E]"
+        : "text-transparent";
+  const hookNote =
+    hookLen >= HOOK_LINE_HARD
+      ? `Over limit — ${hookLen}/${HOOK_LINE_HARD}.`
+      : hookLen >= HOOK_LINE_SOFT
+        ? "Getting long — hooks work best under 100 characters."
+        : "";
 
   if (loading) {
     return (
@@ -498,41 +512,57 @@ export function WriterEditor({
           </div>
         </div>
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] pb-2.5">
-          <span className="text-xs text-[var(--color-ink-muted-3)]">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={savedLabel.text}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={savedLabel.tone === "error" ? "text-[#A13A3A]" : undefined}
-              >
-                {isEditable ? savedLabel.text : ""}
-                {isEditable && saveStatus.kind === "conflict" && (
-                  <button type="button" onClick={openHistory} className="ml-1 underline">
-                    View conflict
-                  </button>
-                )}
-              </motion.span>
-            </AnimatePresence>
-          </span>
+          {isEditable && (
+            <div className="flex items-center gap-[7px] rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
+              {saveStatus.kind === "saving" ? (
+                <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
+              ) : (
+                <span
+                  className={cn(
+                    "h-2 w-2 flex-none rounded-full",
+                    saveStatus.kind === "dirty" && "animate-pulse"
+                  )}
+                  style={{ backgroundColor: saveStatusColor(saveStatus.kind) }}
+                />
+              )}
+              <span className="text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
+                {savedLabel.text}
+              </span>
+              {saveStatus.kind === "conflict" && (
+                <button type="button" onClick={openHistory} className="text-[12.5px] font-semibold text-[#B3371D] underline">
+                  View conflict
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-2" data-writer-header-actions>
             {isEditable && (
               <>
-                {/* Feature 1 — Focus button */}
+                {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
+                {mode === "scroll" && storyId && (
+                  <button
+                    type="button"
+                    onClick={() => editorHandle.current?.flush("Manual save")}
+                    className="flex items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                    title="Save (Cmd+S)"
+                  >
+                    Save
+                  </button>
+                )}
+                {/* B7.1 — Focus button */}
                 <button
                   type="button"
                   onClick={focusModeRef.current ? exitFocusMode : enterFocusMode}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]"
-                  title={focusModeRef.current ? "Exit focus mode" : "Focus mode"}
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                  title={focusModeRef.current ? "Exit focus mode" : "Focus mode (⤢)"}
                 >
                   {focusModeRef.current ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                 </button>
-                {/* Feature 2 — Preview button */}
+                {/* Preview button */}
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]"
+                  className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
                   title="Preview"
                 >
                   <ScanEye size={15} />
@@ -604,8 +634,9 @@ export function WriterEditor({
               className="h-auto border-none bg-transparent px-0 font-[family-name:var(--font-display)] text-[19px] italic leading-[1.4] text-[var(--color-ink)] focus:ring-0 disabled:opacity-60"
             />
             <div className="mt-2 h-px bg-[var(--color-ink)]/[0.12]" />
-            <div className={cn("mt-2 text-right text-xs", hookCounter.className)}>
-              {hookCounter.label}
+            <div className="mt-1.5 flex items-center justify-between gap-2.5">
+              <span className={cn("text-[12px] font-medium", hookNoteColor)}>{hookNote}</span>
+              <span className={cn("flex-none text-[12px] font-semibold", hookCountColor)}>{hookLen}/120</span>
             </div>
           </div>
 
@@ -745,7 +776,15 @@ export function WriterEditor({
         </div>
       )}
 
-      {/* Feature 1 — Esc hint tooltip */}
+      {/* B2.3 — Version restore toast */}
+      {restoreToast && (
+        <div className="fixed bottom-[22px] left-1/2 z-[60] flex -translate-x-1/2 items-center gap-[9px] whitespace-nowrap rounded-full bg-[#2A1A12] px-[18px] py-[11px] text-[13px] font-medium text-[#F5EBDD] shadow-[0_8px_24px_rgba(42,26,18,.3)]">
+          <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#1F4B4B] text-[11px]">✓</span>
+          Story version restored
+        </div>
+      )}
+
+      {/* B7.1 — Esc hint tooltip */}
       {showEscHint && focusModeRef.current && (
         <div className="fixed bottom-6 right-6 z-50 rounded-lg bg-[var(--color-ink)]/80 px-4 py-2 text-xs text-white animate-fade-out">
           Press Esc to exit
@@ -861,69 +900,123 @@ export function WriterEditor({
         </SheetContent>
       </Sheet>
 
-      {/* Version history sidebar */}
-      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="right" className="flex flex-col">
-          <div className="mb-6 flex items-center justify-between">
-            <span className="font-[family-name:var(--font-display)] text-[19px] font-semibold text-[var(--color-ink)]">
+      {/* B2.3 — Version history panel */}
+      <Sheet open={historyOpen} onOpenChange={(open) => { setHistoryOpen(open); if (!open) { setSelectedVersion(null); setShowRestoreConfirm(false); } }}>
+        <SheetContent side="right" className="flex flex-col gap-0 p-0">
+          {/* Header */}
+          <div className="flex flex-none items-center justify-between border-b border-[rgba(42,26,18,.10)] px-[18px] py-4">
+            <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">
               Version history
             </span>
             <button
               type="button"
-              onClick={() => setHistoryOpen(false)}
+              onClick={() => { setHistoryOpen(false); setSelectedVersion(null); setShowRestoreConfirm(false); }}
               aria-label="Close"
-              className="text-[var(--color-ink-muted-2)]"
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[rgba(42,26,18,.05)] text-[#2A1A12] hover:bg-[rgba(42,26,18,.10)]"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
 
           {selectedVersion ? (
-            <div className="flex flex-1 flex-col">
-              <button
-                type="button"
-                onClick={() => setSelectedVersion(null)}
-                className="mb-4 self-start text-xs font-semibold text-[var(--color-primary)] hover:underline"
-              >
-                ← Back to list
-              </button>
-              <div className="mb-1 text-sm font-semibold text-[var(--color-ink)]">{selectedVersion.label}</div>
-              <div className="mb-4 text-xs text-[var(--color-ink-muted-2)]">
-                {new Date(selectedVersion.savedAt).toLocaleString()}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              {/* Back + meta */}
+              <div className="flex-none border-b border-[rgba(42,26,18,.08)] px-4 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedVersion(null); setShowRestoreConfirm(false); }}
+                  className="flex items-center gap-1 text-[13px] font-semibold text-[#C75D2C] hover:underline"
+                >
+                  ‹ All versions
+                </button>
+                <p className="mt-2 text-[14px] font-semibold text-[#2A1A12]">{selectedVersion.label}</p>
+                <p className="mt-0.5 text-[12px] text-[rgba(42,26,18,.5)]">
+                  {selectedVersion.wordCount ? `${selectedVersion.wordCount.toLocaleString()} words · ` : ""}
+                  {new Date(selectedVersion.savedAt).toLocaleString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
-              <div className="flex-1 overflow-y-auto rounded-lg border border-[var(--color-ink)]/10 p-4 text-sm">
+              {/* Preview content */}
+              <div className="flex-1 overflow-y-auto bg-[#FDF8F0] p-4">
                 <StoryReaderContent doc={selectedVersion.content} />
               </div>
-              <button
-                type="button"
-                disabled={restoring}
-                onClick={restoreSelectedVersion}
-                className="mt-4 rounded-[8px] bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-50"
-              >
-                {restoring ? "Restoring…" : "Restore this version"}
-              </button>
+              {/* Restore footer */}
+              <div className="flex-none border-t border-[rgba(42,26,18,.10)] bg-[#FBF5EC] px-4 py-[14px]">
+                {status === "PUBLISHED" ? (
+                  <p className="rounded-[9px] bg-[rgba(42,26,18,.04)] px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-[rgba(42,26,18,.6)]">
+                    Published stories cannot be edited. Contact us if you need to make changes.
+                  </p>
+                ) : showRestoreConfirm ? (
+                  <div>
+                    <p className="mb-2.5 text-[13px] font-medium leading-[1.5] text-[#2A1A12]">
+                      Restore this version? A backup of your current content will be saved first.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRestoreConfirm(false)}
+                        className="flex-1 rounded-[9px] border border-[rgba(42,26,18,.18)] py-[10px] text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={restoring}
+                        onClick={restoreSelectedVersion}
+                        className="flex-1 rounded-[9px] bg-[#C75D2C] py-[10px] text-[13px] font-semibold text-white hover:bg-[#B5512A] disabled:opacity-50"
+                      >
+                        {restoring ? "Restoring…" : "Confirm restore"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowRestoreConfirm(true)}
+                    className="w-full rounded-[10px] bg-[#C75D2C] py-3 text-[13.5px] font-semibold text-white hover:bg-[#B5512A]"
+                  >
+                    Restore this version
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-1 flex-col overflow-hidden">
               {versionsLoading && (
-                <p className="text-sm text-[var(--color-ink-muted-2)]">Loading…</p>
+                <div className="flex flex-1 items-center justify-center">
+                  <p className="text-sm text-[rgba(42,26,18,.5)]">Loading…</p>
+                </div>
               )}
               {!versionsLoading && versions?.length === 0 && (
-                <p className="text-sm text-[var(--color-ink-muted-2)]">No saved versions yet.</p>
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-10 text-center">
+                  <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[rgba(42,26,18,.05)] text-[24px] text-[rgba(42,26,18,.4)]">⟲</span>
+                  <p className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12]">No version history yet</p>
+                  <p className="text-[13.5px] leading-[1.5] text-[rgba(42,26,18,.55)]">Versions appear here automatically as you write.</p>
+                </div>
               )}
-              {versions?.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => selectVersion(v.id)}
-                  className="flex flex-col gap-0.5 rounded-lg border border-[var(--color-ink)]/10 px-3.5 py-3 text-left transition-colors hover:border-[var(--color-primary)]"
-                >
-                  <span className="text-sm font-semibold text-[var(--color-ink)]">{v.label}</span>
-                  <span className="text-xs text-[var(--color-ink-muted-2)]">
-                    {v.wordCount.toLocaleString()} words · {new Date(v.savedAt).toLocaleString()}
-                  </span>
-                </button>
-              ))}
+              {!versionsLoading && versions && versions.length > 0 && (
+                <div className="flex-1 overflow-y-auto px-3 py-2">
+                  {versions.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => selectVersion(v.id)}
+                      className="mb-2 flex w-full items-center gap-3 rounded-[11px] border border-[rgba(42,26,18,.08)] bg-white px-3 py-[13px] text-left hover:border-[rgba(199,93,44,.35)]"
+                    >
+                      <span
+                        className="h-[9px] w-[9px] flex-none rounded-full"
+                        style={{ background: versionDotColor(v.label) }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13.5px] font-semibold text-[#2A1A12]">{v.label}</span>
+                        <span className="mt-0.5 block text-[12px] text-[rgba(42,26,18,.5)]">
+                          {v.wordCount.toLocaleString()} words · {formatRelativeTime(v.savedAt)}
+                        </span>
+                      </span>
+                      <span className="flex-none text-[16px] text-[rgba(42,26,18,.3)]">›</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </SheetContent>
@@ -932,10 +1025,10 @@ export function WriterEditor({
   );
 }
 
-function formatSaveStatus(status: SaveStatus): { text: string; tone?: "error" } {
+function formatSaveStatus(status: SaveStatus): { text: string } {
   switch (status.kind) {
     case "idle":
-      return { text: "" };
+      return { text: "All changes saved" };
     case "dirty":
       return { text: "Unsaved changes" };
     case "saving":
@@ -943,8 +1036,26 @@ function formatSaveStatus(status: SaveStatus): { text: string; tone?: "error" } 
     case "saved":
       return { text: `Saved ${formatRelativeTime(status.lastSavedAt)}` };
     case "offline":
-      return { text: "Offline — saved locally", tone: "error" };
+      return { text: "Offline — saved locally" };
     case "conflict":
-      return { text: "Conflict — your changes could not be saved.", tone: "error" };
+      return { text: "Conflict — your changes could not be saved." };
   }
+}
+
+function saveStatusColor(kind: SaveStatus["kind"]): string {
+  switch (kind) {
+    case "idle":   return "#5C7A6B";
+    case "dirty":  return "#C77A1E";
+    case "saving": return "rgba(42,26,18,.55)";
+    case "saved":  return "#1F4B4B";
+    case "offline": return "#C75D2C";
+    case "conflict": return "#B3371D";
+  }
+}
+
+function versionDotColor(label: string): string {
+  if (label.startsWith("Before restore")) return "#9A6A3F";
+  if (label.startsWith("Submitted version")) return "#1F4B4B";
+  if (label === "Manual save") return "#C75D2C";
+  return "rgba(42,26,18,.3)";
 }

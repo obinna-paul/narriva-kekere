@@ -92,6 +92,7 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
       return;
     }
 
+    try { localStorage.setItem("kekere_welcome_new_user", "1"); } catch {}
     setSuccess("Account created. Sign in below.");
     setMode("signin");
     setPassword("");

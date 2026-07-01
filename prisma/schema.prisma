@@ -59,6 +59,9 @@ model User {
   suspensionReason String?
   suspendedUntil   DateTime?
 
+  // First-story-free benefit: each new user gets their first unlock at no cost.
+  freeReadUsed Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -289,8 +292,33 @@ model Story {
   versions           StoryVersion[]
   paragraphComments  ParagraphComment[]
   paragraphReactions ParagraphReaction[]
+  tags               StoryTag[]
 
   @@index([authorId])
+}
+
+// Story tagging system — tags are admin-assigned at publish time.
+// The canonical tag list lives in src/content/story-tags.ts; no new
+// tags can be created from the UI — slugs must match that list.
+model Tag {
+  id    String @id @default(cuid())
+  slug  String @unique
+  label String
+
+  stories StoryTag[]
+
+  @@index([slug])
+}
+
+model StoryTag {
+  storyId String
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, tagId])
+  @@index([storyId])
+  @@index([tagId])
 }
 
 model ParagraphComment {

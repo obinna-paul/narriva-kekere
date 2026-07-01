@@ -47,7 +47,7 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
     platformEarningsSum,
     withdrawalSum,
   ] = await Promise.all([
-    sumTransactionAmounts(["TOP_UP", "COMPLETION_BONUS", "REFERRAL_REWARD"]),
+    sumTransactionAmounts(["TOP_UP", "REFERRAL_REWARD"]),
     prisma.wallet.aggregate({
       _sum: { spendingBalance: true, earnedBalance: true },
     }),

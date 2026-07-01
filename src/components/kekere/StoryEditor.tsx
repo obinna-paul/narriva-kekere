@@ -2,7 +2,6 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
 import { createEditorExtensions } from "@/lib/tiptap/editor-config";
 import { cn } from "@/lib/utils/cn";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
@@ -21,17 +20,10 @@ const RETRY_INTERVAL_MS = 30000;
 export interface StoryEditorProps {
   storyId: string;
   initialContent: TiptapDoc | null;
-  /** Story.lastSavedAt from the server, ISO or null — the conflict-detection
-   * watermark and the localStorage-recovery comparison point. */
   initialLastSavedAt: string | null;
   onWordCountChange?: (count: number) => void;
-  /** Fires on every content change — the parent can display "~X min read". */
   onReadingTimeChange?: (minutes: number) => void;
-  /** Fires whenever the save state changes — the writer page renders this
-   * as the header status indicator. */
   onStatusChange?: (status: SaveStatus) => void;
-  /** Locks the editor (e.g. while the story is under review) — defaults to
-   * editable, since most callers are actively-editable drafts. */
   editable?: boolean;
 }
 
@@ -43,9 +35,6 @@ interface RecoveryState {
 }
 
 export interface StoryEditorHandle {
-  /** Saves immediately (bypassing the 3s debounce) and snapshots a version
-   * — the same thing Cmd/Ctrl+S does. Used by the writer page before
-   * submitting, so the just-typed content is never left mid-debounce. */
   flush: (label?: string) => Promise<void>;
 }
 
@@ -60,6 +49,8 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
 }, ref) {
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [recovery, setRecovery] = useState<RecoveryState | null>(null);
+  const [localWordCount, setLocalWordCount] = useState(0);
+  const [localReadingTime, setLocalReadingTime] = useState(0);
 
   const isDirtyRef = useRef(false);
   const conflictedRef = useRef(false);
@@ -81,10 +72,11 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       const minutes = count === 0 ? 0 : Math.max(1, Math.round(count / READING_WPM));
       onWordCountChange?.(count);
       onReadingTimeChange?.(minutes);
+      setLocalWordCount(count);
+      setLocalReadingTime(minutes);
       isDirtyRef.current = true;
       setStatus({ kind: "dirty" });
 
-      // Layer 1 — immediate localStorage backup (fast) + IndexedDB (persistent).
       try {
         const savedAt = new Date().toISOString();
         localStorage.setItem(draftStorageKey(storyId), JSON.stringify(json));
@@ -94,7 +86,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       }
       void saveDraftIDB(storyId, json, "", "", new Date().toISOString());
 
-      // Layer 2 — debounced server save, 3s after the user stops typing.
       clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
         void saveToServer(json, count);
@@ -103,14 +94,21 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     },
   });
 
-  // Layer 6 — recovery check. Check IndexedDB first (more reliable), then
-  // localStorage as fallback. Compare timestamps against server lastSavedAt.
+  // Initialise word count from existing content without waiting for a keypress.
+  useEffect(() => {
+    if (!editor) return;
+    const count = editor.storage.characterCount.words();
+    const minutes = count === 0 ? 0 : Math.max(1, Math.round(count / READING_WPM));
+    setLocalWordCount(count);
+    setLocalReadingTime(minutes);
+  }, [editor]);
+
+  // Recovery check: IndexedDB first, localStorage fallback.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let cancelled = false;
 
     async function checkRecovery() {
-      // Check IndexedDB first
       const idbDraft = await getDraftIDB(storyId);
       if (idbDraft && !cancelled) {
         const serverTime = initialLastSavedAt ? new Date(initialLastSavedAt).getTime() : 0;
@@ -123,7 +121,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         }
       }
 
-      // Fallback to localStorage
       let localRaw: string | null = null;
       let localSavedAt: string | null = null;
       try {
@@ -192,9 +189,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         clearLocalBackup();
         setStatus({ kind: "saved", lastSavedAt: story.lastSavedAt });
       } catch {
-        // Network failure (offline, DNS, timeout) — the localStorage
-        // backup from Layer 1 already has this content, so nothing is
-        // lost. Layer 3's retry loop (below) keeps trying.
         setStatus({ kind: "offline" });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,9 +196,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     [storyId]
   );
 
-  // Retry loop while offline — keeps attempting every 30s, always reading
-  // the editor's CURRENT content (not a stale snapshot from when it first
-  // failed), since the user may have kept typing while disconnected.
   useEffect(() => {
     if (status.kind !== "offline" || !editor) return;
     const interval = setInterval(() => {
@@ -216,9 +207,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     return () => clearInterval(interval);
   }, [status.kind, editor, saveToServer]);
 
-  // Layer 3 — manual save: saves immediately, snapshots a version, and
-  // clears the local backup. Triggered by Cmd/Ctrl+S, and exposed to the
-  // parent (via the imperative handle below) for "save before submit."
   const manualSave = useCallback(
     async (label = "Manual save") => {
       if (!editor) return;
@@ -234,8 +222,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           body: JSON.stringify({ label }),
         });
       } catch {
-        // A failed version snapshot shouldn't be reported as a save
-        // failure — the content itself already saved successfully above.
+        // Failed version snapshot doesn't negate a successful save.
       }
       clearLocalBackup();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -270,60 +257,90 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
 
   if (!editor) return null;
 
+  const readingTimeLabel =
+    localWordCount < 200
+      ? "< 1 min read"
+      : `~${localReadingTime} min read`;
+
   return (
     <div className="flex flex-col">
+      {/* B2.2 — Local draft recovery banner */}
       {recovery && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-primary)]/30 bg-[var(--color-primary-muted)] px-4 py-3 text-sm">
-          <span className="text-[var(--color-ink)]">
-            We found unsaved local changes from {formatRelativeTime(recovery.savedAt)}.
-          </span>
-          <div className="flex flex-none gap-4">
-            <button
-              type="button"
-              onClick={handleRestoreLocal}
-              className="font-semibold text-[var(--color-primary)] hover:underline"
-            >
-              Restore local version
-            </button>
-            <button
-              type="button"
-              onClick={handleDismissRecovery}
-              className="text-[var(--color-ink-muted)] hover:underline"
-            >
-              Dismiss
-            </button>
+        <div className="mb-5">
+          <div className="flex items-start gap-3 rounded-[12px] border border-[#E8C98C] bg-[#FBEFD9] p-[13px_14px]">
+            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#C75D2C] text-[15px] text-white">
+              ↻
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-semibold text-[#2A1A12]">
+                We found unsaved changes from {formatRelativeTime(recovery.savedAt)}.
+              </p>
+              <p className="mt-0.5 text-[12.5px] text-[rgba(42,26,18,.6)]">
+                Restore them, or keep the version saved on our server.
+              </p>
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleRestoreLocal}
+                  className="rounded-[8px] bg-[#C75D2C] px-[14px] py-[7px] text-[12.5px] font-semibold text-white"
+                >
+                  Restore local version
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissRecovery}
+                  className="rounded-[8px] border border-[rgba(42,26,18,.18)] bg-transparent px-[14px] py-[7px] text-[12.5px] font-semibold text-[#2A1A12]"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="mb-3 flex items-center gap-1 border-b border-[var(--color-ink)]/[0.08] pb-2">
+      {/* B1 — Formatting toolbar + live word count */}
+      <div className="mb-1.5 flex items-center gap-1.5 border-b border-[rgba(42,26,18,.10)] pb-2">
         <ToolbarButton
-          label="Bold"
+          label="Bold (Ctrl+B)"
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
-          <Bold size={15} />
+          <span className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-none">B</span>
         </ToolbarButton>
         <ToolbarButton
-          label="Italic"
+          label="Italic (Ctrl+I)"
           active={editor.isActive("italic")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
-          <Italic size={15} />
+          <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold italic leading-none">I</span>
         </ToolbarButton>
         <ToolbarButton
-          label="Underline"
+          label="Underline (Ctrl+U)"
           active={editor.isActive("underline")}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
-          <UnderlineIcon size={15} />
+          <span className="text-[17px] font-semibold leading-none underline underline-offset-[3px]">U</span>
         </ToolbarButton>
+
+        <div className="flex-1" />
+
+        {/* B7.3 — live word count + reading time */}
+        <div className="flex items-baseline gap-2.5 text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
+          <span>
+            <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b>{" "}
+            words
+          </span>
+          <span className="inline-block h-[11px] w-px bg-[rgba(42,26,18,.2)]" />
+          <span>{readingTimeLabel}</span>
+        </div>
       </div>
 
       <EditorContent
         editor={editor}
         className={cn(
-          "min-h-[340px] w-full font-sans text-[17px] leading-[1.75] text-[var(--color-ink)]",
+          "min-h-[340px] w-full font-sans text-[17px] leading-[1.75] text-[#2A1A12]",
+          "[&_.ProseMirror]:caret-[#C75D2C]",
           "[&_.ProseMirror]:outline-none",
           "[&_.ProseMirror_p]:mb-[1.3em]",
           "[&_.ProseMirror_strong]:font-bold",
@@ -332,7 +349,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           "[&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none",
           "[&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left",
           "[&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[var(--color-ink-muted-3)]",
+          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[rgba(42,26,18,.38)]",
           "[&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]"
         )}
       />
@@ -356,12 +373,16 @@ function ToolbarButton({
       type="button"
       aria-label={label}
       aria-pressed={active}
-      onClick={onClick}
+      onMouseDown={(e) => {
+        // Prevent blur so the selection/caret is preserved when clicking toolbar.
+        e.preventDefault();
+        onClick();
+      }}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+        "flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] transition-colors",
         active
-          ? "bg-[var(--color-primary-muted)] text-[var(--color-primary)]"
-          : "text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06]"
+          ? "border border-[#2A1A12] bg-[#2A1A12] text-[#F5EBDD]"
+          : "border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
       )}
     >
       {children}

@@ -31,10 +31,6 @@ export default async function KekereWalletPage() {
     .filter((t) => t.type === "REFERRAL" || t.type === "REFERRAL_REWARD")
     .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
 
-  const readRewardEarnings = wallet?.transactions
-    .filter((t) => t.type === "READ_REWARD")
-    .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
-
   const tipEarnings = wallet?.transactions
     .filter((t) => t.type === "TIP" && t.amountCowries > 0)
     .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
@@ -54,7 +50,6 @@ export default async function KekereWalletPage() {
           hasBankDetails={!!user?.bankAccountNumber && !!user?.bankName}
           referralCode={user?.referralCode ?? null}
           referralEarnings={referralEarnings}
-          readRewardEarnings={readRewardEarnings}
           tipEarnings={tipEarnings}
           transactions={
             wallet?.transactions.map((tx) => ({
