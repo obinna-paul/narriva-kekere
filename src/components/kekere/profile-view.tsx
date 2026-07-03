@@ -5,7 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 
-type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED";
+type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED" | "PENDING_CONTRACT";
 
 export interface MyStorySummary {
   id: string;
@@ -20,6 +20,7 @@ const STATUS_STYLES: Record<StoryStatus, string> = {
   REVISIONS_REQUESTED: "bg-[var(--color-primary-muted)] text-[var(--color-primary)]",
   PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
   REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
+  PENDING_CONTRACT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
 };
 
 const STATUS_LABELS: Record<StoryStatus, string> = {
@@ -29,6 +30,7 @@ const STATUS_LABELS: Record<StoryStatus, string> = {
   REVISIONS_REQUESTED: "Revisions requested",
   PUBLISHED: "Published",
   REJECTED: "Not accepted",
+  PENDING_CONTRACT: "Pending contract",
 };
 
 const EDITABLE_STATUSES: StoryStatus[] = ["DRAFT", "REVISIONS_REQUESTED"];
