@@ -5,9 +5,6 @@ import { createHmac } from "node:crypto";
 
 import { prisma } from "@/lib/db/prisma";
 
-const isProduction = process.env.NODE_ENV === "production";
-const sharedCookieDomain = isProduction ? ".narriva.pro" : undefined;
-
 const IMPERSONATION_SECRET =
   process.env.NEXTAUTH_SECRET ?? "impersonation-fallback-secret";
 
@@ -77,20 +74,6 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
-  },
-  cookies: {
-    sessionToken: {
-      name: isProduction
-        ? "__Secure-next-auth.session-token"
-        : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProduction,
-        domain: sharedCookieDomain,
-      },
-    },
   },
   providers: [
     CredentialsProvider({
