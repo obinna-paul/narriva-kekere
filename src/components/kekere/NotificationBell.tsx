@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 
@@ -162,7 +163,7 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
           {/* Keyframe animations — injected once when drawer opens */}
           <style>{`
@@ -327,7 +328,8 @@ export function NotificationBell() {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );

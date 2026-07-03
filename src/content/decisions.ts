@@ -19,10 +19,10 @@ export type CowrieTopupPackage = {
 };
 
 export const COWRIE_TOPUP_PACKAGES: readonly CowrieTopupPackage[] = [
-  { priceNGN: 500, cowries: 100, bonusCowries: 0 },
-  { priceNGN: 1000, cowries: 210, bonusCowries: 10 },
-  { priceNGN: 2500, cowries: 550, bonusCowries: 50 },
-  { priceNGN: 5000, cowries: 1150, bonusCowries: 150 },
+  { priceNGN: 500,  cowries: 10, bonusCowries: 0 },
+  { priceNGN: 1000, cowries: 21, bonusCowries: 1 },
+  { priceNGN: 1500, cowries: 35, bonusCowries: 5 },
+  { priceNGN: 2000, cowries: 50, bonusCowries: 10 },
 ] as const;
 
 export type StoryTier = "standard" | "featured" | "premium";

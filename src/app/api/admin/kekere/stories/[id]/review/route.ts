@@ -44,11 +44,14 @@ export const GET = withAuth(
     return NextResponse.json({
       id: story.id,
       title: story.title,
+      authorName: story.author.name,
       hookLine: story.hookLine,
       body: story.body,
       genre: story.genre,
       status: story.status,
       tier: story.tier,
+      wordCount: story.wordCount ?? 0,
+      readingTime: story.readingTime ?? 0,
       cowrieCost: story.cowrieCost,
       completionRate: story.completionRate,
       moderationNotes: story.moderationNotes,
@@ -66,7 +69,6 @@ export const GET = withAuth(
         rejectionCount: rejectedCount,
         revisionRequestCount: revisionsCount,
       },
-      currentVersion: story.body,
     });
   },
   { roles: ["ADMIN"] },

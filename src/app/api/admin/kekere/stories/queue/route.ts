@@ -53,7 +53,11 @@ export const GET = withAuth(
           authorId: s.authorId,
           authorUsername: s.author.slug ?? s.author.name,
           authorName: s.author.name,
+          genre: s.genre,
+          tier: s.tier,
           wordCount: s.wordCount,
+          cowrieCost: s.cowrieCost,
+          moderationNotes: s.moderationNotes ?? null,
           submittedAt: s.submittedAt?.toISOString() ?? null,
           daysWaiting: s.submittedAt
             ? Math.floor((now - s.submittedAt.getTime()) / 86400000)
