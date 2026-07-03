@@ -28,7 +28,7 @@ export default async function KekereContractsPage() {
             sentAt: c.sentAt.toISOString(),
             status: c.status as "PENDING" | "SIGNED" | "DECLINED" | "EXPIRED" | "VOIDED",
             signedAt: c.signedAt?.toISOString(),
-            signedPdfRef: c.signedPdfRef,
+            signedPdfRef: c.signedPdfRef ?? undefined,
           }))}
         />
       </div>
