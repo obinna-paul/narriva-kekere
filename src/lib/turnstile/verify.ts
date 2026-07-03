@@ -7,9 +7,9 @@
 export async function verifyTurnstileToken(token: string, remoteIp?: string): Promise<boolean> {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
   if (!secretKey) {
-    // Not configured in this environment — fail closed in production, but
-    // don't hard-block local/sandbox development where the key is unset.
-    return process.env.NODE_ENV !== "production";
+    // Turnstile not configured — skip the check entirely.
+    // Protection only works when both site key and secret key are set up.
+    return true;
   }
 
   const body = new URLSearchParams({ secret: secretKey, response: token });
