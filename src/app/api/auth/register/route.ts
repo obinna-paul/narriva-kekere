@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 import { ensureReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
 import { getFeatureFlag } from "@/lib/settings/get";
+import { createAndSendOtp } from "@/lib/auth/verify-email";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -54,11 +55,12 @@ export async function POST(request: Request) {
         name,
         password: hashedPassword,
         termsAcceptedAt: new Date(),
-        emailVerified: new Date(),
         wallet: { create: {} },
       },
       select: { id: true, email: true, name: true, role: true },
     });
+
+    await createAndSendOtp(user.id, user.email, user.name);
 
     const newReferralCode = await ensureReferralCodeForUser(user.id);
     // Kept in sync with ReferralCode.code so the existing wallet-page
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { user: { ...user, referralCode: newReferralCode } },
+      { user: { ...user, referralCode: newReferralCode }, pendingVerification: true },
       { status: 201 },
     );
   } catch (error) {

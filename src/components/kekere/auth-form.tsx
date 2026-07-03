@@ -19,6 +19,8 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
   const initialMode: Mode = searchParams.get("mode") === "signup" ? "signup" : "signin";
   const isNarriva = brand === "narriva";
 
+  const justVerified = searchParams.get("verified") === "1";
+
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -49,6 +51,11 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
     });
 
     setSubmitting(false);
+
+    if (result?.error === "EMAIL_NOT_VERIFIED") {
+      setError("__UNVERIFIED__");
+      return;
+    }
 
     if (result?.error) {
       setError("Incorrect email or password.");
@@ -95,9 +102,7 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
     }
 
     try { localStorage.setItem("kekere_welcome_new_user", "1"); } catch {}
-    setSuccess("Account created! Sign in below.");
-    switchMode("signin");
-    setPassword("");
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   }
 
   const brandName = isNarriva ? "Narriva" : "Kekere";
@@ -136,14 +141,31 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
         {mode === "signin" ? "Welcome back" : `Join ${brandName}`}
       </h1>
 
+      {justVerified && (
+        <p className="mb-4 rounded-lg bg-[rgba(31,111,74,0.1)] px-4 py-3 text-sm text-[var(--color-success)]">
+          Email verified! You can now sign in.
+        </p>
+      )}
       {success && (
         <p className="mb-4 rounded-lg bg-[rgba(31,111,74,0.1)] px-4 py-3 text-sm text-[var(--color-success)]">
           {success}
         </p>
       )}
-      {error && (
+      {error && error !== "__UNVERIFIED__" && (
         <p className="mb-4 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
           {error}
+        </p>
+      )}
+      {error === "__UNVERIFIED__" && (
+        <p className="mb-4 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
+          Your email isn&apos;t verified yet.{" "}
+          <button
+            type="button"
+            className="underline font-medium"
+            onClick={() => router.push(`/verify-email?email=${encodeURIComponent(email)}`)}
+          >
+            Verify now
+          </button>
         </p>
       )}
 

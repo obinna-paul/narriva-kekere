@@ -6,7 +6,7 @@ import { createHmac } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 
 const isProduction = process.env.NODE_ENV === "production";
-const sharedCookieDomain = isProduction ? ".narriva.com" : undefined;
+const sharedCookieDomain = isProduction ? ".narriva.pro" : undefined;
 
 const IMPERSONATION_SECRET =
   process.env.NEXTAUTH_SECRET ?? "impersonation-fallback-secret";
@@ -141,6 +141,10 @@ export const authOptions: NextAuthOptions = {
         );
 
         if (!isValidPassword) return null;
+
+        if (!user.emailVerified) {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
 
         return {
           id: user.id,
