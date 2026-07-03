@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { History, X, ScanEye, Maximize2, Minimize2, FileText } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -565,33 +564,45 @@ export function WriterEditor({
         )}
 
         <fieldset disabled={!isEditable} className="contents">
-          <div className="mb-5">
+          {/* Field 1 — Title */}
+          <div className="mb-5 rounded-[14px] border border-[rgba(42,26,18,0.10)] bg-white px-4 py-3.5">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+              Title
+            </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Add a catchy title..."
+              placeholder="Give your story a title…"
               disabled={!isEditable}
               maxLength={TITLE_LIMIT}
               aria-label="Story title"
-              className="w-full bg-transparent font-[family-name:var(--font-display)] text-[26px] font-semibold leading-[1.2] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
+              className="w-full bg-transparent font-[family-name:var(--font-display)] text-[22px] font-semibold leading-[1.25] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
             />
           </div>
 
-          <div className="mb-6">
-            <label className="mb-2 block text-xs font-semibold text-[var(--color-ink-muted-2)]">
-              One sharp sentence — what makes someone read this?
+          {/* Field 2 — Hookline */}
+          <div className="mb-5 rounded-[14px] border border-[rgba(42,26,18,0.10)] bg-white px-4 py-3.5">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+              Hookline
             </label>
-            <Input
+            <input
               value={hookLine}
               onChange={(e) => setHookLine(e.target.value)}
-              placeholder="Your hook line…"
-              className="h-auto border-none bg-transparent px-0 font-[family-name:var(--font-display)] text-[19px] italic leading-[1.4] text-[var(--color-ink)] focus:ring-0 disabled:opacity-60"
+              placeholder="One sharp sentence — what makes someone want to read this?"
+              disabled={!isEditable}
+              maxLength={HOOK_LINE_HARD}
+              aria-label="Hook line"
+              className="w-full bg-transparent font-[family-name:var(--font-display)] text-[16px] italic leading-[1.5] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
             />
-            <div className="mt-2 h-px bg-[var(--color-ink)]/[0.12]" />
-            <div className="mt-1.5 flex items-center justify-between gap-2.5">
+            <div className="mt-2 flex items-center justify-between gap-2.5">
               <span className={cn("text-[12px] font-medium", hookNoteColor)}>{hookNote}</span>
               <span className={cn("flex-none text-[12px] font-semibold", hookCountColor)}>{hookLen}/120</span>
             </div>
+          </div>
+
+          {/* Field 3 label */}
+          <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
+            Story
           </div>
 
           {mode === "scroll" ? (
@@ -628,10 +639,10 @@ export function WriterEditor({
             <div className="flex flex-col gap-8">
               {chapters.map((chapter) => (
                 <div key={chapter.id}>
-                  <Input
+                  <input
                     value={chapter.title}
                     onChange={(e) => updateChapter(chapter.id, { title: e.target.value })}
-                    className="h-auto border-none bg-transparent px-0 font-[family-name:var(--font-display)] text-lg font-semibold focus:ring-0"
+                    className="w-full bg-transparent font-[family-name:var(--font-display)] text-lg font-semibold outline-none"
                   />
                   <Textarea
                     value={chapter.content}
