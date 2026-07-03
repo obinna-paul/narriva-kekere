@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/db/prisma";
 import { getStoryCoverStream } from "@/lib/storage/r2";
 

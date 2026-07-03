@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { runGA4Report, type GA4ReportResponse } from "@/lib/analytics/ga4";

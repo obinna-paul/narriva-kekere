@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 
 // Story content is exclusive to Kekere and may not be exported or downloaded.

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { getAdminOverview } from "@/lib/data/admin-analytics";
 

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { verifyStoryAccess } from "@/lib/data/kekere-comments";

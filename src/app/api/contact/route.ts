@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { contactFormSchema } from "@/lib/validation/contact";
 import { sendEmail } from "@/lib/email/send";

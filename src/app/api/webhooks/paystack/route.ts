@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/paystack/client";
 import { processBookPurchase } from "@/lib/data/payments";

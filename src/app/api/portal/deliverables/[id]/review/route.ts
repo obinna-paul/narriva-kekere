@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { updateDeliverable } from "@/lib/data/admin-deliverables";

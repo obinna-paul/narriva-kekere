@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { updateDeliverable } from "@/lib/data/admin-deliverables";
 
