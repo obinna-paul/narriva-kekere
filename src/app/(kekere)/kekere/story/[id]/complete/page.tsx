@@ -28,7 +28,7 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
         <StoryCompletionScreen
           storyId={params.id}
           storyTitle={story.title}
-          authorName={story.authorName ?? "Unknown"}
+          authorName={story.author.name ?? "Unknown"}
           spendingBalance={wallet?.spendingBalance ?? 0}
           tipSent={!!alreadyTipped}
           rating={0}
