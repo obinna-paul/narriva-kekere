@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { verifyWebhookSignature } from "@/lib/paystack/client";
 import { processBookPurchase } from "@/lib/data/payments";
 import { creditTopUp } from "@/lib/economy/cowries";
+import { triggerReferralRewardOnFirstTopUp } from "@/lib/data/kekere-referrals";
 import { completeWithdrawal, failWithdrawal } from "@/lib/economy/withdrawals";
 import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
 import { prisma } from "@/lib/db/prisma";
@@ -52,7 +53,10 @@ async function handleChargeSuccess(data: { reference: string; amount: number; me
     const pkg = COWRIE_TOPUP_PACKAGES.find((p) => p.priceNGN === paidNGN);
     if (pkg) {
       const cowriesTotal = pkg.cowries + pkg.bonusCowries;
-      await creditTopUp(metadata.userId, cowriesTotal, reference);
+      const topUpResult = await creditTopUp(metadata.userId, cowriesTotal, reference);
+      if ("success" in topUpResult) {
+        triggerReferralRewardOnFirstTopUp(metadata.userId, paidNGN).catch(() => {});
+      }
     }
   }
 }

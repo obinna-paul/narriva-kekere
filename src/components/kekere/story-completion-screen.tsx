@@ -25,8 +25,8 @@ export function StoryCompletionScreen({ storyId, storyTitle, authorName, spendin
   const [shareCopied, setShareCopied] = useState(false);
 
   const shareUrl = referralCode
-    ? `https://kekere.narriva.com/invite/${referralCode}`
-    : `https://kekere.narriva.com/story/${storyId}`;
+    ? `https://narriva.pro/kekere/invite/${referralCode}`
+    : `https://narriva.pro/kekere/story/${storyId}`;
   const shareText = `I just read "${storyTitle}" on Kekere Stories. Check it out: ${shareUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 

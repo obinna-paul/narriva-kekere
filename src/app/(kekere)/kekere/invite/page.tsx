@@ -33,7 +33,7 @@ export default async function KekereInvitePage() {
         <ReferralSection
           stats={{
             code: referralCode?.code ?? null,
-            shareUrl: referralCode ? `https://kekere.narriva.com/invite/${referralCode.code}` : null,
+            shareUrl: referralCode ? `https://narriva.pro/kekere/invite/${referralCode.code}` : null,
             totalReferrals,
             rewardedReferrals,
             totalCowriesEarned: earningsAgg._sum.amountCowries ?? 0,

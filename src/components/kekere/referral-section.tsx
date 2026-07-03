@@ -32,7 +32,7 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
   return (
     <div className="mx-auto max-w-[402px] px-[22px] pb-[80px] pt-6">
       <h1 className="font-[family-name:var(--font-display)] text-[26px] font-semibold text-[#2A1A12]">Invite friends, earn cowries</h1>
-      <p className="mt-2 text-[14px] text-[#8A7565] leading-[1.55]">Share Kekere with other readers and writers. When someone you referred unlocks their first story, you both earn 3 cowries.</p>
+      <p className="mt-2 text-[14px] text-[#8A7565] leading-[1.55]">Share Kekere with friends. When someone you referred buys cowries for the first time — even just ₦500 — you earn 3 cowries instantly.</p>
 
       {/* Referral code card */}
       {stats.code && (
@@ -69,7 +69,7 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
         </div>
         <div className="rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-3 py-3.5 text-center">
           <div className="font-[family-name:var(--font-display)] text-[24px] font-semibold text-[#2A1A12]">{stats.rewardedReferrals}</div>
-          <div className="mt-0.5 text-[11px] text-[#8A7565]">Unlocked</div>
+          <div className="mt-0.5 text-[11px] text-[#8A7565]">Rewarded</div>
         </div>
         <div className="rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-3 py-3.5 text-center">
           <div className="font-[family-name:var(--font-display)] text-[24px] font-semibold text-[#1F8A5B]">{stats.totalCowriesEarned}</div>

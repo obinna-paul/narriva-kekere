@@ -66,16 +66,23 @@ export async function recordReferralFromCode(code: string, referredUserId: strin
   });
 }
 
+const MIN_QUALIFYING_NGN = 500;
+
 /**
- * Called after a successful story unlock. If this was the reader's first
- * ever unlock and they were referred by someone, credits the referrer's 3
- * cowries, flips the Referral to REWARDED, and emails the referrer. No-op
- * for every later unlock (status is no longer PENDING) and for unreferred
- * readers.
+ * Called after every successful cowrie top-up. If this was the referred
+ * user's first-ever top-up of ≥ 500 NGN, credits the referrer 3 cowries,
+ * flips Referral → REWARDED, and notifies the referrer.
  */
-export async function triggerReferralRewardOnFirstUnlock(userId: string): Promise<void> {
-  const unlockCount = await prisma.storyUnlock.count({ where: { userId } });
-  if (unlockCount !== 1) return;
+export async function triggerReferralRewardOnFirstTopUp(
+  userId: string,
+  paidNGN: number,
+): Promise<void> {
+  if (paidNGN < MIN_QUALIFYING_NGN) return;
+
+  const topUpCount = await prisma.transaction.count({
+    where: { wallet: { userId }, type: "TOP_UP", status: "COMPLETED" },
+  });
+  if (topUpCount !== 1) return; // only reward the very first top-up
 
   const referral = await prisma.referral.findFirst({
     where: { referredUserId: userId, status: "PENDING" },
@@ -93,15 +100,15 @@ export async function triggerReferralRewardOnFirstUnlock(userId: string): Promis
 
   await sendEmail({
     to: referrer.email,
-    subject: "Someone you invited just unlocked their first story",
-    body: `You earned ${result.reward} cowries because ${referredUser?.name ?? "someone"} joined Kekere using your referral link and just unlocked their first story. Your spending balance has been updated.`,
+    subject: "Someone you invited just bought cowries",
+    body: `You earned ${result.reward} cowries! ${referredUser?.name ?? "Someone"} joined Kekere with your referral link and just bought cowries for the first time. Your balance has been updated.`,
   });
 
   await createNotification({
     userId: result.referrerId,
     type: "REFERRAL_REWARD_EARNED",
     title: "Referral reward earned",
-    body: "Someone you invited just unlocked their first story. You've earned 3 cowries.",
+    body: `Someone you invited just bought cowries. You've earned ${result.reward} cowries!`,
     link: "/kekere/wallet",
   });
 }

@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { unlockStory } from "@/lib/economy/cowries";
-import { triggerReferralRewardOnFirstUnlock } from "@/lib/data/kekere-referrals";
 
 export const POST = withAuth(
   async (_request, session, { params }: { params: { id: string } }) => {
@@ -29,7 +28,6 @@ export const POST = withAuth(
       return NextResponse.json({ balance: result.balance });
     }
 
-    triggerReferralRewardOnFirstUnlock(session.user.id).catch(() => {});
     return NextResponse.json({ balance: result.balance });
   }
 );

@@ -24,7 +24,7 @@ export const GET = withAuth(async (_request, session) => {
 
   return NextResponse.json({
     code: referralCode?.code ?? null,
-    shareUrl: referralCode ? `https://kekere.narriva.com/invite/${referralCode.code}` : null,
+    shareUrl: referralCode ? `https://narriva.pro/kekere/invite/${referralCode.code}` : null,
     totalReferrals,
     rewardedReferrals,
     totalCowriesEarned: earningsAgg._sum.amountCowries ?? 0,

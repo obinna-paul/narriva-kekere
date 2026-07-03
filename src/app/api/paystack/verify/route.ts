@@ -6,6 +6,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { creditTopUp } from "@/lib/economy/cowries";
 import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
+import { triggerReferralRewardOnFirstTopUp } from "@/lib/data/kekere-referrals";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 
 /**
@@ -65,5 +66,10 @@ export const POST = withAuth(async (request, session) => {
   }
 
   const result = await creditTopUp(session.user.id, pkg.cowries + pkg.bonusCowries, reference);
+
+  if ("success" in result) {
+    triggerReferralRewardOnFirstTopUp(session.user.id, paidNGN).catch(() => {});
+  }
+
   return NextResponse.json(result);
 });
