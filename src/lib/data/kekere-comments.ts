@@ -26,7 +26,7 @@ const COMMENTS_PER_PARAGRAPH = 50;
 
 /**
  * True if userId can read/comment on this story right now: they wrote it,
- * or they hold a StoryUnlock for it (includes first-story-free grants).
+ * they are ADMIN, or they hold a StoryUnlock for it (includes first-story-free grants).
  */
 export async function verifyStoryAccess(userId: string, storyId: string): Promise<boolean> {
   const story = await prisma.story.findUnique({
@@ -35,6 +35,9 @@ export async function verifyStoryAccess(userId: string, storyId: string): Promis
   });
   if (!story) return false;
   if (story.authorId === userId) return true;
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role === "ADMIN") return true;
 
   const unlock = await prisma.storyUnlock.findUnique({
     where: { userId_storyId: { userId, storyId } },

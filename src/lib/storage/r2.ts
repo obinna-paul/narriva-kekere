@@ -125,6 +125,36 @@ export async function uploadEbookJson(bookId: string, content: EbookContent): Pr
   return key;
 }
 
+/** Uploads a story cover image. Key is deterministic so re-uploading replaces
+ *  the previous cover rather than leaving orphaned files. */
+export async function uploadStoryCover(
+  storyId: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = `story-covers/${storyId}.${ext}`;
+
+  await r2Client.send(
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }),
+  );
+
+  return key;
+}
+
+/** Streams a story cover image from R2. Used by the public cover-serving route
+ *  so browsers get a stable URL they can cache. */
+export async function getStoryCoverStream(
+  key: string,
+): Promise<{ body: ReadableStream; contentType: string }> {
+  const res = await r2Client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  if (!res.Body) throw new Error("Cover not found");
+  return {
+    body: res.Body.transformToWebStream(),
+    contentType: res.ContentType ?? "image/jpeg",
+  };
+}
+
 /** Fetches a single chapter from ebook content in R2. */
 export async function getEbookChapter(
   key: string,

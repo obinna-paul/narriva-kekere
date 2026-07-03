@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { History, X, ScanEye, Maximize2, Minimize2, Download, FileText } from "lucide-react";
+import { History, X, ScanEye, Maximize2, Minimize2, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -99,6 +99,7 @@ export function WriterEditor({
 
   const [storyId, setStoryId] = useState<string | null>(initialStoryId ?? null);
   const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState(false);
   const [title, setTitle] = useState("");
   const [hookLine, setHookLine] = useState("");
   const [tier, setTier] = useState<DbTier>("STANDARD");
@@ -218,7 +219,9 @@ export function WriterEditor({
           setInitialContent(story.body as TiptapDoc);
         }
       } catch {
-        // ignore
+        // Don't silently mount an empty editor — that lets the autosave
+        // overwrite the server content with an empty doc if the user types.
+        if (!cancelled) setInitError(true);
       }
     }
 
@@ -239,7 +242,7 @@ export function WriterEditor({
         if (competitionSlug) params.set("competition", competitionSlug);
         router.replace(`/kekere/write?${params.toString()}`, { scroll: false });
       } catch {
-        // ignore
+        if (!cancelled) setInitError(true);
       }
     }
 
@@ -347,46 +350,6 @@ export function WriterEditor({
     }
   }
 
-  // Feature 7 — export TXT
-  function exportTxt() {
-    if (!storyId) return;
-    let body = "";
-    try {
-      const raw = localStorage.getItem(`kekere_draft_${storyId}`);
-      if (raw) {
-        const doc = JSON.parse(raw) as TiptapDoc;
-        body = docToPlainText(doc);
-      }
-    } catch {
-      // fall through
-    }
-    if (!body && initialContent) {
-      body = docToPlainText(initialContent);
-    }
-    const text = `${title}\n${hookLine}\n\n${body}`;
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title.replace(/[^a-z0-9]/gi, "_")}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // Feature 7 — export PDF
-  async function exportPdf() {
-    if (!storyId) return;
-    try {
-      const res = await fetch(`/api/kekere/stories/${storyId}/export/pdf`, { method: "POST" });
-      if (res.ok) {
-        const { downloadUrl } = await res.json();
-        window.location.href = downloadUrl;
-      }
-    } catch {
-      // Silently fail
-    }
-  }
-
   async function openHistory() {
     setHistoryOpen(true);
     setSelectedVersion(null);
@@ -471,21 +434,12 @@ export function WriterEditor({
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] py-2.5">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Link
-              href="/kekere/feed"
-              className="min-w-0 flex-1 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-primary)]"
+              href="/kekere/write"
+              className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-primary)]"
+              title="Back to your stories"
             >
-              Kekere
+              ‹ Stories
             </Link>
-            {status === "PUBLISHED" && (
-              <div className="flex items-center gap-1" data-writer-header-actions>
-                <button type="button" onClick={exportTxt} title="Export as TXT" className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]">
-                  <FileText size={15} />
-                </button>
-                <button type="button" onClick={exportPdf} title="Export as PDF" className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]">
-                  <Download size={15} />
-                </button>
-              </div>
-            )}
             {mode === "scroll" && storyId && (
               <button
                 type="button"
@@ -641,7 +595,20 @@ export function WriterEditor({
           </div>
 
           {mode === "scroll" ? (
-            storyId && (
+            initError ? (
+              <div className="flex min-h-[340px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(42,26,18,.18)] bg-[rgba(42,26,18,.02)] text-center px-6">
+                <p className="text-[14px] text-[rgba(42,26,18,.55)]">
+                  Couldn&apos;t load the editor. Your story is safe — this is usually a brief connection hiccup.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="rounded-[9px] bg-[#C75D2C] px-5 py-2 text-[13.5px] font-semibold text-white"
+                >
+                  Reload and try again
+                </button>
+              </div>
+            ) : storyId ? (
               <StoryEditor
                 ref={editorHandle}
                 storyId={storyId}
@@ -656,7 +623,7 @@ export function WriterEditor({
                 onStatusChange={setSaveStatus}
                 editable={isEditable}
               />
-            )
+            ) : null
           ) : (
             <div className="flex flex-col gap-8">
               {chapters.map((chapter) => (

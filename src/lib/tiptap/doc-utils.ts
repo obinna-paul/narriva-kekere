@@ -1,5 +1,6 @@
 import { generateUniqueIds } from "@tiptap/extension-unique-id";
 import { createReaderExtensions } from "@/lib/tiptap/editor-config";
+import { generateUUID } from "@/lib/utils/uuid";
 
 /**
  * Shared helpers for working with Tiptap JSON documents server-side (where
@@ -47,7 +48,7 @@ export function plainTextToDoc(text: string): TiptapDoc {
     type: "doc",
     content: paragraphs.map((text) => ({
       type: "paragraph",
-      attrs: { id: crypto.randomUUID() },
+      attrs: { id: generateUUID() },
       content: [{ type: "text", text }],
     })),
   };
@@ -71,7 +72,7 @@ function paragraphPlainText(node: TiptapParagraphNode): string {
  * than trusting a client-supplied id outright. */
 export function extractParagraphIds(doc: TiptapDoc): Set<string> {
   const ids = new Set<string>();
-  for (const node of doc.content) {
+  for (const node of (doc?.content ?? [])) {
     if (node.type === "paragraph" && node.attrs?.id) {
       ids.add(node.attrs.id);
     }
@@ -80,7 +81,7 @@ export function extractParagraphIds(doc: TiptapDoc): Set<string> {
 }
 
 export function docToPlainText(doc: TiptapDoc): string {
-  return doc.content.map(paragraphPlainText).join("\n\n");
+  return (doc?.content ?? []).map(paragraphPlainText).join("\n\n");
 }
 
 export interface ParagraphWordRange {
@@ -99,7 +100,7 @@ export interface ParagraphWordRange {
 export function getParagraphWordRanges(doc: TiptapDoc): ParagraphWordRange[] {
   let wordsBefore = 0;
   const ranges: ParagraphWordRange[] = [];
-  for (const node of doc.content) {
+  for (const node of (doc?.content ?? [])) {
     if (node.type !== "paragraph" || !node.attrs?.id) continue;
     const text = paragraphPlainText(node).trim();
     const words = text.length === 0 ? 0 : text.split(/\s+/).length;
@@ -141,7 +142,7 @@ function textNodeToHtml(node: TiptapTextNode): string {
  * moderation preview). Each <p> carries data-paragraph-id, same as the
  * live reader, so it's visually/structurally consistent everywhere. */
 export function docToHtml(doc: TiptapDoc): string {
-  return doc.content
+  return (doc?.content ?? [])
     .map((node) => {
       const inner = (node.content ?? []).map(textNodeToHtml).join("");
       const id = node.attrs?.id;
@@ -168,7 +169,7 @@ export function truncateDocToFraction(doc: TiptapDoc, fraction = 0.1): TiptapDoc
   const content: TiptapParagraphNode[] = [];
   let consumed = 0;
 
-  for (const node of doc.content) {
+  for (const node of (doc?.content ?? [])) {
     const text = paragraphPlainText(node);
     if (consumed >= targetLength) break;
 

@@ -1,5 +1,6 @@
 import { KekereTheme } from "@/components/theme";
 import { WriterEditor } from "@/components/kekere/writer-editor";
+import { WriterDashboard } from "@/components/kekere/writer-dashboard";
 import { getCompetitionBySlug } from "@/lib/data/kekere-competitions";
 
 export const dynamic = "force-dynamic";
@@ -13,16 +14,32 @@ function closesInLabel(deadline: Date): string {
 export default async function KekereWritePage({
   searchParams,
 }: {
-  searchParams: { competition?: string; id?: string };
+  searchParams: { competition?: string; id?: string; new?: string };
 }) {
+  // No story ID and not explicitly creating new → show the story picker dashboard
+  if (!searchParams.id && !searchParams.new) {
+    const competition = searchParams.competition
+      ? await getCompetitionBySlug(searchParams.competition)
+      : null;
+
+    return (
+      <KekereTheme>
+        <WriterDashboard
+          competitionSlug={searchParams.competition}
+          competitionTitle={competition?.title}
+          competitionDeadlineLabel={competition ? closesInLabel(competition.deadline) : undefined}
+        />
+      </KekereTheme>
+    );
+  }
+
+  // Has an ID or ?new=1 → open the editor (new=1 creates a fresh draft)
   const competition = searchParams.competition
     ? await getCompetitionBySlug(searchParams.competition)
     : null;
 
   return (
     <KekereTheme>
-      {/* Its own universe, per the design handoff — no global nav here, just
-          the in-editor "Kekere" wordmark (links back to the feed). */}
       <WriterEditor
         competitionId={competition?.id}
         competitionSlug={searchParams.competition}

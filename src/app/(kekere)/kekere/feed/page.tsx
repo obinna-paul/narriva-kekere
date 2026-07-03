@@ -11,6 +11,7 @@ import {
 } from "@/lib/data/kekere-stories";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getAllWinners } from "@/lib/data/kekere-competitions";
+import { getReadingProgressBatch } from "@/lib/data/kekere-progress";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { FEED_TAG_ORDER, TAG_BY_SLUG } from "@/content/story-tags";
@@ -71,6 +72,17 @@ export default async function KekereFeedPage() {
     stories: (tagStoryMaps[i] ?? []).map((s) => toFeedStoryData(s)),
   }));
 
+  // Collect all visible story IDs to batch-fetch reading progress
+  const allStoryIds = [
+    ...trending.map((s) => s.id),
+    ...inProgressStories.map((s) => s.id),
+    ...recommendedStories.map((s) => s.id),
+    ...feedTagRows.flatMap((row) => row.stories.map((s) => s.id)),
+  ];
+  const readingProgress = userId
+    ? await getReadingProgressBatch(userId, Array.from(new Set(allStoryIds)))
+    : {};
+
   return (
     <KekereTheme>
       <KekereNavWrapper />
@@ -82,6 +94,7 @@ export default async function KekereFeedPage() {
         recommendedStories={recommendedStories}
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
+        readingProgress={readingProgress}
       />
       <FirstStoryFreeModal />
     </KekereTheme>

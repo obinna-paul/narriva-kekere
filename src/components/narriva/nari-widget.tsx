@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { NARI_INTRO_MESSAGE } from "@/content/nari-faq";
+import { generateUUID } from "@/lib/utils/uuid";
 
 interface NariMessage {
   role: "user" | "nari";
@@ -30,8 +31,8 @@ export function NariWidget() {
 
   const sessionId = useRef(
     typeof window !== "undefined"
-      ? localStorage.getItem("nari-sid") ?? crypto.randomUUID()
-      : crypto.randomUUID(),
+      ? localStorage.getItem("nari-sid") ?? generateUUID()
+      : generateUUID(),
   );
   if (typeof window !== "undefined") {
     localStorage.setItem("nari-sid", sessionId.current);

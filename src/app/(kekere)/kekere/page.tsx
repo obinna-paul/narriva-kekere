@@ -389,15 +389,9 @@ export default async function KekereLandingPage() {
                   <div className="mt-[9px] flex items-center gap-2">
                     <span
                       className="text-xs font-semibold"
-                      style={{
-                        color: story.isFree
-                          ? "var(--color-success)"
-                          : "var(--color-primary)",
-                      }}
+                      style={{ color: "var(--color-primary)" }}
                     >
-                      {story.isFree
-                        ? "Free"
-                        : `${story.cowrieCost} cowries`}
+                      {story.cowrieCost} cowries
                     </span>
                     <span className="text-[11px] text-[var(--color-ink-muted-3)]">
                       ·

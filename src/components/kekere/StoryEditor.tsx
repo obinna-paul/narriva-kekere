@@ -340,17 +340,13 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         editor={editor}
         className={cn(
           "min-h-[340px] w-full font-sans text-[17px] leading-[1.75] text-[#2A1A12]",
+          "[&_.ProseMirror]:min-h-[340px]",
           "[&_.ProseMirror]:caret-[#C75D2C]",
           "[&_.ProseMirror]:outline-none",
           "[&_.ProseMirror_p]:mb-[1.3em]",
           "[&_.ProseMirror_strong]:font-bold",
           "[&_.ProseMirror_em]:italic",
-          "[&_.ProseMirror_u]:underline",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[rgba(42,26,18,.38)]",
-          "[&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]"
+          "[&_.ProseMirror_u]:underline"
         )}
       />
     </div>

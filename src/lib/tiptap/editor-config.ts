@@ -5,6 +5,7 @@ import UniqueID from "@tiptap/extension-unique-id";
 import CharacterCount from "@tiptap/extension-character-count";
 import Placeholder from "@tiptap/extension-placeholder";
 import type { AnyExtension } from "@tiptap/react";
+import { generateUUID } from "@/lib/utils/uuid";
 
 /**
  * UniqueID (below) generates and assigns `attrs.id` on every paragraph —
@@ -53,7 +54,7 @@ export function createEditorExtensions(): AnyExtension[] {
     Underline,
     UniqueID.configure({
       types: ["paragraph"],
-      generateID: () => crypto.randomUUID(),
+      generateID: () => generateUUID(),
       filterTransaction: (transaction) => !transaction.getMeta("paste"),
     }),
     ParagraphIdAttribute,
@@ -78,7 +79,7 @@ export function createReaderExtensions(): AnyExtension[] {
     Underline,
     UniqueID.configure({
       types: ["paragraph"],
-      generateID: () => crypto.randomUUID(),
+      generateID: () => generateUUID(),
       filterTransaction: (transaction) => !transaction.getMeta("paste"),
     }),
     ParagraphIdAttribute,

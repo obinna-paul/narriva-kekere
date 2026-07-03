@@ -5,6 +5,7 @@
  */
 import type { StoryWithAuthor, StoryForReader } from "@/lib/data/kekere-stories";
 import type { MockStory } from "@/content/mock/kekere-stories";
+import { storyCoverUrl } from "@/lib/storage/cloudinary";
 
 const NEW_WINDOW_DAYS = 14;
 
@@ -40,6 +41,9 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
     isNew: isRecentlyPublished(publishedAt),
     isTrending: trending,
     coverColor: story.coverColor,
+    coverImageUrl: story.coverImageRef
+      ? storyCoverUrl(story.coverImageRef)
+      : undefined,
     publishedAt: publishedAt.toISOString(),
     paragraphs: [],
     bodyDoc: null,

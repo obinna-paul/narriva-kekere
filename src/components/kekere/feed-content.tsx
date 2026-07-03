@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils/cn";
 import { STORY_TAGS } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
+import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -22,45 +23,74 @@ function thumbnailPattern(seed: string): string {
   return patterns[i % patterns.length];
 }
 
-function RowCard({ story, badge }: { story: MockStory; badge?: string }) {
+function RowCard({
+  story,
+  badge,
+  readProgress,
+  onPreview,
+}: {
+  story: MockStory;
+  badge?: string;
+  readProgress?: number;
+  onPreview: (story: MockStory) => void;
+}) {
   return (
-    <Link
-      href={`/kekere/story/${story.id}`}
-      className="block w-[200px] flex-none"
+    <button
+      type="button"
+      onClick={() => onPreview(story)}
+      className="block w-[140px] flex-none text-left"
       style={{ scrollSnapAlign: "start" }}
     >
       <div
-        className="relative h-[124px] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
-        style={{ background: thumbnailPattern(story.id) }}
+        className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92] active:brightness-[0.85]"
+        style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
       >
-        <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
-          {story.genre.toUpperCase()}
+        {story.coverImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={story.coverImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            loading="lazy"
+          />
+        )}
+        <span className="absolute right-[9px] top-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
+          {story.readingTimeMinutes}m
         </span>
         {badge && (
           <span className="absolute bottom-[9px] left-[9px] rounded-[20px] bg-[rgba(199,93,44,0.88)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
             {badge}
           </span>
         )}
-        {!badge && story.completionRate > 0.8 && (
+        {!badge && story.completionRate > 0 && (
           <span className="absolute bottom-[9px] right-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
-            {Math.round(story.completionRate * 100)}% finish
+            {Math.round(story.completionRate)}% finish
           </span>
+        )}
+        {readProgress != null && readProgress > 0 && (
+          <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[rgba(42,26,18,0.2)]">
+            <div
+              className="h-full rounded-r-full bg-[#C75D2C]"
+              style={{ width: `${Math.round(readProgress * 100)}%` }}
+            />
+          </div>
         )}
       </div>
       <h3 className="mt-[10px] font-[family-name:var(--font-display)] text-base font-semibold leading-[1.2] text-[var(--color-ink)]">
         {story.title}
       </h3>
-      <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] italic leading-[1.35] text-[var(--color-ink-muted)]">
-        {story.hookLine}
-      </p>
-      <p className="mt-[7px] text-xs text-[var(--color-ink-muted-2)]">
-        <span className="font-semibold text-[var(--color-primary)]">
-          {story.cowrieCost} cowries
+      <p className="mt-[7px] flex items-center gap-[5px] text-xs text-[var(--color-ink-muted-2)]">
+        <span className="flex items-center gap-[3px] font-semibold text-[var(--color-primary)]">
+          <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+            <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+            <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+          </svg>
+          {story.cowrieCost}
         </span>
-        {" · "}
+        <span>·</span>
         {story.readingTimeMinutes} min
       </p>
-    </Link>
+    </button>
   );
 }
 
@@ -68,10 +98,14 @@ function StoryRow({
   title,
   stories,
   seeMoreHref,
+  readingProgress,
+  onPreview,
 }: {
   title: string;
   stories: readonly MockStory[];
   seeMoreHref?: string;
+  readingProgress?: Record<string, number>;
+  onPreview: (story: MockStory) => void;
 }) {
   if (stories.length === 0) return null;
   return (
@@ -94,7 +128,7 @@ function StoryRow({
         style={{ scrollSnapType: "x mandatory" }}
       >
         {stories.map((story) => (
-          <RowCard key={story.id} story={story} />
+          <RowCard key={story.id} story={story} readProgress={readingProgress?.[story.id]} onPreview={onPreview} />
         ))}
         <div className="w-[6px] flex-none" />
       </div>
@@ -110,6 +144,7 @@ export interface FeedContentProps {
   recommendedStories: readonly MockStory[];
   tagRows: readonly FeedTagRow[];
   balance: number;
+  readingProgress?: Record<string, number>;
 }
 
 export function FeedContent({
@@ -120,8 +155,10 @@ export function FeedContent({
   recommendedStories,
   tagRows,
   balance,
+  readingProgress,
 }: FeedContentProps) {
   const [tagOpen, setTagOpen] = useState(false);
+  const [previewStory, setPreviewStory] = useState<MockStory | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -205,13 +242,22 @@ export function FeedContent({
               <Link
                 key={story.id}
                 href={`/kekere/story/${story.id}`}
-                className="block w-[200px] flex-none"
+                className="block w-[140px] flex-none"
                 style={{ scrollSnapAlign: "start" }}
               >
                 <div
-                  className="relative h-[124px] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
-                  style={{ background: thumbnailPattern(story.id) }}
+                  className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
+                  style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
                 >
+                  {story.coverImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={story.coverImageUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      loading="lazy"
+                    />
+                  )}
                   <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
                     {story.genre.toUpperCase()}
                   </span>
@@ -268,11 +314,17 @@ export function FeedContent({
                 <span className="rounded-lg bg-[var(--color-sand-accent)] px-[18px] py-[9px] text-[13px] font-semibold text-[#2A1A12]">
                   ▶ Read
                 </span>
-                <span className="text-[12.5px] text-[rgba(255,255,255,0.8)]">
-                  {featuredStory.cowrieCost} cowries
+                <span className="flex items-center gap-[5px] text-[12.5px] text-[rgba(255,255,255,0.8)]">
+                  <span className="flex items-center gap-[3px]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#E2A565" />
+                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="rgba(42,26,18,0.4)" strokeWidth="1.1" fill="none" />
+                    </svg>
+                    {featuredStory.cowrieCost}
+                  </span>
                   {" · "}{featuredStory.readingTimeMinutes} min
                   {featuredStory.completionRate > 0 && (
-                    <>{" · "}{Math.round(featuredStory.completionRate * 100)}% finish</>
+                    <>{" · "}{Math.round(featuredStory.completionRate)}% finish</>
                   )}
                 </span>
               </div>
@@ -294,7 +346,7 @@ export function FeedContent({
             style={{ scrollSnapType: "x mandatory" }}
           >
             {inProgressStories.map((story) => (
-              <RowCard key={story.id} story={story} badge="Continue" />
+              <RowCard key={story.id} story={story} badge="Continue" readProgress={readingProgress?.[story.id]} onPreview={setPreviewStory} />
             ))}
             <div className="w-[6px] flex-none" />
           </div>
@@ -302,13 +354,15 @@ export function FeedContent({
       )}
 
       {/* 4. Now Trending */}
-      <StoryRow title="Now trending" stories={trending} />
+      <StoryRow title="Now trending" stories={trending} readingProgress={readingProgress} onPreview={setPreviewStory} />
 
       {/* 5. We think you'll love these (only if recommendations exist) */}
       {recommendedStories.length > 0 && (
         <StoryRow
           title="We think you will love these"
           stories={recommendedStories}
+          readingProgress={readingProgress}
+          onPreview={setPreviewStory}
         />
       )}
 
@@ -319,6 +373,8 @@ export function FeedContent({
           title={row.feedHeading}
           stories={row.stories}
           seeMoreHref={`/kekere/tag/${row.slug}`}
+          readingProgress={readingProgress}
+          onPreview={setPreviewStory}
         />
       ))}
 
@@ -327,6 +383,8 @@ export function FeedContent({
           Stories are being added soon. Check back shortly.
         </p>
       )}
+
+      <StoryPreviewSheet story={previewStory} onClose={() => setPreviewStory(null)} />
     </div>
   );
 }

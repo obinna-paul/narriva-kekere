@@ -160,6 +160,10 @@ async function isStoryUnlockedFor(
   if (!userId) return false;
   if (story.authorId === userId) return true;
 
+  // Admins get all content unlocked — they need to review and test everything.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role === "ADMIN") return true;
+
   const unlock = await prisma.storyUnlock.findUnique({
     where: { userId_storyId: { userId, storyId: story.id } },
   });
@@ -299,6 +303,32 @@ export async function submitStory(id: string, authorId: string): Promise<Story> 
   return prisma.story.update({
     where: { id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
+  });
+}
+
+export interface AuthorStorySummary {
+  id: string;
+  title: string;
+  hookLine: string | null;
+  status: StoryStatus;
+  wordCount: number;
+  updatedAt: Date;
+  lastSavedAt: Date | null;
+}
+
+export async function getStoriesByAuthor(authorId: string): Promise<AuthorStorySummary[]> {
+  return prisma.story.findMany({
+    where: { authorId },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      hookLine: true,
+      status: true,
+      wordCount: true,
+      updatedAt: true,
+      lastSavedAt: true,
+    },
   });
 }
 

@@ -49,7 +49,7 @@ function LibraryCard({
     variant === "saved"
       ? story.isFree
         ? { text: "Saved · Free", color: "text-[#1F6F4A]" }
-        : { text: `Saved · ${story.cowrieCost} cowries to unlock`, color: "text-[#8A7565]" }
+        : { text: `Saved · ${story.cowrieCost} to unlock`, color: "text-[#8A7565]" }
       : variant === "unlocked"
         ? { text: "Unlocked · Read again", color: "text-[#C75D2C]" }
         : scrollFraction === undefined || scrollFraction >= 1
@@ -63,10 +63,14 @@ function LibraryCard({
     >
       <div
         className="relative h-[84px] w-[84px] flex-none overflow-hidden rounded-xl"
-        style={{ background: thumbnailPattern(story.id) }}
+        style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
       >
-        <span className="absolute bottom-[6px] left-[6px] rounded-[20px] bg-[rgba(31,75,75,0.8)] px-[6px] py-[2px] text-[8px] font-bold text-white">
-          {story.genre.toUpperCase()}
+        {story.coverImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={story.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" />
+        )}
+        <span className="absolute right-[6px] top-[6px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[6px] py-[2px] text-[8px] font-bold text-white">
+          {story.readingTimeMinutes}m
         </span>
       </div>
 
@@ -87,8 +91,19 @@ function LibraryCard({
           </div>
         )}
 
-        <p className={cn("mt-2 text-[12.5px] font-semibold", cta.color)}>
-          {cta.text}
+        <p className={cn("mt-2 flex items-center gap-1 text-[12.5px] font-semibold", cta.color)}>
+          {variant === "saved" && !story.isFree ? (
+            <>
+              Saved ·{" "}
+              <svg width="9" height="9" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+                <ellipse cx="12" cy="12" rx="6" ry="9" fill="currentColor" />
+                <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.4" fill="none" />
+              </svg>
+              {story.cowrieCost} to unlock
+            </>
+          ) : (
+            cta.text
+          )}
         </p>
       </div>
     </Link>

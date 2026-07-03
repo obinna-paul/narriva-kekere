@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { isStoryUnlocked } from "@/lib/data/kekere-stories";
+import { recalculateCompletionRate } from "@/lib/data/kekere-progress";
 
 export const POST = withAuth(async (_request, session, { params }: { params: { id: string } }) => {
   const story = await prisma.story.findUnique({
@@ -22,6 +23,9 @@ export const POST = withAuth(async (_request, session, { params }: { params: { i
     create: { userId: session.user.id, storyId: params.id, bonusCredited: false },
     update: {},
   });
+
+  // fire-and-forget — don't block the response
+  recalculateCompletionRate(params.id).catch(console.error);
 
   return NextResponse.json({ success: true });
 });

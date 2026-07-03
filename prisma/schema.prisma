@@ -199,6 +199,9 @@ enum StoryStatus {
   REVISIONS_REQUESTED
   PUBLISHED
   REJECTED
+  // Story is fully set up (content, price, tags) but waiting for the author to
+  // sign the publishing contract before going live.
+  PENDING_CONTRACT
 }
 
 enum StoryTier {
@@ -258,6 +261,9 @@ model Story {
   // Kekere's reading-side backend; didn't exist in the Phase 1 schema.
   genre      String  @default("Drama")
   coverColor String  @default("#C75D2C")
+  // R2 object key for the cover image. Null until a cover is uploaded.
+  // Served publicly via GET /api/kekere/story-cover/[id].
+  coverImageRef String?
 
   isSerialized Boolean @default(false)
   chapters     Json?
@@ -293,6 +299,7 @@ model Story {
   paragraphComments  ParagraphComment[]
   paragraphReactions ParagraphReaction[]
   tags               StoryTag[]
+  kekereContracts    KekereContract[]
 
   @@index([authorId])
 }
@@ -1073,6 +1080,9 @@ model KekereContract {
   template      KekereContractTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
   writerId      String
   writer        User                    @relation(fields: [writerId], references: [id], onDelete: Cascade)
+  // When set, signing this contract automatically publishes the linked story.
+  storyId       String?
+  story         Story?                  @relation(fields: [storyId], references: [id], onDelete: SetNull)
   // Rendered contract with variables substituted.
   body          String
   status        KekereContractStatus    @default(PENDING)
@@ -1086,6 +1096,7 @@ model KekereContract {
   sentAt        DateTime                @default(now())
 
   @@index([writerId])
+  @@index([storyId])
   @@index([status])
 }
 

@@ -97,18 +97,35 @@ export const POST = withAuth(async (request, session, { params }) => {
     },
   });
 
+  // If the contract is linked to a PENDING_CONTRACT story, publish it now.
+  // storyId was added via db push; cast until `prisma generate` runs on restart.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const linkedStoryId: string | null = (contract as any).storyId ?? null;
+  if (linkedStoryId) {
+    await prisma.story.updateMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      where: { id: linkedStoryId, status: "PENDING_CONTRACT" as any },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { status: "PUBLISHED" as any, isDraft: false, publishedAt: signedAt },
+    });
+  }
+
   const downloadUrl = await getPortalFileDownloadUrl(pdfRef);
 
   await sendEmail({
     to: contract.writer.email,
-    subject: "Your contract is signed",
-    body: "Your contract is signed. Download a copy from your profile.",
+    subject: linkedStoryId
+      ? "Your contract is signed — your story is now live!"
+      : "Your contract is signed",
+    body: linkedStoryId
+      ? "Your contract is signed and your story has been published on Kekere — it is now live and available to readers. Download your signed contract from your profile."
+      : "Your contract is signed. Download a copy from your profile.",
   });
 
   await sendEmail({
     to: SUPPORT_EMAIL,
     subject: `${contract.writer.name} has signed a ${contract.template.contractType} contract`,
-    body: `Writer: ${contract.writer.name} (${contract.writer.email})\nContract type: ${contract.template.contractType}\nSigned at: ${signedAt.toISOString()}`,
+    body: `Writer: ${contract.writer.name} (${contract.writer.email})\nContract type: ${contract.template.contractType}\nSigned at: ${signedAt.toISOString()}${contract.storyId ? `\nStory ID: ${contract.storyId} — now published` : ""}`,
   });
 
   return NextResponse.json({ success: true, downloadUrl });

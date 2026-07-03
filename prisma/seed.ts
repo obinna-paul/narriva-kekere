@@ -325,6 +325,90 @@ async function seedPlatformConfig() {
   }
 }
 
+const PUBLISHING_CONTRACT_TEMPLATE = `KEKERE PUBLISHING CONTRACT
+
+This publishing agreement ("Agreement") is entered into as of {{date}}, between Narriva Limited ("Publisher") and {{writer_name}} ("Writer").
+
+STORY DETAILS
+Title: {{story_title}}
+Genre: {{genre}}
+Agreed Cowrie Price: {{cowrie_cost}} cowries
+
+────────────────────────────────────────
+
+1. GRANT OF EXCLUSIVE RIGHTS
+
+The Writer grants the Publisher the exclusive, worldwide right to publish, distribute, and monetise the Story on the Kekere platform for the duration of this Agreement. The Writer agrees not to publish this Story on any other platform, website, app, or medium — including self-publishing channels — while this Agreement is in force.
+
+2. WRITER'S EARNINGS
+
+The Writer shall receive seventy percent (70%) of all revenue generated from purchases of this Story on the Kekere platform. Revenue is calculated in cowries, Kekere's digital currency.
+
+Exchange rate: As of the date of this Agreement, 1 cowrie = ₦50 (fifty naira). This rate is subject to change at the Publisher's discretion; Writers will be notified 30 days in advance of any change.
+
+Earnings accumulate in real time in the Writer's cowrie wallet and may be withdrawn at any time via the platform withdrawal feature, subject to minimum withdrawal thresholds and Paystack transfer availability.
+
+3. ORIGINALITY AND INTELLECTUAL PROPERTY
+
+The Writer warrants that:
+- The Story is wholly original and has not been published elsewhere, in any form or language.
+- The Writer is the sole author and the lawful owner of all intellectual property rights in the Story.
+- The Story does not infringe the copyright, trademark, or any other rights of any third party.
+- The Story does not contain defamatory, obscene, or otherwise unlawful content.
+
+The Writer retains full copyright ownership of the Story. This Agreement grants the Publisher a licence to publish; it is not a transfer of copyright.
+
+4. EXCLUSIVITY
+
+This is an exclusive licence. The Publisher requires exclusivity to invest in promoting and distributing the Story. Publishing or distributing the Story through any other channel during the term of this Agreement constitutes a material breach. In the event of breach, the Publisher reserves the right to immediately remove the Story from the platform, withhold unpaid earnings pending investigation, and terminate this Agreement without liability.
+
+5. CONTENT STANDARDS
+
+The Story must comply with Kekere's content guidelines at all times. The Publisher reserves the right to remove any Story that violates these guidelines with immediate effect and without liability, following reasonable written notice to the Writer where circumstances permit.
+
+6. TERM AND TERMINATION
+
+This Agreement is effective from the date the Writer signs below and remains in force until either party terminates it with thirty (30) days' written notice. On termination, all pending earnings due to the Writer will be paid within 14 days. The Writer's right to withdraw previously accumulated cowries is not affected by termination.
+
+7. PLATFORM CHANGES
+
+The Publisher may update platform features, pricing mechanisms, and exchange rates from time to time. Writers will be notified of material changes to this Agreement and may terminate within 14 days of notice if they do not accept the updated terms.
+
+8. LIMITATION OF LIABILITY
+
+The Publisher's total liability to the Writer under this Agreement shall not exceed the total cowrie earnings paid to the Writer in the 12 months preceding the claim.
+
+9. GOVERNING LAW AND DISPUTES
+
+This Agreement is governed by the laws of the Federal Republic of Nigeria. Any disputes shall first be submitted to good-faith negotiation. If unresolved within 30 days, disputes shall be submitted to binding arbitration in Lagos, Nigeria, under applicable Nigerian arbitration rules.
+
+────────────────────────────────────────
+
+By clicking "Accept & Sign" or signing below, the Writer confirms they have read, understood, and agreed to all the terms of this Agreement.
+
+Story: {{story_title}}
+Writer: {{writer_name}}
+Date: {{date}}`;
+
+async function seedPublishingContractTemplate() {
+  await prisma.kekereContractTemplate.upsert({
+    where: { id: "publishing-contract-v1" },
+    update: {
+      name: "Standard Publishing Contract",
+      contractType: "PUBLISHING",
+      body: PUBLISHING_CONTRACT_TEMPLATE,
+      variables: ["story_title", "writer_name", "cowrie_cost", "genre", "date"],
+    },
+    create: {
+      id: "publishing-contract-v1",
+      name: "Standard Publishing Contract",
+      contractType: "PUBLISHING",
+      body: PUBLISHING_CONTRACT_TEMPLATE,
+      variables: ["story_title", "writer_name", "cowrie_cost", "genre", "date"],
+    },
+  });
+}
+
 async function seedAdminUser() {
   const passwordHash = await bcrypt.hash("admin123!", 10);
   await prisma.user.upsert({
@@ -369,6 +453,9 @@ async function main() {
 
   console.log("Seeding admin user…");
   await seedAdminUser();
+
+  console.log("Seeding publishing contract template…");
+  await seedPublishingContractTemplate();
 
   console.log("Done.");
 }

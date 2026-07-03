@@ -95,3 +95,14 @@ body {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-9px); }
 }
+
+/* TipTap Placeholder extension — required global styles.
+   The Tailwind arbitrary-variant approach is fragile for ::before pseudo-elements;
+   declaring these here guarantees the placeholder always renders. */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: rgba(42, 26, 18, 0.38);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

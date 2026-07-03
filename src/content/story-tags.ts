@@ -15,8 +15,8 @@ export interface StoryTag {
 export const STORY_TAGS: readonly StoryTag[] = [
   // Tone / mood
   { slug: "funny",           label: "Funny",           feedHeading: "Fancy a laugh?",                         description: "Comedic, witty, or humorous" },
-  { slug: "dark",            label: "Dark",             feedHeading: "Stories with shadows",                   description: "Bleak, unsettling, or morally heavy" },
-  { slug: "creepy",          label: "Creepy",           feedHeading: "Read alone at night. We dare you.",      description: "Eerie, disturbing, or horror-adjacent" },
+  { slug: "dark",            label: "Dark",             feedHeading: "Read alone at night. We dare you",       description: "Bleak, unsettling, or morally heavy" },
+  { slug: "creepy",          label: "Creepy",           feedHeading: "Read alone at night. We dare you",       description: "Eerie, disturbing, or horror-adjacent" },
   { slug: "heartwarming",    label: "Heartwarming",     feedHeading: "Stories that hug you back",              description: "Feel-good, uplifting, or affirming" },
   { slug: "tense",           label: "Tense",            feedHeading: "Hold your breath",                       description: "High-stakes, nail-biting suspense" },
   { slug: "melancholy",      label: "Melancholy",       feedHeading: "Beautifully sad",                        description: "Bittersweet or quietly sorrowful" },
@@ -59,7 +59,7 @@ export const STORY_TAGS: readonly StoryTag[] = [
   // Genre / form
   { slug: "thriller",        label: "Thriller",         feedHeading: "Can't stop, won't stop",                description: "Suspense and fast-paced plot" },
   { slug: "mystery",         label: "Mystery",          feedHeading: "What really happened?",                 description: "Puzzles, secrets, or whodunits" },
-  { slug: "psychological",   label: "Psychological",    feedHeading: "It was never just in their head",       description: "Mind games, unreliable narrators, or mental tension" },
+  { slug: "psychological",   label: "Psychological",    feedHeading: "Read alone at night. We dare you",       description: "Mind games, unreliable narrators, or mental tension" },
   { slug: "speculative",     label: "Speculative",      feedHeading: "What if the world worked differently?", description: "Sci-fi, alternate history, or near-future" },
   { slug: "literary",        label: "Literary",         feedHeading: "Prose that stays with you",             description: "Character-driven, language-forward fiction" },
   { slug: "crime",           label: "Crime",            feedHeading: "Someone's going to get caught",         description: "Heists, murders, con artists, or detectives" },

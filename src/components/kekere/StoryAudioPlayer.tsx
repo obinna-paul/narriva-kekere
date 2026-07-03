@@ -7,7 +7,8 @@ const SPEEDS = [0.75, 1, 1.25, 1.5, 2] as const;
 
 type AudioInfo =
   | { type: "remote"; url: string; durationSecs: number | null }
-  | { type: "browser_tts"; text: string; durationSecs: number };
+  | { type: "browser_tts"; text: string; durationSecs: number }
+  | { type: "unavailable"; message: string };
 
 export interface StoryAudioPlayerProps {
   storyId: string;
@@ -100,10 +101,19 @@ export function StoryAudioPlayer({ storyId, storyTitle, bodyDoc, containerRef }:
     setError(null);
     try {
       const res = await fetch(`/api/kekere/stories/${storyId}/audio`);
-      if (!res.ok) throw new Error("Couldn't load audio for this story.");
-      const data: AudioInfo = await res.json();
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error ?? "Couldn't load audio for this story.");
+      }
+      // Soft unavailable state — not an error, just no content yet
+      if (json?.error === "no_content") {
+        const info: AudioInfo = { type: "unavailable", message: json.message ?? "No audio for this story." };
+        setAudioInfo(info);
+        return info;
+      }
+      const data = json as AudioInfo;
       setAudioInfo(data);
-      setDuration(data.durationSecs ?? 0);
+      setDuration((data as { durationSecs?: number }).durationSecs ?? 0);
       return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load audio.");
@@ -138,7 +148,7 @@ export function StoryAudioPlayer({ storyId, storyTitle, bodyDoc, containerRef }:
 
   async function handlePlayPause() {
     const info = await ensureAudioInfo();
-    if (!info) return;
+    if (!info || info.type === "unavailable") return;
 
     if (info.type === "remote") {
       const el = audioRef.current;
@@ -202,6 +212,7 @@ export function StoryAudioPlayer({ storyId, storyTitle, bodyDoc, containerRef }:
     };
   }, []);
 
+  const isUnavailable = audioInfo?.type === "unavailable";
   const isTts = audioInfo?.type === "browser_tts";
   const started = currentTime > 0 && duration > 0 && currentTime < duration;
   const progressPct = duration > 0 ? `${(currentTime / duration) * 100}%` : "0%";
@@ -287,6 +298,16 @@ export function StoryAudioPlayer({ storyId, storyTitle, bodyDoc, containerRef }:
           </button>
         </div>
 
+        {/* Unavailable banner */}
+        {isUnavailable && (
+          <div className="mb-[14px] flex items-start gap-2 rounded-[10px] border border-[rgba(245,235,221,.18)] bg-[rgba(245,235,221,.08)] px-[11px] py-[9px]">
+            <span className="flex-none text-[13px]">🎙️</span>
+            <span className="text-[12px] leading-[1.45] text-[rgba(245,235,221,.7)]">
+              Audio isn&apos;t available for this story yet. Check back after it&apos;s been published with content.
+            </span>
+          </div>
+        )}
+
         {/* TTS fallback banner */}
         {isTts && (
           <div className="mb-[14px] flex items-start gap-2 rounded-[10px] border border-[rgba(224,137,79,.3)] bg-[rgba(224,137,79,.14)] px-[11px] py-[9px]">
@@ -346,7 +367,7 @@ export function StoryAudioPlayer({ storyId, storyTitle, bodyDoc, containerRef }:
           <button
             type="button"
             onClick={handlePlayPause}
-            disabled={loading}
+            disabled={loading || isUnavailable}
             aria-label={playing ? "Pause" : "Play"}
             className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#C75D2C] text-[24px] text-white shadow-[0_6px_18px_rgba(199,93,44,.45)] disabled:opacity-50"
           >

@@ -52,15 +52,17 @@ export default async function KekereWalletPage() {
           referralEarnings={referralEarnings}
           tipEarnings={tipEarnings}
           transactions={
-            wallet?.transactions.map((tx) => ({
-              id: tx.id,
-              type: tx.type,
-              amountCowries: tx.amountCowries,
-              amountNgn: tx.amountNgn,
-              description: tx.description,
-              date: tx.createdAt.toISOString(),
-              status: tx.status,
-            })) ?? []
+            wallet?.transactions
+              .filter((tx) => tx.type !== "COMPLETION_BONUS")
+              .map((tx) => ({
+                id: tx.id,
+                type: tx.type as Exclude<typeof tx.type, "COMPLETION_BONUS">,
+                amountCowries: tx.amountCowries,
+                amountNgn: tx.amountNgn,
+                description: tx.description,
+                date: tx.createdAt.toISOString(),
+                status: tx.status,
+              })) ?? []
           }
         />
       </div>
