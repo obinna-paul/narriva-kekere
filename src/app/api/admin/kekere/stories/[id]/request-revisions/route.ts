@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderRevisionsRequestedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 
 const revisionsSchema = z.object({
@@ -53,10 +54,17 @@ export const PUT = withAuth(
       );
     }
 
+    const html = await renderRevisionsRequestedEmail({
+      writerName: story.author.name,
+      storyTitle: story.title,
+      editorNotes: moderationNotes,
+      storyId: id,
+    }).catch(() => undefined);
     await sendEmail({
       to: story.author.email,
-      subject: "Revisions requested for your story",
+      subject: `Revisions requested for "${story.title}" — Kekere Stories`,
       body: `Hi ${story.author.name},\n\nAn editor has reviewed your story "${story.title}" and requested revisions:\n\n${moderationNotes}\n\nPlease log in to Kekere Stories, update your story, and resubmit.`,
+      html,
     });
 
     await createNotification({

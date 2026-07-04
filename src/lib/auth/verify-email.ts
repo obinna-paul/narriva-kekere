@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderOtpEmail, renderWelcomeEmail } from "@/lib/email/templates";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRY_MINUTES = 10;
@@ -29,10 +30,12 @@ export async function createAndSendOtp(
     },
   });
 
+  const html = await renderOtpEmail({ name, otp, expiryMinutes: OTP_EXPIRY_MINUTES }).catch(() => undefined);
   await sendEmail({
     to: email,
-    subject: "Verify your email address",
+    subject: "Verify your email address — Kekere Stories",
     body: `Hi ${name},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't create this account, you can ignore this email.`,
+    html,
   });
 }
 
@@ -63,10 +66,12 @@ export async function resendOtp(
     },
   });
 
+  const html = await renderOtpEmail({ name: user.name, otp, expiryMinutes: OTP_EXPIRY_MINUTES }).catch(() => undefined);
   await sendEmail({
     to: user.email,
-    subject: "Verify your email address",
+    subject: "Your new verification code — Kekere Stories",
     body: `Hi ${user.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+    html,
   });
 
   return { success: true };
@@ -80,6 +85,8 @@ export async function verifyOtp(
     where: { email },
     select: {
       id: true,
+      name: true,
+      email: true,
       emailVerified: true,
       emailVerificationCode: true,
       emailVerificationExpiresAt: true,
@@ -113,6 +120,15 @@ export async function verifyOtp(
       emailVerificationCode: null,
       emailVerificationExpiresAt: null,
     },
+  });
+
+  // Send welcome email now that the address is confirmed
+  const welcomeHtml = await renderWelcomeEmail({ name: user.name }).catch(() => undefined);
+  await sendEmail({
+    to: user.email,
+    subject: "Welcome to Kekere Stories — your first read is free",
+    body: `Hi ${user.name},\n\nWelcome to Kekere Stories. Your account is verified and you're in.\n\nYour first read is completely free — pick any story and enjoy it on us.\n\nThe Kekere Stories Team`,
+    html: welcomeHtml,
   });
 
   return { success: true };

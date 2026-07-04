@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { generateSignedContractPdf } from "@/lib/contracts/pdf";
 import { getPortalFileDownloadUrl, uploadPortalFile } from "@/lib/storage/r2";
 import { sendEmail } from "@/lib/email/send";
+import { renderContractSignedEmail } from "@/lib/email/templates";
 import { SUPPORT_EMAIL } from "@/lib/constants";
 
 const signSchema = z.object({
@@ -114,14 +115,32 @@ export const POST = withAuth(async (request, session, { params }) => {
 
   const downloadUrl = await getPortalFileDownloadUrl(pdfRef);
 
+  // Fetch story title for the email if this contract is linked to a story
+  let storyTitle = "your story";
+  if (linkedStoryId) {
+    const story = await prisma.story.findUnique({ where: { id: linkedStoryId }, select: { title: true } });
+    if (story) storyTitle = story.title;
+  }
+
+  const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+  const signedHtml = linkedStoryId
+    ? await renderContractSignedEmail({
+        writerName: contract.writer.name,
+        storyTitle,
+        signedAt: signedDateStr,
+      }).catch(() => undefined)
+    : undefined;
+
   await sendEmail({
     to: contract.writer.email,
     subject: linkedStoryId
-      ? "Your contract is signed — your story is now live on Kekere!"
+      ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
       : "Your contract is signed",
     body: linkedStoryId
-      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and your story is now live on Kekere Stories. Readers can find and unlock it right now.\n\nA signed copy of your publishing agreement is attached to this email — keep it for your records.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`
+      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nA signed copy of your publishing agreement is attached to this email — keep it for your records.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
       : `Hi ${contract.writer.name},\n\nYour contract has been signed. A signed copy is attached to this email for your records.\n\nThe Kekere Stories Team`,
+    html: signedHtml,
     attachments: [
       { filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer },
     ],

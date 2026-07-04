@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderStoryRejectedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 
 const rejectSchema = z.object({
@@ -56,10 +57,16 @@ export const PUT = withAuth(
       },
     });
 
+    const html = await renderStoryRejectedEmail({
+      writerName: story.author.name,
+      storyTitle: story.title,
+      editorFeedback: moderationNotes,
+    }).catch(() => undefined);
     await sendEmail({
       to: story.author.email,
-      subject: "Your story submission was not accepted",
+      subject: `Editor feedback on "${story.title}" — Kekere Stories`,
       body: `Hi ${story.author.name},\n\nAfter reviewing your story "${story.title}", we've decided not to publish it at this time.\n\n${moderationNotes}`,
+      html,
     });
 
     await createNotification({

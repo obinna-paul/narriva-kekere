@@ -8,7 +8,10 @@ export interface EmailAttachment {
 export interface EmailMessage {
   to: string;
   subject: string;
+  /** Plain-text fallback — always include for accessibility */
   body: string;
+  /** Rendered HTML from a React Email template — shown in HTML-capable clients */
+  html?: string;
   attachments?: EmailAttachment[];
 }
 
@@ -34,6 +37,7 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
       to: message.to,
       subject: message.subject,
       text: message.body,
+      ...(message.html ? { html: message.html } : {}),
       attachments: message.attachments?.map((a) => ({
         filename: a.filename,
         content: a.content,
