@@ -11,17 +11,21 @@ export default async function KekereContractsPage() {
   const session = await getCurrentSession();
   if (!session?.user?.id) redirect("/login");
 
-  const contracts = await prisma.kekereContract.findMany({
-    where: { writerId: session.user.id },
-    include: { template: { select: { contractType: true } } },
-    orderBy: { sentAt: "desc" },
-  });
+  const [user, contracts] = await Promise.all([
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } }),
+    prisma.kekereContract.findMany({
+      where: { writerId: session.user.id },
+      include: { template: { select: { contractType: true } } },
+      orderBy: { sentAt: "desc" },
+    }),
+  ]);
 
   return (
     <KekereTheme>
       <div className="min-h-screen bg-[#F5EBDD]">
         <KekereNavWrapper />
         <ContractsInbox
+          writerName={user?.name ?? ""}
           contracts={contracts.map((c) => ({
             id: c.id,
             contractType: c.template.contractType,

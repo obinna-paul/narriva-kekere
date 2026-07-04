@@ -27,12 +27,12 @@ interface ContractDetail {
   expiresAt?: string;
 }
 
-export function ContractsInbox({ contracts }: { contracts: ContractSummary[] }) {
+export function ContractsInbox({ contracts, writerName = "" }: { contracts: ContractSummary[]; writerName?: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ContractDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [signing, setSigning] = useState(false);
-  const [signedName, setSignedName] = useState("");
+  const [signedName, setSignedName] = useState(writerName);
   const [signed, setSigned] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
@@ -108,17 +108,45 @@ export function ContractsInbox({ contracts }: { contracts: ContractSummary[] }) 
 
               {detail.status === "PENDING" && !signed && (
                 <div className="mt-6 border-t border-[rgba(42,26,18,0.08)] pt-5">
-                  <label className="mb-2 block text-[13px] font-medium text-[#2A1A12]">Sign by typing your full legal name</label>
-                  <input
-                    value={signedName}
-                    onChange={(e) => setSignedName(e.target.value)}
-                    placeholder="Your full name"
-                    className="w-full rounded-[12px] border border-[rgba(42,26,18,0.12)] bg-white px-4 py-3 font-[family-name:var(--font-display)] text-[18px] italic text-[#2A1A12] outline-none"
-                  />
-                  <div className="mt-4 flex gap-3">
-                    <button type="button" onClick={handleDecline} className="flex-1 rounded-[12px] border border-[rgba(42,26,18,0.12)] py-3 text-[14px] font-medium text-[#8A7565] transition-colors hover:bg-[rgba(42,26,18,0.04)]">Decline</button>
-                    <button type="button" onClick={handleSign} disabled={signing || !signedName.trim()} className="flex-1 rounded-[12px] bg-[#1F8A5B] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">I agree &amp; sign</button>
+                  <p className="mb-3 text-[13px] leading-[1.55] text-[#5A4535]">
+                    By tapping <strong>I accept</strong>, you agree to the terms above and sign this contract as:
+                  </p>
+                  <div className="mb-4 rounded-[12px] border border-[rgba(42,26,18,0.12)] bg-white px-4 py-3">
+                    <p className="font-[family-name:var(--font-display)] text-[17px] italic text-[#2A1A12]">
+                      {signedName || "—"}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSignedName("")}
+                      className="mt-1 text-[11px] text-[#A08C7C] hover:text-[#C75D2C]"
+                    >
+                      Not you? Edit name
+                    </button>
+                    {signedName === "" && (
+                      <input
+                        autoFocus
+                        value={signedName}
+                        onChange={(e) => setSignedName(e.target.value)}
+                        placeholder="Type your full name"
+                        className="mt-2 w-full bg-transparent text-[16px] italic text-[#2A1A12] outline-none placeholder:text-[#C0A88C]"
+                      />
+                    )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleSign}
+                    disabled={signing || !signedName.trim()}
+                    className="w-full rounded-[14px] bg-[#1F8A5B] py-4 text-[16px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(31,138,91,0.55)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {signing ? "Signing…" : "I accept — sign contract"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDecline}
+                    className="mt-3 w-full rounded-[14px] border border-[rgba(42,26,18,0.12)] py-3 text-[14px] font-medium text-[#8A7565] transition-colors hover:bg-[rgba(42,26,18,0.04)]"
+                  >
+                    Decline
+                  </button>
                 </div>
               )}
 

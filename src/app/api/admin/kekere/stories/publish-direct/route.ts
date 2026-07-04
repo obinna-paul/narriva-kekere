@@ -23,7 +23,9 @@ const schema = z.object({
   /** Tag slugs to attach (must exist in Tag table). */
   tags: z.array(z.string()).default([]),
   coverColor: z.string().default("#C75D2C"),
-  expiresInDays: z.number().int().min(1).max(365).default(30),
+  /** Versioned Cloudinary public_id e.g. "v1783123848/kekere-covers/abc123" */
+  coverImageRef: z.string().optional(),
+  expiresInDays: z.number().int().min(1).max(365).default(14),
 });
 
 export const POST = withAuth(
@@ -49,6 +51,7 @@ export const POST = withAuth(
       body: bodyText,
       tags,
       coverColor,
+      coverImageRef,
       expiresInDays,
     } = parsed.data;
 
@@ -119,6 +122,7 @@ export const POST = withAuth(
           wordCount,
           genre,
           coverColor,
+          coverImageRef: coverImageRef ?? null,
           tier,
           cowrieCost,
           readingTime,
@@ -149,8 +153,8 @@ export const POST = withAuth(
 
     await sendEmail({
       to: writer.email,
-      subject: `Publishing contract for "${title}" — Kekere Stories`,
-      body: `Hi ${writer.name},\n\nA publishing contract has been prepared for your story "${title}".\n\nCowrie price: ${cowrieCost} cowries\nYour earnings: 70% of all sales\n\nPlease log into Kekere Stories and go to your contracts inbox to review and sign. Once you sign, the story goes live immediately.\n\nThe contract expires in ${expiresInDays} days.\n\nKekere Stories`,
+      subject: `"${title}" has been accepted for publishing — Kekere Stories`,
+      body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of all sales\n\nTo confirm, please open the Kekere app, tap the notification about your contract, and sign it with one tap. Your story goes live the moment you sign.\n\nA copy of the publishing agreement is attached to this email for your records. The contract offer expires in ${expiresInDays} days.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
     });
 
     await createNotification({

@@ -36,6 +36,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Kekere",
     items: [
       { href: "/admin/story-review", label: "Story Review", dotColor: "kekere", countKey: "storiesAwaitingReview" },
+      { href: "/admin/publish-story", label: "Publish Story", dotColor: "kekere" },
       { href: "/admin/performance", label: "Performance", dotColor: "kekere" },
       { href: "/admin/competitions", label: "Competitions", dotColor: "kekere" },
       { href: "/admin/contracts", label: "Contracts", dotColor: "kekere" },
