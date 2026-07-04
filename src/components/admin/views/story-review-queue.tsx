@@ -455,13 +455,13 @@ export function StoryReviewQueue() {
   if (loading) {
     return (
       <div className="flex gap-4">
-        <div className="w-[280px] flex-none space-y-2">
+        <div className="w-[200px] flex-none space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-[90px] animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" />
           ))}
         </div>
         <div className="flex-1 animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
-        <div className="w-[260px] flex-none animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
+        <div className="w-[300px] flex-none animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
       </div>
     );
   }
@@ -481,7 +481,7 @@ export function StoryReviewQueue() {
       )}
 
       {/* Left pane — queue list */}
-      <div className="flex w-[280px] flex-none flex-col gap-2 overflow-y-auto">
+      <div className="flex w-[200px] flex-none flex-col gap-2 overflow-y-auto">
         <div className="mb-1 flex items-center justify-between">
           <span className="text-[12px] font-semibold text-[#8B919A]">QUEUE</span>
           <span className="rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{queue.length}</span>
@@ -627,7 +627,7 @@ export function StoryReviewQueue() {
       </div>
 
       {/* Right pane — decision */}
-      <div className="w-[260px] flex-none overflow-y-auto">
+      <div className="w-[300px] flex-none overflow-y-auto">
         {selected ? (
           <DecisionPanel
             story={selected}
