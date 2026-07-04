@@ -72,14 +72,33 @@ export function ParagraphCommentIndicators({
     const container = containerRef.current;
     if (!container) return;
 
+    let lastTouchMs = 0;
+
+    // touchend fires reliably on iOS inside contenteditable=false (click sometimes doesn't).
+    function handleTouchEnd(e: TouchEvent) {
+      lastTouchMs = Date.now();
+      const touch = e.changedTouches[0];
+      const el = document
+        .elementFromPoint(touch.clientX, touch.clientY)
+        ?.closest<HTMLElement>("[data-paragraph-id]");
+      const id = el?.dataset.paragraphId;
+      if (id) onSelectParagraph(id);
+    }
+
+    // click fallback for desktop/pointer devices — skip if touchend already handled it.
     function handleClick(e: MouseEvent) {
+      if (Date.now() - lastTouchMs < 600) return;
       const target = (e.target as HTMLElement).closest<HTMLElement>("[data-paragraph-id]");
       const id = target?.dataset.paragraphId;
       if (id) onSelectParagraph(id);
     }
 
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
     container.addEventListener("click", handleClick);
-    return () => container.removeEventListener("click", handleClick);
+    return () => {
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("click", handleClick);
+    };
   }, [containerRef, onSelectParagraph]);
 
   return (
@@ -100,7 +119,7 @@ export function ParagraphCommentIndicators({
           }
         `}</style>
       )}
-      <style>{`[data-paragraph-id] { cursor: pointer; }`}</style>
+      <style>{`[data-paragraph-id] { cursor: pointer !important; touch-action: manipulation; }`}</style>
 
       <div className="pointer-events-none absolute inset-0">
         {badges.map((badge) => (

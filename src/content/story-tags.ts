@@ -92,6 +92,7 @@ export const TAG_BY_SLUG: Readonly<Record<string, StoryTag>> = Object.fromEntrie
 export const FEED_TAG_ORDER: readonly StoryTagSlug[] = [
   "funny",
   "romance",
+  "diaspora",
   "thriller",
   "creepy",
   "heartbreak",

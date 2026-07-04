@@ -274,7 +274,7 @@ export function NotificationBell() {
                         onPointerUp={() => onPointerUp(n.id)}
                         className="relative flex cursor-pointer gap-3 px-4 py-[13px]"
                         style={{
-                          background: n.read ? "#FBF5EC" : "rgba(199,93,44,.05)",
+                          background: "#FBF5EC",
                           borderBottom: "1px solid rgba(42,26,18,.06)",
                           transform: `translateX(${dx}px)`,
                           transition: isDragging ? "none" : "transform .15s ease",
