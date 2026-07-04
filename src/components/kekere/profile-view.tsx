@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { signOut } from "next-auth/react";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 
@@ -373,6 +375,17 @@ export function ProfileView(props: ProfileViewProps) {
               </div>
             )}
           </section>
+
+          <div className="px-[22px] pb-[100px] pt-[10px]">
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/kekere" })}
+              className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(193,58,58,0.22)] bg-transparent py-[14px] text-[14px] font-semibold text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
+            >
+              <LogOut size={15} />
+              Log out
+            </button>
+          </div>
         </>
       )}
     </>
