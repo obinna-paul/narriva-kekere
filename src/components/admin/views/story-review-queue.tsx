@@ -318,6 +318,10 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
           <span className="text-[#8B919A]">Submitted</span>
           <span className="font-medium text-[#1A1C20]">{relativeTime(story.submittedAt)}</span>
         </div>
+        <div className="flex justify-between text-[12px]">
+          <span className="text-[#8B919A]">Cowrie price</span>
+          <span className="font-medium text-[#1A1C20]">Set above ↑</span>
+        </div>
       </div>
 
       <button
@@ -586,8 +590,6 @@ export function StoryReviewQueue() {
                 <span>{selected.readingTime} min read</span>
                 <span>·</span>
                 <span>{selected.genre}</span>
-                <span>·</span>
-                <span>{selected.cowrieCost} ₵</span>
               </div>
             </div>
 
