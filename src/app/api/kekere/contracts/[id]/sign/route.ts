@@ -117,11 +117,14 @@ export const POST = withAuth(async (request, session, { params }) => {
   await sendEmail({
     to: contract.writer.email,
     subject: linkedStoryId
-      ? "Your contract is signed — your story is now live!"
+      ? "Your contract is signed — your story is now live on Kekere!"
       : "Your contract is signed",
     body: linkedStoryId
-      ? "Your contract is signed and your story has been published on Kekere — it is now live and available to readers. Download your signed contract from your profile."
-      : "Your contract is signed. Download a copy from your profile.",
+      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and your story is now live on Kekere Stories. Readers can find and unlock it right now.\n\nA signed copy of your publishing agreement is attached to this email — keep it for your records.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`
+      : `Hi ${contract.writer.name},\n\nYour contract has been signed. A signed copy is attached to this email for your records.\n\nThe Kekere Stories Team`,
+    attachments: [
+      { filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer },
+    ],
   });
 
   await sendEmail({

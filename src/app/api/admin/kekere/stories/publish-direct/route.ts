@@ -154,7 +154,7 @@ export const POST = withAuth(
     await sendEmail({
       to: writer.email,
       subject: `"${title}" has been accepted for publishing — Kekere Stories`,
-      body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of all sales\n\nTo confirm, please open the Kekere app, tap the notification about your contract, and sign it with one tap. Your story goes live the moment you sign.\n\nA copy of the publishing agreement is attached to this email for your records. The contract offer expires in ${expiresInDays} days.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+      body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the publishing terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of every sale\n\nA publishing contract is waiting for you in the app. Open Kekere Stories, check your notifications, and sign it with one tap. Your story goes live the moment you sign.\n\nThe contract offer expires in ${expiresInDays} days — please sign before then.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
     });
 
     await createNotification({
