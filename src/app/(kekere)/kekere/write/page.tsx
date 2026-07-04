@@ -1,4 +1,5 @@
 import { KekereTheme } from "@/components/theme";
+import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { WriterEditor } from "@/components/kekere/writer-editor";
 import { WriterDashboard } from "@/components/kekere/writer-dashboard";
 import { getCompetitionBySlug } from "@/lib/data/kekere-competitions";
@@ -24,6 +25,7 @@ export default async function KekereWritePage({
 
     return (
       <KekereTheme>
+        <KekereNavWrapper />
         <WriterDashboard
           competitionSlug={searchParams.competition}
           competitionTitle={competition?.title}
