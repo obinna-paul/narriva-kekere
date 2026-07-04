@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { TurnstileWidget } from "@/components/shared/turnstile-widget";
 import { TermsModal } from "@/components/shared/terms-modal";
@@ -267,9 +268,12 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
           </div>
           {mode === "signin" && (
             <div className="mt-2 text-right">
-              <span className="text-[13px] font-medium text-[var(--color-primary)]">
+              <Link
+                href="/forgot-password"
+                className="text-[13px] font-medium text-[var(--color-primary)] hover:underline"
+              >
                 Forgot password?
-              </span>
+              </Link>
             </div>
           )}
         </div>

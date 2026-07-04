@@ -6,6 +6,7 @@ import { StoryAcceptedEmail } from "./story-accepted";
 import { ContractSignedEmail } from "./contract-signed";
 import { StoryRejectedEmail } from "./story-rejected";
 import { RevisionsRequestedEmail } from "./revisions-requested";
+import { ResetPasswordEmail } from "./reset-password";
 
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
   return render(createElement(OtpEmail, props));
@@ -51,4 +52,12 @@ export async function renderRevisionsRequestedEmail(props: {
   editorUrl?: string;
 }) {
   return render(createElement(RevisionsRequestedEmail, props));
+}
+
+export async function renderResetPasswordEmail(props: {
+  name: string;
+  resetUrl: string;
+  expiryMinutes?: number;
+}) {
+  return render(createElement(ResetPasswordEmail, props));
 }

@@ -39,6 +39,11 @@ model User {
   emailVerified                DateTime?
   emailVerificationCode        String?
   emailVerificationExpiresAt   DateTime?
+
+  // Password reset — one-time token hashed with SHA-256, expires in 1 hour.
+  passwordResetToken     String?
+  passwordResetExpiresAt DateTime?
+
   // Legal consent timestamp and account deletion flow — built out in Phase 16.
   termsAcceptedAt     DateTime?
   deletionRequestedAt DateTime?
