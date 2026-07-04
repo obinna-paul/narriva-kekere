@@ -72,15 +72,16 @@ interface DecisionPanelProps {
   onAction: (action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[]) => void;
   acting: boolean;
   coverImageRef: string | null;
+  coverPreview: string | null;
   onCoverUploaded: (ref: string, previewUrl: string) => void;
+  onCoverRemoved: () => void;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded }: DecisionPanelProps) {
+function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
   const [tagIds, setTagIds] = useState<string[]>([]);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const tagError = tab === "publish" && tagIds.length === 0;
@@ -127,7 +128,6 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
       const res = await fetch("/api/admin/kekere/cover-upload", { method: "POST", body: form });
       if (res.ok) {
         const { coverImageRef: ref, previewUrl } = await res.json();
-        setCoverPreview(previewUrl);
         onCoverUploaded(ref, previewUrl);
       }
     } finally {
@@ -181,10 +181,10 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
             {coverPreview || coverImageRef ? (
               <div className="relative flex h-[100px] w-full items-center justify-center overflow-hidden rounded-[8px] border border-[rgba(20,22,26,0.14)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={coverPreview ?? ""} alt="Cover" className="h-full w-full object-cover" />
+                <img src={coverPreview ?? coverImageRef ?? ""} alt="Cover" className="h-full w-full object-cover" />
                 <button
                   type="button"
-                  onClick={() => { setCoverPreview(null); onCoverUploaded("", ""); if (fileRef.current) fileRef.current.value = ""; }}
+                  onClick={() => { onCoverRemoved(); if (fileRef.current) fileRef.current.value = ""; }}
                   className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white"
                 >
                   <X size={12} />
@@ -358,6 +358,7 @@ interface StoryDraft {
   hookLine: string;
   body: string;
   coverImageRef: string | null;
+  coverPreview: string | null;
 }
 
 function draftKey(storyId: string) { return `kekere-story-draft-${storyId}`; }
@@ -394,8 +395,24 @@ export function StoryReviewQueue() {
   const [draftHookLine, setDraftHookLine] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
+  // Original writer-submitted values — used for version history / revert
+  const [originalHookLine, setOriginalHookLine] = useState("");
+  const [originalBody, setOriginalBody] = useState("");
+
   const [draftSaved, setDraftSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hasEdits = draftHookLine !== originalHookLine || draftBody !== originalBody;
+
+  function revertToOriginal() {
+    setDraftHookLine(originalHookLine);
+    setDraftBody(originalBody);
+    setCoverImageRef(null);
+    setCoverPreview(null);
+    if (selectedId) clearDraft(selectedId);
+  }
 
   // Auto-save draft to localStorage whenever edits change
   useEffect(() => {
@@ -403,12 +420,12 @@ export function StoryReviewQueue() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setDraftSaved(false);
     saveTimer.current = setTimeout(() => {
-      saveDraft(selectedId, { hookLine: draftHookLine, body: draftBody, coverImageRef });
+      saveDraft(selectedId, { hookLine: draftHookLine, body: draftBody, coverImageRef, coverPreview });
       setDraftSaved(true);
       setTimeout(() => setDraftSaved(false), 2000);
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [draftHookLine, draftBody, coverImageRef, selectedId]);
+  }, [draftHookLine, draftBody, coverImageRef, coverPreview, selectedId]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -437,16 +454,24 @@ export function StoryReviewQueue() {
       const detail: StoryDetail = await res.json();
       setSelected(detail);
 
+      // Always store the original writer-submitted values for version history
+      const dbHookLine = detail.hookLine ?? "";
+      const dbBody = bodyToText(detail.body);
+      setOriginalHookLine(dbHookLine);
+      setOriginalBody(dbBody);
+
       // Restore saved draft if one exists, otherwise use story data
       const saved = loadDraft(id);
       if (saved) {
         setDraftHookLine(saved.hookLine);
         setDraftBody(saved.body);
         setCoverImageRef(saved.coverImageRef);
+        setCoverPreview(saved.coverPreview);
       } else {
-        setDraftHookLine(detail.hookLine ?? "");
-        setDraftBody(bodyToText(detail.body));
+        setDraftHookLine(dbHookLine);
+        setDraftBody(dbBody);
         setCoverImageRef(null);
+        setCoverPreview(null);
       }
     } catch {
       setSelected(null);
@@ -501,6 +526,7 @@ export function StoryReviewQueue() {
       setSelected(null);
       setSelectedId(null);
       setCoverImageRef(null);
+      setCoverPreview(null);
     } catch {
       setToast({ type: "err", msg: "Something went wrong. Try again." });
     } finally {
@@ -605,6 +631,16 @@ export function StoryReviewQueue() {
                   {draftSaved && (
                     <span className="text-[10px] font-medium text-[#1F8A5B]">Draft saved</span>
                   )}
+                  {hasEdits && (
+                    <button
+                      type="button"
+                      onClick={revertToOriginal}
+                      title="Discard all edits and restore the writer's original submission"
+                      className="rounded-[7px] border border-[rgba(192,57,43,0.25)] px-2.5 py-1.5 text-[10px] font-semibold text-[#C0392B] transition-colors hover:bg-[rgba(192,57,43,0.06)]"
+                    >
+                      Revert to original
+                    </button>
+                  )}
                   <span className={cn("rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
                     {selected.tier}
                   </span>
@@ -694,7 +730,9 @@ export function StoryReviewQueue() {
             onAction={handleAction}
             acting={acting}
             coverImageRef={coverImageRef}
-            onCoverUploaded={(ref, _preview) => setCoverImageRef(ref || null)}
+            coverPreview={coverPreview}
+            onCoverUploaded={(ref, preview) => { setCoverImageRef(ref || null); setCoverPreview(preview || null); }}
+            onCoverRemoved={() => { setCoverImageRef(null); setCoverPreview(null); }}
           />
         ) : (
           <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-8 text-center">
