@@ -352,6 +352,31 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
   );
 }
 
+// ─── Draft persistence helpers ────────────────────────────────────────────────
+
+interface StoryDraft {
+  hookLine: string;
+  body: string;
+  coverImageRef: string | null;
+}
+
+function draftKey(storyId: string) { return `kekere-story-draft-${storyId}`; }
+
+function loadDraft(storyId: string): StoryDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(storyId));
+    return raw ? (JSON.parse(raw) as StoryDraft) : null;
+  } catch { return null; }
+}
+
+function saveDraft(storyId: string, draft: StoryDraft) {
+  try { localStorage.setItem(draftKey(storyId), JSON.stringify(draft)); } catch {}
+}
+
+function clearDraft(storyId: string) {
+  try { localStorage.removeItem(draftKey(storyId)); } catch {}
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function StoryReviewQueue() {
@@ -369,6 +394,21 @@ export function StoryReviewQueue() {
   const [draftHookLine, setDraftHookLine] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-save draft to localStorage whenever edits change
+  useEffect(() => {
+    if (!selectedId) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setDraftSaved(false);
+    saveTimer.current = setTimeout(() => {
+      saveDraft(selectedId, { hookLine: draftHookLine, body: draftBody, coverImageRef });
+      setDraftSaved(true);
+      setTimeout(() => setDraftSaved(false), 2000);
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [draftHookLine, draftBody, coverImageRef, selectedId]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -391,14 +431,23 @@ export function StoryReviewQueue() {
     setSelectedId(id);
     setDetailLoading(true);
     setEditingContent(false);
-    setCoverImageRef(null);
     try {
       const res = await fetch(`/api/admin/kekere/stories/${id}/review`);
       if (!res.ok) throw new Error(`${res.status}`);
       const detail: StoryDetail = await res.json();
       setSelected(detail);
-      setDraftHookLine(detail.hookLine ?? "");
-      setDraftBody(bodyToText(detail.body));
+
+      // Restore saved draft if one exists, otherwise use story data
+      const saved = loadDraft(id);
+      if (saved) {
+        setDraftHookLine(saved.hookLine);
+        setDraftBody(saved.body);
+        setCoverImageRef(saved.coverImageRef);
+      } else {
+        setDraftHookLine(detail.hookLine ?? "");
+        setDraftBody(bodyToText(detail.body));
+        setCoverImageRef(null);
+      }
     } catch {
       setSelected(null);
     } finally {
@@ -446,6 +495,7 @@ export function StoryReviewQueue() {
         successMsg = `Contract sent to ${data.writerName ?? selected.authorName}.`;
       }
 
+      clearDraft(selectedId);
       setToast({ type: "ok", msg: successMsg });
       setQueue((q) => q.filter((s) => s.id !== selectedId));
       setSelected(null);
@@ -552,6 +602,9 @@ export function StoryReviewQueue() {
                   <p className="mt-1 text-[14px] text-[#646B73]">by {selected.authorName}</p>
                 </div>
                 <div className="flex flex-none items-center gap-2">
+                  {draftSaved && (
+                    <span className="text-[10px] font-medium text-[#1F8A5B]">Draft saved</span>
+                  )}
                   <span className={cn("rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
                     {selected.tier}
                   </span>
@@ -611,7 +664,7 @@ export function StoryReviewQueue() {
                   placeholder="Story content…"
                   className="w-full resize-y rounded-[8px] border border-[rgba(20,22,26,0.18)] bg-[#F7F8FA] px-4 py-3 text-[15px] leading-[1.75] text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/20"
                 />
-                <p className="mt-1.5 text-[10px] text-[#9AA0A8]">Separate paragraphs with a blank line. Edits are saved when you click "Send publishing contract".</p>
+                <p className="mt-1.5 text-[10px] text-[#9AA0A8]">Separate paragraphs with a blank line. Edits auto-save and survive page refreshes.</p>
               </div>
             ) : (
               <div className="prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20]">
