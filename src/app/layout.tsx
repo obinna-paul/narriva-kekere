@@ -2,9 +2,6 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "@/styles/globals.css";
 
-// Both brands use these fonts independently — that is a practical engineering
-// choice, not a shared visual identity. Each brand's layout decides how (or
-// whether) to apply them; this root layout does not impose any brand styling.
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-fraunces",
@@ -36,6 +33,21 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Google tag (gtag.js) */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q9KTKCQ0V0" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-Q9KTKCQ0V0');
+            `,
+          }}
+        />
+      </head>
       <body className={`${fraunces.variable} ${inter.variable} ${ibmPlexMono.variable} antialiased`}>
         {children}
       </body>

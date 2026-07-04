@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ImageIcon, Pencil, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -50,20 +51,88 @@ function bodyToText(body: string | object | null): string {
   }
 }
 
-function DecisionPanel({
-  story,
-  onAction,
-  acting,
-}: {
+// ─── Decision Panel ───────────────────────────────────────────────────────────
+
+interface TagSuggestion {
+  id: string;
+  slug: string;
+  label: string;
+  feedHeading: string;
+}
+
+interface NewTagSuggestion {
+  slug: string;
+  label: string;
+  feedHeading: string;
+  description: string;
+}
+
+interface DecisionPanelProps {
   story: QueueStory;
   onAction: (action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[]) => void;
   acting: boolean;
-}) {
+  coverImageRef: string | null;
+  onCoverUploaded: (ref: string, previewUrl: string) => void;
+}
+
+function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const tagError = tab === "publish" && tagIds.length === 0;
+
+  // Nari tag suggestions
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<TagSuggestion[] | null>(null);
+  const [newTagSuggestion, setNewTagSuggestion] = useState<NewTagSuggestion | null>(null);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  async function handleSuggestTags() {
+    setSuggesting(true);
+    setSuggestions(null);
+    setNewTagSuggestion(null);
+    setSuggestError(null);
+    try {
+      const res = await fetch(`/api/admin/kekere/stories/${story.id}/suggest-tags`, { method: "POST" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      setSuggestions(data.suggestions ?? []);
+      setNewTagSuggestion(data.newTag ?? null);
+    } catch {
+      setSuggestError("Nari couldn't read the story right now. Try again.");
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
+  function applySuggestions() {
+    if (!suggestions) return;
+    setTagIds(suggestions.map((s) => s.id));
+    setSuggestions(null);
+    setNewTagSuggestion(null);
+  }
+
+  async function handleCoverFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("storyId", story.id);
+      const res = await fetch("/api/admin/kekere/cover-upload", { method: "POST", body: form });
+      if (res.ok) {
+        const { coverImageRef: ref, previewUrl } = await res.json();
+        setCoverPreview(previewUrl);
+        onCoverUploaded(ref, previewUrl);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
@@ -72,7 +141,7 @@ function DecisionPanel({
       {story.plagiarismFlagged && (
         <div className="rounded-[8px] border border-[#C0392B]/25 bg-[rgba(192,57,43,0.06)] px-4 py-3">
           <p className="text-[12px] font-semibold text-[#C0392B]">⚠ Plagiarism flag</p>
-          <p className="mt-0.5 text-[11px] text-[#C0392B]/80">This story was flagged for potential plagiarism. Review carefully before publishing.</p>
+          <p className="mt-0.5 text-[11px] text-[#C0392B]/80">Review carefully before publishing.</p>
         </div>
       )}
 
@@ -96,6 +165,44 @@ function DecisionPanel({
 
       {tab === "publish" && (
         <>
+          {/* Cover image upload */}
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
+              Story cover <span className="normal-case text-[#9AA0A8]">(optional)</span>
+            </label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCoverFile(f); }}
+            />
+            {coverPreview || coverImageRef ? (
+              <div className="relative flex h-[100px] w-full items-center justify-center overflow-hidden rounded-[8px] border border-[rgba(20,22,26,0.14)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverPreview ?? ""} alt="Cover" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => { setCoverPreview(null); onCoverUploaded("", ""); if (fileRef.current) fileRef.current.value = ""; }}
+                  className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="flex h-[80px] w-full flex-col items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-[rgba(20,22,26,0.20)] bg-[#F4F5F7] transition-colors hover:border-[rgba(20,22,26,0.35)] disabled:opacity-50"
+              >
+                <ImageIcon size={18} className="text-[#9AA0A8]" />
+                <span className="text-[11px] text-[#9AA0A8]">{uploading ? "Uploading…" : "Upload cover image"}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Cowrie cost */}
           <div>
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
               Cowrie cost (1–10)
@@ -113,11 +220,61 @@ function DecisionPanel({
               <span className="w-8 text-center text-[14px] font-bold text-[#1A1C20]">{cowrieCost}</span>
             </div>
           </div>
+
+          {/* Tags */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
-              Tags <span className="normal-case text-[#C0392B]">(required)</span>
-            </label>
-            <TagPicker value={tagIds} onChange={setTagIds} error={tagError} />
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
+                Tags <span className="normal-case text-[#C0392B]">(required)</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleSuggestTags}
+                disabled={suggesting}
+                className="flex items-center gap-1 rounded-[6px] bg-[rgba(107,33,168,0.08)] px-2 py-1 text-[10px] font-semibold text-[#6B21A8] transition-colors hover:bg-[rgba(107,33,168,0.14)] disabled:opacity-50"
+              >
+                <Sparkles size={10} />
+                {suggesting ? "Nari is reading…" : "Nari suggests"}
+              </button>
+            </div>
+
+            {/* Nari suggestion results */}
+            {suggestions && suggestions.length > 0 && (
+              <div className="mb-2 rounded-[8px] border border-[rgba(107,33,168,0.18)] bg-[rgba(107,33,168,0.04)] p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#6B21A8]">Nari suggests</p>
+                <div className="flex flex-col gap-1.5">
+                  {suggestions.map((s) => (
+                    <div key={s.id} className="rounded-[6px] bg-white px-2.5 py-1.5">
+                      <div className="text-[12px] font-semibold text-[#1A1C20]">{s.label}</div>
+                      <div className="text-[10px] text-[#8B919A]">{s.feedHeading}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={applySuggestions}
+                  className="mt-2.5 w-full rounded-[7px] bg-[#6B21A8] py-2 text-[11px] font-semibold text-white hover:bg-[#5a1a8f]"
+                >
+                  Use these tags
+                </button>
+              </div>
+            )}
+
+            {/* New tag suggestion from Nari */}
+            {newTagSuggestion && (
+              <div className="mb-2 rounded-[8px] border border-[rgba(183,121,31,0.25)] bg-[rgba(183,121,31,0.05)] p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#B7791F]">Nari also suggests a new category</p>
+                <p className="text-[12px] font-semibold text-[#1A1C20]">{newTagSuggestion.label}</p>
+                <p className="text-[10px] italic text-[#8B919A]">"{newTagSuggestion.feedHeading}"</p>
+                <p className="mt-1 text-[10px] text-[#9AA0A8]">This category doesn't exist yet. Ask your engineer to add it to the tag list.</p>
+              </div>
+            )}
+
+            {suggestError && (
+              <p className="mb-1.5 text-[10px] text-[#C0392B]">{suggestError}</p>
+            )}
+
+            <TagPicker value={tagIds} onChange={(ids) => setTagIds(ids.slice(0, 2))} error={tagError} />
             {tagError && (
               <p className="mt-1 text-[10px] text-[#C0392B]">Select at least one tag before publishing.</p>
             )}
@@ -132,10 +289,10 @@ function DecisionPanel({
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          rows={4}
+          rows={3}
           placeholder={
             tab === "publish"
-              ? "Optional note to the author on publication…"
+              ? "Optional note to the author…"
               : tab === "reject"
               ? "Explain why this story is being rejected…"
               : "Describe what changes are needed…"
@@ -144,7 +301,7 @@ function DecisionPanel({
         />
       </div>
 
-      <div className="space-y-2 border-t border-[rgba(20,22,26,0.07)] pt-4">
+      <div className="space-y-2 border-t border-[rgba(20,22,26,0.07)] pt-3">
         <div className="flex justify-between text-[12px]">
           <span className="text-[#8B919A]">Genre</span>
           <span className="font-medium text-[#1A1C20]">{story.genre}</span>
@@ -152,10 +309,6 @@ function DecisionPanel({
         <div className="flex justify-between text-[12px]">
           <span className="text-[#8B919A]">Tier</span>
           <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", TIER_COLORS[story.tier] ?? TIER_COLORS.STANDARD)}>{story.tier}</span>
-        </div>
-        <div className="flex justify-between text-[12px]">
-          <span className="text-[#8B919A]">Cost</span>
-          <span className="font-mono font-medium text-[#1A1C20]">{story.cowrieCost} ₵</span>
         </div>
         <div className="flex justify-between text-[12px]">
           <span className="text-[#8B919A]">Words</span>
@@ -176,11 +329,19 @@ function DecisionPanel({
           tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
         )}
       >
-        {acting ? "Processing…" : tab === "publish" ? "Publish story" : tab === "reject" ? "Reject story" : "Request revisions"}
+        {acting
+          ? "Processing…"
+          : tab === "publish"
+          ? "Send publishing contract"
+          : tab === "reject"
+          ? "Reject story"
+          : "Request revisions"}
       </button>
     </div>
   );
 }
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function StoryReviewQueue() {
   const [queue, setQueue] = useState<QueueStory[]>([]);
@@ -191,6 +352,12 @@ export function StoryReviewQueue() {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  // Admin editing state — reset when a new story is selected
+  const [editingContent, setEditingContent] = useState(false);
+  const [draftHookLine, setDraftHookLine] = useState("");
+  const [draftBody, setDraftBody] = useState("");
+  const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -212,10 +379,15 @@ export function StoryReviewQueue() {
   async function selectStory(id: string) {
     setSelectedId(id);
     setDetailLoading(true);
+    setEditingContent(false);
+    setCoverImageRef(null);
     try {
       const res = await fetch(`/api/admin/kekere/stories/${id}/review`);
       if (!res.ok) throw new Error(`${res.status}`);
-      setSelected(await res.json());
+      const detail: StoryDetail = await res.json();
+      setSelected(detail);
+      setDraftHookLine(detail.hookLine ?? "");
+      setDraftBody(bodyToText(detail.body));
     } catch {
       setSelected(null);
     } finally {
@@ -226,14 +398,25 @@ export function StoryReviewQueue() {
   async function handleAction(action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[]) {
     if (!selectedId || !selected) return;
     setActing(true);
+
     const endpoint =
       action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
       : `/api/admin/kekere/stories/${selectedId}/request-revisions`;
 
+    const originalHookLine = selected.hookLine ?? "";
+    const originalBody = bodyToText(selected.body);
+
     const body =
       action === "publish"
-        ? { cowrieCost, tier: selected.tier, noteToWriter: note || undefined, tagIds }
+        ? {
+            cowrieCost,
+            tier: selected.tier,
+            tagIds,
+            ...(coverImageRef ? { coverImageRef } : {}),
+            ...(draftHookLine !== originalHookLine ? { hookLineOverride: draftHookLine } : {}),
+            ...(draftBody !== originalBody ? { bodyOverride: draftBody } : {}),
+          }
         : action === "reject"
         ? { moderationNotes: note, internalReason: note, plagiarismFlagged: selected.plagiarismFlagged }
         : { moderationNotes: note };
@@ -245,15 +428,23 @@ export function StoryReviewQueue() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Action failed");
-      setToast({ type: "ok", msg: action === "publish" ? "Story published." : action === "reject" ? "Story rejected." : "Revision request sent." });
+
+      let successMsg = action === "reject" ? "Story rejected." : action === "revisions" ? "Revision request sent." : "";
+      if (action === "publish") {
+        const data = await res.json();
+        successMsg = `Contract sent to ${data.writerName ?? selected.authorName}.`;
+      }
+
+      setToast({ type: "ok", msg: successMsg });
       setQueue((q) => q.filter((s) => s.id !== selectedId));
       setSelected(null);
       setSelectedId(null);
+      setCoverImageRef(null);
     } catch {
       setToast({ type: "err", msg: "Something went wrong. Try again." });
     } finally {
       setActing(false);
-      setTimeout(() => setToast(null), 3500);
+      setTimeout(() => setToast(null), 4000);
     }
   }
 
@@ -330,7 +521,7 @@ export function StoryReviewQueue() {
         )}
       </div>
 
-      {/* Middle pane — reading pane */}
+      {/* Middle pane — reading / editing pane */}
       <div className="flex-1 overflow-y-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
         {!selectedId ? (
           <AdminEmptyState title="Select a story" note="Pick a submission from the queue to read it here." />
@@ -340,23 +531,55 @@ export function StoryReviewQueue() {
           </div>
         ) : selected ? (
           <div className="px-8 py-8">
+            {/* Header */}
             <div className="mb-6 border-b border-[rgba(20,22,26,0.07)] pb-6">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <h2 className="font-[family-name:var(--font-display)] text-[28px] font-semibold leading-tight text-[#1A1C20]">
                     {selected.title}
                   </h2>
                   <p className="mt-1 text-[14px] text-[#646B73]">by {selected.authorName}</p>
                 </div>
-                <span className={cn("mt-1 flex-none rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
-                  {selected.tier}
-                </span>
+                <div className="flex flex-none items-center gap-2">
+                  <span className={cn("rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
+                    {selected.tier}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingContent((v) => !v)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                      editingContent
+                        ? "bg-[#1A1C20] text-white"
+                        : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
+                    )}
+                  >
+                    <Pencil size={11} />
+                    {editingContent ? "Done editing" : "Edit content"}
+                  </button>
+                </div>
               </div>
-              {selected.hookLine && (
-                <p className="mt-4 border-l-2 border-[#C75D2C] pl-4 font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed text-[#646B73]">
-                  {selected.hookLine}
-                </p>
-              )}
+
+              {/* Hook line — editable or read-only */}
+              <div className="mt-4">
+                {editingContent ? (
+                  <div>
+                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Hook line</label>
+                    <input
+                      type="text"
+                      value={draftHookLine}
+                      onChange={(e) => setDraftHookLine(e.target.value)}
+                      placeholder="Write a hook line for the story…"
+                      className="w-full rounded-[8px] border border-[rgba(20,22,26,0.18)] bg-[#F7F8FA] px-4 py-2.5 font-[family-name:var(--font-display)] text-[16px] italic text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#C75D2C]/40"
+                    />
+                  </div>
+                ) : draftHookLine ? (
+                  <p className="border-l-2 border-[#C75D2C] pl-4 font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed text-[#646B73]">
+                    {draftHookLine}
+                  </p>
+                ) : null}
+              </div>
+
               <div className="mt-3 flex gap-4 text-[12px] text-[#9AA0A8]">
                 <span>{selected.wordCount.toLocaleString()} words</span>
                 <span>·</span>
@@ -367,11 +590,28 @@ export function StoryReviewQueue() {
                 <span>{selected.cowrieCost} ₵</span>
               </div>
             </div>
-            <div className="prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20]">
-              {bodyToText(selected.body).split("\n\n").map((para, i) => (
-                <p key={i} className="mb-[1.25em]">{para}</p>
-              ))}
-            </div>
+
+            {/* Body — editable or read-only */}
+            {editingContent ? (
+              <div>
+                <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Story body</label>
+                <textarea
+                  value={draftBody}
+                  onChange={(e) => setDraftBody(e.target.value)}
+                  rows={30}
+                  placeholder="Story content…"
+                  className="w-full resize-y rounded-[8px] border border-[rgba(20,22,26,0.18)] bg-[#F7F8FA] px-4 py-3 text-[15px] leading-[1.75] text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/20"
+                />
+                <p className="mt-1.5 text-[10px] text-[#9AA0A8]">Separate paragraphs with a blank line. Edits are saved when you click "Send publishing contract".</p>
+              </div>
+            ) : (
+              <div className="prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20]">
+                {draftBody.split("\n\n").map((para, i) => (
+                  <p key={i} className="mb-[1.25em]">{para}</p>
+                ))}
+              </div>
+            )}
+
             {selected.moderationNotes && (
               <div className="mt-8 rounded-[8px] border border-[#B7791F]/25 bg-[rgba(183,121,31,0.06)] px-4 py-3">
                 <p className="text-[12px] font-semibold text-[#B7791F]">Previous moderation note</p>
@@ -387,7 +627,13 @@ export function StoryReviewQueue() {
       {/* Right pane — decision */}
       <div className="w-[260px] flex-none overflow-y-auto">
         {selected ? (
-          <DecisionPanel story={selected} onAction={handleAction} acting={acting} />
+          <DecisionPanel
+            story={selected}
+            onAction={handleAction}
+            acting={acting}
+            coverImageRef={coverImageRef}
+            onCoverUploaded={(ref, _preview) => setCoverImageRef(ref || null)}
+          />
         ) : (
           <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-8 text-center">
             <p className="text-[12px] text-[#9AA0A8]">Select a story to review and make a decision.</p>

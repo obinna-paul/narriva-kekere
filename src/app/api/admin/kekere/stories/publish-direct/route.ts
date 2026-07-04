@@ -126,7 +126,6 @@ export const POST = withAuth(
           tier,
           cowrieCost,
           readingTime,
-          // @ts-expect-error — PENDING_CONTRACT added via db push; client regenerates on restart
           status: "PENDING_CONTRACT",
           isDraft: false,
           tags: tagRecords.length > 0
@@ -139,7 +138,6 @@ export const POST = withAuth(
         data: {
           templateId: template.id,
           writerId,
-          // @ts-expect-error — storyId added via db push; client regenerates on restart
           storyId: story.id,
           body: rendered.rendered!,
           status: "PENDING",
