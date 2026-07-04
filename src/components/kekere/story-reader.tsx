@@ -482,13 +482,6 @@ export function StoryReader({
             </div>
           ) : (
             <>
-              {story.bodyDoc && (
-                <div className="relative">
-                  <StoryReaderContent doc={story.bodyDoc} />
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[160px] bg-gradient-to-b from-transparent to-[var(--color-bg)]" />
-                </div>
-              )}
-
               <div className="relative pt-2 text-center">
                 <h2 className="mb-[6px] font-[family-name:var(--font-display)] text-[21px] font-semibold text-[var(--color-ink)]">
                   Keep reading?

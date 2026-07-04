@@ -94,6 +94,7 @@ export default async function KekereFeedPage() {
         recommendedStories={recommendedStories}
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
+        isLoggedIn={!!userId}
         readingProgress={readingProgress}
       />
       <FirstStoryFreeModal />

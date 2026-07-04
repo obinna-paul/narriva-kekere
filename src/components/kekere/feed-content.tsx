@@ -144,6 +144,7 @@ export interface FeedContentProps {
   recommendedStories: readonly MockStory[];
   tagRows: readonly FeedTagRow[];
   balance: number;
+  isLoggedIn?: boolean;
   readingProgress?: Record<string, number>;
 }
 
@@ -155,6 +156,7 @@ export function FeedContent({
   recommendedStories,
   tagRows,
   balance,
+  isLoggedIn = false,
   readingProgress,
 }: FeedContentProps) {
   const [tagOpen, setTagOpen] = useState(false);
@@ -384,7 +386,12 @@ export function FeedContent({
         </p>
       )}
 
-      <StoryPreviewSheet story={previewStory} onClose={() => setPreviewStory(null)} />
+      <StoryPreviewSheet
+        story={previewStory}
+        balance={balance}
+        isLoggedIn={isLoggedIn}
+        onClose={() => setPreviewStory(null)}
+      />
     </div>
   );
 }
