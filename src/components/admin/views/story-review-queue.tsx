@@ -84,6 +84,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const tagError = tab === "publish" && tagIds.length === 0;
+  const coverError = tab === "publish" && !coverPreview && !coverImageRef;
 
   // Nari tag suggestions
   const [suggesting, setSuggesting] = useState(false);
@@ -168,7 +169,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
           {/* Cover image upload */}
           <div>
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
-              Story cover <span className="normal-case text-[#9AA0A8]">(optional)</span>
+              Story cover <span className="normal-case text-[#C0392B]">(required)</span>
             </label>
             <input
               ref={fileRef}
@@ -194,11 +195,17 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploading}
-                className="flex h-[80px] w-full flex-col items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-[rgba(20,22,26,0.20)] bg-[#F4F5F7] transition-colors hover:border-[rgba(20,22,26,0.35)] disabled:opacity-50"
+                className={cn(
+                  "flex h-[80px] w-full flex-col items-center justify-center gap-1.5 rounded-[8px] border border-dashed bg-[#F4F5F7] transition-colors disabled:opacity-50",
+                  coverError ? "border-[#C0392B]/50 hover:border-[#C0392B]" : "border-[rgba(20,22,26,0.20)] hover:border-[rgba(20,22,26,0.35)]"
+                )}
               >
-                <ImageIcon size={18} className="text-[#9AA0A8]" />
-                <span className="text-[11px] text-[#9AA0A8]">{uploading ? "Uploading…" : "Upload cover image"}</span>
+                <ImageIcon size={18} className={coverError ? "text-[#C0392B]/60" : "text-[#9AA0A8]"} />
+                <span className={cn("text-[11px]", coverError ? "text-[#C0392B]/70" : "text-[#9AA0A8]")}>{uploading ? "Uploading…" : "Upload cover image"}</span>
               </button>
+            )}
+            {coverError && (
+              <p className="mt-1 text-[10px] text-[#C0392B]">A cover image is required before sending the contract.</p>
             )}
           </div>
 
@@ -326,7 +333,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, onCoverUploaded
 
       <button
         type="button"
-        disabled={acting || (tab !== "publish" && !note.trim()) || (tab === "publish" && tagIds.length === 0)}
+        disabled={acting || (tab !== "publish" && !note.trim()) || (tab === "publish" && (tagIds.length === 0 || coverError))}
         onClick={() => onAction(tab, note, cowrieCost, tagIds)}
         className={cn(
           "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
