@@ -609,7 +609,7 @@ export function StoryReviewQueue() {
       </div>
 
       {/* Middle pane — reading / editing pane */}
-      <div className="flex-1 overflow-y-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+      <div className="flex-1 overflow-y-scroll rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
         {!selectedId ? (
           <AdminEmptyState title="Select a story" note="Pick a submission from the queue to read it here." />
         ) : detailLoading ? (
