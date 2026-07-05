@@ -140,11 +140,17 @@ export const POST = withAuth(async (request, session, { params }) => {
 
   const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
+  const storyUrl = linkedStoryId
+    ? `${baseUrl}/kekere/story/${linkedStoryId}`
+    : `${baseUrl}/kekere`;
+
   const signedHtml = linkedStoryId
     ? await renderContractSignedEmail({
         writerName: contract.writer.name,
         storyTitle,
         signedAt: signedDateStr,
+        storyUrl,
       }).catch(() => undefined)
     : undefined;
 
@@ -154,7 +160,7 @@ export const POST = withAuth(async (request, session, { params }) => {
       ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
       : "Your contract is signed",
     body: linkedStoryId
-      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
+      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
       : `Hi ${contract.writer.name},\n\nYour contract has been signed.\n\nThe Kekere Stories Team`,
     html: signedHtml,
     ...(pdfBuffer ? { attachments: [{ filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer }] } : {}),

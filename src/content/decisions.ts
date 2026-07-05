@@ -9,7 +9,7 @@ export const COMPANY_NAME = "Narriva" as const;
 
 export const DOMAINS = {
   narriva: "narriva.com",
-  kekere: "kekere.narriva.com",
+  kekere: "narriva.pro/kekere",
 } as const;
 
 export type CowrieTopupPackage = {

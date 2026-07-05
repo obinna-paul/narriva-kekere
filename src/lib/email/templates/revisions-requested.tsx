@@ -16,7 +16,7 @@ export function RevisionsRequestedEmail({
   storyId,
   editorUrl,
 }: RevisionsRequestedEmailProps) {
-  const url = editorUrl ?? `https://kekere.narriva.pro/kekere/write?id=${storyId}`;
+  const url = editorUrl ?? `https://narriva.pro/kekere/write?id=${storyId}`;
 
   return (
     <BaseEmail preview={`Revisions requested for "${storyTitle}" — editor's notes inside`}>

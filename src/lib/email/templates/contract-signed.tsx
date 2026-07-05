@@ -12,7 +12,7 @@ export function ContractSignedEmail({
   writerName,
   storyTitle,
   signedAt,
-  storyUrl = "https://kekere.narriva.pro/kekere",
+  storyUrl = "https://narriva.pro/kekere",
 }: ContractSignedEmailProps) {
   return (
     <BaseEmail preview={`Your story "${storyTitle}" is now live on Kekere Stories`}>
