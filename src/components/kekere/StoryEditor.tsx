@@ -37,6 +37,7 @@ interface RecoveryState {
 
 export interface StoryEditorHandle {
   flush: (label?: string) => Promise<void>;
+  getContent: () => TiptapDoc | null;
 }
 
 export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(function StoryEditor({
@@ -231,7 +232,11 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     [editor, saveToServer, storyId]
   );
 
-  useImperativeHandle(ref, () => ({ flush: manualSave }), [manualSave]);
+  const getContent = useCallback(() => {
+    return editor ? (editor.getJSON() as TiptapDoc) : null;
+  }, [editor]);
+
+  useImperativeHandle(ref, () => ({ flush: manualSave, getContent }), [manualSave, getContent]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
