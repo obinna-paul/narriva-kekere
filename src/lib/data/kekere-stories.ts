@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
+import { TAG_BY_SLUG } from "@/content/story-tags";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
 
@@ -435,21 +436,49 @@ export async function getFeedTagRows(
     select: { id: true, slug: true },
   });
 
+  // Group tags by feedHeading so related tags (dark, creepy, psychological)
+  // appear in a single combined feed row instead of 3 separate rows
+  const tagsByHeading = new Map<string, Array<{ id: string; slug: string }>>();
+  const headingOrder = new Map<string, number>();
+
+  for (const tag of tags) {
+    const tagInfo = TAG_BY_SLUG[tag.slug];
+    const heading = tagInfo?.feedHeading ?? tag.slug;
+    const firstSlugForHeading = Array.from(tagSlugs).find(
+      (slug) => (TAG_BY_SLUG[slug]?.feedHeading ?? slug) === heading
+    );
+
+    if (firstSlugForHeading && !headingOrder.has(heading)) {
+      headingOrder.set(heading, Array.from(tagSlugs).indexOf(firstSlugForHeading));
+    }
+
+    if (!tagsByHeading.has(heading)) {
+      tagsByHeading.set(heading, []);
+    }
+    tagsByHeading.get(heading)!.push(tag);
+  }
+
+  // Fetch stories for each feedHeading group
   const results = await Promise.all(
-    tags.map(async (tag) => {
+    Array.from(tagsByHeading.entries()).map(async ([heading, tagGroup]) => {
+      const tagIds = tagGroup.map((t) => t.id);
       const rows = await prisma.storyTag.findMany({
-        where: { tagId: tag.id, story: { status: "PUBLISHED" } },
+        where: { tagId: { in: tagIds }, story: { status: "PUBLISHED" } },
         select: { storyId: true },
         take: limit,
       });
-      return { slug: tag.slug, storyIds: rows.map((r) => r.storyId) };
+      // Use the first tag's slug as the row identifier
+      return { slug: tagGroup[0].slug, storyIds: rows.map((r) => r.storyId) };
     })
   );
 
-  const order = new Map(tagSlugs.map((slug, i) => [slug, i]));
   return results
     .filter((r) => r.storyIds.length > 0)
-    .sort((a, b) => (order.get(a.slug) ?? 99) - (order.get(b.slug) ?? 99));
+    .sort(
+      (a, b) =>
+        (headingOrder.get(TAG_BY_SLUG[a.slug]?.feedHeading ?? a.slug) ?? 99) -
+        (headingOrder.get(TAG_BY_SLUG[b.slug]?.feedHeading ?? b.slug) ?? 99)
+    );
 }
 
 /** Fetch full story rows for a set of IDs, preserving the given order. */
