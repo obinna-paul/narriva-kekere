@@ -5,10 +5,17 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 
-const fixTagSchema = z.object({
-  storyTitle: z.string().min(1, "Story title required"),
-  tagSlug: z.string().min(1, "Tag slug required"),
-});
+const fixTagSchema = z
+  .object({
+    // Prefer storyId (unambiguous). storyTitle is a convenience fallback and
+    // only ever matches a PUBLISHED story.
+    storyId: z.string().min(1).optional(),
+    storyTitle: z.string().min(1).optional(),
+    tagSlug: z.string().min(1, "Tag slug required"),
+  })
+  .refine((d) => d.storyId || d.storyTitle, {
+    message: "Provide either storyId or storyTitle",
+  });
 
 export const POST = withAuth(
   async (request) => {
@@ -27,18 +34,24 @@ export const POST = withAuth(
       );
     }
 
-    const { storyTitle, tagSlug } = parsed.data;
+    const { storyId, storyTitle, tagSlug } = parsed.data;
 
     try {
-      // Find the published story only
-      const story = await prisma.story.findFirst({
-        where: { title: storyTitle, status: "PUBLISHED" },
-        select: { id: true, title: true },
-      });
+      // Look up by ID when given (unambiguous); otherwise fall back to the
+      // published story with a matching title.
+      const story = storyId
+        ? await prisma.story.findUnique({
+            where: { id: storyId },
+            select: { id: true, title: true },
+          })
+        : await prisma.story.findFirst({
+            where: { title: storyTitle, status: "PUBLISHED" },
+            select: { id: true, title: true },
+          });
 
       if (!story) {
         return NextResponse.json(
-          { error: `Story "${storyTitle}" not found` },
+          { error: `Story ${storyId ? `id "${storyId}"` : `"${storyTitle}"`} not found` },
           { status: 404 }
         );
       }
