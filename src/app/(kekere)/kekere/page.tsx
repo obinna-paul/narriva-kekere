@@ -261,7 +261,7 @@ export default async function KekereLandingPage() {
                   {isLoggedIn ? "Go to feed" : "Start Reading"}
                 </Link>
                 <Link
-                  href="/signup"
+                  href={isLoggedIn ? "/kekere/write" : "/signup"}
                   className="border-b border-[rgba(233,201,163,0.4)] pb-[3px] text-[15px] font-semibold text-[var(--color-sand-accent)] transition-colors hover:border-[var(--color-sand-accent)]"
                 >
                   Write & Earn →
