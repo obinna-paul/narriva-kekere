@@ -5,7 +5,6 @@ import { listStories } from "@/lib/data/kekere-stories";
 import { getKekereLandingStats } from "@/lib/data/kekere-landing";
 import { listCompetitions } from "@/lib/data/kekere-competitions";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
-import { TestimonialRotator } from "@/components/kekere/testimonial-rotator";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
@@ -527,9 +526,6 @@ export default async function KekereLandingPage() {
             </div>
           </div>
         </section>
-
-        {/* ======== TESTIMONIALS ======== */}
-        <TestimonialRotator />
 
         {/* ======== FINAL CTA ======== */}
         <section className="relative overflow-hidden bg-[#2A1A12] px-[22px] py-[72px] text-center">
