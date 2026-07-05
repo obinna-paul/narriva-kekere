@@ -7,6 +7,7 @@ export function toMockCompetition(
   winners: readonly WinnerEntry[] = []
 ): MockCompetition {
   return {
+    id: competition.id,
     slug: competition.slug,
     title: competition.title,
     theme: competition.theme,
