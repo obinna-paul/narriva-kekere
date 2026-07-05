@@ -8,11 +8,16 @@ import type { MockCompetition } from "@/content/mock/kekere-competitions";
 const GRAIN_SVG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
 
+// Real (DB-backed) competitions never populate MockCompetition.rules — the
+// Competition model has no rules column — so this fallback is what actually
+// renders on the live site for every competition.
 const DEFAULT_RULES: readonly string[] = [
-  "2,000 words maximum. Shorter is welcome.",
-  "Open to writers across Africa and the diaspora.",
-  "Previously unpublished stories only.",
-  "One entry per writer. Submit through the writer's editor.",
+  "You may submit multiple stories — only one per writer is selected for the shortlist.",
+  "We're looking for stories that leave a lasting impression: beautiful narration and an interesting writing voice. New to flash fiction? Research what it is (and isn't) before submitting.",
+  "Stories can be set anywhere in the world, but we expect submissions from Nigerian writers.",
+  "Original, unpublished work only — nothing that has appeared on any other platform.",
+  "Stories should not be written entirely, or in large part, with AI.",
+  "Format for easy reading: a standard font like Times New Roman, 1.5–2.0 line spacing, indented or spaced paragraphs.",
 ];
 
 function useCountdown(deadline: string) {
