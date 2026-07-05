@@ -481,8 +481,7 @@ export default async function KekereLandingPage() {
               </div>
 
               <p className="mt-[18px] text-center text-[13.5px] italic leading-[1.5] text-[var(--color-ink-muted-2)]">
-                Every season, the winning story gets a manuscript read at
-                Narriva. Most writers start here.
+                Competitions run four seasons every year.
               </p>
             </div>
           </section>
