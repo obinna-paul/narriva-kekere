@@ -308,8 +308,26 @@ export function WriterEditor({
     setChapters((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   }
 
+  // Preview overlays must reflect what's actually in the editor right now,
+  // not the doc captured when the page loaded — `initialContent` is never
+  // updated as the user types (StoryEditor keeps its own Tiptap state).
+  const [previewDoc, setPreviewDoc] = useState<TiptapDoc>(EMPTY_DOC);
+
+  function getLatestDoc(): TiptapDoc {
+    if (mode === "chapters") {
+      return plainTextToDoc(chapters.map((c) => `${c.title}\n\n${c.content}`).join("\n\n"));
+    }
+    return editorHandle.current?.getContent() ?? initialContent;
+  }
+
+  function openPreview() {
+    setPreviewDoc(getLatestDoc());
+    setPreviewOpen(true);
+  }
+
   // Feature 6 — confirm submit triggers preview first
   function handleClickSubmit() {
+    setPreviewDoc(getLatestDoc());
     setSubmitPreviewOpen(true);
   }
 
@@ -516,7 +534,7 @@ export function WriterEditor({
                 {/* Preview button */}
                 <button
                   type="button"
-                  onClick={() => setPreviewOpen(true)}
+                  onClick={openPreview}
                   className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
                   title="Preview"
                 >
@@ -698,7 +716,7 @@ export function WriterEditor({
                 ~{readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
               </p>
               <div className="mt-6">
-                <StoryReaderContent doc={initialContent} />
+                <StoryReaderContent doc={previewDoc} />
               </div>
               <div className="mt-8 text-center text-[11px] text-[var(--color-ink-muted-3)] opacity-30 select-none">
                 you@example.com — Preview
@@ -735,7 +753,7 @@ export function WriterEditor({
                 {wordCount.toLocaleString()} words · ~{readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
               </p>
               <div className="mt-6">
-                <StoryReaderContent doc={initialContent} />
+                <StoryReaderContent doc={previewDoc} />
               </div>
             </div>
           </div>
