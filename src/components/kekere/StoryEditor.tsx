@@ -2,6 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { createEditorExtensions } from "@/lib/tiptap/editor-config";
 import { cn } from "@/lib/utils/cn";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
@@ -299,8 +300,9 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
       )}
 
-      {/* B1 — Formatting toolbar + live word count */}
-      <div className="mb-1.5 flex items-center gap-1.5 border-b border-[rgba(42,26,18,.10)] pb-2">
+      {/* B1 — Formatting toolbar + live word count. Sticky below the writer
+          header so formatting controls are always reachable while scrolling. */}
+      <div className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex items-center gap-1.5 overflow-x-auto border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)] px-[22px] py-2">
         <ToolbarButton
           label="Bold (Ctrl+B)"
           active={editor.isActive("bold")}
@@ -323,10 +325,34 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           <span className="text-[17px] font-semibold leading-none underline underline-offset-[3px]">U</span>
         </ToolbarButton>
 
+        <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+
+        <ToolbarButton
+          label="Align left"
+          active={editor.isActive({ textAlign: "left" })}
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+        >
+          <AlignLeft size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align center"
+          active={editor.isActive({ textAlign: "center" })}
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+        >
+          <AlignCenter size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Align right"
+          active={editor.isActive({ textAlign: "right" })}
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+        >
+          <AlignRight size={16} />
+        </ToolbarButton>
+
         <div className="flex-1" />
 
         {/* B7.3 — live word count + reading time */}
-        <div className="flex items-baseline gap-2.5 text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
+        <div className="flex flex-none items-baseline gap-2.5 whitespace-nowrap text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
           <span>
             <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b>{" "}
             words
@@ -346,7 +372,9 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           "[&_.ProseMirror_p]:mb-[1.3em]",
           "[&_.ProseMirror_strong]:font-bold",
           "[&_.ProseMirror_em]:italic",
-          "[&_.ProseMirror_u]:underline"
+          "[&_.ProseMirror_u]:underline",
+          "[&_.ProseMirror_p[style*='center']]:text-center",
+          "[&_.ProseMirror_p[style*='right']]:text-right"
         )}
       />
     </div>

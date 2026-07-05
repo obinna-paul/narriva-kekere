@@ -4,6 +4,7 @@ import Underline from "@tiptap/extension-underline";
 import UniqueID from "@tiptap/extension-unique-id";
 import CharacterCount from "@tiptap/extension-character-count";
 import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
 import type { AnyExtension } from "@tiptap/react";
 import { generateUUID } from "@/lib/utils/uuid";
 
@@ -52,6 +53,11 @@ export function createEditorExtensions(): AnyExtension[] {
       listItem: false,
     }),
     Underline,
+    TextAlign.configure({
+      types: ["paragraph"],
+      alignments: ["left", "center", "right"],
+      defaultAlignment: "left",
+    }),
     UniqueID.configure({
       types: ["paragraph"],
       generateID: () => generateUUID(),
@@ -77,6 +83,11 @@ export function createReaderExtensions(): AnyExtension[] {
       listItem: false,
     }),
     Underline,
+    TextAlign.configure({
+      types: ["paragraph"],
+      alignments: ["left", "center", "right"],
+      defaultAlignment: "left",
+    }),
     UniqueID.configure({
       types: ["paragraph"],
       generateID: () => generateUUID(),

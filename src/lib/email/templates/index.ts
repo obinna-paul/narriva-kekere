@@ -32,6 +32,7 @@ export async function renderContractSignedEmail(props: {
   storyTitle: string;
   signedAt: string;
   storyUrl?: string;
+  pdfAttached?: boolean;
 }) {
   return render(createElement(ContractSignedEmail, props));
 }

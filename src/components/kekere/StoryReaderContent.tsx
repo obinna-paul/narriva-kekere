@@ -26,7 +26,7 @@ export function StoryReaderContent({ doc }: StoryReaderContentProps) {
   return (
     <EditorContent
       editor={editor}
-      className="font-sans text-[17px] leading-[1.75] text-[var(--color-ink)] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:mb-[1.3em] [&_.ProseMirror_strong]:font-bold [&_.ProseMirror_em]:italic [&_.ProseMirror_u]:underline"
+      className="font-sans text-[17px] leading-[1.75] text-[var(--color-ink)] [&_.ProseMirror]:outline-none [&_.ProseMirror_p]:mb-[1.3em] [&_.ProseMirror_strong]:font-bold [&_.ProseMirror_em]:italic [&_.ProseMirror_u]:underline [&_.ProseMirror_p[style*='center']]:text-center [&_.ProseMirror_p[style*='right']]:text-right"
     />
   );
 }

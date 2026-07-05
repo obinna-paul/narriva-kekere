@@ -21,7 +21,6 @@ import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEd
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { plainTextToDoc, countWords as countWordsInDoc, docToPlainText, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import { formatRelativeTime, type SaveStatus } from "@/lib/tiptap/save-status";
-import { getPendingDrafts } from "@/lib/offline/draft-store";
 
 const HOOK_LINE_SOFT = 100;
 const HOOK_LINE_HARD = 120;
@@ -138,6 +137,7 @@ export function WriterEditor({
   // Feature 1 — distraction-free mode
   const focusModeRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [showEscHint, setShowEscHint] = useState(false);
 
   // Feature 2 — preview mode
@@ -145,9 +145,6 @@ export function WriterEditor({
 
   // Feature 6 — submit preview
   const [submitPreviewOpen, setSubmitPreviewOpen] = useState(false);
-
-  // Feature 5 — drafts badge
-  const [hasPendingDrafts, setHasPendingDrafts] = useState(false);
 
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const hydrating = useRef(true);
@@ -186,12 +183,20 @@ export function WriterEditor({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  // Feature 5 — check pending drafts on mount
+  // Track the sticky header's height so the formatting toolbar can stick
+  // directly beneath it (the header height changes with viewport width).
   useEffect(() => {
-    getPendingDrafts().then((drafts) => {
-      if (drafts.length > 0) setHasPendingDrafts(true);
-    }).catch(() => {});
-  }, []);
+    const header = headerRef.current;
+    const container = containerRef.current;
+    if (!header || !container) return;
+    const setVar = () => {
+      container.style.setProperty("--writer-header-h", `${header.offsetHeight}px`);
+    };
+    setVar();
+    const observer = new ResizeObserver(setVar);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [loading]);
 
   // Load an existing draft, or create empty one.
   useEffect(() => {
@@ -431,7 +436,7 @@ export function WriterEditor({
       `}</style>
 
       {/* Header chrome */}
-      <div className="sticky top-0 z-20 border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]/95 backdrop-blur-md" data-writer-chrome>
+      <div ref={headerRef} className="sticky top-0 z-20 border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]" data-writer-chrome>
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] py-2.5">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Link
@@ -459,16 +464,11 @@ export function WriterEditor({
             >
               {STATUS_LABELS[status]}
             </span>
-            {hasPendingDrafts && storyId && (
-              <span className="flex-none rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
-                Unsaved local draft
-              </span>
-            )}
           </div>
         </div>
-        <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] pb-2.5">
+        <div className="mx-auto flex max-w-[680px] flex-wrap items-center justify-between gap-2 px-[22px] pb-2.5">
           {isEditable && (
-            <div className="flex items-center gap-[7px] rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
+            <div className="flex flex-none items-center gap-[7px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
               {saveStatus.kind === "saving" ? (
                 <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
               ) : (
@@ -480,7 +480,7 @@ export function WriterEditor({
                   style={{ backgroundColor: saveStatusColor(saveStatus.kind) }}
                 />
               )}
-              <span className="text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
+              <span className="whitespace-nowrap text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
                 {savedLabel.text}
               </span>
               {saveStatus.kind === "conflict" && (
@@ -490,7 +490,7 @@ export function WriterEditor({
               )}
             </div>
           )}
-          <div className="flex items-center gap-2" data-writer-header-actions>
+          <div className="ml-auto flex flex-none items-center gap-2" data-writer-header-actions>
             {isEditable && (
               <>
                 {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
@@ -587,14 +587,16 @@ export function WriterEditor({
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
               Hookline
             </label>
-            <input
+            <textarea
               value={hookLine}
-              onChange={(e) => setHookLine(e.target.value)}
+              onChange={(e) => setHookLine(e.target.value.replace(/\n/g, ""))}
+              onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
               placeholder="One sharp sentence — what makes someone want to read this?"
               disabled={!isEditable}
               maxLength={HOOK_LINE_HARD}
+              rows={2}
               aria-label="Hook line"
-              className="w-full bg-transparent font-[family-name:var(--font-display)] text-[16px] italic leading-[1.5] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
+              className="w-full resize-none bg-transparent font-[family-name:var(--font-display)] text-[16px] italic leading-[1.5] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)] disabled:opacity-60"
             />
             <div className="mt-2 flex items-center justify-between gap-2.5">
               <span className={cn("text-[12px] font-medium", hookNoteColor)}>{hookNote}</span>
