@@ -34,8 +34,17 @@ function StoryGrid({ stories }: { stories: MockStory[] }) {
         >
           <div
             className="relative h-[150px] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
-            style={{ background: thumbnailPattern(story.id) }}
+            style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
           >
+            {story.coverImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={story.coverImageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover object-center"
+                loading="lazy"
+              />
+            )}
             <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
               {story.genre.toUpperCase()}
             </span>

@@ -352,7 +352,7 @@ export default async function KekereLandingPage() {
               Now reading
             </p>
             <h2 className="font-[family-name:var(--font-display)] text-[clamp(26px,3vw,34px)] font-semibold leading-[1.12] text-[var(--color-primary)]">
-              Stories worth your ninety seconds
+              Stories worth your time
             </h2>
           </div>
 
@@ -369,8 +369,17 @@ export default async function KekereLandingPage() {
                 <Link href={`/kekere/story/${story.id}`}>
                   <div
                     className="relative h-[142px] overflow-hidden rounded-[14px] shadow-[var(--shadow-card)]"
-                    style={{ background: thumbnailPattern(story.id) }}
+                    style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
                   >
+                    {story.coverImageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={story.coverImageUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover object-center"
+                        loading="lazy"
+                      />
+                    )}
                     <span className="absolute left-[10px] top-[10px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-[9px] py-1 text-[10px] font-semibold tracking-[0.04em] text-white">
                       {story.genre.toUpperCase()}
                     </span>
