@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { isWordCountEligible, wordCountRangeLabel } from "@/lib/competitions/word-count";
 
 interface DraftStory {
   id: string;
@@ -28,9 +29,16 @@ export interface CompetitionApplyProps {
   competitionId: string;
   competitionSlug: string;
   wordCountLimit: number;
+  wordCountMin?: number;
 }
 
-export function CompetitionApply({ competitionId, competitionSlug, wordCountLimit }: CompetitionApplyProps) {
+export function CompetitionApply({
+  competitionId,
+  competitionSlug,
+  wordCountLimit,
+  wordCountMin,
+}: CompetitionApplyProps) {
+  const rangeLabel = wordCountRangeLabel(wordCountMin, wordCountLimit);
   const [entered, setEntered] = useState(false);
 
   const [draftsOpen, setDraftsOpen] = useState(false);
@@ -84,9 +92,10 @@ export function CompetitionApply({ competitionId, competitionSlug, wordCountLimi
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setUploadError(null);
-    if (file && !file.name.toLowerCase().endsWith(".docx")) {
+    const name = file?.name.toLowerCase() ?? "";
+    if (file && !name.endsWith(".doc") && !name.endsWith(".docx")) {
       setUploadFile(null);
-      setUploadError("Only Word documents (.docx) are accepted — no PDFs.");
+      setUploadError("Only Word documents (.doc or .docx) are accepted — no PDFs.");
       return;
     }
     setUploadFile(file);
@@ -171,7 +180,7 @@ export function CompetitionApply({ competitionId, competitionSlug, wordCountLimi
               </p>
             )}
             {drafts?.map((story) => {
-              const overLimit = story.wordCount > wordCountLimit;
+              const overLimit = !isWordCountEligible(story.wordCount, wordCountMin, wordCountLimit);
               const selected = selectedDraftId === story.id;
               return (
                 <button
@@ -191,7 +200,7 @@ export function CompetitionApply({ competitionId, competitionSlug, wordCountLimi
                   </span>
                   <span className="mt-0.5 text-[12.5px] text-[rgba(42,26,18,.5)]">
                     {story.wordCount.toLocaleString()} words
-                    {overLimit && ` — over the ${wordCountLimit.toLocaleString()}-word limit`}
+                    {overLimit && ` — outside the ${rangeLabel}-word range`}
                   </span>
                 </button>
               );
@@ -221,7 +230,7 @@ export function CompetitionApply({ competitionId, competitionSlug, wordCountLimi
           <DialogHeader>
             <DialogTitle>Upload your story</DialogTitle>
             <DialogDescription>
-              Word documents (.docx) only — no PDFs. Max {wordCountLimit.toLocaleString()} words.
+              Word documents (.doc or .docx) only — no PDFs. {rangeLabel} words.
             </DialogDescription>
           </DialogHeader>
 
@@ -240,12 +249,12 @@ export function CompetitionApply({ competitionId, competitionSlug, wordCountLimi
 
             <div className="flex flex-col gap-1.5">
               <label htmlFor="upload-file" className="text-sm font-medium text-[var(--color-ink)]">
-                Manuscript (.docx)
+                Manuscript (.doc or .docx)
               </label>
               <input
                 id="upload-file"
                 type="file"
-                accept=".docx"
+                accept=".doc,.docx"
                 onChange={handleFileChange}
                 className="text-sm text-[var(--color-ink)]/70 file:mr-3 file:rounded-md file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
               />

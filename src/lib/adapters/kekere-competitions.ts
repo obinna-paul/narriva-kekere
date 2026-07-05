@@ -15,6 +15,7 @@ export function toMockCompetition(
     deadline: competition.deadline.toISOString(),
     prizeDescription: competition.prizeDescription,
     wordCountLimit: competition.wordCountLimit,
+    wordCountMin: competition.wordCountMin ?? undefined,
     status: competition.status,
     pastWinners: winners.map((entry) => ({
       storyId: entry.story.id,

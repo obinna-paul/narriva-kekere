@@ -606,6 +606,9 @@ model Competition {
   deadline         DateTime
   prizeDescription String
   wordCountLimit   Int
+  // Optional floor for competitions with a range ("1,000-1,500 words")
+  // rather than a single ceiling. Null means no minimum is enforced.
+  wordCountMin     Int?
   status           CompetitionStatus @default(DRAFT)
   createdAt        DateTime          @default(now())
 

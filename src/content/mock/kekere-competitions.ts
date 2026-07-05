@@ -22,6 +22,9 @@ export interface MockCompetition {
   prizeDescription: string;
   prizeAmount?: string;
   wordCountLimit: number;
+  /** Optional floor for a word-count range ("1,000-1,500 words") rather
+   * than a single ceiling. */
+  wordCountMin?: number;
   status: CompetitionStatus;
   rules?: readonly string[];
   pastWinners?: readonly MockCompetitionWinner[];

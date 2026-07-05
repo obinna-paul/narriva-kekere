@@ -21,6 +21,7 @@ const competitionSchema = z.object({
   deadline: z.coerce.date(),
   prizeDescription: z.string().min(1),
   wordCountLimit: z.number().int().positive(),
+  wordCountMin: z.number().int().positive().nullable().optional(),
   status: z.enum(["DRAFT", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
 });
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { submitStory } from "@/lib/data/kekere-stories";
+import { isWordCountEligible, wordCountRangeLabel } from "@/lib/competitions/word-count";
 import type { Competition, CompetitionEntry, CompetitionStatus, Story } from "@prisma/client";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
@@ -110,6 +111,9 @@ export interface CompetitionInput {
   deadline: Date;
   prizeDescription: string;
   wordCountLimit: number;
+  /** Optional floor for a word-count range ("1,000-1,500 words") rather
+   * than a single ceiling. */
+  wordCountMin?: number | null;
   status?: CompetitionStatus;
 }
 
@@ -150,14 +154,26 @@ export async function selectWinners(
   });
 }
 
+function wordCountRangeError(
+  wordCount: number,
+  min: number | null,
+  max: number
+): string | null {
+  if (isWordCountEligible(wordCount, min, max)) return null;
+
+  const rangeLabel = wordCountRangeLabel(min, max);
+  return wordCount > max
+    ? `This competition asks for ${rangeLabel} words — your story is ${wordCount.toLocaleString()} words.`
+    : `This competition asks for ${rangeLabel} words — your story is only ${wordCount.toLocaleString()} words.`;
+}
+
 /**
- * Recommended flow (documented per the spec's ask): a DRAFT story can be
- * entered directly — this submits it into the normal moderation queue
- * (DRAFT → SUBMITTED, same path as a regular submission) AND creates the
- * CompetitionEntry at the same time, rather than requiring the story to
- * already be PUBLISHED first. The entry exists either way; it just isn't
- * eligible for judging/winning until the story clears moderation. An
- * already-PUBLISHED story enters directly with no extra step.
+ * Enters a story into a competition. Only a plain DRAFT story is eligible —
+ * unpublished, unrejected, and never submitted for review — since both
+ * entry paths (picking an existing draft, or uploading a document that
+ * creates a fresh one) only ever hand this a brand-new draft. Submitting
+ * flips the story straight to SUBMITTED (the normal moderation queue, same
+ * as any regular submission) and creates the CompetitionEntry in one step.
  */
 export async function submitStoryToCompetition(
   competitionId: string,
@@ -178,27 +194,22 @@ export async function submitStoryToCompetition(
   if (!story) throw new CompetitionEntryError("Story not found.");
   if (story.authorId !== userId) throw new CompetitionEntryError("That story isn't yours.");
 
-  if (story.status === "REJECTED") {
-    throw new CompetitionEntryError("A rejected story can't be entered into a competition.");
-  }
-
-  if (story.wordCount > competition.wordCountLimit) {
+  if (story.status !== "DRAFT") {
     throw new CompetitionEntryError(
-      `This competition has a ${competition.wordCountLimit.toLocaleString()}-word limit — your story is ${story.wordCount.toLocaleString()} words.`
+      "Only an unpublished draft that hasn't been submitted for review can be entered into a competition."
     );
   }
+
+  const wordCountError = wordCountRangeError(story.wordCount, competition.wordCountMin, competition.wordCountLimit);
+  if (wordCountError) throw new CompetitionEntryError(wordCountError);
 
   const existingEntry = await prisma.competitionEntry.findUnique({
     where: { competitionId_storyId: { competitionId, storyId } },
   });
   if (existingEntry) throw new CompetitionEntryError("Already entered into this competition.");
 
-  // DRAFT stories ride the normal moderation path the moment they're
-  // entered; anything already SUBMITTED/REVISIONS_REQUESTED/PUBLISHED is
-  // left as-is.
-  if (story.status === "DRAFT") {
-    await submitStory(storyId, userId);
-  }
+  // Ride the normal moderation path the moment the story is entered.
+  await submitStory(storyId, userId);
 
   return prisma.competitionEntry.create({ data: { competitionId, storyId } });
 }

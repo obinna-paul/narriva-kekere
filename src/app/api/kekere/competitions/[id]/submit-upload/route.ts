@@ -8,18 +8,19 @@ import {
   CompetitionNotFoundError,
   submitStoryToCompetition,
 } from "@/lib/data/kekere-competitions";
-import { docxBufferToDoc, DocxImportError, DOCX_MIME_TYPE } from "@/lib/tiptap/docx-import";
+import { wordBufferToDoc, DocxImportError, DOCX_MIME_TYPE, DOC_MIME_TYPE } from "@/lib/tiptap/word-import";
 import { countWords } from "@/lib/tiptap/doc-utils";
 import { READING_WPM } from "@/content/decisions";
 
 const TITLE_LIMIT = 200;
-const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8MB — plenty for a flash-fiction-length .docx
+const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8MB — plenty for a flash-fiction-length Word doc
 
 /**
  * Second way to enter a competition (alongside POST .../submit with an
- * existing storyId): upload a .docx directly. Creates a brand-new Story from
- * the document's text, then enters it exactly like any other submission —
- * so it shows up identically in the admin entries list either way.
+ * existing storyId): upload a Word document (.doc or .docx) directly.
+ * Creates a brand-new Story from the document's text, then enters it
+ * exactly like any other submission — so it shows up identically in the
+ * admin entries list either way.
  */
 export const POST = withAuth(
   async (request, session, { params }: { params: { id: string } }) => {
@@ -37,10 +38,12 @@ export const POST = withAuth(
       return NextResponse.json({ error: `Title must be ${TITLE_LIMIT} characters or fewer` }, { status: 400 });
     }
 
-    const isDocx = file.name.toLowerCase().endsWith(".docx") || file.type === DOCX_MIME_TYPE;
-    if (!isDocx) {
+    const name = file.name.toLowerCase();
+    const isDocx = name.endsWith(".docx") || file.type === DOCX_MIME_TYPE;
+    const isLegacyDoc = !isDocx && (name.endsWith(".doc") || file.type === DOC_MIME_TYPE);
+    if (!isDocx && !isLegacyDoc) {
       return NextResponse.json(
-        { error: "Only Word documents (.docx) are accepted — no PDFs." },
+        { error: "Only Word documents (.doc or .docx) are accepted — no PDFs." },
         { status: 400 }
       );
     }
@@ -52,7 +55,7 @@ export const POST = withAuth(
 
     let doc;
     try {
-      doc = await docxBufferToDoc(buffer);
+      doc = await wordBufferToDoc(buffer, isLegacyDoc);
     } catch (error) {
       if (error instanceof DocxImportError) {
         return NextResponse.json({ error: error.message }, { status: 400 });
