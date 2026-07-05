@@ -79,30 +79,38 @@ export const POST = withAuth(async (request, session, { params }) => {
   const signedAt = new Date();
   const signerIp = getClientIp(request);
 
-  // Generate PDF and upload to R2. If R2 is not configured, sign the contract
-  // without a stored PDF — the signing still succeeds and the story goes live.
+  // Always generate PDF for email attachment
   let pdfBuffer: Buffer | null = null;
   let pdfRef: string | null = null;
-  const r2Ready = !!(
-    process.env.CLOUDFLARE_R2_ENDPOINT &&
-    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
-    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
-    process.env.CLOUDFLARE_R2_BUCKET
-  );
+  try {
+    const pdfBytes = await generateSignedContractPdf(
+      contract.body,
+      signedName,
+      signedAt,
+      signerIp,
+    );
+    pdfBuffer = Buffer.from(pdfBytes);
 
-  if (r2Ready) {
-    try {
-      const pdfBytes = await generateSignedContractPdf(
-        contract.body,
-        signedName,
-        signedAt,
-        signerIp,
-      );
-      pdfBuffer = Buffer.from(pdfBytes);
-      pdfRef = await uploadPortalFile(pdfBuffer, `contract-${id}.pdf`, "application/pdf");
-    } catch (err) {
-      console.error("PDF generation/upload failed — signing without PDF:", err);
+    // Try to upload to R2 for download link (optional)
+    const r2Ready = !!(
+      process.env.CLOUDFLARE_R2_ENDPOINT &&
+      process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
+      process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
+      process.env.CLOUDFLARE_R2_BUCKET
+    );
+    if (r2Ready) {
+      try {
+        pdfRef = await uploadPortalFile(pdfBuffer, `contract-${id}.pdf`, "application/pdf");
+      } catch (err) {
+        console.error("R2 upload failed (non-blocking):", err);
+      }
     }
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    return NextResponse.json(
+      { error: "Failed to generate contract PDF" },
+      { status: 500 }
+    );
   }
 
   await prisma.kekereContract.update({
