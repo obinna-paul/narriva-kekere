@@ -95,7 +95,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
   // Detail view (reading contract)
   if (detail) {
     return (
-      <div className="mx-auto max-w-[402px] px-[22px] pb-[80px] pt-6">
+      <div className="mx-auto max-w-[402px] px-[22px] pb-20 md:pb-[80px] pt-6 overflow-x-hidden">
         <button type="button" onClick={goBack} className="flex items-center gap-2 text-[14px] text-[#8A7565] hover:text-[#2A1A12]">
           <ArrowLeft size={15} /> Back
         </button>
@@ -108,7 +108,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
                 <FileText size={18} className="text-[#C75D2C]" />
                 <span className="text-[13px] font-medium text-[#8A7565]">{detail.contractType}</span>
               </div>
-              <div className="mt-4 font-[family-name:var(--font-display)] text-[17px] leading-[1.65] text-[#2A1A12] whitespace-pre-wrap">
+              <div className="mt-4 font-[family-name:var(--font-display)] text-[17px] leading-[1.65] text-[#2A1A12] whitespace-pre-wrap break-words">
                 {detail.body}
               </div>
               <p className="mt-4 text-[12px] text-[#A08C7C]">Sent {new Date(detail.sentAt).toLocaleDateString()}</p>
