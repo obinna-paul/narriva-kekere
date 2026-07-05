@@ -13,7 +13,7 @@ export async function renderOtpEmail(props: { name: string; otp: string; expiryM
   return render(createElement(OtpEmail, props));
 }
 
-export async function renderWelcomeEmail(props: { name: string; appUrl?: string }) {
+export async function renderWelcomeEmail(props: { name: string }) {
   return render(createElement(WelcomeEmail, props));
 }
 

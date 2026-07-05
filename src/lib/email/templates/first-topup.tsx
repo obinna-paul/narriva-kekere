@@ -37,13 +37,9 @@ export function FirstTopUpEmail({ name, appUrl = "https://kekere.narriva.pro/kek
       <Text style={{ ...styles.p, marginBottom: 4 }}>
         With gratitude,
       </Text>
-      <Text style={{ ...styles.p, marginBottom: 24 }}>
+      <Text style={{ ...styles.p, marginBottom: 0 }}>
         — Obinna Ezeodili<br />
         <span style={{ fontSize: 13, color: "#8A7565" }}>CEO, Kekere Stories</span>
-      </Text>
-
-      <Text style={styles.muted}>
-        Questions? Just reply to this email. I actually read them.
       </Text>
 
     </BaseEmail>
