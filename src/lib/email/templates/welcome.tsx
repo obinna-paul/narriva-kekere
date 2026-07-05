@@ -1,12 +1,11 @@
-import { Link, Section, Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
 
 interface WelcomeEmailProps {
   name: string;
-  appUrl?: string;
 }
 
-export function WelcomeEmail({ name, appUrl = "https://kekere.narriva.pro/kekere" }: WelcomeEmailProps) {
+export function WelcomeEmail({ name }: WelcomeEmailProps) {
   return (
     <BaseEmail preview={`A personal welcome from our CEO, Obinna Ezeodili — your first read is on us`}>
 
@@ -58,23 +57,9 @@ export function WelcomeEmail({ name, appUrl = "https://kekere.narriva.pro/kekere
         </Text>
       </Section>
 
-      {/* CTA */}
-      <Section style={{ textAlign: "center", marginBottom: 28 }}>
-        <Link href={appUrl} style={styles.button()}>
-          Start reading →
-        </Link>
-      </Section>
-
-      <Text style={{ ...styles.p, marginBottom: 4 }}>
-        Thank you for giving us a chance.
-      </Text>
-      <Text style={{ ...styles.p, marginBottom: 24 }}>
+      <Text style={{ ...styles.p, marginBottom: 0 }}>
         — Obinna Ezeodili<br />
         <span style={{ fontSize: 13, color: "#8A7565" }}>CEO, Kekere Stories</span>
-      </Text>
-
-      <Text style={styles.muted}>
-        Questions? Just reply to this email. I actually read them.
       </Text>
 
     </BaseEmail>
