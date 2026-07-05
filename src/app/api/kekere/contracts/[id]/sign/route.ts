@@ -79,15 +79,31 @@ export const POST = withAuth(async (request, session, { params }) => {
   const signedAt = new Date();
   const signerIp = getClientIp(request);
 
-  const pdfBytes = await generateSignedContractPdf(
-    contract.body,
-    signedName,
-    signedAt,
-    signerIp,
+  // Generate PDF and upload to R2. If R2 is not configured, sign the contract
+  // without a stored PDF — the signing still succeeds and the story goes live.
+  let pdfBuffer: Buffer | null = null;
+  let pdfRef: string | null = null;
+  const r2Ready = !!(
+    process.env.CLOUDFLARE_R2_ENDPOINT &&
+    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
+    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
+    process.env.CLOUDFLARE_R2_BUCKET
   );
 
-  const pdfBuffer = Buffer.from(pdfBytes);
-  const pdfRef = await uploadPortalFile(pdfBuffer, `contract-${id}.pdf`, "application/pdf");
+  if (r2Ready) {
+    try {
+      const pdfBytes = await generateSignedContractPdf(
+        contract.body,
+        signedName,
+        signedAt,
+        signerIp,
+      );
+      pdfBuffer = Buffer.from(pdfBytes);
+      pdfRef = await uploadPortalFile(pdfBuffer, `contract-${id}.pdf`, "application/pdf");
+    } catch (err) {
+      console.error("PDF generation/upload failed — signing without PDF:", err);
+    }
+  }
 
   await prisma.kekereContract.update({
     where: { id },
@@ -96,7 +112,7 @@ export const POST = withAuth(async (request, session, { params }) => {
       signedName,
       signedAt,
       signerIp,
-      signedPdfRef: pdfRef,
+      ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
     },
   });
 
@@ -113,7 +129,7 @@ export const POST = withAuth(async (request, session, { params }) => {
     });
   }
 
-  const downloadUrl = await getPortalFileDownloadUrl(pdfRef);
+  const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;
 
   // Fetch story title for the email if this contract is linked to a story
   let storyTitle = "your story";
@@ -138,12 +154,10 @@ export const POST = withAuth(async (request, session, { params }) => {
       ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
       : "Your contract is signed",
     body: linkedStoryId
-      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nA signed copy of your publishing agreement is attached to this email — keep it for your records.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
-      : `Hi ${contract.writer.name},\n\nYour contract has been signed. A signed copy is attached to this email for your records.\n\nThe Kekere Stories Team`,
+      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
+      : `Hi ${contract.writer.name},\n\nYour contract has been signed.\n\nThe Kekere Stories Team`,
     html: signedHtml,
-    attachments: [
-      { filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer },
-    ],
+    ...(pdfBuffer ? { attachments: [{ filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer }] } : {}),
   });
 
   await sendEmail({

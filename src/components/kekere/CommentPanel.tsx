@@ -100,7 +100,7 @@ export function CommentPanel({
         )}
 
         {selectedParagraphId && unlocked && (
-          <div className="border-b border-[var(--color-ink)]/[0.08] px-5 py-3">
+          <div className="hidden border-b border-[var(--color-ink)]/[0.08] px-5 py-3 md:block">
             <EmojiPicker userReaction={userReaction} onSelect={onSelectEmoji} onRemove={onRemoveEmoji} />
           </div>
         )}

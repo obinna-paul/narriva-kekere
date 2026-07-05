@@ -452,6 +452,7 @@ export function StoryReader({
                   containerRef={contentRef}
                   commentCounts={commentCounts}
                   selectedParagraphId={comments.selectedParagraphId}
+                  panelOpen={comments.panelOpen}
                   onSelectParagraph={comments.selectParagraph}
                   onOpenComments={comments.openComments}
                 />

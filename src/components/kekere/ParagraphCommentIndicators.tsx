@@ -9,6 +9,10 @@ export interface ParagraphCommentIndicatorsProps {
   containerRef: React.RefObject<HTMLElement>;
   commentCounts: Record<string, number>;
   selectedParagraphId: string | null;
+  /** Whether the comment panel is currently open. On mobile, touch-to-select
+   * is only active while the panel is open — prevents accidental highlights
+   * while the reader is just scrolling through the story. */
+  panelOpen: boolean;
   /** Clicking the paragraph's text — just selects/highlights it. */
   onSelectParagraph: (paragraphId: string) => void;
   /** Clicking the comment-count badge specifically — the user clearly
@@ -35,9 +39,12 @@ export function ParagraphCommentIndicators({
   containerRef,
   commentCounts,
   selectedParagraphId,
+  panelOpen,
   onSelectParagraph,
   onOpenComments,
 }: ParagraphCommentIndicatorsProps) {
+  const panelOpenRef = useRef(panelOpen);
+  useEffect(() => { panelOpenRef.current = panelOpen; }, [panelOpen]);
   const [badges, setBadges] = useState<BadgePosition[]>([]);
 
   useLayoutEffect(() => {
@@ -75,8 +82,12 @@ export function ParagraphCommentIndicators({
     let lastTouchMs = 0;
 
     // touchend fires reliably on iOS inside contenteditable=false (click sometimes doesn't).
+    // On mobile, only select when the comment panel is open — prevents accidental
+    // paragraph highlights while the reader is scrolling normally.
     function handleTouchEnd(e: TouchEvent) {
       lastTouchMs = Date.now();
+      const isMobile = window.innerWidth < 768;
+      if (isMobile && !panelOpenRef.current) return;
       const touch = e.changedTouches[0];
       const el = document
         .elementFromPoint(touch.clientX, touch.clientY)
@@ -119,7 +130,10 @@ export function ParagraphCommentIndicators({
           }
         `}</style>
       )}
-      <style>{`[data-paragraph-id] { cursor: pointer !important; touch-action: manipulation; }`}</style>
+      <style>{`
+        [data-paragraph-id] { touch-action: manipulation; }
+        @media (min-width: 768px) { [data-paragraph-id] { cursor: pointer; } }
+      `}</style>
 
       <div className="pointer-events-none absolute inset-0">
         {badges.map((badge) => (
