@@ -363,12 +363,12 @@ export default async function KekereLandingPage() {
             {featuredStories.map((story) => (
               <div
                 key={story.id}
-                className="w-[220px] flex-none"
+                className="w-[140px] flex-none"
                 style={{ scrollSnapAlign: "start" }}
               >
                 <Link href={`/kekere/story/${story.id}`}>
                   <div
-                    className="relative h-[142px] overflow-hidden rounded-[14px] shadow-[var(--shadow-card)]"
+                    className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[var(--shadow-card)]"
                     style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
                   >
                     {story.coverImageUrl && (
@@ -412,9 +412,9 @@ export default async function KekereLandingPage() {
               </div>
             ))}
 
-            <div className="w-[160px] flex-none opacity-50 blur-[3px]">
+            <div className="w-[140px] flex-none opacity-50 blur-[3px]">
               <div
-                className="h-[142px] rounded-[14px]"
+                className="aspect-[3/4] rounded-[14px]"
                 style={{
                   background: "linear-gradient(135deg,#C75D2C,#1F4B4B)",
                 }}

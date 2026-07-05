@@ -33,7 +33,7 @@ function StoryGrid({ stories }: { stories: MockStory[] }) {
           className="block"
         >
           <div
-            className="relative h-[150px] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
+            className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
             style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
           >
             {story.coverImageUrl && (
