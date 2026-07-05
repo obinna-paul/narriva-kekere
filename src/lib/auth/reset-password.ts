@@ -31,7 +31,7 @@ export async function createPasswordReset(email: string): Promise<void> {
     },
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://kekere.narriva.pro";
+  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
   const html = await renderResetPasswordEmail({

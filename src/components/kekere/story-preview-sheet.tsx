@@ -74,14 +74,9 @@ export function StoryPreviewSheet({
       router.push(`/login?callbackUrl=${encodeURIComponent(`/kekere/story/${story!.id}`)}`);
       return;
     }
-    if (story!.cowrieCost === 0) {
-      // Free story — go straight in
-      onClose();
-      router.push(`/kekere/story/${story!.id}`);
-      return;
-    }
-    // Show the unlock/topup step
-    setStep("unlock");
+    // Navigate directly — the story page handles unlock, paywall, and admin access
+    onClose();
+    router.push(`/kekere/story/${story!.id}`);
   }
 
   async function handleUnlock() {

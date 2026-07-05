@@ -620,6 +620,7 @@ export function StoryReviewQueue() {
           <div className="px-8 py-8">
             {/* Header */}
             <div className="mb-6 border-b border-[rgba(20,22,26,0.07)] pb-6">
+              {/* Row 1 — title + tier badge */}
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <h2 className="font-[family-name:var(--font-display)] text-[28px] font-semibold leading-tight text-[#1A1C20]">
@@ -627,37 +628,40 @@ export function StoryReviewQueue() {
                   </h2>
                   <p className="mt-1 text-[14px] text-[#646B73]">by {selected.authorName}</p>
                 </div>
-                <div className="flex flex-none items-center gap-2">
-                  {draftSaved && (
-                    <span className="text-[10px] font-medium text-[#1F8A5B]">Draft saved</span>
-                  )}
-                  {hasEdits && (
-                    <button
-                      type="button"
-                      onClick={revertToOriginal}
-                      title="Discard all edits and restore the writer's original submission"
-                      className="rounded-[7px] border border-[rgba(192,57,43,0.25)] px-2.5 py-1.5 text-[10px] font-semibold text-[#C0392B] transition-colors hover:bg-[rgba(192,57,43,0.06)]"
-                    >
-                      Revert to original
-                    </button>
-                  )}
-                  <span className={cn("rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
-                    {selected.tier}
-                  </span>
+                <span className={cn("mt-1 flex-none rounded-full px-3 py-1 text-[10px] font-bold uppercase", TIER_COLORS[selected.tier] ?? TIER_COLORS.STANDARD)}>
+                  {selected.tier}
+                </span>
+              </div>
+
+              {/* Row 2 — action toolbar */}
+              <div className="mt-3 flex items-center gap-2">
+                {draftSaved && (
+                  <span className="text-[10px] font-medium text-[#1F8A5B]">Draft saved</span>
+                )}
+                <div className="flex-1" />
+                {hasEdits && (
                   <button
                     type="button"
-                    onClick={() => setEditingContent((v) => !v)}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                      editingContent
-                        ? "bg-[#1A1C20] text-white"
-                        : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
-                    )}
+                    onClick={revertToOriginal}
+                    title="Discard all edits and restore the writer's original submission"
+                    className="rounded-[7px] border border-[rgba(192,57,43,0.25)] px-2.5 py-1.5 text-[10px] font-semibold text-[#C0392B] transition-colors hover:bg-[rgba(192,57,43,0.06)]"
                   >
-                    <Pencil size={11} />
-                    {editingContent ? "Done editing" : "Edit content"}
+                    Revert to original
                   </button>
-                </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setEditingContent((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                    editingContent
+                      ? "bg-[#1A1C20] text-white"
+                      : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
+                  )}
+                >
+                  <Pencil size={11} />
+                  {editingContent ? "Done editing" : "Edit content"}
+                </button>
               </div>
 
               {/* Hook line — editable or read-only */}

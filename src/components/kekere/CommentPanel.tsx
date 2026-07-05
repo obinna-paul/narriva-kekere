@@ -64,8 +64,10 @@ export function CommentPanel({
 
   return (
     <>
-      {/* Mobile: dims the story text behind the bottom sheet. */}
-      <div className="fixed inset-0 z-40 bg-[var(--color-ink)]/30 md:hidden" onClick={onClose} aria-hidden="true" />
+      {/* Mobile: dims the story text behind the bottom sheet.
+          pointer-events-none so taps pass through to story paragraphs —
+          users close the panel with the X button instead. */}
+      <div className="pointer-events-none fixed inset-0 z-40 bg-[var(--color-ink)]/30 md:hidden" aria-hidden="true" />
 
       <div
         className={cn(

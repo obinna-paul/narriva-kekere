@@ -67,7 +67,7 @@ export function FloatingEmojiPicker({
 
   return createPortal(
     <div
-      className="fixed z-[60] rounded-2xl border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-2 shadow-[0_10px_30px_-10px_rgba(42,26,18,0.35)]"
+      className="fixed z-[60] hidden rounded-2xl border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-2 shadow-[0_10px_30px_-10px_rgba(42,26,18,0.35)] md:flex"
       style={{ top: position.top, left: position.left, maxWidth: "calc(100vw - 16px)" }}
       onMouseEnter={() => clearTimeout(dismissTimer.current)}
       onMouseLeave={resetDismissTimer}

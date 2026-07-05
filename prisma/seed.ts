@@ -278,8 +278,15 @@ async function seedCompetitions() {
 
     for (let i = 0; i < comp.pastWinners.length; i++) {
       const winner = comp.pastWinners[i];
-      // winner.storyId matches a seeded Story id directly, since Story ids
-      // were set explicitly to the mock story ids above.
+      // Stories are now real DB records — skip if the referenced story doesn't exist yet.
+      const storyExists = await prisma.story.findUnique({
+        where: { id: winner.storyId },
+        select: { id: true },
+      });
+      if (!storyExists) {
+        console.log(`  Skipping winner entry — story "${winner.storyId}" not in DB yet`);
+        continue;
+      }
       await prisma.competitionEntry.upsert({
         where: {
           competitionId_storyId: { competitionId: competition.id, storyId: winner.storyId },
@@ -336,9 +343,11 @@ Agreed Cowrie Price: {{cowrie_cost}} cowries
 
 ────────────────────────────────────────
 
-1. GRANT OF EXCLUSIVE RIGHTS
+1. GRANT OF PUBLISHING RIGHTS
 
-The Writer grants the Publisher the exclusive, worldwide right to publish, distribute, and monetise the Story on the Kekere platform for the duration of this Agreement. The Writer agrees not to publish this Story on any other platform, website, app, or medium — including self-publishing channels — while this Agreement is in force.
+The Writer grants the Publisher the exclusive right to officially publish and distribute the Story on the Kekere platform (narriva.pro/kekere) for the duration of this Agreement. The Writer retains full copyright ownership of the Story.
+
+The Writer agrees not to make this Story available for free on any other platform, website, app, or medium while this Agreement is in force. The Writer may, however, publish and sell this Story as a paid work on other platforms, provided the price on those platforms is equal to or greater than the agreed cowrie price on Kekere.
 
 2. WRITER'S EARNINGS
 
@@ -351,16 +360,22 @@ Earnings accumulate in real time in the Writer's cowrie wallet and may be withdr
 3. ORIGINALITY AND INTELLECTUAL PROPERTY
 
 The Writer warrants that:
-- The Story is wholly original and has not been published elsewhere, in any form or language.
+- The Story is wholly original and the Writer's own creative work.
 - The Writer is the sole author and the lawful owner of all intellectual property rights in the Story.
 - The Story does not infringe the copyright, trademark, or any other rights of any third party.
 - The Story does not contain defamatory, obscene, or otherwise unlawful content.
+- If the Story has been published elsewhere as a paid work, the Writer has disclosed this to the Publisher prior to signing.
 
-The Writer retains full copyright ownership of the Story. This Agreement grants the Publisher a licence to publish; it is not a transfer of copyright.
+The Writer retains full copyright ownership of the Story. This Agreement grants the Publisher a licence to officially publish; it is not a transfer of copyright.
 
-4. EXCLUSIVITY
+4. EXCLUSIVITY TERMS
 
-This is an exclusive licence. The Publisher requires exclusivity to invest in promoting and distributing the Story. Publishing or distributing the Story through any other channel during the term of this Agreement constitutes a material breach. In the event of breach, the Publisher reserves the right to immediately remove the Story from the platform, withhold unpaid earnings pending investigation, and terminate this Agreement without liability.
+Kekere is the exclusive official publisher of this Story. To protect this investment, the Writer agrees that:
+
+- The Story may NOT be distributed or made available for free on any other platform, website, app, or service.
+- The Story MAY be sold as a paid work on other platforms (e.g. Amazon KDP, Selar, Gumroad), provided the listing price on those platforms is not lower than the agreed cowrie price in this Agreement.
+
+Making this Story freely available elsewhere during the term of this Agreement constitutes a material breach. In the event of breach, the Publisher reserves the right to immediately remove the Story from the platform, withhold unpaid earnings pending investigation, and terminate this Agreement without liability.
 
 5. CONTENT STANDARDS
 

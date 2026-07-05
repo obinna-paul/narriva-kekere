@@ -13,7 +13,6 @@ import { useParagraphComments } from "@/components/kekere/use-paragraph-comments
 import { useParagraphReactions } from "@/components/kekere/use-paragraph-reactions";
 import { EmojiFloat } from "@/components/kekere/EmojiFloat";
 import { FloatingEmojiPicker } from "@/components/kekere/FloatingEmojiPicker";
-import { StoryAudioPlayer } from "@/components/kekere/StoryAudioPlayer";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export interface StoryReaderProps {
@@ -565,9 +564,6 @@ export function StoryReader({
         />
       )}
 
-      {unlocked && isLoggedIn && (
-        <StoryAudioPlayer storyId={story.id} storyTitle={story.title} bodyDoc={story.bodyDoc} containerRef={contentRef} />
-      )}
       </div>
     </div>
   );

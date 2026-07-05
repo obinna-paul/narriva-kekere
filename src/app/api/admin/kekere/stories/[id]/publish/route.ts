@@ -118,11 +118,13 @@ export const PUT = withAuth(
     });
 
     // Email: acceptance notice only (PDF sent after they sign)
+    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/contracts`;
     const acceptedHtml = await renderStoryAcceptedEmail({
       writerName: story.author.name,
       storyTitle: story.title,
       cowrieCost,
       expiresInDays,
+      contractUrl,
     }).catch(() => undefined);
     await sendEmail({
       to: story.author.email,

@@ -33,6 +33,8 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
   const [loading, setLoading] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signedName, setSignedName] = useState(writerName);
+  const [editingName, setEditingName] = useState(false);
+  const [signError, setSignError] = useState<string | null>(null);
   const [signed, setSigned] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
@@ -54,18 +56,23 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
   async function handleSign() {
     if (!detail || !signedName.trim()) return;
     setSigning(true);
+    setSignError(null);
     try {
       const res = await fetch(`/api/kekere/contracts/${detail.id}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signedName: signedName.trim() }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
         setSigned(true);
         setDownloadUrl(data.downloadUrl ?? null);
+      } else {
+        setSignError(data.error ?? "Something went wrong. Please try again.");
       }
-    } catch {}
+    } catch {
+      setSignError("Network error. Please check your connection and try again.");
+    }
     setSigning(false);
   }
 
@@ -115,23 +122,32 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
                     <p className="font-[family-name:var(--font-display)] text-[17px] italic text-[#2A1A12]">
                       {signedName || "—"}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setSignedName("")}
-                      className="mt-1 text-[11px] text-[#A08C7C] hover:text-[#C75D2C]"
-                    >
-                      Not you? Edit name
-                    </button>
-                    {signedName === "" && (
+                    {!editingName && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingName(true)}
+                        className="mt-1 text-[11px] text-[#A08C7C] hover:text-[#C75D2C]"
+                      >
+                        Not you? Edit name
+                      </button>
+                    )}
+                    {editingName && (
                       <input
                         autoFocus
                         value={signedName}
                         onChange={(e) => setSignedName(e.target.value)}
+                        onBlur={() => { if (signedName.trim()) setEditingName(false); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" && signedName.trim()) setEditingName(false); }}
                         placeholder="Type your full name"
                         className="mt-2 w-full bg-transparent text-[16px] italic text-[#2A1A12] outline-none placeholder:text-[#C0A88C]"
                       />
                     )}
                   </div>
+                  {signError && (
+                    <p className="mb-3 rounded-[10px] bg-[rgba(193,58,58,0.08)] px-4 py-3 text-[13px] text-[#A13A3A]">
+                      {signError}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={handleSign}

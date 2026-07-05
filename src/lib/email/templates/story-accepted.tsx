@@ -16,7 +16,7 @@ export function StoryAcceptedEmail({
   cowrieCost,
   writerSharePercent = 70,
   expiresInDays,
-  contractUrl = "https://kekere.narriva.pro/kekere/contracts",
+  contractUrl = "https://narriva.pro/kekere/contracts",
 }: StoryAcceptedEmailProps) {
   return (
     <BaseEmail preview={`"${storyTitle}" has been accepted for publishing on Kekere Stories`}>
