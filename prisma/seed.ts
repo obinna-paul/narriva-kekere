@@ -334,7 +334,7 @@ async function seedPlatformConfig() {
 
 const PUBLISHING_CONTRACT_TEMPLATE = `KEKERE PUBLISHING CONTRACT
 
-This publishing agreement ("Agreement") is entered into as of {{date}}, between Narriva Limited ("Publisher") and {{writer_name}} ("Writer").
+This publishing agreement ("Agreement") is entered into as of {{date}}, between Narriva Publishing ("Publisher") and {{writer_name}} ("Writer").
 
 STORY DETAILS
 Title: {{story_title}}
