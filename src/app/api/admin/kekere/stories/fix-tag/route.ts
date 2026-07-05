@@ -57,28 +57,42 @@ export const POST = withAuth(
       }
 
       // Remove old tags
-      await prisma.storyTag.deleteMany({
+      const deleteResult = await prisma.storyTag.deleteMany({
         where: { storyId: story.id },
       });
+      console.log(`Deleted ${deleteResult.count} old tags for story ${story.id}`);
 
       // Add new tag
-      await prisma.storyTag.create({
+      const createResult = await prisma.storyTag.create({
         data: {
           storyId: story.id,
           tagId: tag.id,
         },
       });
+      console.log(`Created new StoryTag:`, createResult);
+
+      // Verify the change
+      const verify = await prisma.story.findUnique({
+        where: { id: story.id },
+        select: {
+          tags: {
+            select: { tag: { select: { slug: true } } },
+          },
+        },
+      });
+      console.log(`Verification - Story now has tags:`, verify?.tags.map(t => t.tag.slug));
 
       return NextResponse.json({
         success: true,
         message: `Story "${story.title}" reassigned to tag "${tag.slug}"`,
         story: { id: story.id, title: story.title },
         tag: { id: tag.id, slug: tag.slug },
+        verification: { tagsAfter: verify?.tags.map(t => t.tag.slug) },
       });
     } catch (error) {
       console.error("Error fixing story tag:", error);
       return NextResponse.json(
-        { error: "Failed to fix story tag" },
+        { error: "Failed to fix story tag", details: error instanceof Error ? error.message : String(error) },
         { status: 500 }
       );
     }
