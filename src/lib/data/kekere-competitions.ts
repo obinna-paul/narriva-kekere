@@ -18,12 +18,13 @@ export class CompetitionEntryError extends Error {
 }
 
 export interface ListCompetitionsParams {
-  status?: CompetitionStatus;
+  status?: CompetitionStatus | CompetitionStatus[];
 }
 
 export async function listCompetitions(params: ListCompetitionsParams = {}) {
+  const status = params.status;
   return prisma.competition.findMany({
-    where: params.status ? { status: params.status } : undefined,
+    where: status ? { status: Array.isArray(status) ? { in: status } : status } : undefined,
     orderBy: { deadline: "desc" },
   });
 }

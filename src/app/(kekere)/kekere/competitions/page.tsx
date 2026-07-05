@@ -27,7 +27,9 @@ export default async function KekereCompetitionsPage() {
             Enter the conversation
           </h1>
           <p className="mt-3 text-[14.5px] leading-[1.55] text-[var(--color-ink-muted)]">
-            Seasonal prompts, real prizes, and a manuscript read at Narriva for every winner.
+            Join the winner&apos;s circle and compete with hundreds of writers for cash prizes.
+            We hold our competitions four times a year and publish the best stories each season.
+            May the best writers win.
           </p>
         </header>
 

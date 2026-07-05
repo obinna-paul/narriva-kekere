@@ -177,7 +177,7 @@ export default async function KekereLandingPage() {
   const [stats, stories, competitions] = await Promise.all([
     getKekereLandingStats(),
     listStories({ sort: "trending", pageSize: 5 }),
-    listCompetitions({ status: "OPEN" }),
+    listCompetitions({ status: ["OPEN", "JUDGING"] }),
   ]);
 
   const featuredStories = stories.stories.map((s) => toFeedStoryData(s));
@@ -458,13 +458,18 @@ export default async function KekereLandingPage() {
                 />
                 <div className="relative">
                   <span className="inline-block rounded-[20px] bg-[var(--color-primary)] px-3 py-[5px] text-[11px] font-semibold tracking-[0.04em] text-white">
-                    OPEN · {daysUntil(competition.deadline)} days left
+                    {competition.status === "OPEN"
+                      ? `OPEN · ${daysUntil(competition.deadline)} days left`
+                      : "JUDGING"}
                   </span>
                   <h3 className="mt-4 font-[family-name:var(--font-display)] text-[26px] font-semibold leading-[1.18] text-[var(--color-cream)]">
                     {competition.title}
                   </h3>
                   <p className="mt-[10px] max-w-[520px] text-[15px] leading-[1.55] text-[rgba(245,235,221,0.72)]">
                     {competition.themeDescription || competition.theme}
+                  </p>
+                  <p className="mt-4 max-w-[520px] text-[14px] font-semibold text-[var(--color-sand-accent)]">
+                    {competition.prizeDescription}
                   </p>
                   <Link
                     href={`/kekere/competitions/${competition.slug}`}
