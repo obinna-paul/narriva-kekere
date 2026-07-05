@@ -79,7 +79,7 @@ export const POST = withAuth(async (request, session, { params }) => {
   const signedAt = new Date();
   const signerIp = getClientIp(request);
 
-  // Always generate PDF for email attachment
+  // Try to generate PDF for email attachment, but don't block signing if it fails
   let pdfBuffer: Buffer | null = null;
   let pdfRef: string | null = null;
   try {
@@ -106,11 +106,7 @@ export const POST = withAuth(async (request, session, { params }) => {
       }
     }
   } catch (err) {
-    console.error("PDF generation failed:", err);
-    return NextResponse.json(
-      { error: "Failed to generate contract PDF" },
-      { status: 500 }
-    );
+    console.error("PDF generation failed (non-blocking) for contract", id, ":", err);
   }
 
   await prisma.kekereContract.update({
@@ -159,6 +155,7 @@ export const POST = withAuth(async (request, session, { params }) => {
         storyTitle,
         signedAt: signedDateStr,
         storyUrl,
+        pdfAttached: !!pdfBuffer,
       }).catch(() => undefined)
     : undefined;
 

@@ -6,6 +6,7 @@ interface ContractSignedEmailProps {
   storyTitle: string;
   signedAt: string;
   storyUrl?: string;
+  pdfAttached?: boolean;
 }
 
 export function ContractSignedEmail({
@@ -13,6 +14,7 @@ export function ContractSignedEmail({
   storyTitle,
   signedAt,
   storyUrl = "https://narriva.pro/kekere",
+  pdfAttached = true,
 }: ContractSignedEmailProps) {
   return (
     <BaseEmail preview={`Your story "${storyTitle}" is now live on Kekere Stories`}>
@@ -41,7 +43,9 @@ export function ContractSignedEmail({
           Contract signed
         </Text>
         <Text style={{ margin: 0, fontSize: 14, color: "#2A1A12", lineHeight: "1.6" }}>
-          A signed copy of your publishing agreement is attached to this email — keep it for your records.
+          {pdfAttached
+            ? "A signed copy of your publishing agreement is attached to this email — keep it for your records."
+            : "Your contract has been signed and your story is now live. A copy of your publishing agreement will be available in your dashboard."}
         </Text>
       </Section>
 
