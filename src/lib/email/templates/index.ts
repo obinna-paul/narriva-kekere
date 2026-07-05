@@ -2,6 +2,7 @@ import { render } from "@react-email/render";
 import { createElement } from "react";
 import { OtpEmail } from "./otp";
 import { WelcomeEmail } from "./welcome";
+import { FirstTopUpEmail } from "./first-topup";
 import { StoryAcceptedEmail } from "./story-accepted";
 import { ContractSignedEmail } from "./contract-signed";
 import { StoryRejectedEmail } from "./story-rejected";
@@ -14,6 +15,10 @@ export async function renderOtpEmail(props: { name: string; otp: string; expiryM
 
 export async function renderWelcomeEmail(props: { name: string; appUrl?: string }) {
   return render(createElement(WelcomeEmail, props));
+}
+
+export async function renderFirstTopUpEmail(props: { name: string; appUrl?: string }) {
+  return render(createElement(FirstTopUpEmail, props));
 }
 
 export async function renderStoryAcceptedEmail(props: {

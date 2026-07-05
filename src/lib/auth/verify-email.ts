@@ -126,8 +126,8 @@ export async function verifyOtp(
   const welcomeHtml = await renderWelcomeEmail({ name: user.name }).catch(() => undefined);
   await sendEmail({
     to: user.email,
-    subject: "Welcome to Kekere Stories — your first read is free",
-    body: `Hi ${user.name},\n\nWelcome to Kekere Stories. Your account is verified and you're in.\n\nYour first read is completely free — pick any story and enjoy it on us.\n\nThe Kekere Stories Team`,
+    subject: "A personal welcome from our CEO — Kekere Stories",
+    body: `Hi ${user.name},\n\nI'm Obinna, the CEO of Kekere Stories, and I wanted to welcome you myself. Every story on Kekere is vetted by our editors before it reaches your feed — only the best make it through. We publish short fiction on purpose, sized for real life, and 70% of every cowrie spent on a story goes straight to the writer who wrote it.\n\nYour first read is completely free — pick any story and enjoy it on us before you ever top up.\n\nThank you for giving us a chance.\n\n— Obinna Ezeodili\nCEO, Kekere Stories`,
     html: welcomeHtml,
   });
 
