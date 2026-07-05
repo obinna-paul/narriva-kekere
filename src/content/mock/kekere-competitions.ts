@@ -23,84 +23,20 @@ export interface MockCompetition {
   pastWinners?: readonly MockCompetitionWinner[];
 }
 
+// Kekere's first-ever writing competition. Submissions closed May 31, 2026;
+// judging is underway. Longlist is out, shortlist and winner are still to
+// come — see the dates in themeDescription below.
 export const MOCK_COMPETITIONS: readonly MockCompetition[] = [
   {
-    slug: "harmattan-2026",
-    title: "The Harmattan Cycle",
-    theme: "Dust and distance",
+    slug: "kekere-flash-fiction-prize-2026",
+    title: "The Kekere Flash Fiction Prize 2026",
+    theme: "No fixed theme — flash fiction from Nigerian writers, judged on voice",
     themeDescription:
-      "Stories about the season Lagos pretends doesn't happen to it — the dry wind, the dust on everything, the people who leave for it and the people who wait. We're not looking for weather descriptions. We're looking for what the dry season makes people do.",
-    deadline: "2026-08-15",
-    prizeDescription:
-      "The winning story's author gets a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
-    prizeAmount: "₦150,000",
-    wordCountLimit: 3000,
-    status: "OPEN",
-    rules: [
-      "3,000 words maximum. Shorter is welcome.",
-      "Open to writers across Africa and the diaspora.",
-      "Previously unpublished stories only.",
-      "One entry per writer. Submit through the writer's editor.",
-    ],
-  },
-  {
-    slug: "first-light-2026",
-    title: "First Light",
-    theme: "Beginnings nobody asked for",
-    themeDescription:
-      "A story about a beginning that arrived uninvited — a new job, a new city, a new sibling, a diagnosis. We want the version of \"new\" that nobody throws a party for.",
-    deadline: "2026-07-01",
-    prizeDescription:
-      "The winning story's author gets a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
-    prizeAmount: "₦120,000",
-    wordCountLimit: 2500,
+      "Kekere's first-ever writing competition. No set prompt — we read for stories with a lasting impression, told with beautiful narration and an interesting writing voice. Stories can be set anywhere in the world, but we expect submissions from Nigerian writers.\n\nSubmissions opened May 1, 2026 and closed May 31, 2026. Judging is underway now. The longlist has been released on our Instagram: https://www.instagram.com/p/DaVQC7ZjKbL/?igsh=YWg3YXpwNGRzanMz. The shortlist will be announced July 25, 2026, and the winner on July 31, 2026.",
+    deadline: "2026-05-31",
+    prizeDescription: "₦100,000 for the winner, with consolation prizes for the runners-up.",
+    wordCountLimit: 1000,
     status: "JUDGING",
-    rules: [
-      "2,500 words maximum. Shorter is welcome.",
-      "Open to writers across Africa and the diaspora.",
-      "Previously unpublished stories only.",
-      "One entry per writer. Submit through the writer's editor.",
-    ],
-  },
-  {
-    slug: "small-gods-2025",
-    title: "Small Gods",
-    theme: "The minor superstitions we actually keep",
-    themeDescription:
-      "Not the big myths — the small private ones. The thing you still do even though you know better. We wanted stories about the superstitions people keep quietly, on purpose, without defending them to anyone.",
-    deadline: "2025-12-10",
-    prizeDescription:
-      "The winning story's author got a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
-    prizeAmount: "₦100,000",
-    wordCountLimit: 3000,
-    status: "CLOSED",
-    pastWinners: [
-      {
-        storyId: "nkem-and-the-quiet-house",
-        authorName: "Chiamaka Udo",
-        title: "Nkem and the Quiet House",
-      },
-    ],
-  },
-  {
-    slug: "the-long-table-2025",
-    title: "The Long Table",
-    theme: "Food as an argument",
-    themeDescription:
-      "A story where food is doing more work than just being food — an inheritance, an apology, a fight nobody's having out loud. Kitchens, markets, the one dish that means something specific in your family and nobody else's.",
-    deadline: "2025-09-20",
-    prizeDescription:
-      "The winning story's author got a full manuscript read at Narriva, plus a featured slot on the Kekere homepage for one month.",
-    prizeAmount: "₦100,000",
-    wordCountLimit: 2500,
-    status: "CLOSED",
-    pastWinners: [
-      {
-        storyId: "jollof-wars",
-        authorName: "Femi Okonkwo",
-        title: "Jollof Wars",
-      },
-    ],
   },
 ] as const;
 
