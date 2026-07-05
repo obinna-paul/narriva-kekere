@@ -30,9 +30,9 @@ export const POST = withAuth(
     const { storyTitle, tagSlug } = parsed.data;
 
     try {
-      // Find the story
+      // Find the published story only
       const story = await prisma.story.findFirst({
-        where: { title: storyTitle },
+        where: { title: storyTitle, status: "PUBLISHED" },
         select: { id: true, title: true },
       });
 
