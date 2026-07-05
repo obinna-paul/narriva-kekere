@@ -35,6 +35,7 @@ export default async function AdminKekereCompetitionDetailPage({
               deadline: competition.deadline.toISOString().slice(0, 10),
               prizeDescription: competition.prizeDescription,
               wordCountLimit: String(competition.wordCountLimit),
+              wordCountMin: competition.wordCountMin ? String(competition.wordCountMin) : "",
               status: competition.status,
             }}
           />

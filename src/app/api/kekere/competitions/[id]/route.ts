@@ -36,6 +36,7 @@ const updateSchema = z.object({
   deadline: z.coerce.date().optional(),
   prizeDescription: z.string().min(1).optional(),
   wordCountLimit: z.number().int().positive().optional(),
+  wordCountMin: z.number().int().positive().nullable().optional(),
   status: z.enum(["DRAFT", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
 });
 

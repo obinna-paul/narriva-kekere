@@ -22,6 +22,9 @@ export interface CompetitionFormValues {
   deadline: string;
   prizeDescription: string;
   wordCountLimit: string;
+  /** Empty string means no minimum — a single word-count ceiling rather
+   * than a range. */
+  wordCountMin: string;
   status: "DRAFT" | "OPEN" | "CLOSED" | "JUDGING" | "COMPLETE";
 }
 
@@ -33,6 +36,7 @@ const EMPTY: CompetitionFormValues = {
   deadline: "",
   prizeDescription: "",
   wordCountLimit: "3000",
+  wordCountMin: "",
   status: "DRAFT",
 };
 
@@ -65,6 +69,7 @@ export function CompetitionForm({ mode, competitionId, initial }: CompetitionFor
       deadline: values.deadline,
       prizeDescription: values.prizeDescription,
       wordCountLimit: Number(values.wordCountLimit),
+      wordCountMin: values.wordCountMin ? Number(values.wordCountMin) : null,
       status: values.status,
     };
 
@@ -118,19 +123,31 @@ export function CompetitionForm({ mode, competitionId, initial }: CompetitionFor
         />
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="deadline">Deadline</Label>
+        <Input
+          id="deadline"
+          type="date"
+          required
+          value={values.deadline}
+          onChange={(e) => set("deadline", e.target.value)}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="deadline">Deadline</Label>
+          <Label htmlFor="wordCountMin">Minimum word count (optional)</Label>
           <Input
-            id="deadline"
-            type="date"
-            required
-            value={values.deadline}
-            onChange={(e) => set("deadline", e.target.value)}
+            id="wordCountMin"
+            type="number"
+            min="1"
+            placeholder="No minimum"
+            value={values.wordCountMin}
+            onChange={(e) => set("wordCountMin", e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="wordCountLimit">Word count limit</Label>
+          <Label htmlFor="wordCountLimit">Maximum word count</Label>
           <Input
             id="wordCountLimit"
             type="number"

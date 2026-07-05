@@ -182,6 +182,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
               competitionId={competition.id}
               competitionSlug={competition.slug}
               wordCountLimit={competition.wordCountLimit}
+              wordCountMin={competition.wordCountMin}
             />
           ) : (
             <p className="rounded-xl bg-[var(--color-ink)]/10 px-4 py-[17px] text-center text-sm font-medium text-[var(--color-ink)]/60">
