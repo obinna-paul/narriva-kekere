@@ -110,19 +110,9 @@ function StoryRow({
   if (stories.length === 0) return null;
   return (
     <section className="py-2">
-      <div className="flex items-center justify-between px-5 pb-[14px]">
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
-          {title}
-        </h2>
-        {seeMoreHref && (
-          <Link
-            href={seeMoreHref}
-            className="text-[12.5px] font-semibold text-[var(--color-primary)] hover:opacity-80"
-          >
-            See more →
-          </Link>
-        )}
-      </div>
+      <h2 className="px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+        {title}
+      </h2>
       <div
         className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
         style={{ scrollSnapType: "x mandatory" }}
@@ -130,6 +120,26 @@ function StoryRow({
         {stories.map((story) => (
           <RowCard key={story.id} story={story} readProgress={readingProgress?.[story.id]} onPreview={onPreview} />
         ))}
+        {seeMoreHref && (
+          <Link
+            href={seeMoreHref}
+            className="flex w-[60px] flex-none items-center justify-center"
+            style={{ scrollSnapAlign: "start" }}
+            title="View all stories in this category"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-[var(--color-primary)] transition-opacity hover:opacity-60"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </Link>
+        )}
         <div className="w-[6px] flex-none" />
       </div>
     </section>
