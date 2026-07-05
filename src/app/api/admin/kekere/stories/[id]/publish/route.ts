@@ -13,7 +13,7 @@ import { plainTextToDoc, countWords } from "@/lib/tiptap/doc-utils";
 const publishSchema = z.object({
   cowrieCost: z.number().int().min(1).max(10),
   tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]),
-  tagIds: z.array(z.string()).min(1, "Select at least one tag"),
+  tagIds: z.array(z.string()).length(1, "Select exactly one category"),
   /** Versioned Cloudinary ref — if omitted the existing coverImageRef is kept */
   coverImageRef: z.string().optional(),
   /** If admin edited the hook line before publishing */

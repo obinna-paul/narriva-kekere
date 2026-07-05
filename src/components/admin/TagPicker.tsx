@@ -39,8 +39,8 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  function toggle(id: string) {
-    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+  function selectTag(id: string) {
+    onChange([id]);
   }
 
   const filtered = tags.filter((t) =>
@@ -64,7 +64,7 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
         )}
       >
         {selectedTags.length === 0 ? (
-          <span className="text-[#9AA0A8]">Select tags…</span>
+          <span className="text-[#9AA0A8]">Select a category…</span>
         ) : (
           selectedTags.map((t) => (
             <span
@@ -74,7 +74,7 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
               {t.label}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); toggle(t.id); }}
+                onClick={(e) => { e.stopPropagation(); onChange([]); }}
                 className="ml-0.5 text-[#9AA0A8] hover:text-white"
                 aria-label={`Remove ${t.label}`}
               >
@@ -108,7 +108,7 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => toggle(t.id)}
+                    onClick={() => { selectTag(t.id); setOpen(false); setSearch(""); }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] font-medium transition-colors",
                       selected

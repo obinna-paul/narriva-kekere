@@ -84,7 +84,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const tagError = tab === "publish" && tagIds.length === 0;
+  const tagError = tab === "publish" && tagIds.length !== 1;
   const coverError = tab === "publish" && !coverPreview && !coverImageRef;
 
   // Nari tag suggestions
@@ -112,8 +112,8 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   }
 
   function applySuggestions() {
-    if (!suggestions) return;
-    setTagIds(suggestions.map((s) => s.id));
+    if (!suggestions || suggestions.length === 0) return;
+    setTagIds([suggestions[0].id]);
     setSuggestions(null);
     setNewTagSuggestion(null);
   }
@@ -281,9 +281,9 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
               <p className="mb-1.5 text-[10px] text-[#C0392B]">{suggestError}</p>
             )}
 
-            <TagPicker value={tagIds} onChange={(ids) => setTagIds(ids.slice(0, 2))} error={tagError} />
+            <TagPicker value={tagIds} onChange={setTagIds} error={tagError} />
             {tagError && (
-              <p className="mt-1 text-[10px] text-[#C0392B]">Select at least one tag before publishing.</p>
+              <p className="mt-1 text-[10px] text-[#C0392B]">Select exactly one category before publishing.</p>
             )}
           </div>
         </>
