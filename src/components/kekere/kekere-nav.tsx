@@ -30,7 +30,7 @@ export function KekereNav({ user }: KekereNavProps = {}) {
           destination for notifications, this adds a minimal top strip
           (logo + bell) that only appears for logged-in users. */}
       {user && (
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 backdrop-blur-sm md:hidden">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 md:hidden">
           <Link href="/kekere/feed" className="inline-block">
             <Image src="/kekere-logo.png" alt="Kekere Stories" width={32} height={32} className="h-8 w-auto" />
           </Link>
@@ -38,7 +38,7 @@ export function KekereNav({ user }: KekereNavProps = {}) {
         </header>
       )}
 
-      <header className="sticky top-0 z-40 hidden border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-sm md:block">
+      <header className="sticky top-0 z-40 hidden border-b border-[var(--color-border)] bg-[var(--color-bg)] md:block">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <Link href="/kekere/feed" className="inline-block">
             <Image
