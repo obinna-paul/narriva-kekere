@@ -7,6 +7,7 @@ import { verifyTransaction } from "@/lib/paystack/client";
 import { creditTopUp } from "@/lib/economy/cowries";
 import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
 import { triggerReferralRewardOnFirstTopUp } from "@/lib/data/kekere-referrals";
+import { sendFirstTopUpThankYouEmail } from "@/lib/data/kekere-wallet";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 
 /**
@@ -69,6 +70,7 @@ export const POST = withAuth(async (request, session) => {
 
   if ("success" in result) {
     triggerReferralRewardOnFirstTopUp(session.user.id, paidNGN).catch(() => {});
+    sendFirstTopUpThankYouEmail(session.user.id).catch(() => {});
   }
 
   return NextResponse.json(result);
