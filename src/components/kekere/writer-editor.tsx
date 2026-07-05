@@ -32,7 +32,7 @@ const RELATIVE_TIME_TICK_MS = 30000;
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
 type DbTier = "STANDARD" | "FEATURED" | "PREMIUM";
-type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED";
+type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED";
 type Mode = "scroll" | "chapters";
 
 interface Chapter {
@@ -65,13 +65,14 @@ function tierToLower(tier: DbTier): LowercaseTier {
   return tier.toLowerCase() as LowercaseTier;
 }
 
-const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED"];
+const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED", "PENDING_CONTRACT"];
 
 const STATUS_STYLES: Record<Status, string> = {
   DRAFT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
   SUBMITTED: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
   REVIEWING: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
   REVISIONS_REQUESTED: "bg-[var(--color-primary-muted)] text-[var(--color-primary)]",
+  PENDING_CONTRACT: "bg-[rgba(31,111,74,0.1)] text-[var(--color-success)]",
   PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
   REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
 };
@@ -81,6 +82,7 @@ const STATUS_LABELS: Record<Status, string> = {
   SUBMITTED: "Submitted",
   REVIEWING: "In review",
   REVISIONS_REQUESTED: "Revisions requested",
+  PENDING_CONTRACT: "Contract pending",
   PUBLISHED: "Published",
   REJECTED: "Not accepted",
 };
