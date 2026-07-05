@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getStoryById } from "@/content/mock/kekere-stories";
 import type { MockCompetition } from "@/content/mock/kekere-competitions";
+import { CompetitionApply } from "@/components/kekere/competition-apply";
 
 const GRAIN_SVG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
@@ -176,13 +177,12 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
         </section>
 
         {competition.status === "OPEN" &&
-          (countdown ? (
-            <Link
-              href={`/kekere/write?competition=${competition.slug}`}
-              className="block rounded-xl bg-[var(--color-primary)] px-4 py-[17px] text-center text-base font-semibold text-white shadow-[0_12px_28px_-10px_rgba(199,93,44,0.55)] transition-colors hover:bg-[var(--color-primary-light)]"
-            >
-              Submit your story
-            </Link>
+          (countdown && competition.id ? (
+            <CompetitionApply
+              competitionId={competition.id}
+              competitionSlug={competition.slug}
+              wordCountLimit={competition.wordCountLimit}
+            />
           ) : (
             <p className="rounded-xl bg-[var(--color-ink)]/10 px-4 py-[17px] text-center text-sm font-medium text-[var(--color-ink)]/60">
               Submissions closed

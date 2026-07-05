@@ -10,6 +10,10 @@ export interface MockCompetitionWinner {
 }
 
 export interface MockCompetition {
+  /** Only set when adapted from a real DB row (toMockCompetition) — the
+   * hand-authored MOCK_COMPETITIONS seed entries below have no id yet,
+   * since the database assigns it on create. */
+  id?: string;
   slug: string;
   title: string;
   theme: string;
