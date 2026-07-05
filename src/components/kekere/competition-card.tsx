@@ -55,11 +55,11 @@ export function CompetitionCard({ competition, daysLeft }: CompetitionCardProps)
         {competition.theme}
       </p>
 
-      <div className="mt-4 flex items-center justify-between border-t border-[rgba(42,26,18,0.08)] pt-4">
-        <span className="text-[13px] text-[var(--color-ink-muted-2)]">
+      <div className="mt-4 border-t border-[rgba(42,26,18,0.08)] pt-4">
+        <p className="text-[13px] text-[var(--color-ink-muted-2)]">
           {competition.prizeDescription}
-        </span>
-        <span className="text-[13.5px] font-semibold text-[var(--color-primary)]">
+        </p>
+        <span className="mt-4 block w-full rounded-[10px] bg-[var(--color-primary)] py-[11px] text-center text-[13.5px] font-semibold text-white transition-colors group-hover:bg-[var(--color-primary-light)]">
           See competition →
         </span>
       </div>
