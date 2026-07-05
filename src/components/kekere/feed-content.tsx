@@ -108,6 +108,7 @@ function StoryRow({
   onPreview: (story: MockStory) => void;
 }) {
   if (stories.length === 0) return null;
+  const hasMore = stories.length > 8;
   return (
     <section className="py-2">
       <h2 className="px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
@@ -120,7 +121,7 @@ function StoryRow({
         {stories.map((story) => (
           <RowCard key={story.id} story={story} readProgress={readingProgress?.[story.id]} onPreview={onPreview} />
         ))}
-        {seeMoreHref && (
+        {seeMoreHref && hasMore && (
           <Link
             href={seeMoreHref}
             className="flex w-[60px] flex-none items-center justify-center"
