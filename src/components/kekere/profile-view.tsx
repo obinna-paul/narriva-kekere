@@ -130,7 +130,7 @@ export function ProfileView(props: ProfileViewProps) {
   return (
     <>
       {editing ? (
-        <div className="px-[22px] pt-[18px]">
+        <div className="px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-[18px]">
           <div className="mb-[26px] flex items-center justify-between">
             <button
               type="button"
