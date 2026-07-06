@@ -7,7 +7,7 @@ export const metadata = { title: "Copyright & IP Policy Ã¢â‚¬â€ Keker
 export default function KekereCopyrightPage() {
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] pb-20">
+      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] pb-[calc(80px+env(safe-area-inset-bottom))]">
         <KekereNavWrapper />
         <CopyrightPolicy />
       </div>

@@ -189,7 +189,7 @@ export function FeedContent({
   }, [tagOpen]);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] pb-20 text-[var(--color-ink)]">
+    <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
       {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
         <div className="flex items-center justify-between px-5 pb-3 pt-4">

@@ -120,7 +120,7 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
         </div>
       </div>
 
-      <main className="mx-auto max-w-[680px] px-5 pb-20 pt-8">
+      <main className="mx-auto max-w-[680px] px-5 pb-[calc(80px+env(safe-area-inset-bottom))] pt-8">
         {/* Competition banner */}
         {competitionTitle && (
           <div className="mb-8 flex items-center gap-3 rounded-xl border border-[rgba(199,93,44,.2)] bg-[rgba(199,93,44,.05)] px-4 py-3.5">

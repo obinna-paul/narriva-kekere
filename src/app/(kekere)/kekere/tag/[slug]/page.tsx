@@ -90,7 +90,7 @@ export default async function TagBrowsePage({
   return (
     <KekereTheme>
       <KekereNavWrapper />
-      <div className="min-h-screen bg-[var(--color-bg)] pb-20 text-[var(--color-ink)]">
+      <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
         {/* Header */}
         <div className="px-5 pb-6 pt-8">
           <Link

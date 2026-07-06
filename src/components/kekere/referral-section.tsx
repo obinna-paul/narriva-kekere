@@ -30,7 +30,7 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
   const [linkCopied, setLinkCopied] = useState(false);
 
   return (
-    <div className="mx-auto max-w-[402px] px-[22px] pb-[80px] pt-6">
+    <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-6">
       <h1 className="font-[family-name:var(--font-display)] text-[26px] font-semibold text-[#2A1A12]">Invite friends, earn cowries</h1>
       <p className="mt-2 text-[14px] text-[#8A7565] leading-[1.55]">Share Kekere with friends. When someone you referred buys cowries for the first time — even just ₦500 — you earn 3 cowries instantly.</p>
 
