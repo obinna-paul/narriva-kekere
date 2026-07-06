@@ -78,7 +78,7 @@ export function NariIntelligence() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-4 gap-[14px]">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
         <SkeletonTableShell rows={5} cols={5} />
       </div>
     );
@@ -91,7 +91,7 @@ export function NariIntelligence() {
   return (
     <div className="space-y-7">
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Conversations (7d)", value: s.totalConversationsThisWeek.toLocaleString() },
           { label: "High intent (7d)", value: s.highIntentThisWeek.toLocaleString() },
@@ -107,15 +107,15 @@ export function NariIntelligence() {
 
       {/* Lead pipeline table */}
       <div>
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <h3 className="text-[13px] font-semibold text-[#1A1C20]">Lead pipeline</h3>
-          <div className="flex gap-1 rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
+          <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
             {["ALL", "HIGH", "MEDIUM", "LOW", "BROWSING"].map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setIntentFilter(f)}
-                className={cn("px-3 py-1.5 text-[11px] font-semibold rounded-[7px] capitalize transition-colors", intentFilter === f ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
+                className={cn("flex-none whitespace-nowrap px-3 py-1.5 text-[11px] font-semibold rounded-[7px] capitalize transition-colors", intentFilter === f ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
               >
                 {f === "ALL" ? "All" : `${f.charAt(0) + f.slice(1).toLowerCase()} intent`}
               </button>
@@ -126,8 +126,8 @@ export function NariIntelligence() {
         {leads.length === 0 ? (
           <AdminEmptyState title="No leads" note={intentFilter === "ALL" ? "Nari conversations that express interest will appear here." : `No ${intentFilter.toLowerCase()} intent leads.`} />
         ) : (
-          <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-            <div className="grid grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+          <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+            <div className="grid min-w-[760px] grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
               <span>Contact</span>
               <span>Summary</span>
               <span>Intent</span>
@@ -136,7 +136,7 @@ export function NariIntelligence() {
               <span>Last active</span>
             </div>
             {leads.map((lead) => (
-              <div key={lead.id} className="grid grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-4 last:border-0 hover:bg-[#FBFBFC]">
+              <div key={lead.id} className="grid min-w-[760px] grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-4 last:border-0 hover:bg-[#FBFBFC]">
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{lead.name ?? "Anonymous"}</p>
                   {lead.email && <p className="truncate text-[11px] text-[#8B919A]">{lead.email}</p>}

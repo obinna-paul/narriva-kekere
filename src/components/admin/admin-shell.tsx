@@ -10,9 +10,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#F4F5F7] text-[#1A1C20]">
       <AdminSidebar isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-      <div className="flex min-h-screen flex-1 flex-col md:ml-[248px]">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col md:ml-[248px]">
         <AdminTopBar onMenuClick={() => setMobileNavOpen(true)} />
-        <main className="flex-1 px-4 py-5 md:px-[34px] md:py-[30px]">
+        <main className="min-w-0 flex-1 px-4 py-5 md:px-[34px] md:py-[30px]">
           <div className="mx-auto max-w-[1320px]">{children}</div>
         </main>
       </div>

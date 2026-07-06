@@ -537,14 +537,16 @@ export function StoryReviewQueue() {
 
   if (loading) {
     return (
-      <div className="flex gap-4">
-        <div className="w-[200px] flex-none space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[90px] animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" />
-          ))}
+      <div className="overflow-x-auto">
+        <div className="flex min-w-[900px] gap-4">
+          <div className="w-[200px] flex-none space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-[90px] animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" />
+            ))}
+          </div>
+          <div className="flex-1 animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
+          <div className="w-[300px] flex-none animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
         </div>
-        <div className="flex-1 animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
-        <div className="w-[300px] flex-none animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" style={{ minHeight: 400 }} />
       </div>
     );
   }
@@ -552,7 +554,8 @@ export function StoryReviewQueue() {
   if (error) return <AdminViewError message={error} onRetry={loadQueue} />;
 
   return (
-    <div className="relative flex h-[calc(100vh-130px)] gap-4">
+    <div className="overflow-x-auto">
+    <div className="relative flex h-[calc(100vh-130px)] min-w-[900px] gap-4">
       {/* Toast */}
       {toast && (
         <div className={cn(
@@ -744,6 +747,7 @@ export function StoryReviewQueue() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

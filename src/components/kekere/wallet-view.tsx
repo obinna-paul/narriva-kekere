@@ -9,7 +9,7 @@ import { TopUpModal } from "@/components/kekere/top-up-modal";
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -46,6 +46,8 @@ const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = 
   EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_SENT: { icon: ArrowUpRight, color: "#8A7565" },
+  ADMIN_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  ADMIN_DEBIT: { icon: ArrowUpRight, color: "#8A7565" },
 };
 
 function TxIcon({ type }: { type: string }) {
@@ -65,6 +67,7 @@ function TxLabel(type: string): string {
     TIP_SENT: "Tip sent", TIP_RECEIVED: "Tip received",
     EARNINGS_CREDIT: "Earnings", REFERRAL: "Referral",
     READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
+    ADMIN_CREDIT: "Balance adjustment", ADMIN_DEBIT: "Balance adjustment",
   };
   return map[type] ?? type;
 }

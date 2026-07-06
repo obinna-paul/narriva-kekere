@@ -97,9 +97,8 @@ export const POST = withAuth(
       prisma.transaction.create({
         data: {
           walletId: wallet.id,
-          type: "TOP_UP",
+          type: amount > 0 ? "ADMIN_CREDIT" : "ADMIN_DEBIT",
           amountCowries: absAmount,
-          amountNgn: 0,
           walletField:
             walletType === "spending" ? ("SPENDING" as const) : ("EARNED" as const),
           description: `Manual adjustment: ${reason}`,

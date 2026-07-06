@@ -62,7 +62,7 @@ export function BookSalesView() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-4 gap-[14px]">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
         <SkeletonTableShell rows={6} cols={5} />
       </div>
     );
@@ -75,7 +75,7 @@ export function BookSalesView() {
   return (
     <div className="space-y-7">
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Total revenue", value: fmtNgn(ov.totalRevenueAllTimeNgn) },
           { label: "Copies sold", value: ov.totalUnitsAllTime.toLocaleString() },
@@ -93,8 +93,8 @@ export function BookSalesView() {
       {books.length === 0 ? (
         <AdminEmptyState title="No book sales yet" note="Sales will appear here once books are purchased." />
       ) : (
-        <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+        <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+          <div className="grid min-w-[760px] grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
             <span>Title</span>
             <span>Author</span>
             <span>Price</span>
@@ -103,7 +103,7 @@ export function BookSalesView() {
             <span>Last sale</span>
           </div>
           {books.map((b) => (
-            <div key={b.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
+            <div key={b.id} className="grid min-w-[760px] grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
               <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{b.title}</p>
               <p className="truncate text-[12px] text-[#646B73]">{b.authorName}</p>
               <span className="text-[13px] text-[#1A1C20]">{fmtNgn(b.price)}</span>

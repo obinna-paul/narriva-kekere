@@ -14,6 +14,13 @@ import type { TransactionType } from "@prisma/client";
 
 export interface ReconcileResult {
   totalIssued: number;
+  // Breakdown of totalIssued by source — the "no one has bought any
+  // cowries" question can't be answered from totalIssued alone, since it
+  // silently blends real Paystack revenue with free referral rewards and
+  // manual admin corrections.
+  totalFromTopUps: number;
+  totalFromReferralRewards: number;
+  totalFromAdminAdjustments: number; // net: admin credits minus admin debits
   totalInSpendingWallets: number;
   totalInEarnedWallets: number;
   totalSpentOnUnlocks: number;
@@ -40,14 +47,20 @@ async function sumTransactionAmounts(types: TransactionType[]): Promise<number> 
 
 export async function reconcileEconomy(): Promise<ReconcileResult> {
   const [
-    totalIssued,
+    totalFromTopUps,
+    totalFromReferralRewards,
+    totalAdminCredit,
+    totalAdminDebit,
     walletSums,
     totalSpentOnUnlocks,
     totalEarningsDistributed,
     platformEarningsSum,
     withdrawalSum,
   ] = await Promise.all([
-    sumTransactionAmounts(["TOP_UP", "REFERRAL_REWARD"]),
+    sumTransactionAmounts(["TOP_UP"]),
+    sumTransactionAmounts(["REFERRAL_REWARD"]),
+    sumTransactionAmounts(["ADMIN_CREDIT"]),
+    sumTransactionAmounts(["ADMIN_DEBIT"]),
     prisma.wallet.aggregate({
       _sum: { spendingBalance: true, earnedBalance: true },
     }),
@@ -59,6 +72,9 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
       _sum: { cowriesAmount: true },
     }),
   ]);
+
+  const totalFromAdminAdjustments = totalAdminCredit - totalAdminDebit;
+  const totalIssued = totalFromTopUps + totalFromReferralRewards + totalFromAdminAdjustments;
 
   const totalInSpendingWallets = walletSums._sum.spendingBalance ?? 0;
   const totalInEarnedWallets = walletSums._sum.earnedBalance?.toNumber() ?? 0;
@@ -72,6 +88,9 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
 
   return {
     totalIssued,
+    totalFromTopUps,
+    totalFromReferralRewards,
+    totalFromAdminAdjustments,
     totalInSpendingWallets,
     totalInEarnedWallets,
     totalSpentOnUnlocks,

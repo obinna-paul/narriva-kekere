@@ -163,6 +163,11 @@ enum TransactionType {
   REFERRAL_REWARD
   EARNINGS_CREDIT
   PLATFORM_EARNINGS
+  // Manual admin wallet adjustments (e.g. compensating a user, correcting an
+  // error) — must never share the TOP_UP type, since every revenue/conversion
+  // metric filters on TOP_UP to mean "a real Paystack purchase happened."
+  ADMIN_CREDIT
+  ADMIN_DEBIT
 }
 
 enum TransactionStatus {

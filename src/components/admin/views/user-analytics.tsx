@@ -51,8 +51,8 @@ export function UserAnalytics() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-4 gap-[14px]">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
-        <div className="grid grid-cols-2 gap-[14px]"><SkeletonChart /><SkeletonChart /></div>
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
+        <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2"><SkeletonChart /><SkeletonChart /></div>
       </div>
     );
   }
@@ -66,7 +66,7 @@ export function UserAnalytics() {
   return (
     <div className="space-y-7">
       {/* DAU / WAU / MAU */}
-      <div className="grid grid-cols-4 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "DAU", value: data.dau.toLocaleString(), note: "Daily active users" },
           { label: "WAU", value: data.wau.toLocaleString(), note: "Weekly active users" },
@@ -82,7 +82,7 @@ export function UserAnalytics() {
       </div>
 
       {/* Stickiness + Genre breakdown */}
-      <div className="grid grid-cols-2 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2">
         {/* Stickiness ratios */}
         <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
           <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Stickiness</h3>
