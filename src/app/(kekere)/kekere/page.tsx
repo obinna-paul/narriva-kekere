@@ -6,6 +6,7 @@ import { getKekereLandingStats } from "@/lib/data/kekere-landing";
 import { listCompetitions } from "@/lib/data/kekere-competitions";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
+import { LandingAuthButton } from "@/components/kekere/landing-auth-button";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -217,12 +218,7 @@ export default async function KekereLandingPage() {
                 priority
               />
             </Link>
-            <Link
-              href="/login"
-              className="rounded-[10px] bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(199,93,44,0.6)] transition-colors hover:bg-[var(--color-primary-light)]"
-            >
-              Sign in
-            </Link>
+            <LandingAuthButton isLoggedIn={isLoggedIn} />
           </div>
 
           <div className="relative z-[2] mx-auto flex w-full max-w-[1200px] flex-1 flex-wrap items-center gap-x-[56px] gap-y-10 px-6 pb-16 pt-6">
@@ -255,10 +251,10 @@ export default async function KekereLandingPage() {
 
               <div className="mt-8 flex flex-wrap items-center gap-[22px]">
                 <Link
-                  href={isLoggedIn ? "/kekere/feed" : "/signup"}
+                  href={isLoggedIn ? "/kekere/feed" : "/login"}
                   className="inline-block rounded-[10px] bg-[var(--color-primary)] px-[34px] py-4 text-base font-semibold text-white shadow-[0_14px_34px_-10px_rgba(199,93,44,0.7)] transition-colors hover:bg-[var(--color-primary-light)]"
                 >
-                  {isLoggedIn ? "Go to feed" : "Start Reading"}
+                  {isLoggedIn ? "Go to feed" : "Sign in"}
                 </Link>
                 <Link
                   href={isLoggedIn ? "/kekere/write" : "/signup"}
@@ -558,10 +554,10 @@ export default async function KekereLandingPage() {
               already waiting.
             </h2>
             <Link
-              href={isLoggedIn ? "/kekere/feed" : "/signup"}
+              href={isLoggedIn ? "/kekere/feed" : "/login"}
               className="mt-7 inline-block rounded-[10px] bg-[var(--color-primary)] px-10 py-4 text-base font-semibold text-white shadow-[0_14px_34px_-10px_rgba(199,93,44,0.7)] transition-colors hover:bg-[var(--color-primary-light)]"
             >
-              {isLoggedIn ? "Go to feed" : "Start Reading"}
+              {isLoggedIn ? "Go to feed" : "Sign in"}
             </Link>
           </div>
         </section>
