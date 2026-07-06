@@ -95,7 +95,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
   // Detail view (reading contract)
   if (detail) {
     return (
-      <div className="mx-auto max-w-[402px] px-[22px] pb-20 md:pb-[80px] pt-6 overflow-x-hidden">
+      <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] md:pb-[80px] pt-6 overflow-x-hidden">
         <button type="button" onClick={goBack} className="flex items-center gap-2 text-[14px] text-[#8A7565] hover:text-[#2A1A12]">
           <ArrowLeft size={15} /> Back
         </button>
@@ -197,7 +197,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
 
   // Inbox view
   return (
-    <div className="mx-auto max-w-[402px] px-[22px] pb-[80px] pt-6">
+    <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-6">
       <h1 className="font-[family-name:var(--font-display)] text-[26px] font-semibold text-[#2A1A12]">Contracts</h1>
 
       {pending.length > 0 && (

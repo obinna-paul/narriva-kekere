@@ -48,7 +48,7 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
   }
 
   return (
-    <div className="mx-auto max-w-[402px] px-[22px] pb-[80px] pt-6">
+    <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[rgba(42,26,18,0.08)]"><ArrowLeft size={16} className="text-[#8A7565]" /></button>

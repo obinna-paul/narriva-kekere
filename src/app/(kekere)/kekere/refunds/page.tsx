@@ -7,7 +7,7 @@ export const metadata = { title: "Refund & Cancellation Policy Ã¢â‚¬â€�
 export default function KekereRefundsPage() {
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] pb-20">
+      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)] pb-[calc(80px+env(safe-area-inset-bottom))]">
         <KekereNavWrapper />
         <RefundsPolicy />
       </div>

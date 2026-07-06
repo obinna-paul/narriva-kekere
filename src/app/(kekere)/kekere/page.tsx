@@ -7,6 +7,7 @@ import { listCompetitions } from "@/lib/data/kekere-competitions";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { LandingAuthButton } from "@/components/kekere/landing-auth-button";
+import { KekereFooter } from "@/components/kekere/kekere-footer";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -562,6 +563,7 @@ export default async function KekereLandingPage() {
           </div>
         </section>
       </main>
+      <KekereFooter />
     </KekereTheme>
   );
 }

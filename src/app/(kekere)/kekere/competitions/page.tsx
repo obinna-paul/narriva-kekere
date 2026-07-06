@@ -16,7 +16,7 @@ export default async function KekereCompetitionsPage() {
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[var(--color-bg)] pb-20 text-[var(--color-ink)]">
+      <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
         <KekereNavWrapper />
 
         <header className="px-[22px] pb-[14px] pt-[26px]">
