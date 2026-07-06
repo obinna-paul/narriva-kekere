@@ -132,11 +132,16 @@ model Wallet {
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Cowries from top-ups, completion bonuses, and referral rewards. Used to
-  // unlock stories and tip writers. Never withdrawable.
+  // unlock stories and tip writers. Never withdrawable — always whole
+  // cowries, since top-ups and story costs are both whole numbers.
   spendingBalance Int @default(0)
   // Cowries earned by writers from their 70% share of story unlocks and from
-  // tips received. The withdrawable balance.
-  earnedBalance   Int @default(0)
+  // tips received. The withdrawable balance. Decimal because a 70/30 split
+  // of a whole-cowrie story cost isn't always a whole number (e.g. a
+  // 1-cowrie unlock nets the writer exactly 0.7, not 0 or 1) — carrying the
+  // fraction instead of rounding it away is what actually gets writers
+  // their full 70%.
+  earnedBalance   Decimal @default(0) @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,7 +182,10 @@ model Transaction {
   wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
 
   type             TransactionType
-  amountCowries    Int
+  // Decimal, not Int: EARNINGS_CREDIT rows record a writer's exact 70%
+  // share, which isn't always a whole number. Whole-cowrie transaction
+  // types (TOP_UP, UNLOCK, etc.) just store an integral value here, e.g. 5.00.
+  amountCowries    Decimal @db.Decimal(10, 2)
   amountNgn        Float?
   paymentReference String?
   status           TransactionStatus @default(PENDING)
@@ -707,7 +715,9 @@ model WithdrawalRequest {
   id                   String                  @id @default(cuid())
   userId               String
   user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cowriesAmount        Int
+  // Decimal so a writer can withdraw their full earned balance even when it
+  // isn't a whole number (e.g. 42.7 cowries).
+  cowriesAmount        Decimal                 @db.Decimal(10, 2)
   ngnAmount            Float
   bankDetailsId        String
   bankDetails          WriterBankDetails       @relation(fields: [bankDetailsId], references: [id], onDelete: Cascade)
@@ -728,7 +738,9 @@ model PlatformEarnings {
   storyId   String
   story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
   unlockId  String   @unique
-  cowries   Int
+  // The platform's 30% share — the exact remainder after the writer's
+  // Decimal share, not necessarily a whole number either.
+  cowries   Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
 
   @@index([storyId])

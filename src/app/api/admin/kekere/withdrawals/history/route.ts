@@ -16,7 +16,7 @@ export const GET = withAuth(
       payouts: completed.map((w) => ({
         id: w.id,
         writerName: w.user.name,
-        cowriesAmount: w.cowriesAmount,
+        cowriesAmount: w.cowriesAmount.toNumber(),
         ngnAmount: w.ngnAmount,
         paystackTransferRef: w.paystackTransferRef,
         processedAt: w.processedAt,

@@ -74,7 +74,7 @@ export const POST = withAuth(
     const currentBalance =
       walletType === "spending"
         ? wallet.spendingBalance
-        : wallet.earnedBalance;
+        : wallet.earnedBalance.toNumber();
 
     if (amount < 0 && currentBalance < Math.abs(amount)) {
       return NextResponse.json(
@@ -117,7 +117,7 @@ export const POST = withAuth(
     const newBalance =
       walletType === "spending"
         ? updatedWallet.spendingBalance
-        : updatedWallet.earnedBalance;
+        : updatedWallet.earnedBalance.toNumber();
 
     return NextResponse.json({ success: true, newBalance });
   },

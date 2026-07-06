@@ -60,7 +60,7 @@ export const GET = withAuth(
         totalUnlocks: s._count.unlocks,
         completionRate: s.completionRate,
         totalEarnings: s.platformEarnings.reduce(
-          (sum, pe) => sum + pe.cowries,
+          (sum, pe) => sum + pe.cowries.toNumber(),
           0,
         ),
       })),

@@ -20,8 +20,9 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const nairaAmount = amount ? Math.round((parseInt(amount) || 0) * NAIRA_RATE) : 0;
-  const remaining = availableBalance - (parseInt(amount) || 0);
+  const parsedAmount = parseFloat(amount) || 0;
+  const nairaAmount = amount ? Math.round(parsedAmount * NAIRA_RATE) : 0;
+  const remaining = Math.round((availableBalance - parsedAmount) * 100) / 100;
 
   async function handleVerify() {
     if (!bankName || accountNumber.length !== 10) return;
@@ -38,7 +39,7 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
 
   async function handleSubmit() {
     try {
-      const res = await fetch("/api/kekere/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cowriesAmount: parseInt(amount) }) });
+      const res = await fetch("/api/kekere/withdrawals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cowriesAmount: parsedAmount }) });
       if (res.ok) {
         setSubmitted(true);
         setStep(4);
@@ -93,22 +94,32 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
       {/* Step 2: Amount */}
       {step === 2 && (
         <div className="mt-6">
-          <p className="text-[14px] text-[#8A7565]">Available: <span className="font-semibold text-[#2A1A12]">{availableBalance.toLocaleString()} cowries</span></p>
+          <p className="text-[14px] text-[#8A7565]">Available: <span className="font-semibold text-[#2A1A12]">{availableBalance.toFixed(2)} cowries</span></p>
           <div className="mt-5">
             <label className="mb-1.5 block text-[13px] font-medium text-[#2A1A12]">Amount (cowries)</label>
-            <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))} placeholder={`Min ${MIN_WITHDRAWAL} cowries`} className="w-full rounded-[12px] border border-[rgba(42,26,18,0.12)] bg-white px-4 py-3 text-[24px] font-[family-name:var(--font-display)] font-semibold text-[#2A1A12] outline-none placeholder:text-[#A08C7C]" />
+            <input
+              value={amount}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^\d.]/g, "");
+                const firstDot = next.indexOf(".");
+                const cleaned = firstDot === -1 ? next : next.slice(0, firstDot + 1) + next.slice(firstDot + 1).replace(/\./g, "");
+                setAmount(cleaned);
+              }}
+              placeholder={`Min ${MIN_WITHDRAWAL} cowries`}
+              className="w-full rounded-[12px] border border-[rgba(42,26,18,0.12)] bg-white px-4 py-3 text-[24px] font-[family-name:var(--font-display)] font-semibold text-[#2A1A12] outline-none placeholder:text-[#A08C7C]"
+            />
           </div>
           {amount && (
             <div className="mt-4 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
               <div className="text-[13px] text-[#8A7565]">You receive</div>
               <div className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#1F8A5B]">&#8358;{nairaAmount.toLocaleString()}</div>
-              <div className="mt-2 text-[12px] text-[#A08C7C]">Remaining after: {remaining.toLocaleString()} cowries</div>
+              <div className="mt-2 text-[12px] text-[#A08C7C]">Remaining after: {remaining.toFixed(2)} cowries</div>
             </div>
           )}
           <button
             type="button"
             onClick={() => setStep(3)}
-            disabled={!amount || (parseInt(amount) || 0) < MIN_WITHDRAWAL || (parseInt(amount) || 0) > availableBalance}
+            disabled={!amount || parsedAmount < MIN_WITHDRAWAL || parsedAmount > availableBalance}
             className="mt-5 w-full rounded-[12px] bg-[#1F8A5B] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             Review withdrawal
@@ -125,7 +136,7 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
               <div className="flex justify-between"><span className="text-[#8A7565]">Cowries</span><span className="text-[#2A1A12] font-medium">{amount} cowries</span></div>
               <div className="flex justify-between"><span className="text-[#8A7565]">Bank</span><span className="text-[#2A1A12] font-medium">{bankName}</span></div>
               <div className="flex justify-between"><span className="text-[#8A7565]">Account</span><span className="text-[#2A1A12] font-medium">****{accountNumber.slice(-3)}</span></div>
-              <div className="flex justify-between"><span className="text-[#8A7565]">Remaining balance</span><span className="text-[#2A1A12] font-medium">{remaining} cowries</span></div>
+              <div className="flex justify-between"><span className="text-[#8A7565]">Remaining balance</span><span className="text-[#2A1A12] font-medium">{remaining.toFixed(2)} cowries</span></div>
             </div>
           </div>
           <p className="mt-3 text-[12px] text-[#A08C7C] text-center">Your request will be reviewed by the admin team.</p>
@@ -144,7 +155,7 @@ export function WithdrawalPage({ availableBalance, hasBankDetails }: { available
           <h2 className="mt-5 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[#2A1A12]">Request received</h2>
           <p className="mt-2 text-[14px] text-[#8A7565]">Your withdrawal of {amount} cowries (&#8358;{nairaAmount.toLocaleString()}) is under review.</p>
           <div className="mt-3 rounded-full bg-[#B7791F]/15 px-3 py-1 text-[12px] font-medium text-[#B7791F]">Pending review</div>
-          <div className="mt-4 text-[14px] text-[#A08C7C]">Updated balance: {remaining.toLocaleString()} cowries</div>
+          <div className="mt-4 text-[14px] text-[#A08C7C]">Updated balance: {remaining.toFixed(2)} cowries</div>
           <button type="button" onClick={() => router.push("/kekere/wallet")} className="mt-6 rounded-[12px] bg-[#C75D2C] px-8 py-3 text-[14px] font-semibold text-white">
             Back to wallet
           </button>

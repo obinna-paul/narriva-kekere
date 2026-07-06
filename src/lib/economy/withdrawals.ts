@@ -37,8 +37,9 @@ export async function createWithdrawalRequest(
     create: { userId },
     update: {},
   });
-  if (wallet.earnedBalance < cowriesAmount) {
-    return { error: "insufficient_earned_balance", balance: wallet.earnedBalance };
+  const earnedBalance = wallet.earnedBalance.toNumber();
+  if (earnedBalance < cowriesAmount) {
+    return { error: "insufficient_earned_balance", balance: earnedBalance };
   }
 
   const existing = await prisma.withdrawalRequest.findFirst({
@@ -136,7 +137,7 @@ export async function failWithdrawal(
     }
   });
 
-  return { success: true, userId: request.userId, cowriesAmount: request.cowriesAmount };
+  return { success: true, userId: request.userId, cowriesAmount: request.cowriesAmount.toNumber() };
 }
 
 export async function completeWithdrawal(
@@ -148,6 +149,8 @@ export async function completeWithdrawal(
     include: { user: { select: { name: true, email: true } } },
   });
   if (!request) return { error: "not_found" };
+
+  const cowriesAmount = request.cowriesAmount.toNumber();
 
   await prisma.$transaction([
     prisma.withdrawalRequest.update({
@@ -163,14 +166,14 @@ export async function completeWithdrawal(
   await sendEmail({
     to: request.user.email,
     subject: "Your withdrawal has been completed",
-    body: `Hi ${request.user.name},\n\nYour withdrawal of ${request.cowriesAmount} cowries (₦${request.ngnAmount}) has been completed and should arrive in your bank account within 24 hours.\n\nReference: ${paystackTransferRef}`,
+    body: `Hi ${request.user.name},\n\nYour withdrawal of ${cowriesAmount} cowries (₦${request.ngnAmount}) has been completed and should arrive in your bank account within 24 hours.\n\nReference: ${paystackTransferRef}`,
   });
 
   await createNotification({
     userId: request.userId,
     type: "WITHDRAWAL_PROCESSED",
     title: "Withdrawal successful",
-    body: `${request.cowriesAmount} cowries (₦${request.ngnAmount}) have been sent to your bank account.`,
+    body: `${cowriesAmount} cowries (₦${request.ngnAmount}) have been sent to your bank account.`,
     link: "/kekere/wallet",
   });
 

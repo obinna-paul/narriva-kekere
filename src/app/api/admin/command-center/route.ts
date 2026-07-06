@@ -223,7 +223,7 @@ export const GET = withAuth(
 
     // ---- Cowries ----
     const cowriesInCirculation =
-      (wallets._sum.spendingBalance ?? 0) + (wallets._sum.earnedBalance ?? 0);
+      (wallets._sum.spendingBalance ?? 0) + (wallets._sum.earnedBalance?.toNumber() ?? 0);
 
     // ---- Pending actions ----
     const storiesAwaiting = storiesAwaitingReview;

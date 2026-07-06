@@ -68,7 +68,7 @@ export const GET = withAuth(
       referralCode: user.referralCode,
       cowrieBalances: {
         spendingBalance: user.wallet?.spendingBalance ?? 0,
-        earnedBalance: user.wallet?.earnedBalance ?? 0,
+        earnedBalance: user.wallet?.earnedBalance.toNumber() ?? 0,
       },
       stats: {
         storyCount: user._count.stories,

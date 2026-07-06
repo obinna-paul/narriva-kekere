@@ -29,11 +29,11 @@ export default async function KekereWalletPage() {
 
   const referralEarnings = wallet?.transactions
     .filter((t) => t.type === "REFERRAL" || t.type === "REFERRAL_REWARD")
-    .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
+    .reduce((sum, t) => sum + t.amountCowries.toNumber(), 0) ?? 0;
 
   const tipEarnings = wallet?.transactions
-    .filter((t) => t.type === "TIP" && t.amountCowries > 0)
-    .reduce((sum, t) => sum + t.amountCowries, 0) ?? 0;
+    .filter((t) => t.type === "TIP" && t.amountCowries.toNumber() > 0)
+    .reduce((sum, t) => sum + t.amountCowries.toNumber(), 0) ?? 0;
 
   const isWriter = user?.role === "WRITER" || user?.role === "ADMIN";
 
@@ -43,7 +43,7 @@ export default async function KekereWalletPage() {
         <KekereNavWrapper />
         <WalletView
           spendingBalance={wallet?.spendingBalance ?? 0}
-          earnedBalance={wallet?.earnedBalance ?? 0}
+          earnedBalance={wallet?.earnedBalance.toNumber() ?? 0}
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
           isWriter={isWriter}
@@ -57,7 +57,7 @@ export default async function KekereWalletPage() {
               .map((tx) => ({
                 id: tx.id,
                 type: tx.type as Exclude<typeof tx.type, "COMPLETION_BONUS">,
-                amountCowries: tx.amountCowries,
+                amountCowries: tx.amountCowries.toNumber(),
                 amountNgn: tx.amountNgn,
                 description: tx.description,
                 date: tx.createdAt.toISOString(),

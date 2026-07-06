@@ -35,7 +35,7 @@ export const GET = withAuth(
     return NextResponse.json({
       id: request.id,
       status: request.status,
-      cowriesAmount: request.cowriesAmount,
+      cowriesAmount: request.cowriesAmount.toNumber(),
       ngnAmount: request.ngnAmount,
       requestedAt: request.requestedAt,
       processedAt: request.processedAt,
@@ -60,13 +60,13 @@ export const GET = withAuth(
       earningsHistory: earningsTransactions.map((t) => ({
         id: t.id,
         type: t.type,
-        amountCowries: t.amountCowries,
+        amountCowries: t.amountCowries.toNumber(),
         description: t.description,
         createdAt: t.createdAt,
       })),
       previousWithdrawals: previousWithdrawals.map((w) => ({
         id: w.id,
-        cowriesAmount: w.cowriesAmount,
+        cowriesAmount: w.cowriesAmount.toNumber(),
         ngnAmount: w.ngnAmount,
         status: w.status,
         requestedAt: w.requestedAt,

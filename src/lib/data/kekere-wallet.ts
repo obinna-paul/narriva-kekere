@@ -35,7 +35,7 @@ export async function listAllTransactions(): Promise<AdminTransactionRow[]> {
     userEmail: t.wallet.user.email,
     type: t.type,
     status: t.status,
-    amountCowries: t.amountCowries,
+    amountCowries: t.amountCowries.toNumber(),
     amountNgn: t.amountNgn,
     paymentReference: t.paymentReference,
     createdAt: t.createdAt,
