@@ -13,7 +13,7 @@ const adjustSchema = z.object({
   reason: z.string().min(10, "Reason must be at least 10 characters."),
 });
 
-const SUPER_ADMIN_DEFAULT = "admin@narriva.com";
+const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 export const POST = withAuth(
   async (request, session, { params }) => {
