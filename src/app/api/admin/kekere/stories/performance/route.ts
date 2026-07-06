@@ -97,7 +97,7 @@ export const GET = withAuth(
       rank: i + 1,
       userId: w.user.id,
       name: w.user.name,
-      earnedCowries: w.earnedBalance,
+      earnedCowries: w.earnedBalance.toNumber(),
     }));
 
     return NextResponse.json({ trending, genres, risingWriters });

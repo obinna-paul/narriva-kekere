@@ -17,7 +17,7 @@ export default async function KekereWithdrawPage() {
     <KekereTheme>
       <div className="min-h-screen bg-[#F5EBDD]">
         <KekereNavWrapper />
-        <WithdrawalPage availableBalance={wallet?.earnedBalance ?? 0} hasBankDetails={false} />
+        <WithdrawalPage availableBalance={wallet?.earnedBalance.toNumber() ?? 0} hasBankDetails={false} />
       </div>
     </KekereTheme>
   );

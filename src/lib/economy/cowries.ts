@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { getSettingNumber } from "@/lib/settings/get";
+import { round2 } from "@/lib/economy/round";
 import {
   TIP_AMOUNT_COWRIES,
   WRITER_EARNINGS_RATE,
@@ -107,8 +108,10 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
   }
 
   const writerRate = await getSettingNumber("writer_earnings_rate", WRITER_EARNINGS_RATE);
-  const writerShare = Math.floor(story.cowrieCost * writerRate);
-  const platformShare = story.cowrieCost - writerShare;
+  // Exact decimal split, not floored to a whole cowrie — a 1-cowrie unlock
+  // nets the writer exactly 0.70, not 0.
+  const writerShare = round2(story.cowrieCost * writerRate);
+  const platformShare = round2(story.cowrieCost - writerShare);
 
   // Ensure the writer's wallet row exists before the atomic block below —
   // this upsert moves no money, it only guarantees `writerWallet.id` is

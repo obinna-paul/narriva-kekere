@@ -9,7 +9,10 @@ import { MINIMUM_WITHDRAWAL_COWRIES } from "@/content/decisions";
 import { createWithdrawalRequest } from "@/lib/economy/withdrawals";
 
 const withdrawalSchema = z.object({
-  cowriesAmount: z.number().int().positive(),
+  // Earned balances can be fractional (a writer's 70% share of a story
+  // unlock isn't always a whole number) — allow up to 2 decimal places,
+  // matching the Decimal(10,2) column.
+  cowriesAmount: z.number().positive().multipleOf(0.01),
 });
 
 export const POST = withAuth(async (request, session) => {
@@ -37,7 +40,9 @@ export const POST = withAuth(async (request, session) => {
   }
 
   const rate = await getSettingNumber("withdrawal_rate_ngn_per_cowrie", 50);
-  const ngnAmount = cowriesAmount * rate;
+  // Round off binary floating-point dust (e.g. 42.7 * 50 can land on
+  // 2135.0000000000005) — NGN amounts are whole currency, not fractional.
+  const ngnAmount = Math.round(cowriesAmount * rate);
 
   const result = await createWithdrawalRequest(session.user.id, cowriesAmount, ngnAmount);
 

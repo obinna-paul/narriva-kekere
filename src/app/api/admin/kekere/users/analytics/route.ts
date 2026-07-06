@@ -123,7 +123,7 @@ export const GET = withAuth(
       topWriters: topWriters.map((w) => ({
         userId: w.user.id,
         displayName: obfuscate(w.user.name),
-        earnedBalance: w.earnedBalance,
+        earnedBalance: w.earnedBalance.toNumber(),
         storyCount: w.user._count.stories,
       })),
     });

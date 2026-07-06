@@ -48,7 +48,7 @@ export const GET = withAuth(
         id: r.id,
         userName: r.user.name,
         userEmail: r.user.email,
-        cowriesAmount: r.cowriesAmount,
+        cowriesAmount: r.cowriesAmount.toNumber(),
         ngnAmount: r.ngnAmount,
         bankDetails: {
           bankName: r.bankDetails.bankName,

@@ -101,7 +101,7 @@ export function WalletView({
                 <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-semibold text-white">Writer</span>
               </div>
               <div className="mt-3 font-[family-name:var(--font-display)] text-[36px] font-semibold text-white tracking-[-0.01em]">
-                {earnedBalance.toLocaleString()} <span className="text-[24px]">cowries</span>
+                {earnedBalance.toFixed(2)} <span className="text-[24px]">cowries</span>
               </div>
               <div className="mt-1 text-[15px] text-white/70">~&#8358;{nairaValue.toLocaleString()}</div>
               <button
@@ -137,7 +137,7 @@ export function WalletView({
           {!isWriter && (
             <div className="border-t border-white/10 px-5 py-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] text-[#A08C7C]">Earned balance · {earnedBalance} cowries</span>
+                <span className="text-[13px] text-[#A08C7C]">Earned balance · {earnedBalance.toFixed(2)} cowries</span>
                 <span className="text-[12px] text-white/50">Publish a story to start earning</span>
               </div>
             </div>

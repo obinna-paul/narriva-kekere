@@ -35,7 +35,7 @@ async function sumTransactionAmounts(types: TransactionType[]): Promise<number> 
     where: { type: { in: types }, status: "COMPLETED" },
     _sum: { amountCowries: true },
   });
-  return result._sum.amountCowries ?? 0;
+  return result._sum.amountCowries?.toNumber() ?? 0;
 }
 
 export async function reconcileEconomy(): Promise<ReconcileResult> {
@@ -61,9 +61,9 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
   ]);
 
   const totalInSpendingWallets = walletSums._sum.spendingBalance ?? 0;
-  const totalInEarnedWallets = walletSums._sum.earnedBalance ?? 0;
-  const totalPlatformEarned = platformEarningsSum._sum.cowries ?? 0;
-  const totalWithdrawnCowries = withdrawalSum._sum.cowriesAmount ?? 0;
+  const totalInEarnedWallets = walletSums._sum.earnedBalance?.toNumber() ?? 0;
+  const totalPlatformEarned = platformEarningsSum._sum.cowries?.toNumber() ?? 0;
+  const totalWithdrawnCowries = withdrawalSum._sum.cowriesAmount?.toNumber() ?? 0;
 
   const left = totalIssued + totalEarningsDistributed;
   const right =
