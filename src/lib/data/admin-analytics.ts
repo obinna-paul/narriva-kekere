@@ -1,17 +1,20 @@
 import { prisma } from "@/lib/db/prisma";
 
+// Real Narriva book revenue lives in BookPurchase (written by
+// createBookPurchase in books.ts) — nothing in the codebase ever writes to
+// the older BookSale table, so querying it always returned zero/empty
+// regardless of actual sales.
+
 export async function getAdminOverview() {
-  const [totalUsers, totalLeads, totalProjects, totalBooks, recentSales, signups7d] =
+  const [totalUsers, totalLeads, totalProjects, totalBooks, recentPurchases, signups7d] =
     await Promise.all([
       prisma.user.count(),
       prisma.nariConversation.count({ where: { classifiedLead: true } }),
       prisma.authorProject.count(),
       prisma.book.count(),
-      prisma.bookSale.aggregate({
-        _sum: { amountNgn: true, quantity: true },
-        where: {
-          saleDate: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-        },
+      prisma.bookPurchase.findMany({
+        where: { purchasedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        select: { book: { select: { price: true } } },
       }),
       prisma.user.count({
         where: {
@@ -25,28 +28,42 @@ export async function getAdminOverview() {
     totalLeads,
     totalProjects,
     totalBooks,
-    revenue30d: recentSales._sum.amountNgn ?? 0,
-    salesCount30d: recentSales._sum.quantity ?? 0,
+    revenue30d: recentPurchases.reduce((sum, p) => sum + p.book.price, 0),
+    salesCount30d: recentPurchases.length,
     signups7d,
   };
 }
 
 export async function getSalesData(days = 30) {
-  return prisma.bookSale.findMany({
+  const purchases = await prisma.bookPurchase.findMany({
     where: {
-      saleDate: { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) },
+      purchasedAt: { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) },
     },
-    include: { book: { select: { title: true, author: { select: { name: true } } } } },
-    orderBy: { saleDate: "desc" },
+    include: { book: { select: { title: true, price: true, author: { select: { name: true } } } } },
+    orderBy: { purchasedAt: "desc" },
     take: 100,
   });
+
+  return purchases.map((p) => ({
+    id: p.id,
+    book: p.book,
+    amountNgn: p.book.price,
+    saleDate: p.purchasedAt,
+  }));
 }
 
 export async function getAuthorBookSales(authorId: string) {
-  return prisma.bookSale.findMany({
+  const purchases = await prisma.bookPurchase.findMany({
     where: { book: { authorId } },
-    include: { book: { select: { title: true } } },
-    orderBy: { saleDate: "desc" },
+    include: { book: { select: { title: true, price: true } } },
+    orderBy: { purchasedAt: "desc" },
     take: 100,
   });
+
+  return purchases.map((p) => ({
+    id: p.id,
+    book: p.book,
+    amountNgn: p.book.price,
+    saleDate: p.purchasedAt,
+  }));
 }

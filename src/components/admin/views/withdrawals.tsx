@@ -6,15 +6,18 @@ import { AdminViewError, AdminEmptyState, SkeletonTableShell } from "@/component
 
 interface Withdrawal {
   id: string;
-  userId: string;
   userName: string;
   userEmail: string;
-  amountCowries: number;
-  amountNgn: number;
-  bankName: string;
-  bankAccountNumber: string;
-  bankAccountName: string;
-  status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED" | "ON_HOLD";
+  cowriesAmount: number;
+  ngnAmount: number;
+  bankDetails: {
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+    verifiedAt: string | null;
+  };
+  status: "PENDING" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED" | "FAILED";
   requestedAt: string;
   processedAt: string | null;
   adminNote: string | null;
@@ -22,10 +25,11 @@ interface Withdrawal {
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-[rgba(183,121,31,0.10)] text-[#B7791F]",
+  APPROVED: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
   PROCESSING: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
   COMPLETED: "bg-[rgba(31,138,91,0.10)] text-[#1F8A5B]",
   REJECTED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
-  ON_HOLD: "bg-[rgba(20,22,26,0.07)] text-[#646B73]",
+  FAILED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
 };
 
 function relativeTime(iso: string) {
@@ -53,7 +57,7 @@ export function WithdrawalsView() {
       const res = await fetch(`/api/admin/kekere/withdrawals?${params}`);
       if (!res.ok) throw new Error(`${res.status}`);
       const d = await res.json();
-      setItems(d.withdrawals ?? []);
+      setItems(d.requests ?? []);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -89,7 +93,10 @@ export function WithdrawalsView() {
     }
   }
 
-  const FILTERS = ["PENDING", "PROCESSING", "ON_HOLD", "COMPLETED", "REJECTED"];
+  // "ON_HOLD" isn't a real status — a held request stays PENDING with an
+  // adminNote attached (see the /hold endpoint), surfaced as a badge below
+  // rather than a separate, always-empty filter tab.
+  const FILTERS = ["PENDING", "PROCESSING", "COMPLETED", "REJECTED", "FAILED"];
 
   return (
     <div className="space-y-5">
@@ -193,19 +200,29 @@ export function WithdrawalsView() {
                 <p className="truncate text-[11px] text-[#8B919A]">{w.userEmail}</p>
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[12px] font-medium text-[#1A1C20]">{w.bankName}</p>
-                <p className="font-mono text-[11px] text-[#9AA0A8]">{w.bankAccountNumber}</p>
+                <p className="truncate text-[12px] font-medium text-[#1A1C20]">{w.bankDetails.bankName}</p>
+                <p className="font-mono text-[11px] text-[#9AA0A8]">{w.bankDetails.accountNumber}</p>
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-[#1A1C20]">₦{w.amountNgn.toLocaleString()}</p>
-                <p className="text-[11px] text-[#8B919A]">{w.amountCowries.toLocaleString()} ₵</p>
+                <p className="text-[13px] font-semibold text-[#1A1C20]">₦{w.ngnAmount.toLocaleString()}</p>
+                <p className="text-[11px] text-[#8B919A]">{w.cowriesAmount.toLocaleString()} ₵</p>
               </div>
-              <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", STATUS_STYLES[w.status] ?? STATUS_STYLES.PENDING)}>
-                {w.status.replace("_", " ")}
-              </span>
+              <div className="flex flex-col items-start gap-1">
+                <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", STATUS_STYLES[w.status] ?? STATUS_STYLES.PENDING)}>
+                  {w.status.replace("_", " ")}
+                </span>
+                {w.status === "PENDING" && w.adminNote && (
+                  <span
+                    title={w.adminNote}
+                    className="rounded-full bg-[rgba(20,22,26,0.07)] px-2.5 py-1 text-[10px] font-bold uppercase text-[#646B73] w-fit"
+                  >
+                    On hold
+                  </span>
+                )}
+              </div>
               <span className="text-[12px] text-[#8B919A]">{relativeTime(w.requestedAt)}</span>
               <div className="flex items-center gap-2">
-                {w.status === "PENDING" || w.status === "ON_HOLD" ? (
+                {w.status === "PENDING" ? (
                   <>
                     <button
                       type="button"

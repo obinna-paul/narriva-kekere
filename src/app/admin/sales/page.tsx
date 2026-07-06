@@ -20,10 +20,7 @@ export default async function AdminSalesPage() {
           <tr style={{ borderBottom: "2px solid #eee", textAlign: "left" }}>
             <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Book</th>
             <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Author</th>
-            <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Type</th>
-            <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Qty</th>
             <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Amount</th>
-            <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Royalty</th>
             <th style={{ padding: "12px 16px", fontSize: "13px", color: "#888" }}>Date</th>
           </tr>
         </thead>
@@ -32,10 +29,7 @@ export default async function AdminSalesPage() {
             <tr key={s.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
               <td style={{ padding: "12px 16px", fontSize: "14px", fontWeight: 500 }}>{s.book.title}</td>
               <td style={{ padding: "12px 16px", fontSize: "13px", color: "#666" }}>{s.book.author.name}</td>
-              <td style={{ padding: "12px 16px", fontSize: "13px" }}>{s.saleType}</td>
-              <td style={{ padding: "12px 16px", fontSize: "14px" }}>{s.quantity}</td>
               <td style={{ padding: "12px 16px", fontSize: "14px", fontWeight: 500 }}>₦{s.amountNgn.toLocaleString()}</td>
-              <td style={{ padding: "12px 16px", fontSize: "13px", color: "#1F6F4A" }}>{s.royaltyNgn ? `₦${s.royaltyNgn.toLocaleString()}` : "—"}</td>
               <td style={{ padding: "12px 16px", fontSize: "12px", color: "#999" }}>{new Date(s.saleDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
             </tr>
           ))}
