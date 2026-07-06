@@ -59,7 +59,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
   const rules = competition.rules && competition.rules.length > 0 ? competition.rules : DEFAULT_RULES;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] pb-10">
+    <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))]">
       <div className="relative overflow-hidden bg-[#2A1A12] px-[22px] pb-9 pt-[18px]">
         <div
           aria-hidden="true"
