@@ -25,8 +25,17 @@ interface GeoData {
   countries: Array<{ country: string; users: number; pct: number }>;
 }
 
+interface FunnelStep {
+  step: number;
+  name: string;
+  count: number;
+  dropoffRate: number | null;
+  note?: string;
+}
+
 interface FunnelData {
-  steps: Array<{ name: string; users: number; dropoffPct: number }>;
+  narriva: FunnelStep[];
+  kekere: FunnelStep[];
 }
 
 function formatSeconds(sec: number): string {
@@ -204,30 +213,42 @@ function FunnelsTab() {
   if (loading) return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" />)}</div>;
   if (error) return <AdminViewError message={error} onRetry={load} />;
 
-  const steps = data?.steps ?? [];
-  if (steps.length === 0) return <p className="py-10 text-center text-[13px] text-[#9AA0A8]">Connect GA4 for funnel data.</p>;
+  const narriva = data?.narriva ?? [];
+  const kekere = data?.kekere ?? [];
+  if (narriva.length === 0 && kekere.length === 0) return <p className="py-10 text-center text-[13px] text-[#9AA0A8]">Connect GA4 for funnel data.</p>;
 
-  const maxUsers = Math.max(...steps.map((s) => s.users), 1);
+  function FunnelSection({ title, steps }: { title: string; steps: FunnelStep[] }) {
+    if (steps.length === 0) return null;
+    const maxCount = Math.max(...steps.map((s) => s.count), 1);
+    return (
+      <div className="space-y-3">
+        <h3 className="text-[13px] font-semibold text-[#1A1C20]">{title}</h3>
+        {steps.map((step) => (
+          <div key={step.step} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#1A1C20] text-[11px] font-bold text-white">{step.step}</span>
+                <span className="text-[13px] font-semibold text-[#1A1C20]">{step.name}</span>
+              </div>
+              <div className="flex items-center gap-4 text-[12px]">
+                <span className="font-semibold text-[#1A1C20]">{step.count.toLocaleString()} users</span>
+                {step.dropoffRate !== null && step.dropoffRate > 0 && <span className="text-[#C0392B]">−{step.dropoffRate}% dropoff</span>}
+              </div>
+            </div>
+            <div className="h-[8px] overflow-hidden rounded-full bg-[rgba(20,22,26,0.07)]">
+              <div className="h-full rounded-full bg-[#1E3A8A] transition-all" style={{ width: `${(step.count / maxCount) * 100}%` }} />
+            </div>
+            {step.note && <p className="mt-2 text-[11px] italic text-[#9AA0A8]">{step.note}</p>}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {steps.map((step, i) => (
-        <div key={step.name} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-4">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#1A1C20] text-[11px] font-bold text-white">{i + 1}</span>
-              <span className="text-[13px] font-semibold text-[#1A1C20]">{step.name}</span>
-            </div>
-            <div className="flex items-center gap-4 text-[12px]">
-              <span className="font-semibold text-[#1A1C20]">{step.users.toLocaleString()} users</span>
-              {step.dropoffPct > 0 && <span className="text-[#C0392B]">−{step.dropoffPct}% dropoff</span>}
-            </div>
-          </div>
-          <div className="h-[8px] overflow-hidden rounded-full bg-[rgba(20,22,26,0.07)]">
-            <div className="h-full rounded-full bg-[#1E3A8A] transition-all" style={{ width: `${(step.users / maxUsers) * 100}%` }} />
-          </div>
-        </div>
-      ))}
+    <div className="space-y-7">
+      <FunnelSection title="Narriva" steps={narriva} />
+      <FunnelSection title="Kekere" steps={kekere} />
     </div>
   );
 }

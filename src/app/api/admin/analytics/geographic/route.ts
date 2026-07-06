@@ -69,12 +69,19 @@ export const GET = withAuth(
 
     const ga4Error = !countryReport ? "GA4 API unavailable or credentials not configured" : undefined;
 
+    const countryRows = countryReport?.rows?.map((r) => ({
+      country: r.dimensionValues?.[0]?.value ?? "",
+      sessions: parseInt(r.metricValues?.[0]?.value ?? "0"),
+      users: parseInt(r.metricValues?.[1]?.value ?? "0"),
+    })) ?? [];
+    const totalCountryUsers = countryRows.reduce((sum, c) => sum + c.users, 0);
+
     return NextResponse.json({
-      countries: countryReport?.rows?.map((r) => ({
-        country: r.dimensionValues?.[0]?.value ?? "",
-        sessions: parseInt(r.metricValues?.[0]?.value ?? "0"),
-        users: parseInt(r.metricValues?.[1]?.value ?? "0"),
-      })) ?? [],
+      countries: countryRows.map((c) => ({
+        country: c.country,
+        users: c.users,
+        pct: totalCountryUsers > 0 ? Math.round((c.users / totalCountryUsers) * 1000) / 10 : 0,
+      })),
       cities: cityReport?.rows?.map((r) => ({
         city: r.dimensionValues?.[0]?.value ?? "",
         country: r.dimensionValues?.[1]?.value ?? "",
