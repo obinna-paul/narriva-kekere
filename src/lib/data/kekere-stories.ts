@@ -103,6 +103,56 @@ export async function listStories(params: ListStoriesParams = {}): Promise<ListS
   return { stories, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
+const SEARCH_SUGGESTION_LIMIT = 8;
+const SEARCH_MIN_QUERY_LENGTH = 2;
+
+/**
+ * Typeahead search for the feed's search bar — ranked, tiered relevance
+ * rather than a single flat OR match, so "kek" surfaces a story titled
+ * "Kekere Nights" before one that merely mentions "kekere" in its hook
+ * line. Three tiers, each excluding stories already picked up by an
+ * earlier tier, stopping as soon as the result limit is filled:
+ *   1. Title starts with the query
+ *   2. Title contains the query elsewhere
+ *   3. Hook line or author name contains the query
+ * Plain `contains`/`startsWith` (no pg_trgm) — no typo tolerance, but no
+ * new Postgres extension or migration either.
+ */
+export async function searchStories(query: string): Promise<StoryWithAuthor[]> {
+  const q = query.trim();
+  if (q.length < SEARCH_MIN_QUERY_LENGTH) return [];
+
+  const baseWhere: Prisma.StoryWhereInput = { status: "PUBLISHED" };
+  const found: StoryWithAuthor[] = [];
+  const foundIds = new Set<string>();
+
+  async function runTier(where: Prisma.StoryWhereInput) {
+    const remaining = SEARCH_SUGGESTION_LIMIT - found.length;
+    if (remaining <= 0) return;
+    const results = await prisma.story.findMany({
+      where: { ...baseWhere, id: { notIn: Array.from(foundIds) }, ...where },
+      include: authorInclude,
+      orderBy: { publishedAt: "desc" },
+      take: remaining,
+    });
+    for (const story of results) {
+      found.push(story);
+      foundIds.add(story.id);
+    }
+  }
+
+  await runTier({ title: { startsWith: q, mode: "insensitive" } });
+  await runTier({ title: { contains: q, mode: "insensitive" } });
+  await runTier({
+    OR: [
+      { hookLine: { contains: q, mode: "insensitive" } },
+      { author: { name: { contains: q, mode: "insensitive" } } },
+    ],
+  });
+
+  return found;
+}
+
 /**
  * Trending formula: number of StoryUnlock rows in the last 7 days, highest
  * first. Deliberately simple — no decay curve, no weighting — "what's
