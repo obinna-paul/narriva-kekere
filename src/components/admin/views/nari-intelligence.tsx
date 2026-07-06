@@ -15,14 +15,15 @@ interface Lead {
   id: string;
   name: string | null;
   email: string | null;
-  intent: "LOW" | "MEDIUM" | "HIGH";
-  status: "NEW" | "CONTACTED" | "QUALIFIED" | "CONVERTED" | "CLOSED";
-  lastMessageAt: string;
-  messageCount: number;
-  summary: string | null;
+  manuscriptTopic: string | null;
+  intentLevel: "LOW" | "MEDIUM" | "HIGH" | "BROWSING";
+  status: "NEW" | "CONTACTED" | "IN_DISCUSSION" | "SUBMITTED" | "WON" | "LOST";
+  conversationCount: number;
+  updatedAt: string;
 }
 
 const INTENT_STYLES: Record<string, string> = {
+  BROWSING: "bg-[rgba(20,22,26,0.07)] text-[#8B919A]",
   LOW: "bg-[rgba(20,22,26,0.07)] text-[#8B919A]",
   MEDIUM: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
   HIGH: "bg-[rgba(199,93,44,0.12)] text-[#C75D2C]",
@@ -31,9 +32,10 @@ const INTENT_STYLES: Record<string, string> = {
 const STATUS_STYLES: Record<string, string> = {
   NEW: "bg-[rgba(183,121,31,0.10)] text-[#B7791F]",
   CONTACTED: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
-  QUALIFIED: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
-  CONVERTED: "bg-[rgba(31,138,91,0.10)] text-[#1F8A5B]",
-  CLOSED: "bg-[rgba(20,22,26,0.07)] text-[#8B919A]",
+  IN_DISCUSSION: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
+  SUBMITTED: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
+  WON: "bg-[rgba(31,138,91,0.10)] text-[#1F8A5B]",
+  LOST: "bg-[rgba(20,22,26,0.07)] text-[#8B919A]",
 };
 
 function relativeTime(iso: string) {
@@ -55,7 +57,7 @@ export function NariIntelligence() {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (intentFilter !== "ALL") params.set("intent", intentFilter);
+      if (intentFilter !== "ALL") params.set("intentLevel", intentFilter);
       const [sumRes, leadRes] = await Promise.all([
         fetch("/api/admin/nari/pipeline/summary"),
         fetch(`/api/admin/nari/leads?${params}`),
@@ -108,7 +110,7 @@ export function NariIntelligence() {
         <div className="mb-4 flex items-center gap-3">
           <h3 className="text-[13px] font-semibold text-[#1A1C20]">Lead pipeline</h3>
           <div className="flex gap-1 rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
-            {["ALL", "HIGH", "MEDIUM", "LOW"].map((f) => (
+            {["ALL", "HIGH", "MEDIUM", "LOW", "BROWSING"].map((f) => (
               <button
                 key={f}
                 type="button"
@@ -130,7 +132,7 @@ export function NariIntelligence() {
               <span>Summary</span>
               <span>Intent</span>
               <span>Status</span>
-              <span>Messages</span>
+              <span>Conversations</span>
               <span>Last active</span>
             </div>
             {leads.map((lead) => (
@@ -139,11 +141,11 @@ export function NariIntelligence() {
                   <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{lead.name ?? "Anonymous"}</p>
                   {lead.email && <p className="truncate text-[11px] text-[#8B919A]">{lead.email}</p>}
                 </div>
-                <p className="line-clamp-2 text-[12px] text-[#646B73]">{lead.summary ?? "No summary yet."}</p>
-                <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", INTENT_STYLES[lead.intent])}>{lead.intent}</span>
-                <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", STATUS_STYLES[lead.status])}>{lead.status}</span>
-                <span className="text-[13px] text-[#1A1C20]">{lead.messageCount}</span>
-                <span className="text-[12px] text-[#8B919A]">{relativeTime(lead.lastMessageAt)}</span>
+                <p className="line-clamp-2 text-[12px] text-[#646B73]">{lead.manuscriptTopic ?? "No summary yet."}</p>
+                <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", INTENT_STYLES[lead.intentLevel])}>{lead.intentLevel}</span>
+                <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-bold uppercase w-fit", STATUS_STYLES[lead.status])}>{lead.status.replace("_", " ")}</span>
+                <span className="text-[13px] text-[#1A1C20]">{lead.conversationCount}</span>
+                <span className="text-[12px] text-[#8B919A]">{relativeTime(lead.updatedAt)}</span>
               </div>
             ))}
           </div>
