@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Bookmark, Share2, MessageCircle } from "lucide-react";
@@ -41,6 +41,7 @@ export function StoryReader({
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [isRefreshing, startRefresh] = useTransition();
 
   const [unlocked, setUnlocked] = useState(initialUnlocked);
   const [balance, setBalance] = useState(initialBalance);
@@ -58,6 +59,15 @@ export function StoryReader({
   const [tipped, setTipped] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
   const [showNoCowryModal, setShowNoCowryModal] = useState(false);
+
+  // Once a successful unlock triggers router.refresh(), this fires when the
+  // server's refetched props (now carrying the real, untruncated body) land
+  // — syncing local state to match, rather than the handler optimistically
+  // flipping `unlocked` itself using the still-truncated `story` prop that
+  // was fetched while the story was locked.
+  useEffect(() => {
+    setUnlocked(initialUnlocked);
+  }, [initialUnlocked]);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const comments = useParagraphComments(story.id, unlocked);
@@ -169,9 +179,15 @@ export function StoryReader({
     }
 
     setBalance(data.balance);
-    setUnlocked(true);
+    // Don't flip `unlocked` here — `story.bodyDoc` in this render is still
+    // the truncated preview fetched while the story was locked. Refresh so
+    // the server sends the real body, and let the effect above flip
+    // `unlocked` once those fresh props actually arrive. isRefreshing keeps
+    // the button showing "Unlocking…" for the whole wait, not just the fetch.
+    startRefresh(() => {
+      router.refresh();
+    });
     setUnlocking(false);
-    router.refresh();
   }
 
   async function toggleSave() {
@@ -518,12 +534,16 @@ export function StoryReader({
                   {canAfford ? (
                     <button
                       type="button"
-                      disabled={unlocking}
+                      disabled={unlocking || isRefreshing}
                       onClick={handleUnlock}
                       className="w-full cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-base font-semibold text-white shadow-[0_10px_24px_-10px_rgba(199,93,44,0.55)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
                       style={{ border: "none" }}
                     >
-                      {unlocking ? "Unlocking…" : firstReadFree ? "Read free" : `Unlock for ${story.cowrieCost} cowries`}
+                      {unlocking || isRefreshing
+                        ? "Unlocking…"
+                        : firstReadFree
+                          ? "Read free"
+                          : `Unlock for ${story.cowrieCost} cowries`}
                     </button>
                   ) : (
                     <div className="flex flex-col gap-3">
