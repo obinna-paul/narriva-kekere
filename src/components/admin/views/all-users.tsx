@@ -85,6 +85,26 @@ export function AllUsers() {
     }
   }
 
+  async function changeRole(user: User, role: User["role"]) {
+    if (role === user.role) return;
+    setActing(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? "Failed");
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role } : u)));
+      showToast("ok", `${user.name} is now ${role.toLowerCase()}.`);
+    } catch (e) {
+      showToast("err", e instanceof Error ? e.message : "Action failed.");
+    } finally {
+      setActing(null);
+    }
+  }
+
   const ROLES = ["ALL", "READER", "WRITER", "ADMIN"];
 
   return (
@@ -160,9 +180,19 @@ export function AllUsers() {
                   </div>
                 </div>
                 <p className="truncate text-[12px] text-[#646B73]">{u.email}</p>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase w-fit", ROLE_STYLES[u.role] ?? ROLE_STYLES.READER)}>
-                  {u.role}
-                </span>
+                <select
+                  value={u.role}
+                  disabled={acting === u.id}
+                  onChange={(e) => changeRole(u, e.target.value as User["role"])}
+                  className={cn(
+                    "w-fit cursor-pointer rounded-full border-0 px-2.5 py-0.5 text-[10px] font-bold uppercase focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30 disabled:opacity-50",
+                    ROLE_STYLES[u.role] ?? ROLE_STYLES.READER
+                  )}
+                >
+                  <option value="READER">Reader</option>
+                  <option value="WRITER">Writer</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
                 <span className="text-[13px] text-[#1A1C20]">{u.storyCount}</span>
                 <span className="text-[13px] text-[#1A1C20]">{u.unlockCount}</span>
                 <span className="text-[12px] text-[#8B919A]">{relativeTime(u.lastActiveAt)}</span>
