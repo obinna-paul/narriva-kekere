@@ -7,6 +7,9 @@ import { AdminViewError, SkeletonKpiCard, SkeletonChart } from "@/components/adm
 interface EconomyOverview {
   reconciliation: {
     totalIssued: number;
+    totalFromTopUps: number;
+    totalFromReferralRewards: number;
+    totalFromAdminAdjustments: number;
     totalInSpendingWallets: number;
     totalInEarnedWallets: number;
     totalSpentOnUnlocks: number;
@@ -89,7 +92,7 @@ export function CowrieEconomy() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-3 gap-[14px]">{Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>
         <SkeletonChart />
       </div>
     );
@@ -121,7 +124,7 @@ export function CowrieEconomy() {
       </div>
 
       {/* Reconciliation KPIs */}
-      <div className="grid grid-cols-3 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
         {RECONCILIATION_ITEMS.map((item) => {
           const value = rec ? rec[item.key] : 0;
           return (
@@ -139,15 +142,38 @@ export function CowrieEconomy() {
         })}
       </div>
 
+      {/* Where "Total issued" actually comes from — a "cowries in circulation"
+          figure is meaningless for judging real revenue unless it's split by
+          source, since referral rewards and admin corrections issue cowries
+          with no purchase behind them. */}
+      <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
+        <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Issuance breakdown</h3>
+        <div className="space-y-3">
+          {[
+            { label: "Purchased (real top-ups)", value: rec?.totalFromTopUps ?? 0, accent: "#1F8A5B" },
+            { label: "Referral rewards (free)", value: rec?.totalFromReferralRewards ?? 0, accent: "#1E3A8A" },
+            { label: "Admin adjustments (net, free)", value: rec?.totalFromAdminAdjustments ?? 0, accent: "#B7791F" },
+          ].map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="h-[8px] w-[8px] flex-none rounded-full" style={{ background: row.accent }} />
+                <span className="text-[13px] text-[#1A1C20]">{row.label}</span>
+              </div>
+              <span className="text-[13px] font-semibold tabular-nums text-[#1A1C20]">{row.value.toLocaleString()} cowries</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Time-series chart */}
       <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-[13px] font-semibold text-[#1A1C20]">Economy activity over time</h3>
             <p className="mt-0.5 text-[12px] text-[#8B919A]">Issued, spent, and withdrawn cowries per day</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex gap-4 text-[11px] text-[#646B73]">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap gap-4 text-[11px] text-[#646B73]">
               <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-[#1A1C20]" /> Issued</span>
               <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-[#C75D2C]" /> Spent</span>
               <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-[#B7791F]" /> Withdrawn</span>

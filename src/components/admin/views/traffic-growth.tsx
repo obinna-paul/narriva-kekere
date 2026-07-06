@@ -65,7 +65,7 @@ function OverviewTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="grid grid-cols-3 gap-[14px]">{Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>;
+  if (loading) return <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}</div>;
   if (error) return <AdminViewError message={error} onRetry={load} />;
 
   const s = data?.summary;
@@ -80,7 +80,7 @@ function OverviewTab() {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <div key={c.label} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
             <span className="text-[12px] font-medium text-[#646B73]">{c.label}</span>
@@ -122,12 +122,12 @@ function AcquisitionTab() {
   if (channels.length === 0) return <p className="py-10 text-center text-[13px] text-[#9AA0A8]">Connect GA4 for acquisition data.</p>;
 
   return (
-    <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-      <div className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+    <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+      <div className="grid min-w-[560px] grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
         <span>Channel</span><span>Sessions</span><span>Share</span><span>Bounce</span>
       </div>
       {channels.map((c) => (
-        <div key={c.channel} className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
+        <div key={c.channel} className="grid min-w-[560px] grid-cols-[2fr_1fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
           <span className="text-[13px] font-medium text-[#1A1C20]">{c.channel}</span>
           <span className="text-[13px] text-[#1A1C20]">{c.sessions.toLocaleString()}</span>
           <span className="text-[13px] text-[#646B73]">{c.pct}%</span>
@@ -166,14 +166,14 @@ function GeoTab() {
   if (countries.length === 0) return <p className="py-10 text-center text-[13px] text-[#9AA0A8]">Connect GA4 for geographic data.</p>;
 
   return (
-    <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-      <div className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+    <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+      <div className="grid min-w-[480px] grid-cols-[2fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
         <span>Country</span><span>Users</span><span>Share</span>
       </div>
       {countries.map((c) => {
         const maxPct = Math.max(...countries.map((x) => x.pct), 1);
         return (
-          <div key={c.country} className="grid grid-cols-[2fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
+          <div key={c.country} className="grid min-w-[480px] grid-cols-[2fr_1fr_1fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
             <div className="flex items-center gap-3">
               <div className="h-[6px] w-[60px] overflow-hidden rounded-full bg-[rgba(20,22,26,0.07)]">
                 <div className="h-full rounded-full bg-[#1E3A8A]" style={{ width: `${(c.pct / maxPct) * 100}%` }} />
@@ -265,13 +265,13 @@ export function TrafficGrowth() {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-1 rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px] w-fit">
+      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={cn("px-4 py-2 text-[13px] font-medium rounded-[7px] transition-colors", tab === t.key ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
+            className={cn("flex-none whitespace-nowrap px-4 py-2 text-[13px] font-medium rounded-[7px] transition-colors", tab === t.key ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
           >
             {t.label}
           </button>

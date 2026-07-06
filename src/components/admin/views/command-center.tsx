@@ -148,10 +148,10 @@ export function CommandCenter() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-3 gap-[14px]">
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonKpiCard key={i} />)}
         </div>
-        <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-[14px]">
+        <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.35fr_1fr_1fr]">
           <SkeletonChart />
           <SkeletonChart />
           <SkeletonChart />
@@ -167,7 +167,7 @@ export function CommandCenter() {
   return (
     <div className="space-y-7">
       {/* KPI row */}
-      <div className="grid grid-cols-3 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
         <KpiCard label="Revenue this month" value={kpiCards.totalRevenueThisMonthNgn ?? 0} delta={kpiCards.totalRevenueWoWChange} deltaNote="vs last week" format="currency" />
         <KpiCard label="New registrations" value={kpiCards.newUsersLast7Days ?? 0} delta={kpiCards.newUsersWoWChange} deltaNote="vs last week" />
         <KpiCard label="Active users" value={kpiCards.activeKekereUsersLast7Days ?? 0} delta={kpiCards.activeKekereWoWChange} deltaNote="vs last week" category="kekere" />
@@ -177,7 +177,7 @@ export function CommandCenter() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-[1.35fr_1fr_1fr] gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.35fr_1fr_1fr]">
         <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-[13px] font-semibold text-[#1A1C20]">Revenue (30 days)</span>

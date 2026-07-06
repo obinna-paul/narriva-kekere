@@ -59,7 +59,7 @@ export function Performance() {
   if (loading) {
     return (
       <div className="space-y-7">
-        <div className="grid grid-cols-3 gap-[14px]">
+        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => <SkeletonKpiCard key={i} />)}
         </div>
         <SkeletonTableShell rows={6} cols={4} />
@@ -77,7 +77,7 @@ export function Performance() {
   return (
     <div className="space-y-7">
       {/* Summary KPIs */}
-      <div className="grid grid-cols-3 gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-3">
         <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
           <span className="text-[12px] font-medium text-[#646B73]">Trending stories (7d)</span>
           <div className="mt-2 font-[family-name:var(--font-display)] text-[32px] font-semibold text-[#1A1C20]">{trending.length}</div>
@@ -92,15 +92,15 @@ export function Performance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[1.6fr_1fr] gap-[14px]">
+      <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[1.6fr_1fr]">
         {/* Trending stories table */}
         <div>
           <h2 className="mb-3 text-[13px] font-semibold text-[#1A1C20]">Trending this week</h2>
           {trending.length === 0 ? (
             <AdminEmptyState title="No trending data" note="Unlock activity will appear here." />
           ) : (
-            <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-              <div className="grid grid-cols-[auto_2fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+            <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+              <div className="grid min-w-[600px] grid-cols-[auto_2fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
                 <span>#</span>
                 <span>Story</span>
                 <span>Author</span>
@@ -108,7 +108,7 @@ export function Performance() {
                 <span>Trend</span>
               </div>
               {trending.map((s, i) => (
-                <div key={s.storyId} className="grid grid-cols-[auto_2fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
+                <div key={s.storyId} className="grid min-w-[600px] grid-cols-[auto_2fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
                   <span className="text-[13px] font-bold text-[#9AA0A8]">{i + 1}</span>
                   <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{s.title}</p>
                   <p className="truncate text-[12px] text-[#646B73]">{s.authorName}</p>

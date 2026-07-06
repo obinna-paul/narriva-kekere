@@ -75,17 +75,19 @@ export function WithdrawalsView() {
   async function act(id: string, action: "approve" | "reject" | "hold", note: string) {
     setActing(id);
     const endpoint = `/api/admin/kekere/withdrawals/${id}/${action === "hold" ? "hold" : action === "reject" ? "reject" : "approve"}`;
+    const body = action === "reject" ? { reason: note } : { note };
     try {
       const res = await fetch(endpoint, {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ note }),
+        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Failed");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.message ?? data?.error ?? "Failed");
       setItems((prev) => prev.filter((w) => w.id !== id));
       showToast("ok", action === "approve" ? "Withdrawal approved." : action === "reject" ? "Withdrawal rejected." : "Withdrawal put on hold.");
-    } catch {
-      showToast("err", "Action failed. Try again.");
+    } catch (e) {
+      showToast("err", e instanceof Error ? e.message : "Action failed. Try again.");
     } finally {
       setActing(null);
       setNoteModal(null);
@@ -127,7 +129,7 @@ export function WithdrawalsView() {
             <textarea
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
-              placeholder="Add a note (optional)…"
+              placeholder={noteModal.action === "reject" ? "Reason for rejection (required)…" : "Add a note (optional)…"}
               rows={3}
               className="mt-4 w-full resize-none rounded-[8px] border border-[rgba(20,22,26,0.14)] bg-[#F4F5F7] px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30"
             />
@@ -141,7 +143,7 @@ export function WithdrawalsView() {
               </button>
               <button
                 type="button"
-                disabled={!!acting}
+                disabled={!!acting || (noteModal.action === "reject" && !noteText.trim())}
                 onClick={() => act(noteModal.id, noteModal.action, noteText)}
                 className={cn(
                   "flex-1 rounded-[8px] py-2.5 text-[13px] font-semibold text-white disabled:opacity-40",
@@ -156,14 +158,14 @@ export function WithdrawalsView() {
       )}
 
       {/* Filter tabs */}
-      <div className="flex gap-1 rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px] w-fit">
+      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
         {FILTERS.map((f) => (
           <button
             key={f}
             type="button"
             onClick={() => setFilter(f)}
             className={cn(
-              "px-4 py-2 text-[12px] font-semibold capitalize rounded-[7px] transition-colors",
+              "flex-none whitespace-nowrap px-4 py-2 text-[12px] font-semibold capitalize rounded-[7px] transition-colors",
               filter === f ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]"
             )}
           >
@@ -179,9 +181,9 @@ export function WithdrawalsView() {
       ) : items.length === 0 ? (
         <AdminEmptyState title={`No ${filter.toLowerCase().replace("_", " ")} withdrawals`} note="All clear here — nothing to action." />
       ) : (
-        <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+        <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
           {/* Header */}
-          <div className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+          <div className="grid min-w-[760px] grid-cols-[2fr_1.5fr_1.5fr_1fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
             <span>Writer</span>
             <span>Bank</span>
             <span>Amount</span>
@@ -193,7 +195,7 @@ export function WithdrawalsView() {
           {items.map((w) => (
             <div
               key={w.id}
-              className="grid grid-cols-[2fr_1.5fr_1.5fr_1fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-4 last:border-0 hover:bg-[#FBFBFC]"
+              className="grid min-w-[760px] grid-cols-[2fr_1.5fr_1.5fr_1fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-4 last:border-0 hover:bg-[#FBFBFC]"
             >
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{w.userName}</p>
@@ -227,7 +229,7 @@ export function WithdrawalsView() {
                     <button
                       type="button"
                       disabled={acting === w.id}
-                      onClick={() => setNoteModal({ id: w.id, action: "approve" })}
+                      onClick={() => { setNoteModal({ id: w.id, action: "approve" }); setNoteText(""); }}
                       className="rounded-[7px] bg-[#1F8A5B] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1a7a50] disabled:opacity-40"
                     >
                       Pay
@@ -235,7 +237,7 @@ export function WithdrawalsView() {
                     <button
                       type="button"
                       disabled={acting === w.id}
-                      onClick={() => setNoteModal({ id: w.id, action: "hold" })}
+                      onClick={() => { setNoteModal({ id: w.id, action: "hold" }); setNoteText(""); }}
                       className="rounded-[7px] border border-[rgba(20,22,26,0.14)] px-3 py-1.5 text-[11px] font-medium text-[#646B73] hover:bg-[#F4F5F7] disabled:opacity-40"
                     >
                       Hold
@@ -243,7 +245,7 @@ export function WithdrawalsView() {
                     <button
                       type="button"
                       disabled={acting === w.id}
-                      onClick={() => setNoteModal({ id: w.id, action: "reject" })}
+                      onClick={() => { setNoteModal({ id: w.id, action: "reject" }); setNoteText(""); }}
                       className="rounded-[7px] border border-[#C0392B]/30 px-3 py-1.5 text-[11px] font-medium text-[#C0392B] hover:bg-[rgba(192,57,43,0.06)] disabled:opacity-40"
                     >
                       Reject

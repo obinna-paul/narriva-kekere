@@ -96,8 +96,8 @@ export function AllUsers() {
       )}
 
       {/* Controls */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-[340px]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-[340px] sm:flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9AA0A8]" />
           <input
             type="text"
@@ -107,19 +107,21 @@ export function AllUsers() {
             className="w-full rounded-[8px] border border-[rgba(20,22,26,0.14)] bg-white py-2.5 pl-9 pr-3 text-[13px] text-[#1A1C20] placeholder:text-[#9AA0A8] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30"
           />
         </div>
-        <div className="flex gap-1 rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setRoleFilter(r); setPage(1); }}
-              className={cn("px-3.5 py-2 text-[12px] font-semibold rounded-[7px] transition-colors", roleFilter === r ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-1 overflow-x-auto rounded-[9px] bg-[rgba(20,22,26,0.06)] p-[3px]">
+            {ROLES.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => { setRoleFilter(r); setPage(1); }}
+                className={cn("flex-none px-3.5 py-2 text-[12px] font-semibold rounded-[7px] transition-colors", roleFilter === r ? "bg-white text-[#1A1C20] shadow-sm" : "text-[#8B919A] hover:text-[#1A1C20]")}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <span className="flex-none text-[12px] text-[#8B919A] sm:ml-auto">{total.toLocaleString()} users</span>
         </div>
-        <span className="ml-auto text-[12px] text-[#8B919A]">{total.toLocaleString()} users</span>
       </div>
 
       {loading ? (
@@ -130,8 +132,8 @@ export function AllUsers() {
         <AdminEmptyState title="No users found" note={search ? `No results for "${search}"` : "No users match the selected filter."} />
       ) : (
         <>
-          <div className="overflow-hidden rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
-            <div className="grid grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
+          <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
+            <div className="grid min-w-[780px] grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">
               <span>Name</span>
               <span>Email</span>
               <span>Role</span>
@@ -144,7 +146,7 @@ export function AllUsers() {
               <div
                 key={u.id}
                 className={cn(
-                  "grid grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]",
+                  "grid min-w-[780px] grid-cols-[2fr_2fr_0.8fr_0.8fr_0.8fr_0.8fr_auto] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]",
                   u.suspended && "opacity-60"
                 )}
               >
