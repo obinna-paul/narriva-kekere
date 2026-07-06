@@ -21,7 +21,7 @@ export interface TiptapTextNode {
 
 export interface TiptapParagraphNode {
   type: "paragraph";
-  attrs?: { id?: string };
+  attrs?: { id?: string; textAlign?: "left" | "center" | "right" };
   content?: TiptapTextNode[];
 }
 

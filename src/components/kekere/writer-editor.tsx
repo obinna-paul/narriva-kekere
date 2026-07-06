@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { History, X, ScanEye, Maximize2, Minimize2, FileText } from "lucide-react";
+import { History, X, ScanEye, Maximize2, Minimize2, FileText, Download } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -569,6 +569,17 @@ export function WriterEditor({
             <p className="text-sm font-semibold text-[#A13A3A]">Why this wasn&apos;t accepted</p>
             <p className="mt-1 text-sm text-[var(--color-ink)]/80">{moderationNotes}</p>
           </div>
+        )}
+
+        {status === "REJECTED" && storyId && (
+          <a
+            href={`/api/kekere/stories/${storyId}/export`}
+            className="mb-6 flex items-center justify-center gap-2 rounded-lg border border-[rgba(42,26,18,.14)] bg-white px-4 py-3 text-sm font-semibold text-[#2A1A12] transition-colors hover:bg-[rgba(42,26,18,.04)]"
+            data-writer-chrome
+          >
+            <Download size={15} />
+            Export story as .docx
+          </a>
         )}
 
         {justSubmitted && (
