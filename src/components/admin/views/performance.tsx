@@ -24,7 +24,7 @@ interface RisingWriter {
   rank: number;
   userId: string;
   name: string;
-  earnedCowries: number;
+  earnedCowriesLast7d: number;
 }
 
 interface PerfData {
@@ -152,7 +152,7 @@ export function Performance() {
 
           {/* Rising writers */}
           <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
-            <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Rising writers</h3>
+            <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Rising writers (7d earnings)</h3>
             {risingWriters.length === 0 ? (
               <p className="text-[12px] text-[#9AA0A8]">No data yet.</p>
             ) : (
@@ -163,7 +163,7 @@ export function Performance() {
                       {w.rank}
                     </span>
                     <span className="flex-1 text-[13px] font-medium text-[#1A1C20]">{w.name}</span>
-                    <span className="font-mono text-[12px] text-[#C75D2C]">{w.earnedCowries.toLocaleString()} ₵</span>
+                    <span className="font-mono text-[12px] text-[#C75D2C]">{w.earnedCowriesLast7d.toLocaleString()} ₵</span>
                   </div>
                 ))}
               </div>

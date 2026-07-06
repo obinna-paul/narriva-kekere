@@ -28,14 +28,14 @@ export const GET = withAuth(
         where: { unlockedAt: { gte: thirtyDaysAgo } },
         include: { story: { select: { genre: true } } },
       }),
-      // Rising writers — biggest earned-balance growth
-      prisma.wallet.findMany({
-        where: {
-          earnedBalance: { gt: 0 },
-          user: { stories: { some: { status: "PUBLISHED" } } },
-        },
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { earnedBalance: "desc" },
+      // Rising writers — biggest earnings growth in the last 7 days (not
+      // total accumulated balance, which would rank a stagnant
+      // high-balance writer above one who just started earning fast).
+      prisma.transaction.groupBy({
+        by: ["walletId"],
+        where: { type: "EARNINGS_CREDIT", status: "COMPLETED", createdAt: { gte: sevenDaysAgo } },
+        _sum: { amountCowries: true },
+        orderBy: { _sum: { amountCowries: "desc" } },
         take: 5,
       }),
     ]);
@@ -93,12 +93,24 @@ export const GET = withAuth(
       })
       .filter(Boolean);
 
-    const risingWriters = writerEarnings.map((w, i) => ({
-      rank: i + 1,
-      userId: w.user.id,
-      name: w.user.name,
-      earnedCowries: w.earnedBalance.toNumber(),
-    }));
+    const risingWallets = await prisma.wallet.findMany({
+      where: { id: { in: writerEarnings.map((w) => w.walletId) } },
+      select: { id: true, user: { select: { id: true, name: true } } },
+    });
+    const walletUserMap = new Map(risingWallets.map((w) => [w.id, w.user]));
+
+    const risingWriters = writerEarnings
+      .map((w, i) => {
+        const user = walletUserMap.get(w.walletId);
+        if (!user) return null;
+        return {
+          rank: i + 1,
+          userId: user.id,
+          name: user.name,
+          earnedCowriesLast7d: w._sum.amountCowries?.toNumber() ?? 0,
+        };
+      })
+      .filter((w): w is NonNullable<typeof w> => w !== null);
 
     return NextResponse.json({ trending, genres, risingWriters });
   },
