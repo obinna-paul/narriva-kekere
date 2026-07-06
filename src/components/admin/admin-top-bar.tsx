@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const ROUTE_META: Record<string, { section: string; subsection?: string; title: string }> = {
@@ -32,23 +32,35 @@ interface AdminTopBarProps {
   range?: string;
   onRangeChange?: (range: string) => void;
   showRange?: boolean;
+  onMenuClick?: () => void;
 }
 
-export function AdminTopBar({ range = "30d", onRangeChange, showRange = true }: AdminTopBarProps) {
+export function AdminTopBar({ range = "30d", onRangeChange, showRange = true, onMenuClick }: AdminTopBarProps) {
   const pathname = usePathname();
   const meta = ROUTE_META[pathname] ?? { section: "Admin", title: "Dashboard" };
 
   return (
     <header
-      className="sticky top-0 z-20 flex h-[62px] items-center justify-between border-b border-[rgba(20,22,26,0.08)] px-[34px]"
+      className="sticky top-0 z-20 flex h-[62px] items-center justify-between gap-3 border-b border-[rgba(20,22,26,0.08)] px-4 md:px-[34px]"
       style={{ background: "rgba(244,245,247,0.86)", backdropFilter: "blur(12px)" }}
     >
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9AA0A8]">
-          {meta.section}
-          {meta.subsection ? ` · ${meta.subsection}` : ""}
+      <div className="flex min-w-0 items-center gap-3">
+        {onMenuClick && (
+          <button
+            type="button"
+            onClick={onMenuClick}
+            className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[9px] border border-[rgba(20,22,26,0.08)] bg-white hover:bg-[#FBFBFC] md:hidden"
+          >
+            <Menu size={16} className="text-[#646B73]" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <div className="truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9AA0A8]">
+            {meta.section}
+            {meta.subsection ? ` · ${meta.subsection}` : ""}
+          </div>
+          <h1 className="truncate mt-[2px] text-[16px] font-semibold text-[#1A1C20]">{meta.title}</h1>
         </div>
-        <h1 className="mt-[2px] text-[16px] font-semibold text-[#1A1C20]">{meta.title}</h1>
       </div>
 
       <div className="flex items-center gap-3">
