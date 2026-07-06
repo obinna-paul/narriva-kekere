@@ -12,13 +12,23 @@ export function LandingAuthButton({ isLoggedIn }: { isLoggedIn: boolean }) {
       <button
         type="button"
         onClick={async () => {
-          // This button lives on /kekere and would otherwise redirect back to
-          // /kekere — the exact same URL. Assigning window.location.href to
-          // an unchanged URL doesn't reliably force a fresh navigation in
-          // every browser, so the page can appear to stay "signed in" even
-          // though the session cookie was actually cleared. Forcing a real
-          // reload sidesteps that.
-          await signOut({ redirect: false });
+          // Belt and suspenders: next-auth's own signOut() flow (CSRF fetch,
+          // then POST /api/auth/signout) hasn't reliably cleared the session
+          // on every device, so it's backed up by a first-party cookie clear
+          // (/api/auth/hard-signout) that bypasses that flow entirely. Every
+          // step is best-effort — the reload always runs regardless of
+          // whether either call succeeds, so a network hiccup never leaves
+          // the button silently doing nothing.
+          try {
+            await signOut({ redirect: false });
+          } catch {
+            // fall through to the hard backstop below
+          }
+          try {
+            await fetch("/api/auth/hard-signout", { method: "POST" });
+          } catch {
+            // worst case the cookie survives this click — reload still runs
+          }
           window.location.reload();
         }}
         className={buttonClass}
