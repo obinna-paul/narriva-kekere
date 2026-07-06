@@ -12,7 +12,7 @@ export const GET = withAuth(
     weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
 
-    const [allPurchases, monthPurchases, weekPurchases, bestSeller] = await Promise.all([
+    const [allPurchases, monthPurchases, weekPurchases, bestSeller, titlesLive] = await Promise.all([
       prisma.bookPurchase.findMany({
         include: { book: { select: { price: true } } },
       }),
@@ -31,6 +31,7 @@ export const GET = withAuth(
         orderBy: { _count: { id: "desc" } },
         take: 1,
       }),
+      prisma.book.count({ where: { price: { gt: 0 } } }),
     ]);
 
     const totalRevenueAllTime = allPurchases.reduce((s, p) => s + p.book.price, 0);
@@ -62,6 +63,7 @@ export const GET = withAuth(
         totalUnitsAllTime > 0
           ? Math.round((totalRevenueAllTime / totalUnitsAllTime) * 100) / 100
           : 0,
+      titlesLive,
       bestSellerThisMonth: bestSellerInfo,
     });
   },
