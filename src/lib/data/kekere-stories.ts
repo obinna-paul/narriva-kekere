@@ -175,7 +175,17 @@ export { isStoryUnlockedFor as isStoryUnlocked };
 
 export interface StoryForReader extends Omit<StoryWithAuthor, "body"> {
   unlocked: boolean;
+  /** True when this reader hasn't unlocked anything yet AND hasn't used
+   * their one free first read — lets the reader UI offer this specific
+   * story free instead of gating on cowrie balance. */
+  firstReadFree: boolean;
   body: TiptapDoc;
+}
+
+export async function hasFreeReadAvailable(userId?: string): Promise<boolean> {
+  if (!userId) return false;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { freeReadUsed: true } });
+  return !!user && !user.freeReadUsed;
 }
 
 /**
@@ -193,8 +203,9 @@ export async function getStoryForReader(
   if (!story || story.status !== "PUBLISHED") return null;
 
   const unlocked = await isStoryUnlockedFor(story, userId);
+  const firstReadFree = !unlocked && (await hasFreeReadAvailable(userId));
   const body = story.body as unknown as TiptapDoc;
-  return { ...story, unlocked, body: unlocked ? body : previewFraction(body) };
+  return { ...story, unlocked, firstReadFree, body: unlocked ? body : previewFraction(body) };
 }
 
 /** No status filter — for the author viewing/editing their own story

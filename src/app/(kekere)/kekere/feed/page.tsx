@@ -8,6 +8,7 @@ import {
   getRecommendedStories,
   getFeedTagRows,
   getStoriesByIds,
+  hasFreeReadAvailable,
 } from "@/lib/data/kekere-stories";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getAllWinners } from "@/lib/data/kekere-competitions";
@@ -35,13 +36,14 @@ export default async function KekereFeedPage() {
   const userId = session?.user?.id;
 
   // Fetch all sections in parallel
-  const [trendingData, winners, wallet, inProgress, recommended, tagRows] = await Promise.all([
+  const [trendingData, winners, wallet, inProgress, recommended, tagRows, firstReadFree] = await Promise.all([
     listStories({ sort: "trending", pageSize: 12 }),
     getAllWinners(),
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getInProgressStories(userId) : Promise.resolve([]),
     userId ? getRecommendedStories(userId, 12) : Promise.resolve([]),
     getFeedTagRows(FEED_TAG_ORDER, 8),
+    hasFreeReadAvailable(userId),
   ]);
 
   // Fetch story data for all tag rows in parallel
@@ -95,6 +97,7 @@ export default async function KekereFeedPage() {
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
         isLoggedIn={!!userId}
+        firstReadFree={firstReadFree}
         readingProgress={readingProgress}
       />
       <FirstStoryFreeModal />

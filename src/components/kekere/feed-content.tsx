@@ -156,6 +156,7 @@ export interface FeedContentProps {
   tagRows: readonly FeedTagRow[];
   balance: number;
   isLoggedIn?: boolean;
+  firstReadFree?: boolean;
   readingProgress?: Record<string, number>;
 }
 
@@ -168,6 +169,7 @@ export function FeedContent({
   tagRows,
   balance,
   isLoggedIn = false,
+  firstReadFree = false,
   readingProgress,
 }: FeedContentProps) {
   const [tagOpen, setTagOpen] = useState(false);
@@ -401,6 +403,7 @@ export function FeedContent({
         story={previewStory}
         balance={balance}
         isLoggedIn={isLoggedIn}
+        firstReadFree={firstReadFree}
         onClose={() => setPreviewStory(null)}
       />
     </div>
