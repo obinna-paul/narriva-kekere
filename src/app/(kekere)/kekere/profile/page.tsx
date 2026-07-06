@@ -4,6 +4,7 @@ import { ProfileView } from "@/components/kekere/profile-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
 import { listStoriesByAuthor } from "@/lib/data/kekere-stories";
+import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 
 export const dynamic = "force-dynamic";
 
@@ -13,18 +14,20 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, myStories] = userId
+  const [profile, writerStats, readerStats, myStories, bankDetails] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
         getReaderStats(userId),
         listStoriesByAuthor(userId),
+        getWriterBankDetails(userId),
       ])
     : [
         null,
         { publishedCount: 0, totalReads: 0, cowriesEarned: 0, hasAuthoredAnyStory: false },
         { storiesRead: 0, savedCount: 0 },
         [],
+        null,
       ];
 
   return (
@@ -36,9 +39,7 @@ export default async function KekereProfilePage() {
           email={profile?.email ?? ""}
           bio={profile?.bio ?? ""}
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
-          bankName={profile?.bankName ?? null}
-          bankAccountNumber={profile?.bankAccountNumber ?? null}
-          bankAccountName={profile?.bankAccountName ?? null}
+          bankDetails={bankDetails}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
           readingStats={readerStats}

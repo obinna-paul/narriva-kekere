@@ -24,7 +24,6 @@ export interface WalletViewProps {
   userEmail: string;
   isWriter: boolean;
   transactions: readonly WalletTransactionView[];
-  hasBankDetails: boolean;
   referralCode: string | null;
   referralEarnings: number;
   tipEarnings: number;
@@ -78,7 +77,7 @@ function getWalletForTx(type: string): string | null {
 
 export function WalletView({
   spendingBalance, earnedBalance, userId, userEmail, isWriter,
-  transactions, hasBankDetails, referralCode, referralEarnings, tipEarnings,
+  transactions, referralCode, referralEarnings, tipEarnings,
 }: WalletViewProps) {
   const router = useRouter();
   const [showTopUp, setShowTopUp] = useState(false);

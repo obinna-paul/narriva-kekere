@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
+import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 
 type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED" | "PENDING_CONTRACT";
 
@@ -66,9 +67,7 @@ export interface ProfileViewProps {
   email: string;
   bio: string;
   avatarColor: string;
-  bankName: string | null;
-  bankAccountNumber: string | null;
-  bankAccountName: string | null;
+  bankDetails: BankDetailsProp | null;
   hasAuthoredAnyStory: boolean;
   writingStats: { publishedCount: number; totalReads: number; cowriesEarned: number };
   readingStats: { storiesRead: number; savedCount: number };
@@ -81,17 +80,11 @@ export function ProfileView(props: ProfileViewProps) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [draftBio, setDraftBio] = useState(bio);
-  const [draftBankName, setDraftBankName] = useState(props.bankName ?? "");
-  const [draftBankAccountNumber, setDraftBankAccountNumber] = useState(props.bankAccountNumber ?? "");
-  const [draftBankAccountName, setDraftBankAccountName] = useState(props.bankAccountName ?? "");
   const [saving, setSaving] = useState(false);
 
   function openEdit() {
     setDraftName(name);
     setDraftBio(bio);
-    setDraftBankName(props.bankName ?? "");
-    setDraftBankAccountNumber(props.bankAccountNumber ?? "");
-    setDraftBankAccountName(props.bankAccountName ?? "");
     setEditing(true);
   }
 
@@ -110,9 +103,6 @@ export function ProfileView(props: ProfileViewProps) {
         body: JSON.stringify({
           name: draftName,
           bio: draftBio,
-          bankName: draftBankName,
-          bankAccountNumber: draftBankAccountNumber,
-          bankAccountName: draftBankAccountName,
         }),
       });
     } catch {
@@ -206,56 +196,6 @@ export function ProfileView(props: ProfileViewProps) {
               />
               <div className="mt-[6px] text-right text-xs text-[var(--color-ink-muted-3)]">
                 {draftBio.length} / 160
-              </div>
-            </div>
-
-            <div className="border-t border-[rgba(42,26,18,0.1)] pt-[18px]">
-              <p className="mb-[14px] text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
-                Bank details for withdrawals
-              </p>
-              <div className="flex flex-col gap-[14px]">
-                <div>
-                  <label htmlFor="profile-bank-name" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
-                    Bank name
-                  </label>
-                  <input
-                    id="profile-bank-name"
-                    value={draftBankName}
-                    onChange={(e) => setDraftBankName(e.target.value)}
-                    placeholder="e.g. GTBank, Access, First Bank"
-                    className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-                    style={{ fontFamily: "inherit" }}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-bank-number" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
-                    Account number
-                  </label>
-                  <input
-                    id="profile-bank-number"
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={10}
-                    value={draftBankAccountNumber}
-                    onChange={(e) => setDraftBankAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="0123456789"
-                    className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-                    style={{ fontFamily: "inherit" }}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-bank-account-name" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
-                    Account name
-                  </label>
-                  <input
-                    id="profile-bank-account-name"
-                    value={draftBankAccountName}
-                    onChange={(e) => setDraftBankAccountName(e.target.value)}
-                    placeholder="Name on the bank account"
-                    className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-                    style={{ fontFamily: "inherit" }}
-                  />
-                </div>
               </div>
             </div>
           </form>
@@ -375,6 +315,8 @@ export function ProfileView(props: ProfileViewProps) {
               </div>
             )}
           </section>
+
+          <BankDetailsSection bankDetails={props.bankDetails} />
 
           <div className="px-[22px] pb-[100px] pt-[10px]">
             <button

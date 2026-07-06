@@ -48,11 +48,6 @@ model User {
   termsAcceptedAt     DateTime?
   deletionRequestedAt DateTime?
 
-  // Bank details for writer withdrawals (cowry → NGN via Paystack Transfers).
-  bankName          String?
-  bankAccountNumber String?
-  bankAccountName   String?
-
   // Referral system — each user gets a unique code on signup.
   // `referredBy` stores the inviter's referral code (not userId), so the
   // inviter can be found even if they change their slug/name later.

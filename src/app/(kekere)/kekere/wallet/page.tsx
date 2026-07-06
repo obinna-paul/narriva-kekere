@@ -18,8 +18,6 @@ export default async function KekereWalletPage() {
           where: { id: userId },
           select: {
             role: true,
-            bankAccountNumber: true,
-            bankName: true,
             referralCode: true,
             referredBy: true,
           },
@@ -47,7 +45,6 @@ export default async function KekereWalletPage() {
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
           isWriter={isWriter}
-          hasBankDetails={!!user?.bankAccountNumber && !!user?.bankName}
           referralCode={user?.referralCode ?? null}
           referralEarnings={referralEarnings}
           tipEarnings={tipEarnings}

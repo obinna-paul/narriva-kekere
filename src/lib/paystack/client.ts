@@ -99,6 +99,40 @@ export async function resolveBankAccount(
   }
 }
 
+export interface PaystackBank {
+  name: string;
+  code: string;
+}
+
+let bankListCache: { banks: PaystackBank[]; fetchedAt: number } | null = null;
+const BANK_LIST_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Nigeria's bank list changes rarely enough that a 24h in-memory cache avoids
+ * hitting Paystack on every withdrawal-page load, but often enough (new
+ * fintech banks, renames) that it isn't worth hardcoding.
+ */
+export async function listBanks(): Promise<PaystackBank[]> {
+  if (bankListCache && Date.now() - bankListCache.fetchedAt < BANK_LIST_TTL_MS) {
+    return bankListCache.banks;
+  }
+
+  const res = await fetch(`${PAYSTACK_BASE_URL}/bank?currency=NGN&type=nuban`, {
+    headers: authHeader(),
+  });
+  const body = await res.json();
+  if (!res.ok || !body?.status) {
+    throw new Error(body?.message ?? `Bank list fetch failed with status ${res.status}`);
+  }
+
+  const banks: PaystackBank[] = (body.data as Array<{ name: string; code: string }>).map((b) => ({
+    name: b.name,
+    code: b.code,
+  }));
+  bankListCache = { banks, fetchedAt: Date.now() };
+  return banks;
+}
+
 export interface CreateTransferRecipientInput {
   accountName: string;
   accountNumber: string;
