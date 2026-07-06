@@ -12,11 +12,14 @@ function iso(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// `days`-long windows that don't share a boundary day — GA4 date ranges are
+// inclusive on both ends, so naively reusing one range's start as the other
+// range's end double-counts that day in both totals.
 function dateRange(days: number, endOffset = 0): { startDate: string; endDate: string } {
   const end = new Date();
   end.setDate(end.getDate() - endOffset);
   const start = new Date(end);
-  start.setDate(start.getDate() - days);
+  start.setDate(start.getDate() - (days - 1));
   return { startDate: iso(start), endDate: iso(end) };
 }
 
