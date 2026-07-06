@@ -331,6 +331,27 @@ export function WriterEditor({
     setSubmitPreviewOpen(true);
   }
 
+  const [exporting, setExporting] = useState(false);
+
+  // The export endpoint reads the story's saved title/body from the
+  // database, not the live editor — flush both before downloading so a
+  // draft exported seconds after typing doesn't miss whatever hasn't
+  // autosaved yet. saveDraft() covers title/hookline (and body, in chapters
+  // mode); the editor handle covers the scroll-mode body separately.
+  async function handleExport() {
+    if (!storyId || exporting) return;
+    setExporting(true);
+    try {
+      await saveDraft();
+      if (mode === "scroll") {
+        await editorHandle.current?.flush("Export").catch(() => {});
+      }
+      window.location.href = `/api/kekere/stories/${storyId}/export`;
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function confirmSubmit() {
     if (!storyId) return;
 
@@ -540,6 +561,18 @@ export function WriterEditor({
                 >
                   <ScanEye size={15} />
                 </button>
+                {/* Export button — only before a draft has ever been submitted */}
+                {status === "DRAFT" && storyId && (
+                  <button
+                    type="button"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:opacity-50"
+                    title="Export as .docx"
+                  >
+                    <Download size={15} />
+                  </button>
+                )}
               </>
             )}
             {isEditable && (
