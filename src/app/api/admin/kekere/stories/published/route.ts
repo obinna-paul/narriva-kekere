@@ -59,7 +59,10 @@ export const GET = withAuth(
         publishedAt: s.publishedAt?.toISOString() ?? null,
         totalUnlocks: s._count.unlocks,
         completionRate: s.completionRate,
-        totalEarnings: s.platformEarnings.reduce(
+        // Total cowries spent unlocking this story (writer's 70% + platform's
+        // 30%) — NOT platformEarnings alone, which is only the platform's cut.
+        totalRevenueCowries: s._count.unlocks * s.cowrieCost,
+        platformEarningsCowries: s.platformEarnings.reduce(
           (sum, pe) => sum + pe.cowries.toNumber(),
           0,
         ),
