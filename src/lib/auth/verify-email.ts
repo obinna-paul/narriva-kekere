@@ -127,7 +127,7 @@ export async function verifyOtp(
   await sendEmail({
     to: user.email,
     subject: "Welcome to Kekere Stories",
-    from: "Obinna Ezeodili <obinna@kekere.pro>",
+    from: "Obinna Ezeodili <obinna@narriva.pro>",
     body: `Hi ${user.name},\n\nI'm Obinna, co-founder and CEO of Kekere Stories. I'm genuinely glad you're here, and I can't wait for you to read all the short stories we've curated for you!\n\nYou see, we chose short fiction on purpose, not novels. Life in Lagos, in Nairobi, in London, wherever you're reading this from, doesn't leave much room for a 400-page commitment. But it always leaves room for one great story in the time it takes to wait for a bus, finish a meal, or fall asleep. Small doesn't mean small stakes. Some of the best storytelling we've ever read has happened in a few thousand words.\n\nI wonder which of our stories you'll read first 🙃\n\nCheers,\nObinna`,
     html: welcomeHtml,
   });
