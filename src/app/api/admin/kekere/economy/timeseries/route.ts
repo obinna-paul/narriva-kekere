@@ -4,12 +4,27 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 
+// All day/week keys are computed in Lagos calendar time, not UTC — a
+// transaction in the first hour of a Lagos day (UTC+1) falls on the
+// previous UTC day, which would otherwise shift it into the wrong bucket.
+const lagosDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Lagos",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function lagosDateKey(date: Date): string {
+  return lagosDateFormatter.format(date);
+}
+
 function getWeekKey(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d.setDate(diff));
-  return monday.toISOString().split("T")[0];
+  const [y, m, d] = lagosDateKey(date).split("-").map(Number);
+  const local = new Date(Date.UTC(y, m - 1, d));
+  const day = local.getUTCDay();
+  const diff = local.getUTCDate() - day + (day === 0 ? -6 : 1);
+  local.setUTCDate(diff);
+  return lagosDateKey(local);
 }
 
 export const GET = withAuth(
@@ -26,7 +41,7 @@ export const GET = withAuth(
     const results: { date: string; value: number }[] = [];
 
     function resolveKey(d: Date): string {
-      return period === "weekly" ? getWeekKey(d) : d.toISOString().split("T")[0];
+      return period === "weekly" ? getWeekKey(d) : lagosDateKey(d);
     }
 
     if (metric === "topup_ngn") {
