@@ -29,13 +29,23 @@ function toParagraph(node: TiptapParagraphNode): Paragraph {
 
 /** Renders a story's Tiptap doc to a .docx buffer — bold/italic/underline/
  * strike marks and paragraph alignment carry over, giving a writer whose
- * story was rejected a usable document back, not just their raw text. */
-export async function tiptapDocToDocxBuffer(doc: TiptapDoc, title: string): Promise<Buffer> {
+ * story was rejected (or hasn't been submitted yet) a usable document back,
+ * not just their raw text. */
+export async function tiptapDocToDocxBuffer(
+  doc: TiptapDoc,
+  title: string,
+  hookLine?: string
+): Promise<Buffer> {
+  const trimmedHook = hookLine?.trim();
+
   const document = new Document({
     sections: [
       {
         children: [
           new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }),
+          ...(trimmedHook
+            ? [new Paragraph({ children: [new TextRun({ text: trimmedHook, italics: true })], spacing: { after: 300 } })]
+            : []),
           ...(doc.content ?? []).map(toParagraph),
         ],
       },

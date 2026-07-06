@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { generateSignedContractPdf } from "@/lib/contracts/pdf";
+import { generateSignedContractDocx } from "@/lib/contracts/docx";
 import { getPortalFileDownloadUrl, uploadPortalFile } from "@/lib/storage/r2";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
@@ -79,9 +80,15 @@ export const POST = withAuth(async (request, session, { params }) => {
   const signedAt = new Date();
   const signerIp = getClientIp(request);
 
-  // Try to generate PDF for email attachment, but don't block signing if it fails
+  // Try to generate PDF for email attachment, but don't block signing if it fails.
+  // pdf-lib's standard fonts only support WinAnsi-encodable characters and
+  // throw on names outside that (e.g. Yoruba/Igbo tonal diacritics like
+  // "Ọláyínká") — fall back to a .docx (no such encoding restriction) rather
+  // than silently sending the writer no copy of their contract at all.
   let pdfBuffer: Buffer | null = null;
   let pdfRef: string | null = null;
+  let attachmentBuffer: Buffer | null = null;
+  let attachmentFilename: string | null = null;
   try {
     const pdfBytes = await generateSignedContractPdf(
       contract.body,
@@ -90,6 +97,8 @@ export const POST = withAuth(async (request, session, { params }) => {
       signerIp,
     );
     pdfBuffer = Buffer.from(pdfBytes);
+    attachmentBuffer = pdfBuffer;
+    attachmentFilename = `kekere-publishing-agreement-${contract.id}.pdf`;
 
     // Try to upload to R2 for download link (optional)
     const r2Ready = !!(
@@ -106,7 +115,13 @@ export const POST = withAuth(async (request, session, { params }) => {
       }
     }
   } catch (err) {
-    console.error("PDF generation failed (non-blocking) for contract", id, ":", err);
+    console.error("PDF generation failed for contract", id, "— falling back to .docx:", err);
+    try {
+      attachmentBuffer = await generateSignedContractDocx(contract.body, signedName, signedAt, signerIp);
+      attachmentFilename = `kekere-publishing-agreement-${contract.id}.docx`;
+    } catch (docxErr) {
+      console.error("DOCX fallback also failed for contract", id, ":", docxErr);
+    }
   }
 
   await prisma.kekereContract.update({
@@ -155,7 +170,7 @@ export const POST = withAuth(async (request, session, { params }) => {
         storyTitle,
         signedAt: signedDateStr,
         storyUrl,
-        pdfAttached: !!pdfBuffer,
+        pdfAttached: !!attachmentBuffer,
       }).catch(() => undefined)
     : undefined;
 
@@ -168,7 +183,9 @@ export const POST = withAuth(async (request, session, { params }) => {
       ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
       : `Hi ${contract.writer.name},\n\nYour contract has been signed.\n\nThe Kekere Stories Team`,
     html: signedHtml,
-    ...(pdfBuffer ? { attachments: [{ filename: `kekere-publishing-agreement-${contract.id}.pdf`, content: pdfBuffer }] } : {}),
+    ...(attachmentBuffer && attachmentFilename
+      ? { attachments: [{ filename: attachmentFilename, content: attachmentBuffer }] }
+      : {}),
   });
 
   await sendEmail({

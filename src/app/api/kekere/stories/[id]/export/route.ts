@@ -6,10 +6,14 @@ import { getStoryById } from "@/lib/data/kekere-stories";
 import { tiptapDocToDocxBuffer } from "@/lib/tiptap/docx-export";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 
-/** A rejected story is locked from editing, but the writer still wrote it —
- * this is the only way they can get it back out of the app. Scoped to
- * REJECTED (rather than any story) since every other status either still
- * belongs to the writer in the editor or is already public. */
+const EXPORTABLE_STATUSES = ["DRAFT", "REJECTED"];
+
+/** A writer can get their own words back out of the app in exactly two
+ * windows: before they've ever submitted (DRAFT), or after Kekere has
+ * rejected it. Everything in between (SUBMITTED, REVIEWING,
+ * REVISIONS_REQUESTED, PENDING_CONTRACT) is mid-review or on its way to
+ * publication, and PUBLISHED stories are already public — none of those
+ * are exportable. */
 export const GET = withAuth(async (_request, session, { params }: { params: { id: string } }) => {
   const story = await getStoryById(params.id);
   if (!story) {
@@ -18,11 +22,14 @@ export const GET = withAuth(async (_request, session, { params }: { params: { id
   if (story.authorId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  if (story.status !== "REJECTED") {
-    return NextResponse.json({ error: "Only a rejected story can be exported." }, { status: 409 });
+  if (!EXPORTABLE_STATUSES.includes(story.status)) {
+    return NextResponse.json(
+      { error: "Only a draft (before submission) or a rejected story can be exported." },
+      { status: 409 }
+    );
   }
 
-  const buffer = await tiptapDocToDocxBuffer(story.body as unknown as TiptapDoc, story.title);
+  const buffer = await tiptapDocToDocxBuffer(story.body as unknown as TiptapDoc, story.title, story.hookLine);
   const filename = `${story.title || "story"}.docx`.replace(/[^A-Za-z0-9.\- ]+/g, "_");
 
   return new NextResponse(new Uint8Array(buffer), {
