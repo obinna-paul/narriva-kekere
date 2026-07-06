@@ -11,7 +11,7 @@ interface User {
   email: string;
   role: "READER" | "WRITER" | "ADMIN";
   createdAt: string;
-  lastActiveAt: string;
+  lastActiveAt: string | null;
   suspended: boolean;
   storyCount: number;
   unlockCount: number;
@@ -23,7 +23,8 @@ const ROLE_STYLES: Record<string, string> = {
   ADMIN: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
 };
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string | null) {
+  if (!iso) return "Never";
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
   if (diff < 86400 * 30) return `${Math.round(diff / 86400)}d ago`;

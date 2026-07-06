@@ -44,9 +44,13 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const updateData: { currentStage: ProjectStage; statusNote?: string } = {
+    const updateData: { currentStage: ProjectStage; statusNote?: string; stageEnteredAt?: Date } = {
       currentStage: stage as ProjectStage,
     };
+
+    if (stage !== project.currentStage) {
+      updateData.stageEnteredAt = new Date();
+    }
 
     if (statusNote !== undefined) {
       updateData.statusNote = statusNote;
