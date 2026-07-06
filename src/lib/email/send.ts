@@ -13,6 +13,8 @@ export interface EmailMessage {
   /** Rendered HTML from a React Email template — shown in HTML-capable clients */
   html?: string;
   attachments?: EmailAttachment[];
+  /** Overrides the default sender identity, e.g. a personal note from the CEO */
+  from?: string;
 }
 
 const resend = process.env.RESEND_API_KEY
@@ -33,7 +35,7 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
 
   try {
     const { error } = await resend.emails.send({
-      from: FROM,
+      from: message.from ?? FROM,
       to: message.to,
       subject: message.subject,
       text: message.body,

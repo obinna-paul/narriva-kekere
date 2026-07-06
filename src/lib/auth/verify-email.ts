@@ -126,8 +126,9 @@ export async function verifyOtp(
   const welcomeHtml = await renderWelcomeEmail({ name: user.name }).catch(() => undefined);
   await sendEmail({
     to: user.email,
-    subject: "A personal welcome from our CEO — Kekere Stories",
-    body: `Hi ${user.name},\n\nI'm Obinna, the CEO of Kekere Stories, and I wanted to welcome you myself. Every story on Kekere is vetted by our editors before it reaches your feed — only the best make it through. We publish short fiction on purpose, sized for real life, and 70% of every cowrie spent on a story goes straight to the writer who wrote it.\n\nYour first read is completely free — pick any story and enjoy it on us before you ever top up.\n\nThank you for giving us a chance.\n\n— Obinna Ezeodili\nCEO, Kekere Stories`,
+    subject: "Welcome to Kekere Stories",
+    from: "Obinna Ezeodili <obinna@kekere.pro>",
+    body: `Hi ${user.name},\n\nI'm Obinna, co-founder and CEO of Kekere Stories. I'm genuinely glad you're here, and I can't wait for you to read all the short stories we've curated for you!\n\nYou see, we chose short fiction on purpose, not novels. Life in Lagos, in Nairobi, in London, wherever you're reading this from, doesn't leave much room for a 400-page commitment. But it always leaves room for one great story in the time it takes to wait for a bus, finish a meal, or fall asleep. Small doesn't mean small stakes. Some of the best storytelling we've ever read has happened in a few thousand words.\n\nI wonder which of our stories you'll read first 🙃\n\nCheers,\nObinna`,
     html: welcomeHtml,
   });
 
