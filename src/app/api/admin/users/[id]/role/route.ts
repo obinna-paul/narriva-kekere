@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
 import { logAdminAction } from "@/lib/admin/logAction";
 
-const SUPER_ADMIN_DEFAULT = "admin@narriva.com";
+const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 const roleSchema = z.object({
   role: z.enum(["READER", "WRITER", "ADMIN"]),
