@@ -5,10 +5,13 @@ import { withAuth } from "@/lib/auth/middleware";
 import { runGA4Report } from "@/lib/analytics/ga4";
 import { prisma } from "@/lib/db/prisma";
 
+// `days`-long windows that don't share a boundary day — GA4 date ranges are
+// inclusive on both ends, so naively reusing one range's start as the other
+// range's end double-counts that day in both totals.
 function dateRange(days: number): { startDate: string; endDate: string } {
   const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - days);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
   const pad = (n: number) => n.toString().padStart(2, "0");
   const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   return { startDate: iso(start), endDate: iso(end) };
@@ -18,7 +21,7 @@ function prevMonthRange(days: number): { startDate: string; endDate: string } {
   const end = new Date();
   end.setDate(end.getDate() - days);
   const start = new Date(end);
-  start.setDate(start.getDate() - days);
+  start.setDate(start.getDate() - (days - 1));
   const pad = (n: number) => n.toString().padStart(2, "0");
   const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   return { startDate: iso(start), endDate: iso(end) };
@@ -32,6 +35,11 @@ export const GET = withAuth(
     const thisRange = dateRange(days);
     const lastRange = prevMonthRange(days);
     const thirtyDaysAgo = new Date(Date.now() - days * 86400000);
+    // Revenue-vs-target must be true month-to-date — monthlyTarget is a
+    // calendar-month goal, so comparing it against a rolling 30-day total
+    // overstates progress early in the month and understates it late.
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [
       currentTraffic,
@@ -78,11 +86,11 @@ export const GET = withAuth(
       prisma.narrivaSubmission.count({ where: { submittedAt: { gte: thirtyDaysAgo } } }),
       prisma.platformSetting.findUnique({ where: { key: "monthlyRevenueTarget" } }),
       prisma.bookPurchase.findMany({
-        where: { purchasedAt: { gte: thirtyDaysAgo } },
+        where: { purchasedAt: { gte: monthStart } },
         include: { book: { select: { price: true } } },
       }),
       prisma.transaction.findMany({
-        where: { type: "TOP_UP", status: "COMPLETED", createdAt: { gte: thirtyDaysAgo } },
+        where: { type: "TOP_UP", status: "COMPLETED", createdAt: { gte: monthStart } },
         select: { amountNgn: true },
       }),
     ]);

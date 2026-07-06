@@ -60,6 +60,8 @@ export const GET = withAuth(
         requestedAt: r.requestedAt,
         daysWaiting: Math.floor((now - r.requestedAt.getTime()) / 86400000),
         status: r.status,
+        adminNote: r.adminNote,
+        processedAt: r.processedAt,
       })),
     });
   },

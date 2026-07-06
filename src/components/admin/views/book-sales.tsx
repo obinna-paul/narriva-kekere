@@ -5,21 +5,19 @@ import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState, SkeletonKpiCard, SkeletonTableShell } from "@/components/admin/admin-skeleton";
 
 interface BookSalesOverview {
-  totalRevenueNgn: number;
-  copiesSold: number;
-  avgPriceNgn: number;
+  totalRevenueAllTimeNgn: number;
+  totalUnitsAllTime: number;
+  avgRevenuePerSale: number;
   titlesLive: number;
-  revenueLast30d: number;
-  revenueWoW: number;
 }
 
 interface BookSalesRow {
-  bookId: string;
+  id: string;
   title: string;
   authorName: string;
-  priceNgn: number;
-  copiesSold: number;
-  revenueNgn: number;
+  price: number;
+  totalUnits: number;
+  totalRevenueNgn: number;
   lastSaleAt: string | null;
 }
 
@@ -72,16 +70,16 @@ export function BookSalesView() {
 
   if (error) return <AdminViewError message={error} onRetry={load} />;
 
-  const ov = overview ?? { totalRevenueNgn: 0, copiesSold: 0, avgPriceNgn: 0, titlesLive: 0, revenueLast30d: 0, revenueWoW: 0 };
+  const ov = overview ?? { totalRevenueAllTimeNgn: 0, totalUnitsAllTime: 0, avgRevenuePerSale: 0, titlesLive: 0 };
 
   return (
     <div className="space-y-7">
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-[14px]">
         {[
-          { label: "Total revenue", value: fmtNgn(ov.totalRevenueNgn) },
-          { label: "Copies sold", value: ov.copiesSold.toLocaleString() },
-          { label: "Avg price", value: fmtNgn(ov.avgPriceNgn) },
+          { label: "Total revenue", value: fmtNgn(ov.totalRevenueAllTimeNgn) },
+          { label: "Copies sold", value: ov.totalUnitsAllTime.toLocaleString() },
+          { label: "Avg price", value: fmtNgn(ov.avgRevenuePerSale) },
           { label: "Titles live", value: ov.titlesLive.toLocaleString() },
         ].map((k) => (
           <div key={k.label} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
@@ -105,12 +103,12 @@ export function BookSalesView() {
             <span>Last sale</span>
           </div>
           {books.map((b) => (
-            <div key={b.bookId} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
+            <div key={b.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1fr_0.8fr] items-center gap-4 border-b border-[rgba(20,22,26,0.05)] px-5 py-3.5 last:border-0 hover:bg-[#FBFBFC]">
               <p className="truncate text-[13px] font-semibold text-[#1A1C20]">{b.title}</p>
               <p className="truncate text-[12px] text-[#646B73]">{b.authorName}</p>
-              <span className="text-[13px] text-[#1A1C20]">{fmtNgn(b.priceNgn)}</span>
-              <span className="text-[13px] text-[#1A1C20]">{b.copiesSold.toLocaleString()}</span>
-              <span className="text-[13px] font-semibold text-[#1F8A5B]">{fmtNgn(b.revenueNgn)}</span>
+              <span className="text-[13px] text-[#1A1C20]">{fmtNgn(b.price)}</span>
+              <span className="text-[13px] text-[#1A1C20]">{b.totalUnits.toLocaleString()}</span>
+              <span className="text-[13px] font-semibold text-[#1F8A5B]">{fmtNgn(b.totalRevenueNgn)}</span>
               <span className="text-[12px] text-[#8B919A]">{fmtDate(b.lastSaleAt)}</span>
             </div>
           ))}

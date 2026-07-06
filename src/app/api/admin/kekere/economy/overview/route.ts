@@ -17,7 +17,6 @@ export const GET = withAuth(
       walletAvg,
       totalUsers,
       usersWithTopup,
-      usersWithMultipleTopups,
       storyUnlocks7d,
       activeUsers7d,
     ] = await Promise.all([
@@ -44,15 +43,6 @@ export const GET = withAuth(
           wallet: { transactions: { some: { type: "TOP_UP", status: "COMPLETED" } } },
         },
       }),
-      prisma.user.count({
-        where: {
-          wallet: {
-            transactions: {
-              some: { type: "TOP_UP", status: "COMPLETED" },
-            },
-          },
-        },
-      }),
       prisma.storyUnlock.count({
         where: { unlockedAt: { gte: sevenDaysAgo } },
       }),
@@ -62,16 +52,6 @@ export const GET = withAuth(
         distinct: ["userId"],
       }),
     ]);
-
-    const usersWithMultipleTopupsActual = await prisma.user.count({
-      where: {
-        wallet: {
-          transactions: {
-            some: { type: "TOP_UP", status: "COMPLETED" },
-          },
-        },
-      },
-    });
 
     // Count users with 2+ TOP_UP transactions
     const repeatTopupUsers = await prisma.transaction.groupBy({
@@ -98,12 +78,7 @@ export const GET = withAuth(
       topupPackageBreakdown,
       avgSpendingBalancePerActiveUser: walletAvg._avg.spendingBalance ?? 0,
       topupConversionRate: totalUsers > 0 ? (usersWithTopup / totalUsers) : 0,
-      repeatTopupRate:
-        usersWithTopup > 0
-          ? (usersWithMultipleTopupsActual > 0
-              ? usersWithMultipleTopupsActual / usersWithTopup
-              : repeatTopupUsers.length / Math.max(1, usersWithTopup))
-          : 0,
+      repeatTopupRate: usersWithTopup > 0 ? repeatTopupUsers.length / usersWithTopup : 0,
       avgUnlocksPerActiveUserPerWeek:
         activeUsers7dCount > 0
           ? Math.round((storyUnlocks7d / activeUsers7dCount) * 100) / 100

@@ -7,13 +7,13 @@ import { AdminViewError, SkeletonKpiCard, SkeletonChart } from "@/components/adm
 interface EconomyOverview {
   reconciliation: {
     totalIssued: number;
-    readerWallets: number;
-    writerWallets: number;
-    spentOnUnlocks: number;
-    withdrawn: number;
-    platformEarnings: number;
-    isBalanced: boolean;
-    delta: number;
+    totalInSpendingWallets: number;
+    totalInEarnedWallets: number;
+    totalSpentOnUnlocks: number;
+    totalWithdrawnCowries: number;
+    totalPlatformEarned: number;
+    balanced: boolean;
+    equation: { left: number; right: number; difference: number };
   };
 }
 
@@ -51,12 +51,12 @@ function AreaChart({ data, keys }: { data: TimeseriesPoint[]; keys: Array<{ key:
 
 const RECONCILIATION_ITEMS = [
   { key: "totalIssued", label: "Total issued", accent: "#1A1C20" },
-  { key: "readerWallets", label: "Reader wallets", accent: "#1E3A8A" },
-  { key: "writerWallets", label: "Writer wallets (earnable)", accent: "#C75D2C" },
-  { key: "spentOnUnlocks", label: "Spent on unlocks", accent: "#1F8A5B" },
-  { key: "withdrawn", label: "Withdrawn (NGN)", accent: "#B7791F" },
-  { key: "platformEarnings", label: "Platform earnings", accent: "#6B21A8" },
-];
+  { key: "totalInSpendingWallets", label: "Reader wallets", accent: "#1E3A8A" },
+  { key: "totalInEarnedWallets", label: "Writer wallets (earnable)", accent: "#C75D2C" },
+  { key: "totalSpentOnUnlocks", label: "Spent on unlocks", accent: "#1F8A5B" },
+  { key: "totalWithdrawnCowries", label: "Withdrawn", accent: "#B7791F" },
+  { key: "totalPlatformEarned", label: "Platform earnings", accent: "#6B21A8" },
+] as const;
 
 export function CowrieEconomy() {
   const [overview, setOverview] = useState<EconomyOverview | null>(null);
@@ -98,7 +98,7 @@ export function CowrieEconomy() {
   if (error) return <AdminViewError message={error} onRetry={load} />;
 
   const rec = overview?.reconciliation;
-  const isBalanced = rec?.isBalanced ?? false;
+  const isBalanced = rec?.balanced ?? false;
 
   return (
     <div className="space-y-7">
@@ -115,7 +115,7 @@ export function CowrieEconomy() {
             {isBalanced ? "Economy is balanced" : "Economy imbalance detected"}
           </p>
           {!isBalanced && rec && (
-            <p className="text-[12px] text-[#C0392B]/80">Delta: {rec.delta.toLocaleString()} ₵ — investigate before issuing more cowries.</p>
+            <p className="text-[12px] text-[#C0392B]/80">Delta: {rec.equation.difference.toLocaleString()} ₵ — investigate before issuing more cowries.</p>
           )}
         </div>
       </div>
@@ -123,7 +123,7 @@ export function CowrieEconomy() {
       {/* Reconciliation KPIs */}
       <div className="grid grid-cols-3 gap-[14px]">
         {RECONCILIATION_ITEMS.map((item) => {
-          const value = rec ? (rec as any)[item.key] : 0;
+          const value = rec ? rec[item.key] : 0;
           return (
             <div key={item.key} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
               <div className="flex items-center gap-2">

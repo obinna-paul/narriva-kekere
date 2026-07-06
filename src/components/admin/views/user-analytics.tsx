@@ -10,7 +10,7 @@ interface AnalyticsData {
   mau: number;
   dauWauRatio: number;
   wauMauRatio: number;
-  avgUnlocksPerUser: number;
+  avgStoriesReadPerActiveUserPerWeek: number;
   topGenres: Array<{ genre: string; readers: number }>;
   cohortRetention: Array<{ week: string; retained: number; total: number }>;
 }
@@ -71,7 +71,7 @@ export function UserAnalytics() {
           { label: "DAU", value: data.dau.toLocaleString(), note: "Daily active users" },
           { label: "WAU", value: data.wau.toLocaleString(), note: "Weekly active users" },
           { label: "MAU", value: data.mau.toLocaleString(), note: "Monthly active users" },
-          { label: "Avg unlocks / user", value: data.avgUnlocksPerUser?.toFixed(1) ?? "—", note: "last 30 days" },
+          { label: "Avg unlocks / user", value: data.avgStoriesReadPerActiveUserPerWeek?.toFixed(1) ?? "—", note: "per active user, last 7 days" },
         ].map((k) => (
           <div key={k.label} className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
             <span className="text-[12px] font-medium text-[#646B73]">{k.label}</span>

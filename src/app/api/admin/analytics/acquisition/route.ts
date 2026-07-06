@@ -37,7 +37,7 @@ export const GET = withAuth(
     const [sourceReport, referrerReport, landingReport] = await Promise.all([
       runGA4Report({
         dimensions: [{ name: "sessionDefaultChannelGroup" }],
-        metrics: [{ name: "sessions" }, { name: "totalUsers" }],
+        metrics: [{ name: "sessions" }, { name: "totalUsers" }, { name: "bounceRate" }],
         dateRanges: [range],
         dimensionFilter: dimFilter,
         orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
@@ -63,12 +63,21 @@ export const GET = withAuth(
 
     const ga4Error = !sourceReport ? "GA4 API unavailable or credentials not configured" : undefined;
 
+    const channelRows = sourceReport?.rows?.map((r) => ({
+      channel: r.dimensionValues?.[0]?.value ?? "",
+      sessions: parseInt(r.metricValues?.[0]?.value ?? "0"),
+      users: parseInt(r.metricValues?.[1]?.value ?? "0"),
+      bounceRate: parseFloat(r.metricValues?.[2]?.value ?? "0"),
+    })) ?? [];
+    const totalChannelSessions = channelRows.reduce((sum, c) => sum + c.sessions, 0);
+
     return NextResponse.json({
-      sources: sourceReport?.rows?.map((r) => ({
-        channel: r.dimensionValues?.[0]?.value ?? "",
-        sessions: parseInt(r.metricValues?.[0]?.value ?? "0"),
-        users: parseInt(r.metricValues?.[1]?.value ?? "0"),
-      })) ?? [],
+      channels: channelRows.map((c) => ({
+        channel: c.channel,
+        sessions: c.sessions,
+        pct: totalChannelSessions > 0 ? Math.round((c.sessions / totalChannelSessions) * 1000) / 10 : 0,
+        bounceRate: c.bounceRate,
+      })),
       referrers: referrerReport?.rows?.map((r) => ({
         source: r.dimensionValues?.[0]?.value ?? "",
         sessions: parseInt(r.metricValues?.[0]?.value ?? "0"),
