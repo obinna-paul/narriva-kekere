@@ -9,7 +9,20 @@ const buttonClass =
 export function LandingAuthButton({ isLoggedIn }: { isLoggedIn: boolean }) {
   if (isLoggedIn) {
     return (
-      <button type="button" onClick={() => signOut({ callbackUrl: "/kekere" })} className={buttonClass}>
+      <button
+        type="button"
+        onClick={async () => {
+          // This button lives on /kekere and would otherwise redirect back to
+          // /kekere — the exact same URL. Assigning window.location.href to
+          // an unchanged URL doesn't reliably force a fresh navigation in
+          // every browser, so the page can appear to stay "signed in" even
+          // though the session cookie was actually cleared. Forcing a real
+          // reload sidesteps that.
+          await signOut({ redirect: false });
+          window.location.reload();
+        }}
+        className={buttonClass}
+      >
         Sign out
       </button>
     );
