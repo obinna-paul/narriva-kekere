@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -64,7 +65,12 @@ function isActive(href: string, pathname: string) {
   return pathname.startsWith(href);
 }
 
-export function AdminSidebar() {
+export interface AdminSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [counts, setCounts] = useState<Record<string, number>>({});
 
@@ -77,10 +83,31 @@ export function AdminSidebar() {
       .catch(() => {});
   }, []);
 
+  // Close the mobile drawer whenever the route changes (e.g. after tapping a nav link).
+  useEffect(() => {
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col bg-[#15171C]">
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col bg-[#15171C] transition-transform duration-200 md:z-30 md:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       {/* Logo lockup */}
-      <div className="flex-none px-5 py-6">
+      <div className="flex flex-none items-center justify-between px-5 py-6">
         <div className="flex items-center gap-3">
           <div className="flex h-[30px] w-[30px] flex-none overflow-hidden rounded-[7px]">
             <div className="h-full w-1/2 bg-[#1E3A8A]" />
@@ -91,6 +118,13 @@ export function AdminSidebar() {
             <div className="text-[10px] uppercase tracking-[0.06em] text-[#7C828C]">Narriva · Kekere</div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-[28px] w-[28px] flex-none items-center justify-center rounded-[7px] text-[#7C828C] hover:bg-[rgba(255,255,255,0.06)] hover:text-white md:hidden"
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {/* Nav */}
@@ -150,6 +184,7 @@ export function AdminSidebar() {
           </span>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
