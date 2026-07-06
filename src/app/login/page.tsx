@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { KekereTheme, NarrivaTheme } from "@/components/theme";
 import { KekereAuthForm } from "@/components/kekere/auth-form";
 import { TermsOfUse } from "@/content/legal/terms-of-use";
+import { getRandomKekereLoginQuote } from "@/content/kekere-login-quotes";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default function LoginPage({
   searchParams: { brand?: string; callbackUrl?: string; mode?: string };
 }) {
   const isNarriva = searchParams.brand === "narriva";
+  const loginQuote = getRandomKekereLoginQuote();
 
   if (isNarriva) {
     return (
@@ -64,7 +66,7 @@ export default function LoginPage({
           </span>
           <div className="absolute bottom-[22px] left-[22px] right-[22px]">
             <p className="font-[family-name:var(--font-display)] text-[22px] font-semibold italic leading-[1.25] text-[var(--color-cream)]">
-              &ldquo;Read in the time it takes to wait for a bus.&rdquo;
+              &ldquo;{loginQuote}&rdquo;
             </p>
           </div>
         </div>
