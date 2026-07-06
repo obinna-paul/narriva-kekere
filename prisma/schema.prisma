@@ -67,6 +67,11 @@ model User {
   // First-story-free benefit: each new user gets their first unlock at no cost.
   freeReadUsed Boolean @default(false)
 
+  // Set on every successful sign-in (see authorize() in auth/options.ts) —
+  // the only real signal of account activity. updatedAt moves on any
+  // profile/admin edit too, so it isn't a substitute for this.
+  lastLoginAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -935,6 +940,11 @@ model AuthorProject {
   bookTitle        String
   coverImageRef    String?
   currentStage     ProjectStage      @default(ASSESSMENT)
+  // Bumped whenever currentStage actually changes (see the PUT handler in
+  // api/admin/narriva/projects/[projectId]/stage) — lets "days in this
+  // stage" be measured from the last real stage transition instead of
+  // from project creation.
+  stageEnteredAt   DateTime          @default(now())
   // Short admin-written status message shown to the author.
   statusNote       String?
   expectedPubDate  DateTime?

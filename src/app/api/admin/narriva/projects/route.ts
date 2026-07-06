@@ -25,7 +25,7 @@ export const GET = withAuth(
       ).length;
 
       const daysInCurrentStage = Math.floor(
-        (Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        (Date.now() - p.stageEnteredAt.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       return {
