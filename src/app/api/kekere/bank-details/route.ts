@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { resolveBankAccount } from "@/lib/paystack/client";
+import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 
 const bankDetailsSchema = z.object({
   bankName: z.string().min(1),
@@ -39,27 +40,14 @@ export const POST = withAuth(async (request, session) => {
     return NextResponse.json({
       saved: true,
       verified: false,
-      warning: "We could not verify this account. Please double-check your details before withdrawing.",
+      warning: resolution.message || "We could not verify this account. Please double-check your details before withdrawing.",
     });
   }
 
-  return NextResponse.json({ saved: true, verified: true });
+  return NextResponse.json({ saved: true, verified: true, accountName: resolution.accountName });
 });
 
 export const GET = withAuth(async (_request, session) => {
-  const bankDetails = await prisma.writerBankDetails.findUnique({ where: { userId: session.user.id } });
-  if (!bankDetails) {
-    return NextResponse.json({ bankDetails: null });
-  }
-
-  return NextResponse.json({
-    bankDetails: {
-      id: bankDetails.id,
-      bankName: bankDetails.bankName,
-      accountNumberLast4: bankDetails.accountNumber.slice(-4),
-      accountName: bankDetails.accountName,
-      verifiedAt: bankDetails.verifiedAt,
-      bankCode: bankDetails.bankCode,
-    },
-  });
+  const bankDetails = await getWriterBankDetails(session.user.id);
+  return NextResponse.json({ bankDetails });
 });
