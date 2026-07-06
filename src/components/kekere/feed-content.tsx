@@ -8,6 +8,7 @@ import { STORY_TAGS } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
 import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
+import { StorySearch } from "@/components/kekere/story-search";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -239,6 +240,7 @@ export function FeedContent({
               </div>
             )}
           </div>
+          <StorySearch onPreview={setPreviewStory} />
         </div>
       </div>
 
