@@ -23,6 +23,10 @@ export interface StoryReaderProps {
   initialBalance: number;
   initialSaved: boolean;
   initialRating?: number;
+  /** True when this reader hasn't unlocked anything yet and still has their
+   * one free first read available — lets this specific story open free
+   * regardless of cowrie balance. */
+  firstReadFree?: boolean;
 }
 
 export function StoryReader({
@@ -33,6 +37,7 @@ export function StoryReader({
   initialBalance,
   initialSaved,
   initialRating = 0,
+  firstReadFree = false,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -198,7 +203,7 @@ export function StoryReader({
     }
   }
 
-  const canAfford = balance >= story.cowrieCost;
+  const canAfford = firstReadFree || balance >= story.cowrieCost;
   const completionPct = Math.round(story.completionRate * 100);
   const progressPct = Math.round(progress * 100);
 
@@ -493,16 +498,22 @@ export function StoryReader({
                 )}
 
                 <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]">
-                  <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
-                    <span>Your balance</span>
-                    <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
-                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                        <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                        <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                      </svg>
-                      {balance}
-                    </span>
-                  </div>
+                  {firstReadFree ? (
+                    <p className="mb-4 rounded-lg bg-[rgba(199,93,44,0.08)] px-3 py-2 text-[13px] font-semibold text-[var(--color-primary)]">
+                      Your first story is free — no cowries needed
+                    </p>
+                  ) : (
+                    <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
+                      <span>Your balance</span>
+                      <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
+                        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                          <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                          <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                        </svg>
+                        {balance}
+                      </span>
+                    </div>
+                  )}
 
                   {canAfford ? (
                     <button
@@ -512,7 +523,7 @@ export function StoryReader({
                       className="w-full cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-base font-semibold text-white shadow-[0_10px_24px_-10px_rgba(199,93,44,0.55)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
                       style={{ border: "none" }}
                     >
-                      {unlocking ? "Unlocking…" : `Unlock for ${story.cowrieCost} cowries`}
+                      {unlocking ? "Unlocking…" : firstReadFree ? "Read free" : `Unlock for ${story.cowrieCost} cowries`}
                     </button>
                   ) : (
                     <div className="flex flex-col gap-3">

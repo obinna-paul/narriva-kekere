@@ -11,6 +11,9 @@ interface StoryPreviewSheetProps {
   initialSaved?: boolean;
   balance?: number;
   isLoggedIn?: boolean;
+  /** True when this reader hasn't unlocked anything yet and still has their
+   * one free first read available. */
+  firstReadFree?: boolean;
   onClose: () => void;
 }
 
@@ -21,6 +24,7 @@ export function StoryPreviewSheet({
   initialSaved = false,
   balance = 0,
   isLoggedIn = false,
+  firstReadFree = false,
   onClose,
 }: StoryPreviewSheetProps) {
   const router = useRouter();
@@ -45,7 +49,7 @@ export function StoryPreviewSheet({
 
   if (!story) return null;
 
-  const canAfford = balance >= story.cowrieCost;
+  const canAfford = firstReadFree || balance >= story.cowrieCost;
 
   async function toggleSave(e: React.MouseEvent) {
     e.stopPropagation();
@@ -214,29 +218,37 @@ export function StoryPreviewSheet({
             <p className="mt-1 text-[13px] text-[var(--color-ink-muted-2)]">by {story.authorName}</p>
 
             <div className="mt-6 rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-5 shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
-              {/* Balance row */}
-              <div className="mb-4 flex items-center justify-between text-[13.5px]">
-                <span className="text-[var(--color-ink-muted)]">Your balance</span>
-                <span className="flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
-                  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-                    <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                    <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                  </svg>
-                  {balance} cowries
-                </span>
-              </div>
+              {firstReadFree ? (
+                <p className="mb-4 rounded-lg bg-[rgba(199,93,44,0.08)] px-3 py-2 text-center text-[13px] font-semibold text-[var(--color-primary)]">
+                  Your first story is free — no cowries needed
+                </p>
+              ) : (
+                <>
+                  {/* Balance row */}
+                  <div className="mb-4 flex items-center justify-between text-[13.5px]">
+                    <span className="text-[var(--color-ink-muted)]">Your balance</span>
+                    <span className="flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
+                      <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+                        <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                        <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                      </svg>
+                      {balance} cowries
+                    </span>
+                  </div>
 
-              {/* Cost row */}
-              <div className="mb-5 flex items-center justify-between text-[13.5px]">
-                <span className="text-[var(--color-ink-muted)]">Story cost</span>
-                <span className="flex items-center gap-[5px] font-semibold text-[var(--color-primary)]">
-                  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-                    <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                    <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                  </svg>
-                  {story.cowrieCost} cowries
-                </span>
-              </div>
+                  {/* Cost row */}
+                  <div className="mb-5 flex items-center justify-between text-[13.5px]">
+                    <span className="text-[var(--color-ink-muted)]">Story cost</span>
+                    <span className="flex items-center gap-[5px] font-semibold text-[var(--color-primary)]">
+                      <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+                        <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                        <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                      </svg>
+                      {story.cowrieCost} cowries
+                    </span>
+                  </div>
+                </>
+              )}
 
               {canAfford ? (
                 <button
@@ -245,7 +257,7 @@ export function StoryPreviewSheet({
                   onClick={handleUnlock}
                   className="w-full rounded-[12px] bg-[var(--color-primary)] py-[15px] text-[15px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(199,93,44,0.5)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
                 >
-                  {unlocking ? "Unlocking…" : `Unlock for ${story.cowrieCost} cowries`}
+                  {unlocking ? "Unlocking…" : firstReadFree ? "Read free" : `Unlock for ${story.cowrieCost} cowries`}
                 </button>
               ) : (
                 <div className="flex flex-col gap-3">

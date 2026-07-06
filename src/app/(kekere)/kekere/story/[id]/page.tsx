@@ -33,6 +33,7 @@ export default async function KekereStoryPage({ params }: { params: { id: string
         initialBalance={wallet?.spendingBalance ?? 0}
         initialSaved={saved}
         initialRating={rating ?? undefined}
+        firstReadFree={dbStory.firstReadFree}
       />
     </KekereTheme>
   );
