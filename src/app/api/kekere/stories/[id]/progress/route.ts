@@ -19,3 +19,9 @@ export const PUT = withAuth(async (request, session, { params }: { params: { id:
   ]);
   return NextResponse.json({ ok: true });
 });
+
+// navigator.sendBeacon (used by the reader's flush-on-leave path) can only
+// ever issue a POST — it has no way to send PUT — so without this handler
+// that final flush silently 404s every single time and the last bit of
+// scroll progress before leaving the page never gets saved.
+export const POST = PUT;
