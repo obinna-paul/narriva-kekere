@@ -65,9 +65,9 @@ export function AllUsers() {
 
   useEffect(() => { load(); }, [load]);
 
-  function showToast(type: "ok" | "err", msg: string) {
+  function showToast(type: "ok" | "err", msg: string, durationMs = 3500) {
     setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), durationMs);
   }
 
   async function toggleSuspend(user: User) {
@@ -97,7 +97,21 @@ export function AllUsers() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Failed");
       setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role } : u)));
-      showToast("ok", `${user.name} is now ${role.toLowerCase()}.`);
+      // Role lives in the session's JWT, refreshed only at sign-in — a role
+      // change takes effect in the database immediately, but not in a
+      // session that was already issued before the change, which is what
+      // actually gates access to /admin. Only worth flagging for ADMIN:
+      // that's the one role change with an access consequence the promoted
+      // user would immediately try to exercise.
+      if (role === "ADMIN") {
+        showToast(
+          "ok",
+          `${user.name} is now admin. They'll need to sign out and back in before /admin will let them in.`,
+          6000
+        );
+      } else {
+        showToast("ok", `${user.name} is now ${role.toLowerCase()}.`);
+      }
     } catch (e) {
       showToast("err", e instanceof Error ? e.message : "Action failed.");
     } finally {
@@ -110,7 +124,7 @@ export function AllUsers() {
   return (
     <div className="space-y-5">
       {toast && (
-        <div className={cn("fixed right-6 top-6 z-50 rounded-[8px] px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg", toast.type === "ok" ? "bg-[#1F8A5B]" : "bg-[#C0392B]")}>
+        <div className={cn("fixed right-6 top-6 z-50 max-w-[320px] rounded-[8px] px-4 py-2.5 text-[13px] font-semibold leading-[1.4] text-white shadow-lg", toast.type === "ok" ? "bg-[#1F8A5B]" : "bg-[#C0392B]")}>
           {toast.msg}
         </div>
       )}
