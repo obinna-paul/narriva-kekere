@@ -153,7 +153,20 @@ export function ProfileView(props: ProfileViewProps) {
     e.target.value = ""; // allow re-selecting the same file next time
     if (!file) return;
     setAvatarError(null);
-    setCropSrc(URL.createObjectURL(file));
+
+    // react-easy-crop has no built-in handling for an image that fails to
+    // decode — it just silently renders the crop circle with nothing inside
+    // it, with zero indication anything went wrong. Confirm the browser can
+    // actually decode this file into an image *before* ever opening the
+    // crop screen, so a bad photo gets a clear error instead of a dead end.
+    const objectUrl = URL.createObjectURL(file);
+    const probe = new Image();
+    probe.onload = () => setCropSrc(objectUrl);
+    probe.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setAvatarError("Couldn't open that photo. Try a different image.");
+    };
+    probe.src = objectUrl;
   }
 
   function closeCropModal() {
