@@ -26,6 +26,11 @@ const KEKERE_PROTECTED_PREFIXES = ["/kekere/wallet", "/kekere/library", "/kekere
 // real identity (purchases and reading progress are per-user).
 const NARRIVA_PROTECTED_PREFIXES = ["/read", "/account"];
 
+// /kekere/manifest.webmanifest and /kekere/sw.js (public/kekere/*) must stay
+// unauthenticated — a service worker registration or manifest fetch getting
+// redirected to /login would break installability. Neither is in any
+// protected-prefix list above, so both already pass through untouched.
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;

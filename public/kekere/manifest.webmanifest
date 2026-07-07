@@ -1,0 +1,18 @@
+{
+  "name": "Kekere Stories",
+  "short_name": "Kekere",
+  "description": "Small stories. Big feelings. African fiction, read in the time it takes to wait for a bus.",
+  "start_url": "/kekere/feed",
+  "scope": "/kekere/",
+  "id": "/kekere/feed",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5EBDD",
+  "theme_color": "#C75D2C",
+  "icons": [
+    { "src": "/kekere/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/kekere/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/kekere/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/kekere/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
