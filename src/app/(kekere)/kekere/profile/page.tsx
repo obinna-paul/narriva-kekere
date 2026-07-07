@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
 import { listStoriesByAuthor } from "@/lib/data/kekere-stories";
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
+import { getStreakStats } from "@/lib/data/kekere-streaks";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,14 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, myStories, bankDetails] = userId
+  const [profile, writerStats, readerStats, myStories, bankDetails, streakStats] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
         getReaderStats(userId),
         listStoriesByAuthor(userId),
         getWriterBankDetails(userId),
+        getStreakStats(userId),
       ])
     : [
         null,
@@ -28,6 +30,7 @@ export default async function KekereProfilePage() {
         { storiesRead: 0, storiesCompleted: 0, savedCount: 0 },
         [],
         null,
+        { currentStreak: 0, longestStreak: 0, hasAnyActivity: false, heatmapWeeks: [] },
       ];
 
   return (
@@ -48,6 +51,7 @@ export default async function KekereProfilePage() {
           writingStats={writerStats}
           readingStats={readerStats}
           myStories={myStories.map((s) => ({ id: s.id, title: s.title, status: s.status }))}
+          streakStats={streakStats}
         />
       </div>
     </KekereTheme>
