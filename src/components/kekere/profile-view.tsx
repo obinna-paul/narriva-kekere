@@ -7,8 +7,8 @@ import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
-import { DeleteAccountSection } from "@/components/shared/delete-account-section";
 import { ReadingStreak, type ReadingStreakProps } from "@/components/kekere/reading-streak";
+import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -85,9 +85,8 @@ export interface ProfileViewProps {
   email: string;
   bio: string;
   avatarColor: string;
-  avatarKey: string | null;
+  avatarUrl: string | null;
   socialLinks: readonly { label: string; href: string }[];
-  deletionRequestedAt: string | null;
   bankDetails: BankDetailsProp | null;
   hasAuthoredAnyStory: boolean;
   writingStats: { publishedCount: number; totalReads: number };
@@ -100,9 +99,7 @@ export function ProfileView(props: ProfileViewProps) {
   const [name, setName] = useState(props.name);
   const [bio, setBio] = useState(props.bio);
   const [socialLinks, setSocialLinks] = useState(props.socialLinks);
-  const [avatarUrl, setAvatarUrl] = useState(
-    props.avatarKey ? `/api/kekere/avatar/${props.userId}` : null,
-  );
+  const [avatarUrl, setAvatarUrl] = useState(props.avatarUrl);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [draftBio, setDraftBio] = useState(bio);
@@ -111,6 +108,8 @@ export function ProfileView(props: ProfileViewProps) {
   );
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function openEdit() {
@@ -151,22 +150,36 @@ export function ProfileView(props: ProfileViewProps) {
     setEditing(false);
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file next time
     if (!file) return;
+    setAvatarError(null);
+    setCropSrc(URL.createObjectURL(file));
+  }
 
+  function closeCropModal() {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    closeCropModal();
     setUploadingAvatar(true);
+    setAvatarError(null);
+
     try {
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", blob, "avatar.jpg");
       const res = await fetch("/api/kekere/profile/avatar", { method: "POST", body: formData });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.avatarUrl) {
         setAvatarUrl(data.avatarUrl);
+      } else {
+        setAvatarError(data?.error ?? "Couldn't upload photo. Please try again.");
       }
     } catch {
-      // best-effort — the photo just doesn't update on a network failure
+      setAvatarError("Couldn't upload photo — check your connection and try again.");
     }
     setUploadingAvatar(false);
   }
@@ -204,7 +217,7 @@ export function ProfileView(props: ProfileViewProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/*"
               className="hidden"
               onChange={handleAvatarChange}
             />
@@ -230,7 +243,12 @@ export function ProfileView(props: ProfileViewProps) {
             >
               {uploadingAvatar ? "Uploading…" : "Change photo"}
             </button>
+            {avatarError && <p className="mt-2 text-[12.5px] text-[#A13A3A]">{avatarError}</p>}
           </div>
+
+          {cropSrc && (
+            <AvatarCropModal imageSrc={cropSrc} onCancel={closeCropModal} onConfirm={handleCropConfirm} />
+          )}
 
           <form id="edit-profile-form" onSubmit={saveEdit} className="flex flex-col gap-[18px]">
             <div>
@@ -441,7 +459,7 @@ export function ProfileView(props: ProfileViewProps) {
 
           <BankDetailsSection bankDetails={props.bankDetails} />
 
-          <div className="px-[22px] pt-[10px]">
+          <div className="px-[22px] pb-[100px] pt-[10px]">
             <button
               type="button"
               onClick={() => hardSignOut("/kekere")}
@@ -450,10 +468,6 @@ export function ProfileView(props: ProfileViewProps) {
               <LogOut size={15} />
               Log out
             </button>
-          </div>
-
-          <div className="px-[22px] pb-[100px] pt-[22px]">
-            <DeleteAccountSection initialDeletionRequestedAt={props.deletionRequestedAt} />
           </div>
         </>
       )}
