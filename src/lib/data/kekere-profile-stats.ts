@@ -9,14 +9,15 @@ export async function getKekereUserProfile(userId: string) {
 
 export interface WriterStats {
   publishedCount: number;
-  /** Proxy: count of paid unlocks across this writer's stories. Free-story
-   * reads aren't tracked anywhere yet — there's no view/impression model in
-   * the schema — so this undercounts real readership. Real read-tracking is
-   * future work, not in this phase's scope. */
+  /** Proxy: count of unlocks (paid or first-story-free) across this
+   * writer's stories. Free-story reads aren't tracked anywhere else — there's
+   * no view/impression model in the schema — so this undercounts real
+   * readership. Real read-tracking is future work, not in this phase's scope. */
   totalReads: number;
-  /** Proxy: sum of cowrieCost across unlocks of this writer's stories,
-   * i.e. gross cowries spent on their work. Not a real payout ledger —
-   * revenue-share/payout logic doesn't exist yet either. */
+  /** The writer's actual EARNINGS_CREDIT + TIP_RECEIVED ledger total — not
+   * a sum of cowrieCost over every unlock, since a story's first-story-free
+   * unlocks spend nothing and credit nothing (see cowries.ts), so summing
+   * cowrieCost over all unlocks over-counts real earnings by including them. */
   cowriesEarned: number;
   /** Whether to show the "Writing" stats section at all — true if they've
    * authored anything, published or not (not just `publishedCount > 0`). */
@@ -24,19 +25,24 @@ export interface WriterStats {
 }
 
 export async function getWriterStats(userId: string): Promise<WriterStats> {
-  const [publishedCount, anyStoryCount, unlocks] = await Promise.all([
+  const [publishedCount, anyStoryCount, totalReads, earnings] = await Promise.all([
     prisma.story.count({ where: { authorId: userId, status: "PUBLISHED" } }),
     prisma.story.count({ where: { authorId: userId } }),
-    prisma.storyUnlock.findMany({
-      where: { story: { authorId: userId } },
-      select: { story: { select: { cowrieCost: true } } },
+    prisma.storyUnlock.count({ where: { story: { authorId: userId } } }),
+    prisma.transaction.aggregate({
+      where: {
+        wallet: { userId },
+        type: { in: ["EARNINGS_CREDIT", "TIP_RECEIVED"] },
+        status: "COMPLETED",
+      },
+      _sum: { amountCowries: true },
     }),
   ]);
 
   return {
     publishedCount,
-    totalReads: unlocks.length,
-    cowriesEarned: unlocks.reduce((sum, u) => sum + u.story.cowrieCost, 0),
+    totalReads,
+    cowriesEarned: earnings._sum.amountCowries?.toNumber() ?? 0,
     hasAuthoredAnyStory: anyStoryCount > 0,
   };
 }

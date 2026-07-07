@@ -61,7 +61,12 @@ export const GET = withAuth(
         completionRate: s.completionRate,
         // Total cowries spent unlocking this story (writer's 70% + platform's
         // 30%) — NOT platformEarnings alone, which is only the platform's cut.
-        totalRevenueCowries: s._count.unlocks * s.cowrieCost,
+        // Uses platformEarnings.length, not _count.unlocks: a story's
+        // first-story-free unlocks are real StoryUnlock rows but spend
+        // nothing and never create a platformEarnings row (see
+        // lib/economy/cowries.ts), so counting all unlocks here would credit
+        // this story with revenue that was never actually paid.
+        totalRevenueCowries: s.platformEarnings.length * s.cowrieCost,
         platformEarningsCowries: s.platformEarnings.reduce(
           (sum, pe) => sum + pe.cowries.toNumber(),
           0,
