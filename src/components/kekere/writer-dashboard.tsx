@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PenLine, Clock, CheckCircle2, AlertCircle, Eye, FileText } from "lucide-react";
+import { PenLine, Clock, CheckCircle2, AlertCircle, Eye, FileText, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { StoryStatus } from "@prisma/client";
 
@@ -92,6 +92,10 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
     params.set("new", "1");
     if (competitionSlug) params.set("competition", competitionSlug);
     router.push(`/kekere/write?${params.toString()}`);
+  }
+
+  function handleStoryDeleted(id: string) {
+    setStories((prev) => prev?.filter((s) => s.id !== id) ?? prev);
   }
 
   const editableStories = stories?.filter((s) => EDITABLE.includes(s.status)) ?? [];
@@ -202,7 +206,12 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
             </h2>
             <div className="flex flex-col gap-2.5">
               {editableStories.map((story) => (
-                <StoryCard key={story.id} story={story} competitionSlug={competitionSlug} />
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  competitionSlug={competitionSlug}
+                  onDeleted={handleStoryDeleted}
+                />
               ))}
             </div>
           </section>
@@ -216,7 +225,12 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
             </h2>
             <div className="flex flex-col gap-2.5">
               {otherStories.map((story) => (
-                <StoryCard key={story.id} story={story} competitionSlug={competitionSlug} />
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  competitionSlug={competitionSlug}
+                  onDeleted={handleStoryDeleted}
+                />
               ))}
             </div>
           </section>
@@ -226,9 +240,22 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
   );
 }
 
-function StoryCard({ story, competitionSlug }: { story: AuthorStorySummary; competitionSlug?: string }) {
+function StoryCard({
+  story,
+  competitionSlug,
+  onDeleted,
+}: {
+  story: AuthorStorySummary;
+  competitionSlug?: string;
+  onDeleted: (id: string) => void;
+}) {
   const isEditable = EDITABLE.includes(story.status);
+  const canDelete = story.status === "DRAFT";
   const { bg, text } = STATUS_COLORS[story.status];
+
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
 
   const href = (() => {
     const params = new URLSearchParams();
@@ -237,53 +264,122 @@ function StoryCard({ story, competitionSlug }: { story: AuthorStorySummary; comp
     return `/kekere/write?${params.toString()}`;
   })();
 
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError(false);
+    try {
+      const res = await fetch(`/api/kekere/stories/${story.id}`, { method: "DELETE" });
+      if (res.ok) {
+        onDeleted(story.id);
+      } else {
+        setDeleteError(true);
+        setDeleting(false);
+      }
+    } catch {
+      setDeleteError(true);
+      setDeleting(false);
+    }
+  }
+
   return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex items-start gap-4 rounded-xl border bg-white px-4 py-4 transition-colors hover:border-[rgba(199,93,44,.35)] hover:shadow-sm",
-        "border-[rgba(42,26,18,.08)]"
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span
+    <div className="group relative rounded-xl border border-[rgba(42,26,18,.08)] bg-white transition-colors hover:border-[rgba(199,93,44,.35)] hover:shadow-sm">
+      <Link href={href} className="flex items-start gap-4 px-4 py-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                bg, text
+              )}
+            >
+              {STATUS_ICON[story.status]}
+              {STATUS_LABEL[story.status]}
+            </span>
+          </div>
+          <p
             className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-              bg, text
+              "truncate font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12] transition-colors group-hover:text-[#C75D2C]",
+              canDelete && "pr-7",
             )}
           >
-            {STATUS_ICON[story.status]}
-            {STATUS_LABEL[story.status]}
-          </span>
-        </div>
-        <p className="truncate font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12] group-hover:text-[#C75D2C] transition-colors">
-          {story.title || "Untitled story"}
-        </p>
-        {story.hookLine && story.hookLine.trim() && (
-          <p className="mt-0.5 truncate text-[13px] italic text-[rgba(42,26,18,.55)]">
-            {story.hookLine}
+            {story.title || "Untitled story"}
           </p>
-        )}
-        <div className="mt-2 flex items-center gap-3 text-[12px] text-[rgba(42,26,18,.4)]">
-          <span>{story.wordCount.toLocaleString()} words</span>
-          {story.wordCount > 0 && (
-            <>
-              <span>·</span>
-              <span>{readingTime(story.wordCount)}</span>
-            </>
+          {story.hookLine && story.hookLine.trim() && (
+            <p className="mt-0.5 truncate text-[13px] italic text-[rgba(42,26,18,.55)]">
+              {story.hookLine}
+            </p>
           )}
-          <span>·</span>
-          <span>
-            {isEditable && story.lastSavedAt
-              ? `Saved ${relTime(story.lastSavedAt)}`
-              : `Updated ${relTime(story.updatedAt)}`}
-          </span>
+          <div className="mt-2 flex items-center gap-3 text-[12px] text-[rgba(42,26,18,.4)]">
+            <span>{story.wordCount.toLocaleString()} words</span>
+            {story.wordCount > 0 && (
+              <>
+                <span>·</span>
+                <span>{readingTime(story.wordCount)}</span>
+              </>
+            )}
+            <span>·</span>
+            <span>
+              {isEditable && story.lastSavedAt
+                ? `Saved ${relTime(story.lastSavedAt)}`
+                : `Updated ${relTime(story.updatedAt)}`}
+            </span>
+          </div>
         </div>
-      </div>
-      <span className="flex-none pt-1 text-[20px] text-[rgba(42,26,18,.2)] transition-colors group-hover:text-[#C75D2C]">
-        ›
-      </span>
-    </Link>
+        {!canDelete && (
+          <span className="flex-none pt-1 text-[20px] text-[rgba(42,26,18,.2)] transition-colors group-hover:text-[#C75D2C]">
+            ›
+          </span>
+        )}
+      </Link>
+
+      {/* Delete is only ever offered for true drafts — the same rule the
+       * DELETE /api/kekere/stories/[id] endpoint enforces server-side
+       * (deleteStory in kekere-stories.ts), so this button is purely a
+       * shortcut to an already-safe action, not a new authorization path.
+       * Always visible, not hover-revealed: most Kekere usage is on a
+       * phone, which has no hover state. */}
+      {canDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            setConfirming(true);
+          }}
+          aria-label="Delete draft"
+          className="absolute right-3 top-3 rounded-full p-1.5 text-[rgba(42,26,18,.35)] transition-colors hover:bg-[rgba(193,58,58,0.08)] hover:text-[#A13A3A]"
+        >
+          <Trash2 size={15} />
+        </button>
+      )}
+
+      {confirming && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/[.97] px-4 text-center">
+          <p className="text-[13.5px] font-medium text-[#2A1A12]">
+            Delete this draft? This can&apos;t be undone.
+          </p>
+          {deleteError && (
+            <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={deleting}
+              className="rounded-full border border-[rgba(42,26,18,.16)] px-4 py-1.5 text-[13px] font-semibold text-[#2A1A12] disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="rounded-full bg-[#A13A3A] px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
