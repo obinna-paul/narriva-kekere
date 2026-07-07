@@ -24,8 +24,8 @@ export default async function KekereProfilePage() {
       ])
     : [
         null,
-        { publishedCount: 0, totalReads: 0, cowriesEarned: 0, hasAuthoredAnyStory: false },
-        { storiesRead: 0, savedCount: 0 },
+        { publishedCount: 0, totalReads: 0, hasAuthoredAnyStory: false },
+        { storiesRead: 0, storiesCompleted: 0, savedCount: 0 },
         [],
         null,
       ];
@@ -35,10 +35,14 @@ export default async function KekereProfilePage() {
       <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
         <KekereNavWrapper />
         <ProfileView
+          userId={userId ?? ""}
           name={profile?.name ?? ""}
           email={profile?.email ?? ""}
           bio={profile?.bio ?? ""}
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
+          avatarKey={profile?.avatar ?? null}
+          socialLinks={profile?.socialLinks ?? []}
+          deletionRequestedAt={profile?.deletionRequestedAt?.toISOString() ?? null}
           bankDetails={bankDetails}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}

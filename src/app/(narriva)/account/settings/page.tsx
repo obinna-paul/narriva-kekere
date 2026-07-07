@@ -4,7 +4,7 @@ import { Container, Section } from "@/components/ui/layout";
 import { Heading, Body } from "@/components/ui/typography";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { DeleteAccountSection } from "@/components/narriva/delete-account-section";
+import { DeleteAccountSection } from "@/components/shared/delete-account-section";
 
 export const dynamic = "force-dynamic";
 

@@ -1,12 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { LogOut, Link2, Gift } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
+import { DeleteAccountSection } from "@/components/shared/delete-account-section";
+
+/** "Label|https://url" per line — same plain-text convention as the admin's
+ * Narriva author-form social links editor (src/components/admin/author-form.tsx),
+ * kept simple rather than building a repeatable-fields UI for a handful of links. */
+function parseSocialLinks(text: string): { label: string; href: string }[] {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((line) => {
+      const [label, href] = line.split("|").map((part) => part.trim());
+      return { label: label || href, href: href || label };
+    });
+}
 
 type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED" | "PENDING_CONTRACT";
 
@@ -63,28 +79,42 @@ function StatCard({ value, label, accent }: { value: string; label: string; acce
 }
 
 export interface ProfileViewProps {
+  userId: string;
   name: string;
   email: string;
   bio: string;
   avatarColor: string;
+  avatarKey: string | null;
+  socialLinks: readonly { label: string; href: string }[];
+  deletionRequestedAt: string | null;
   bankDetails: BankDetailsProp | null;
   hasAuthoredAnyStory: boolean;
-  writingStats: { publishedCount: number; totalReads: number; cowriesEarned: number };
-  readingStats: { storiesRead: number; savedCount: number };
+  writingStats: { publishedCount: number; totalReads: number };
+  readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   myStories: readonly MyStorySummary[];
 }
 
 export function ProfileView(props: ProfileViewProps) {
   const [name, setName] = useState(props.name);
   const [bio, setBio] = useState(props.bio);
+  const [socialLinks, setSocialLinks] = useState(props.socialLinks);
+  const [avatarUrl, setAvatarUrl] = useState(
+    props.avatarKey ? `/api/kekere/avatar/${props.userId}` : null,
+  );
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [draftBio, setDraftBio] = useState(bio);
+  const [draftSocialLinksText, setDraftSocialLinksText] = useState(
+    socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"),
+  );
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function openEdit() {
     setDraftName(name);
     setDraftBio(bio);
+    setDraftSocialLinksText(socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"));
     setEditing(true);
   }
 
@@ -96,6 +126,8 @@ export function ProfileView(props: ProfileViewProps) {
     e.preventDefault();
     setSaving(true);
 
+    const parsedSocialLinks = parseSocialLinks(draftSocialLinksText);
+
     try {
       await fetch("/api/kekere/profile", {
         method: "PATCH",
@@ -103,6 +135,7 @@ export function ProfileView(props: ProfileViewProps) {
         body: JSON.stringify({
           name: draftName,
           bio: draftBio,
+          socialLinks: parsedSocialLinks,
         }),
       });
     } catch {
@@ -111,8 +144,29 @@ export function ProfileView(props: ProfileViewProps) {
 
     setName(draftName);
     setBio(draftBio);
+    setSocialLinks(parsedSocialLinks);
     setSaving(false);
     setEditing(false);
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file next time
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/kekere/profile/avatar", { method: "POST", body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setAvatarUrl(data.avatarUrl);
+      }
+    } catch {
+      // best-effort — the photo just doesn't update on a network failure
+    }
+    setUploadingAvatar(false);
   }
 
   const initial = name.trim().charAt(0).toUpperCase() || "?";
@@ -145,20 +199,34 @@ export function ProfileView(props: ProfileViewProps) {
           </div>
 
           <div className="mb-[26px] text-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
             <div
-              className="mx-auto flex h-[84px] w-[84px] items-center justify-center rounded-full font-[family-name:var(--font-display)] text-[30px] font-semibold text-white"
+              className="mx-auto flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[30px] font-semibold text-white"
               style={{
                 background: `linear-gradient(135deg, #E08A4A, ${props.avatarColor})`,
               }}
             >
-              {initial}
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initial
+              )}
             </div>
             <button
               type="button"
-              className="mt-3 cursor-pointer bg-none text-[13.5px] font-semibold text-[var(--color-primary)]"
+              disabled={uploadingAvatar}
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-3 cursor-pointer bg-none text-[13.5px] font-semibold text-[var(--color-primary)] disabled:opacity-50"
               style={{ background: "none", border: "none" }}
             >
-              Change photo
+              {uploadingAvatar ? "Uploading…" : "Change photo"}
             </button>
           </div>
 
@@ -198,22 +266,47 @@ export function ProfileView(props: ProfileViewProps) {
                 {draftBio.length} / 160
               </div>
             </div>
+            <div>
+              <label
+                htmlFor="profile-social-links"
+                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+              >
+                Social links
+              </label>
+              <textarea
+                id="profile-social-links"
+                rows={3}
+                value={draftSocialLinksText}
+                onChange={(e) => setDraftSocialLinksText(e.target.value)}
+                placeholder={"Instagram|https://instagram.com/you\nX|https://x.com/you"}
+                className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                style={{ fontFamily: "inherit" }}
+              />
+              <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
+                One per line, as Label|https://url. Up to 5.
+              </div>
+            </div>
           </form>
         </div>
       ) : (
         <>
           <section className="px-[22px] pb-[30px] pt-[44px] text-center">
             <div
-              className="mx-auto flex h-[96px] w-[96px] items-center justify-center rounded-full p-1"
+              className="mx-auto flex h-[96px] w-[96px] items-center justify-center overflow-hidden rounded-full p-1"
               style={{ background: props.avatarColor }}
             >
               <div
-                className="flex h-full w-full items-center justify-center rounded-full font-[family-name:var(--font-display)] text-[34px] font-semibold text-white"
+                className="flex h-full w-full items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[34px] font-semibold text-white"
                 style={{
                   background: `linear-gradient(135deg, #E08A4A, ${props.avatarColor})`,
                 }}
               >
-                {initial}
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initial
+                )}
               </div>
             </div>
             <h1 className="mt-4 font-[family-name:var(--font-display)] text-[26px] font-semibold text-[var(--color-ink)]">
@@ -222,6 +315,24 @@ export function ProfileView(props: ProfileViewProps) {
             <p className="mx-auto mt-2 max-w-[300px] text-[14.5px] leading-[1.5] text-[var(--color-ink-muted)]">
               {bio || "No bio yet."}
             </p>
+
+            {socialLinks.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-[8px]">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
+                  >
+                    <Link2 size={12} />
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
+
             <button
               type="button"
               onClick={openEdit}
@@ -238,7 +349,7 @@ export function ProfileView(props: ProfileViewProps) {
                 <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
                   As a writer
                 </div>
-                <div className="mb-6 grid grid-cols-3 gap-[10px]">
+                <div className="mb-6 grid grid-cols-2 gap-[10px]">
                   <StatCard
                     value={String(props.writingStats.publishedCount)}
                     label="Published stories"
@@ -249,11 +360,6 @@ export function ProfileView(props: ProfileViewProps) {
                     label="Total reads"
                     accent="orange"
                   />
-                  <StatCard
-                    value={formatStat(props.writingStats.cowriesEarned)}
-                    label="Cowries earned"
-                    accent="orange"
-                  />
                 </div>
               </>
             )}
@@ -261,10 +367,15 @@ export function ProfileView(props: ProfileViewProps) {
             <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
               As a reader
             </div>
-            <div className="mb-6 grid grid-cols-2 gap-[10px]">
+            <div className="mb-6 grid grid-cols-3 gap-[10px]">
               <StatCard
                 value={String(props.readingStats.storiesRead)}
                 label="Stories read"
+                accent="teal"
+              />
+              <StatCard
+                value={String(props.readingStats.storiesCompleted)}
+                label="Completed"
                 accent="teal"
               />
               <StatCard
@@ -276,9 +387,17 @@ export function ProfileView(props: ProfileViewProps) {
 
             <Link
               href="/kekere/library"
-              className="mb-6 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
+              className="mb-3 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
             >
               Go to my library &rarr;
+            </Link>
+
+            <Link
+              href="/kekere/invite"
+              className="mb-6 flex items-center justify-center gap-2 rounded-xl bg-[rgba(31,75,75,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-accent)]"
+            >
+              <Gift size={16} />
+              Invite friends, earn cowries &rarr;
             </Link>
 
             {props.hasAuthoredAnyStory && props.myStories.length > 0 && (
@@ -318,7 +437,7 @@ export function ProfileView(props: ProfileViewProps) {
 
           <BankDetailsSection bankDetails={props.bankDetails} />
 
-          <div className="px-[22px] pb-[100px] pt-[10px]">
+          <div className="px-[22px] pt-[10px]">
             <button
               type="button"
               onClick={() => hardSignOut("/kekere")}
@@ -327,6 +446,10 @@ export function ProfileView(props: ProfileViewProps) {
               <LogOut size={15} />
               Log out
             </button>
+          </div>
+
+          <div className="px-[22px] pb-[100px] pt-[22px]">
+            <DeleteAccountSection initialDeletionRequestedAt={props.deletionRequestedAt} />
           </div>
         </>
       )}

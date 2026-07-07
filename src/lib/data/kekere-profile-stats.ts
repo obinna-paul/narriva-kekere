@@ -1,10 +1,32 @@
 import { prisma } from "@/lib/db/prisma";
 
+// A type alias, not an interface: Prisma's generated JSON input type rejects
+// interfaces here (they're structurally "open" for declaration merging),
+// same reason authors.ts's equivalent field uses an inline object type.
+export type SocialLink = {
+  label: string;
+  href: string;
+};
+
 export async function getKekereUserProfile(userId: string) {
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true, bio: true, avatarColor: true },
+    select: {
+      name: true,
+      email: true,
+      bio: true,
+      avatarColor: true,
+      avatar: true,
+      socialLinks: true,
+      deletionRequestedAt: true,
+    },
   });
+  if (!user) return null;
+
+  return {
+    ...user,
+    socialLinks: (user.socialLinks as SocialLink[] | null) ?? [],
+  };
 }
 
 export interface WriterStats {
@@ -14,35 +36,21 @@ export interface WriterStats {
    * no view/impression model in the schema — so this undercounts real
    * readership. Real read-tracking is future work, not in this phase's scope. */
   totalReads: number;
-  /** The writer's actual EARNINGS_CREDIT + TIP_RECEIVED ledger total — not
-   * a sum of cowrieCost over every unlock, since a story's first-story-free
-   * unlocks spend nothing and credit nothing (see cowries.ts), so summing
-   * cowrieCost over all unlocks over-counts real earnings by including them. */
-  cowriesEarned: number;
   /** Whether to show the "Writing" stats section at all — true if they've
    * authored anything, published or not (not just `publishedCount > 0`). */
   hasAuthoredAnyStory: boolean;
 }
 
 export async function getWriterStats(userId: string): Promise<WriterStats> {
-  const [publishedCount, anyStoryCount, totalReads, earnings] = await Promise.all([
+  const [publishedCount, anyStoryCount, totalReads] = await Promise.all([
     prisma.story.count({ where: { authorId: userId, status: "PUBLISHED" } }),
     prisma.story.count({ where: { authorId: userId } }),
     prisma.storyUnlock.count({ where: { story: { authorId: userId } } }),
-    prisma.transaction.aggregate({
-      where: {
-        wallet: { userId },
-        type: { in: ["EARNINGS_CREDIT", "TIP_RECEIVED"] },
-        status: "COMPLETED",
-      },
-      _sum: { amountCowries: true },
-    }),
   ]);
 
   return {
     publishedCount,
     totalReads,
-    cowriesEarned: earnings._sum.amountCowries?.toNumber() ?? 0,
     hasAuthoredAnyStory: anyStoryCount > 0,
   };
 }
@@ -51,22 +59,39 @@ export interface ReaderStats {
   /** Proxy: count of this user's own unlocks. Free stories they've read
    * without unlocking aren't tracked — same caveat as WriterStats.totalReads. */
   storiesRead: number;
+  storiesCompleted: number;
   savedCount: number;
 }
 
 export async function getReaderStats(userId: string): Promise<ReaderStats> {
-  const [storiesRead, savedCount] = await Promise.all([
+  const [storiesRead, storiesCompleted, savedCount] = await Promise.all([
     prisma.storyUnlock.count({ where: { userId } }),
+    prisma.storyCompletion.count({ where: { userId } }),
     prisma.savedStory.count({ where: { userId } }),
   ]);
 
-  return { storiesRead, savedCount };
+  return { storiesRead, storiesCompleted, savedCount };
 }
 
-export async function updateKekereProfile(userId: string, data: { name: string; bio: string }) {
+export async function updateKekereProfile(
+  userId: string,
+  data: { name: string; bio: string; socialLinks?: SocialLink[] },
+) {
   return prisma.user.update({
     where: { id: userId },
-    data: { name: data.name, bio: data.bio },
-    select: { name: true, bio: true },
+    data: {
+      name: data.name,
+      bio: data.bio,
+      socialLinks: data.socialLinks,
+    },
+    select: { name: true, bio: true, socialLinks: true },
+  });
+}
+
+export async function updateUserAvatar(userId: string, avatarKey: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { avatar: avatarKey },
+    select: { avatar: true },
   });
 }
