@@ -18,7 +18,6 @@ export async function getKekereUserProfile(userId: string) {
       avatarColor: true,
       avatar: true,
       socialLinks: true,
-      deletionRequestedAt: true,
     },
   });
   if (!user) return null;
@@ -56,21 +55,31 @@ export async function getWriterStats(userId: string): Promise<WriterStats> {
 }
 
 export interface ReaderStats {
-  /** Proxy: count of this user's own unlocks. Free stories they've read
-   * without unlocking aren't tracked — same caveat as WriterStats.totalReads. */
+  /** Distinct stories this user has unlocked OR completed — a union, not
+   * just unlock count, because completing a story doesn't require an
+   * unlock row: the story's own author (previewing their own work) and
+   * admins (isStoryUnlockedFor in kekere-stories.ts) can both read and
+   * complete a story with no StoryUnlock ever created. Counting unlocks
+   * alone could show fewer "stories read" than "stories completed", which
+   * is a nonsensical thing to show someone. */
   storiesRead: number;
   storiesCompleted: number;
   savedCount: number;
 }
 
 export async function getReaderStats(userId: string): Promise<ReaderStats> {
-  const [storiesRead, storiesCompleted, savedCount] = await Promise.all([
-    prisma.storyUnlock.count({ where: { userId } }),
-    prisma.storyCompletion.count({ where: { userId } }),
+  const [unlockedStoryIds, completedStoryIds, savedCount] = await Promise.all([
+    prisma.storyUnlock.findMany({ where: { userId }, select: { storyId: true } }),
+    prisma.storyCompletion.findMany({ where: { userId }, select: { storyId: true } }),
     prisma.savedStory.count({ where: { userId } }),
   ]);
 
-  return { storiesRead, storiesCompleted, savedCount };
+  const readStoryIds = new Set([
+    ...unlockedStoryIds.map((u) => u.storyId),
+    ...completedStoryIds.map((c) => c.storyId),
+  ]);
+
+  return { storiesRead: readStoryIds.size, storiesCompleted: completedStoryIds.length, savedCount };
 }
 
 export async function updateKekereProfile(

@@ -6,6 +6,7 @@ import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data
 import { listStoriesByAuthor } from "@/lib/data/kekere-stories";
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 import { getStreakStats } from "@/lib/data/kekere-streaks";
+import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +44,8 @@ export default async function KekereProfilePage() {
           email={profile?.email ?? ""}
           bio={profile?.bio ?? ""}
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
-          avatarKey={profile?.avatar ?? null}
+          avatarUrl={profile?.avatar ? userAvatarUrl(profile.avatar) : null}
           socialLinks={profile?.socialLinks ?? []}
-          deletionRequestedAt={profile?.deletionRequestedAt?.toISOString() ?? null}
           bankDetails={bankDetails}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}

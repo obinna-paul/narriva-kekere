@@ -155,36 +155,6 @@ export async function getStoryCoverStream(
   };
 }
 
-/** Uploads a user's profile photo. Key is deterministic (keyed by userId, not
- *  a random id) so re-uploading replaces the previous photo rather than
- *  leaving orphaned files behind — same pattern as uploadStoryCover. */
-export async function uploadUserAvatar(
-  userId: string,
-  buffer: Buffer,
-  contentType: string,
-): Promise<string> {
-  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-  const key = `avatars/${userId}.${ext}`;
-
-  await r2Client.send(
-    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }),
-  );
-
-  return key;
-}
-
-/** Streams a user's profile photo from R2. Public — avatars aren't sensitive,
- *  and a stable URL lets browsers cache them like story covers. */
-export async function getUserAvatarStream(
-  key: string,
-): Promise<{ body: ReadableStream; contentType: string }> {
-  const res = await r2Client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-  if (!res.Body) throw new Error("Avatar not found");
-  return {
-    body: res.Body.transformToWebStream(),
-    contentType: res.ContentType ?? "image/jpeg",
-  };
-}
 
 /** Fetches a single chapter from ebook content in R2. */
 export async function getEbookChapter(
