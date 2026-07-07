@@ -68,7 +68,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     content: initialContent ?? EMPTY_DOC,
     editable,
     immediatelyRender: false,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       const json = editor.getJSON() as TiptapDoc;
       const count = editor.storage.characterCount.words();
       const minutes = count === 0 ? 0 : Math.max(1, Math.round(count / READING_WPM));
@@ -76,6 +76,24 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       onReadingTimeChange?.(minutes);
       setLocalWordCount(count);
       setLocalReadingTime(minutes);
+
+      // The UniqueID extension (editor-config.ts) assigns a paragraph id the
+      // moment the editor mounts, via two different internal code paths —
+      // one tags its transaction "__uniqueIDTransaction", the other (its
+      // onCreate initial-id-check) only sets "addToHistory: false" — so both
+      // meta flags need checking, not just one. Either fires onUpdate before
+      // the writer has typed anything; treating that as a real edit made
+      // every brand-new story immediately show a false "unsaved changes"
+      // recovery banner, since it wrote a fresher-than-server
+      // localStorage/IndexedDB entry with content identical to what the
+      // server already has.
+      if (
+        transaction.getMeta("__uniqueIDTransaction") ||
+        transaction.getMeta("addToHistory") === false
+      ) {
+        return;
+      }
+
       isDirtyRef.current = true;
       setStatus({ kind: "dirty" });
 
