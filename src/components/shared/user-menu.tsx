@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 
 export interface UserMenuProps {
@@ -85,7 +85,7 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
 
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={() => hardSignOut(isKekere ? "/kekere" : "/")}
             className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
           >
             Sign out
