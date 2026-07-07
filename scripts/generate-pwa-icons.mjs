@@ -14,7 +14,9 @@ const outDir = path.join(root, "public", "kekere", "icons");
 const BG = "#F5EBDD"; // Kekere --color-bg
 
 async function regularIcon(size, filename) {
-  const logo = await sharp(source).resize(Math.round(size * 0.72), Math.round(size * 0.72), { fit: "contain" }).toBuffer();
+  // "any"-purpose icons are placed as-is with no OS-applied mask, so they
+  // should fill most of the canvas like a typical home-screen icon.
+  const logo = await sharp(source).resize(Math.round(size * 0.86), Math.round(size * 0.86), { fit: "contain" }).toBuffer();
   await sharp({ create: { width: size, height: size, channels: 4, background: BG } })
     .composite([{ input: logo, gravity: "center" }])
     .png()
@@ -22,9 +24,11 @@ async function regularIcon(size, filename) {
 }
 
 async function maskableIcon(size, filename) {
-  // Maskable icons need the logo within a smaller "safe zone" (~70% of the
-  // canvas) since OS icon masks (circle/squircle) can crop the outer edge.
-  const logo = await sharp(source).resize(Math.round(size * 0.55), Math.round(size * 0.55), { fit: "contain" }).toBuffer();
+  // Maskable icons need the logo within a safe zone since OS icon masks
+  // (circle/squircle) can crop the outer edge — per the W3C/Google maskable
+  // icon spec, content should fit within a centered safe zone that's ~80% of
+  // the icon's diameter to survive any mask shape without clipping.
+  const logo = await sharp(source).resize(Math.round(size * 0.8), Math.round(size * 0.8), { fit: "contain" }).toBuffer();
   await sharp({ create: { width: size, height: size, channels: 4, background: BG } })
     .composite([{ input: logo, gravity: "center" }])
     .png()
@@ -32,8 +36,11 @@ async function maskableIcon(size, filename) {
 }
 
 async function appleTouchIcon() {
-  // iOS ignores/mishandles alpha on home-screen icons — flatten fully opaque.
-  const logo = await sharp(source).resize(130, 130, { fit: "contain" }).toBuffer();
+  // iOS applies its own rounded-corner mask (no clipping of a circular safe
+  // zone the way maskable icons need), so this can fill nearly the full
+  // canvas — iOS ignores/mishandles alpha on home-screen icons, so flatten
+  // fully opaque.
+  const logo = await sharp(source).resize(160, 160, { fit: "contain" }).toBuffer();
   await sharp({ create: { width: 180, height: 180, channels: 3, background: BG } })
     .composite([{ input: logo, gravity: "center" }])
     .flatten({ background: BG })
