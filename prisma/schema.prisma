@@ -82,6 +82,7 @@ model User {
   storyRatings       StoryRating[]
   storyCompletions   StoryCompletion[]
   storyReadingProgress StoryReadingProgress[]
+  readingActivity      ReadingActivity[]
   authorProjects     AuthorProject[]
   tipsSent             Tip[]                 @relation("TipReader")
   tipsReceived         Tip[]                 @relation("TipWriter")
@@ -761,6 +762,24 @@ model StoryReadingProgress {
   updatedAt      DateTime @updatedAt
 
   @@unique([userId, storyId])
+}
+
+// One row per user per UTC calendar day they did real reading activity
+// (see recordReadingActivity in lib/data/kekere-streaks.ts, called from the
+// same reading-progress endpoint StoryReadingProgress uses) — powers the
+// profile's reading-streak stat and activity heatmap. `date` is truncated to
+// midnight UTC; streaks are computed on UTC day boundaries, not the reader's
+// local timezone (not stored anywhere today), so a read right around
+// midnight can land on a different day than the reader would expect.
+model ReadingActivity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
 }
 
 // Narriva blog (Phase 7) — added here since it didn't exist in the Phase 1

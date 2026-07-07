@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 import { DeleteAccountSection } from "@/components/shared/delete-account-section";
+import { ReadingStreak, type ReadingStreakProps } from "@/components/kekere/reading-streak";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -92,6 +93,7 @@ export interface ProfileViewProps {
   writingStats: { publishedCount: number; totalReads: number };
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   myStories: readonly MyStorySummary[];
+  streakStats: ReadingStreakProps;
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -342,6 +344,8 @@ export function ProfileView(props: ProfileViewProps) {
               Edit profile
             </button>
           </section>
+
+          <ReadingStreak {...props.streakStats} />
 
           <section className="px-[22px]">
             {props.hasAuthoredAnyStory && (
