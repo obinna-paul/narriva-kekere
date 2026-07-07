@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { Download, Share2, X } from "lucide-react";
 
+// sessionStorage, not localStorage: a decline/dismiss should only quiet the
+// banner for the current browser session, not forever — so it resurfaces on
+// the next visit (and, notably, after an uninstall + revisit, since that's
+// a fresh session) instead of being silenced permanently on this origin.
 const DISMISSED_KEY = "kekere-install-prompt-dismissed";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -42,7 +46,7 @@ export function InstallPrompt() {
 
   useEffect(() => {
     if (isStandalone()) return;
-    if (localStorage.getItem(DISMISSED_KEY) === "1") return;
+    if (sessionStorage.getItem(DISMISSED_KEY) === "1") return;
 
     setDismissed(false);
 
@@ -60,16 +64,21 @@ export function InstallPrompt() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(DISMISSED_KEY, "1");
+    sessionStorage.setItem(DISMISSED_KEY, "1");
     setDismissed(true);
   }
 
   async function handleInstallClick() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    const { outcome } = await deferredPrompt.userChoice;
     setDeferredPrompt(null);
-    dismiss();
+    // Only silence the banner outright on an accepted install (the app is
+    // about to become standalone, so isStandalone() takes over from here).
+    // On a decline, just clear the consumed prompt — don't call dismiss(),
+    // so the banner can still reappear this session if the browser fires
+    // beforeinstallprompt again, and definitely reappears next session.
+    if (outcome === "accepted") setDismissed(true);
   }
 
   if (dismissed) return null;
