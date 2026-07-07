@@ -7,7 +7,6 @@ import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { DraftBadge } from "@/components/kekere/DraftBadge";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
-import { ReadingStreak, type ReadingStreakProps } from "@/components/kekere/reading-streak";
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
@@ -92,7 +91,6 @@ export interface ProfileViewProps {
   writingStats: { publishedCount: number; totalReads: number };
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   myStories: readonly MyStorySummary[];
-  streakStats: ReadingStreakProps;
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -362,8 +360,6 @@ export function ProfileView(props: ProfileViewProps) {
               Edit profile
             </button>
           </section>
-
-          <ReadingStreak {...props.streakStats} />
 
           <section className="px-[22px]">
             {props.hasAuthoredAnyStory && (
