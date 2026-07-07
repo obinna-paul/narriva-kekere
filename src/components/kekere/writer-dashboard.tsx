@@ -250,7 +250,8 @@ function StoryCard({
   onDeleted: (id: string) => void;
 }) {
   const isEditable = EDITABLE.includes(story.status);
-  const canDelete = story.status === "DRAFT";
+  const isRejected = story.status === "REJECTED";
+  const canDelete = story.status === "DRAFT" || isRejected;
   const { bg, text } = STATUS_COLORS[story.status];
 
   const [confirming, setConfirming] = useState(false);
@@ -332,11 +333,11 @@ function StoryCard({
         )}
       </Link>
 
-      {/* Delete is only ever offered for true drafts — the same rule the
-       * DELETE /api/kekere/stories/[id] endpoint enforces server-side
-       * (deleteStory in kekere-stories.ts), so this button is purely a
-       * shortcut to an already-safe action, not a new authorization path.
-       * Always visible, not hover-revealed: most Kekere usage is on a
+      {/* Delete is only ever offered for drafts and rejected stories — the
+       * same rule the DELETE /api/kekere/stories/[id] endpoint enforces
+       * server-side (deleteStory in kekere-stories.ts), so this button is
+       * purely a shortcut to an already-safe action, not a new authorization
+       * path. Always visible, not hover-revealed: most Kekere usage is on a
        * phone, which has no hover state. */}
       {canDelete && (
         <button
@@ -345,7 +346,7 @@ function StoryCard({
             e.preventDefault();
             setConfirming(true);
           }}
-          aria-label="Delete draft"
+          aria-label="Delete story"
           className="absolute right-3 top-3 rounded-full p-1.5 text-[rgba(42,26,18,.35)] transition-colors hover:bg-[rgba(193,58,58,0.08)] hover:text-[#A13A3A]"
         >
           <Trash2 size={15} />
@@ -355,8 +356,18 @@ function StoryCard({
       {confirming && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/[.97] px-4 text-center">
           <p className="text-[13.5px] font-medium text-[#2A1A12]">
-            Delete this draft? This can&apos;t be undone.
+            {isRejected
+              ? "Delete this story? This can't be undone — export it first if you want to keep a copy."
+              : "Delete this draft? This can't be undone."}
           </p>
+          {isRejected && (
+            <a
+              href={`/api/kekere/stories/${story.id}/export`}
+              className="text-[12.5px] font-semibold text-[#C75D2C] underline"
+            >
+              Export as .docx first
+            </a>
+          )}
           {deleteError && (
             <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
           )}

@@ -47,7 +47,9 @@ export default async function KekereProfilePage() {
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
           readingStats={readerStats}
-          myStories={myStories.map((s) => ({ id: s.id, title: s.title, status: s.status }))}
+          myStories={myStories
+            .filter((s) => s.status !== "REJECTED")
+            .map((s) => ({ id: s.id, title: s.title, status: s.status }))}
         />
       </div>
     </KekereTheme>
