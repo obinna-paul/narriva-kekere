@@ -340,12 +340,16 @@ export async function updateStory(
   });
 }
 
-/** Author-only, DRAFT status only — once submitted, a story can't be
- * deleted out from under the moderation queue. */
+/** Author-only. Only a draft (never submitted) or a rejected story (done
+ * with review) can be deleted — anything mid-review (SUBMITTED, REVIEWING,
+ * REVISIONS_REQUESTED, PENDING_CONTRACT) can't be deleted out from under
+ * the moderation queue, and PUBLISHED stories are already public. */
+const DELETABLE_STATUSES: StoryStatus[] = ["DRAFT", "REJECTED"];
+
 export async function deleteStory(id: string, authorId: string): Promise<void> {
   const story = await getStoryForAuthor(id, authorId);
-  if (story.status !== "DRAFT") {
-    throw new StoryIllegalStateError("Only draft stories can be deleted.");
+  if (!DELETABLE_STATUSES.includes(story.status)) {
+    throw new StoryIllegalStateError("Only a draft or a rejected story can be deleted.");
   }
   await prisma.story.delete({ where: { id } });
 }
