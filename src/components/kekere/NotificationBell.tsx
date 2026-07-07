@@ -312,12 +312,17 @@ export function NotificationBell() {
                           </p>
                         </div>
 
-                        {/* Desktop dismiss X — shown on hover via group */}
+                        {/* Explicit dismiss X — visible on every screen size.
+                         * Mobile also has swipe-to-delete (below), but that
+                         * gesture has zero visual hint until someone
+                         * accidentally discovers it, so this button is the
+                         * only *discoverable* way to delete a notification
+                         * on the platform most Kekere users are actually on. */}
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleDismiss(n.id); }}
                           aria-label="Dismiss"
-                          className="hidden self-start rounded-[6px] border-none bg-transparent p-[5px] text-[13px] text-[rgba(42,26,18,.35)] hover:bg-[rgba(42,26,18,.08)] hover:text-[#B3371D] md:block"
+                          className="flex-none self-start rounded-[6px] border-none bg-transparent p-[5px] text-[13px] text-[rgba(42,26,18,.35)] hover:bg-[rgba(42,26,18,.08)] hover:text-[#B3371D]"
                         >
                           ✕
                         </button>
