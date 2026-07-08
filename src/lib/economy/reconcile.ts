@@ -35,6 +35,7 @@
  */
 import { prisma } from "@/lib/db/prisma";
 import type { TransactionType, WalletField } from "@prisma/client";
+import { round2 } from "@/lib/economy/round";
 
 export interface ReconcileResult {
   totalIssued: number;
@@ -74,9 +75,11 @@ const RECONCILE_TOLERANCE_COWRIES = 1;
 export const CREDIT_TYPES: TransactionType[] = [
   "TOP_UP", "REFUND", "REFERRAL", "READ_REWARD", "TIP_RECEIVED",
   "REFERRAL_REWARD", "EARNINGS_CREDIT", "ADMIN_CREDIT", "DATA_CORRECTION_CREDIT",
+  "EARNED_TO_SPENDING_IN",
 ];
 export const DEBIT_TYPES: TransactionType[] = [
   "UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT",
+  "EARNED_TO_SPENDING_OUT",
 ];
 
 /**
@@ -157,12 +160,15 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
   // Any gap between what's actually in a wallet bucket and what its own
   // transaction history says should be there — real activity, correctly
   // recorded, nets to zero here. A nonzero value is untracked/legacy data.
-  const totalUntrackedBalance =
-    (totalInSpendingWallets - expectedSpendingNet) + (totalInEarnedWallets - expectedEarnedNet);
+  // Rounded to 2dp so a floating-point epsilon from Decimal→number math
+  // (e.g. 8.1 − 5) never surfaces as a phantom fraction.
+  const totalUntrackedBalance = round2(
+    (totalInSpendingWallets - expectedSpendingNet) + (totalInEarnedWallets - expectedEarnedNet)
+  );
 
-  const left = totalIssued;
-  const right = totalInSpendingWallets + totalInEarnedWallets + totalPlatformEarned + totalWithdrawnCowries;
-  const difference = left - right;
+  const left = round2(totalIssued);
+  const right = round2(totalInSpendingWallets + totalInEarnedWallets + totalPlatformEarned + totalWithdrawnCowries);
+  const difference = round2(left - right);
 
   return {
     totalIssued,
