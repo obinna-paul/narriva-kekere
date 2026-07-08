@@ -282,6 +282,47 @@ function StoryCard({
     }
   }
 
+  if (confirming) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-[rgba(42,26,18,.08)] bg-white px-4 py-5 text-center">
+        <p className="text-[13.5px] font-medium text-[#2A1A12]">
+          {isRejected
+            ? "Delete this story? This can't be undone — export it first if you want to keep a copy."
+            : "Delete this draft? This can't be undone."}
+        </p>
+        {isRejected && (
+          <a
+            href={`/api/kekere/stories/${story.id}/export`}
+            className="text-[12.5px] font-semibold text-[#C75D2C] underline"
+          >
+            Export as .docx first
+          </a>
+        )}
+        {deleteError && (
+          <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            disabled={deleting}
+            className="rounded-full border border-[rgba(42,26,18,.16)] px-4 py-1.5 text-[13px] font-semibold text-[#2A1A12] disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="rounded-full bg-[#A13A3A] px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="group relative rounded-xl border border-[rgba(42,26,18,.08)] bg-white transition-colors hover:border-[rgba(199,93,44,.35)] hover:shadow-sm">
       <Link href={href} className="flex items-start gap-4 px-4 py-4">
@@ -351,45 +392,6 @@ function StoryCard({
         >
           <Trash2 size={15} />
         </button>
-      )}
-
-      {confirming && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-white/[.97] px-4 text-center">
-          <p className="text-[13.5px] font-medium text-[#2A1A12]">
-            {isRejected
-              ? "Delete this story? This can't be undone — export it first if you want to keep a copy."
-              : "Delete this draft? This can't be undone."}
-          </p>
-          {isRejected && (
-            <a
-              href={`/api/kekere/stories/${story.id}/export`}
-              className="text-[12.5px] font-semibold text-[#C75D2C] underline"
-            >
-              Export as .docx first
-            </a>
-          )}
-          {deleteError && (
-            <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              disabled={deleting}
-              className="rounded-full border border-[rgba(42,26,18,.16)] px-4 py-1.5 text-[13px] font-semibold text-[#2A1A12] disabled:opacity-60"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="rounded-full bg-[#A13A3A] px-4 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
-            >
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </div>
       )}
     </div>
   );
