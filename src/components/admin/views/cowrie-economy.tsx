@@ -15,6 +15,8 @@ interface EconomyOverview {
     totalSpentOnUnlocks: number;
     totalWithdrawnCowries: number;
     totalPlatformEarned: number;
+    totalHeldByAdmin: number;
+    totalUntrackedBalance: number;
     balanced: boolean;
     equation: { left: number; right: number; difference: number };
   };
@@ -25,6 +27,15 @@ interface TimeseriesPoint {
   issued: number;
   spent: number;
   withdrawn: number;
+}
+
+interface WalletAuditRow {
+  walletId: string;
+  email: string;
+  name: string;
+  spendingDiff: number;
+  earnedDiff: number;
+  totalDiff: number;
 }
 
 function AreaChart({ data, keys }: { data: TimeseriesPoint[]; keys: Array<{ key: keyof TimeseriesPoint; color: string; label: string }> }) {
@@ -64,6 +75,7 @@ const RECONCILIATION_ITEMS = [
 export function CowrieEconomy() {
   const [overview, setOverview] = useState<EconomyOverview | null>(null);
   const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([]);
+  const [auditRows, setAuditRows] = useState<WalletAuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("30d");
@@ -72,14 +84,19 @@ export function CowrieEconomy() {
     setLoading(true);
     setError(null);
     try {
-      const [ovRes, tsRes] = await Promise.all([
+      const [ovRes, tsRes, auditRes] = await Promise.all([
         fetch("/api/admin/kekere/economy/overview"),
         fetch(`/api/admin/kekere/economy/timeseries?range=${range}`),
+        fetch("/api/admin/kekere/economy/wallet-audit"),
       ]);
       if (!ovRes.ok || !tsRes.ok) throw new Error("Failed to load economy data");
       const [ov, ts] = await Promise.all([ovRes.json(), tsRes.json()]);
       setOverview(ov);
       setTimeseries(ts.data ?? []);
+      if (auditRes.ok) {
+        const audit = await auditRes.json();
+        setAuditRows(audit.rows ?? []);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -118,10 +135,66 @@ export function CowrieEconomy() {
             {isBalanced ? "Economy is balanced" : "Economy imbalance detected"}
           </p>
           {!isBalanced && rec && (
-            <p className="text-[12px] text-[#C0392B]/80">Delta: {rec.equation.difference.toLocaleString()} ₵ — investigate before issuing more cowries.</p>
+            <p className="text-[12px] text-[#C0392B]/80">
+              Delta: {rec.equation.difference.toLocaleString()} ₵.{" "}
+              {Math.abs(rec.totalUntrackedBalance) > 1
+                ? `${Math.abs(rec.totalUntrackedBalance).toLocaleString()} ₵ of that is untracked wallet balance — not backed by any transaction. See below.`
+                : "Investigate before issuing more cowries."}
+            </p>
           )}
         </div>
       </div>
+
+      {/* Untracked balance — a data-integrity signal distinct from the admin's
+          own (deliberately excluded) test balance. */}
+      {rec && Math.abs(rec.totalUntrackedBalance) > 1 && (
+        <div className="flex items-center gap-3 rounded-[11px] border border-[#B7791F]/25 bg-[rgba(183,121,31,0.06)] px-5 py-4">
+          <span className="text-[20px]">◆</span>
+          <div>
+            <p className="text-[14px] font-semibold text-[#B7791F]">Untracked wallet balance</p>
+            <p className="text-[12px] text-[#B7791F]/85">
+              {rec.totalUntrackedBalance.toLocaleString()} ₵ sitting in reader/writer wallets has no matching
+              transaction — likely leftover from before the spending/earned wallet split, or a direct
+              database edit. Real activity always nets to zero here.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Which specific wallets carry the untracked balance. */}
+      {auditRows.length > 0 && (
+        <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
+          <h3 className="mb-1 text-[13px] font-semibold text-[#1A1C20]">Flagged wallets</h3>
+          <p className="mb-4 text-[12px] text-[#8B919A]">
+            Accounts whose stored balance doesn&apos;t match what their own transaction history says it should be.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[13px]">
+              <thead>
+                <tr className="border-b border-[rgba(20,22,26,0.08)] text-left text-[11px] uppercase tracking-[0.04em] text-[#9AA0A8]">
+                  <th className="pb-2 font-medium">User</th>
+                  <th className="pb-2 text-right font-medium">Spending diff</th>
+                  <th className="pb-2 text-right font-medium">Earned diff</th>
+                  <th className="pb-2 text-right font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditRows.map((row) => (
+                  <tr key={row.walletId} className="border-b border-[rgba(20,22,26,0.05)] last:border-0">
+                    <td className="py-2">
+                      <div className="font-medium text-[#1A1C20]">{row.name}</div>
+                      <div className="text-[11px] text-[#8B919A]">{row.email}</div>
+                    </td>
+                    <td className="py-2 text-right tabular-nums text-[#1A1C20]">{row.spendingDiff.toLocaleString()}</td>
+                    <td className="py-2 text-right tabular-nums text-[#1A1C20]">{row.earnedDiff.toLocaleString()}</td>
+                    <td className="py-2 text-right font-semibold tabular-nums text-[#C0392B]">{row.totalDiff.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Reconciliation KPIs */}
       <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
@@ -163,6 +236,14 @@ export function CowrieEconomy() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Admin's own wallet — reported for transparency, deliberately left
+          out of every figure above. It's a test/free account, not a real
+          reader or writer, so it isn't "cowries in circulation". */}
+      <div className="flex items-center justify-between gap-3 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-4">
+        <span className="text-[13px] text-[#646B73]">Held by admin accounts (excluded from every figure above)</span>
+        <span className="text-[13px] font-semibold tabular-nums text-[#1A1C20]">{(rec?.totalHeldByAdmin ?? 0).toLocaleString()} cowries</span>
       </div>
 
       {/* Time-series chart */}
