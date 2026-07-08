@@ -10,7 +10,7 @@ import { HistoryExportModal } from "@/components/kekere/history-export-modal";
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -37,7 +37,7 @@ const HISTORY_PAGE_SIZE = 10;
 // Every transaction is stored as a positive magnitude regardless of
 // direction — whether it's a debit (money leaving the wallet) or a credit
 // depends entirely on the type, not the sign of amountCowries.
-const DEBIT_TX_TYPES = new Set(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT"]);
+const DEBIT_TX_TYPES = new Set(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT"]);
 
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   navigator.clipboard.writeText(text).then(() => {
@@ -56,6 +56,8 @@ const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = 
   TIP_SENT: { icon: ArrowUpRight, color: "#C0392B" },
   ADMIN_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   ADMIN_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
+  DATA_CORRECTION_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  DATA_CORRECTION_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
 };
 
 function TxIcon({ type }: { type: string }) {
@@ -76,6 +78,7 @@ function TxLabel(type: string): string {
     EARNINGS_CREDIT: "Earnings", REFERRAL: "Referral",
     READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
     ADMIN_CREDIT: "Balance adjustment", ADMIN_DEBIT: "Balance adjustment",
+    DATA_CORRECTION_CREDIT: "Balance correction", DATA_CORRECTION_DEBIT: "Balance correction",
   };
   return map[type] ?? type;
 }

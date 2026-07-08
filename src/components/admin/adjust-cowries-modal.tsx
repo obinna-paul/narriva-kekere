@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 export type CowrieWalletType = "spending" | "earned";
+export type CowrieAdjustmentKind = "business" | "correction";
 
 export interface AdjustCowriesModalProps {
   userId: string;
@@ -12,6 +13,13 @@ export interface AdjustCowriesModalProps {
   initialAmount?: number;
   initialReason?: string;
   initialRecordOnly?: boolean;
+  // "business" (default): a deliberate decision — counted in totalIssued.
+  // "correction": fixing an untracked balance — excluded from totalIssued,
+  // and (unlike a business adjustment) DOES resolve a wallet's "untracked
+  // balance" flag once applied, since it's a real explanation for the gap
+  // rather than a new, separately-tracked event. Not user-editable — fixed
+  // by which part of the admin UI opened this modal.
+  kind?: CowrieAdjustmentKind;
   onClose: () => void;
   onSuccess: (result: { wallet: CowrieWalletType; newBalance: number }) => void;
 }
@@ -23,6 +31,7 @@ export function AdjustCowriesModal({
   initialAmount,
   initialReason,
   initialRecordOnly = false,
+  kind = "business",
   onClose,
   onSuccess,
 }: AdjustCowriesModalProps) {
@@ -54,7 +63,7 @@ export function AdjustCowriesModal({
       const res = await fetch(`/api/admin/users/${userId}/adjust-cowries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet, amount: numericAmount, reason: reason.trim(), recordOnly }),
+        body: JSON.stringify({ wallet, amount: numericAmount, reason: reason.trim(), recordOnly, kind }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Adjustment failed");
@@ -136,9 +145,8 @@ export function AdjustCowriesModal({
             <span>
               <span className="font-medium text-[#1A1C20]">Record only — don&apos;t change the balance.</span>{" "}
               Use this when the current balance is already correct (e.g. legitimate legacy data) and you
-              just need the ledger to explain it. Leave unchecked for a real correction — that moves the
-              balance, but by definition can never make a historical &quot;untracked balance&quot; flag
-              disappear, since the correction itself becomes a new, separately-explained event.
+              just need the ledger to explain it. Leave unchecked to actually move the balance to what it
+              should be.
             </span>
           </label>
         </div>
