@@ -38,6 +38,17 @@ export async function ensureReferralCodeForUser(userId: string): Promise<string>
 }
 
 /**
+ * Looks up this user's referral code, creating one if they signed up before
+ * the referral system existed (or otherwise never got one) — without this,
+ * the code/share link silently disappears for any pre-existing account.
+ */
+export async function getOrCreateReferralCodeForUser(userId: string): Promise<string> {
+  const existing = await prisma.referralCode.findUnique({ where: { userId }, select: { code: true } });
+  if (existing) return existing.code;
+  return ensureReferralCodeForUser(userId);
+}
+
+/**
  * Looks up a referral code and, unless it's invalid or self-referral,
  * creates a PENDING Referral linking the code owner to the new user. Never
  * throws on an invalid/self code — referral attribution is best-effort and

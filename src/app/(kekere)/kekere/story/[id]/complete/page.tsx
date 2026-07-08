@@ -4,7 +4,7 @@ import { StoryCompletionScreen } from "@/components/kekere/story-completion-scre
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getStoryForReader } from "@/lib/data/kekere-stories";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
-import { prisma } from "@/lib/db/prisma";
+import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +15,9 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
   const story = await getStoryForReader(params.id, session.user.id);
   if (!story) notFound();
 
-  const [wallet, referrer] = await Promise.all([
+  const [wallet, code] = await Promise.all([
     getWalletForUser(session.user.id),
-    prisma.referralCode.findUnique({ where: { userId: session.user.id }, select: { code: true } }),
+    getOrCreateReferralCodeForUser(session.user.id),
   ]);
 
   const alreadyTipped = wallet?.transactions.some((t) => t.type === "TIP_SENT" && t.description?.includes(params.id));
@@ -32,7 +32,7 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
           spendingBalance={wallet?.spendingBalance ?? 0}
           tipSent={!!alreadyTipped}
           rating={0}
-          referralCode={referrer?.code ?? null}
+          referralCode={code}
           onTip={async () => {}}
           onRate={async () => {}}
         />

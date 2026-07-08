@@ -3,12 +3,13 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
+import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 
 export const GET = withAuth(async (_request, session) => {
   const userId = session.user.id;
 
-  const [referralCode, totalReferrals, rewardedReferrals, earningsAgg, referrals] = await Promise.all([
-    prisma.referralCode.findUnique({ where: { userId } }),
+  const [code, totalReferrals, rewardedReferrals, earningsAgg, referrals] = await Promise.all([
+    getOrCreateReferralCodeForUser(userId),
     prisma.referral.count({ where: { referrerId: userId } }),
     prisma.referral.count({ where: { referrerId: userId, status: "REWARDED" } }),
     prisma.transaction.aggregate({
@@ -23,8 +24,8 @@ export const GET = withAuth(async (_request, session) => {
   ]);
 
   return NextResponse.json({
-    code: referralCode?.code ?? null,
-    shareUrl: referralCode ? `https://narriva.pro/kekere/invite/${referralCode.code}` : null,
+    code,
+    shareUrl: `https://narriva.pro/kekere/invite/${code}`,
     totalReferrals,
     rewardedReferrals,
     totalCowriesEarned: earningsAgg._sum.amountCowries?.toNumber() ?? 0,
