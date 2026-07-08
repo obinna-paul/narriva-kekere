@@ -18,6 +18,14 @@ interface ReferralStats {
   }>;
 }
 
+function relativeJoinTime(iso: string): string {
+  const diffSec = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diffSec < 3600) return "just now";
+  if (diffSec < 86400) return `${Math.max(1, Math.round(diffSec / 3600))}h ago`;
+  if (diffSec < 86400 * 30) return `${Math.round(diffSec / 86400)}d ago`;
+  return new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "2-digit" });
+}
+
 function legacyCopy(text: string): boolean {
   const textarea = document.createElement("textarea");
   textarea.value = text;
@@ -135,10 +143,10 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
                 <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[12px] bg-[rgba(42,26,18,0.06)] text-[14px] font-semibold text-[#8A7565]">{r.referredUserName}***</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[14px] font-medium text-[#2A1A12]">{r.referredUserName}***</div>
-                  <div className="text-[12px] text-[#8A7565]">{new Date(r.referredAt).toLocaleDateString()}</div>
+                  <div className="text-[12px] text-[#8A7565]">Joined {relativeJoinTime(r.referredAt)}</div>
                 </div>
                 <div className={cn("flex-none rounded-full px-2.5 py-1 text-[11px] font-medium", r.status === "REWARDED" ? "bg-[#1F8A5B]/10 text-[#1F8A5B]" : "bg-[#E9A56B]/15 text-[#B7791F]")}>
-                  {r.status === "REWARDED" ? "Reward earned" : "Joined"}
+                  {r.status === "REWARDED" ? "Reward earned" : "Awaiting top-up"}
                 </div>
               </div>
             ))}

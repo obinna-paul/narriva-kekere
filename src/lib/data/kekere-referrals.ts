@@ -65,15 +65,27 @@ export async function recordReferralFromCode(code: string, referredUserId: strin
   if (!ownerCode) return;
   if (ownerCode.userId === referredUserId) return; // cannot refer yourself
 
-  await prisma.referral.upsert({
-    where: { referredUserId },
-    create: {
-      referrerId: ownerCode.userId,
-      referredUserId,
-      codeUsed: trimmed,
-      status: "PENDING",
-    },
-    update: {}, // a user can only ever be referred once — keep the first attribution
+  const existing = await prisma.referral.findUnique({ where: { referredUserId } });
+  if (existing) return; // a user can only ever be referred once — keep the first attribution
+
+  const [, referredUser] = await Promise.all([
+    prisma.referral.create({
+      data: {
+        referrerId: ownerCode.userId,
+        referredUserId,
+        codeUsed: trimmed,
+        status: "PENDING",
+      },
+    }),
+    prisma.user.findUnique({ where: { id: referredUserId }, select: { name: true } }),
+  ]);
+
+  await createNotification({
+    userId: ownerCode.userId,
+    type: "REFERRAL_JOINED",
+    title: "Someone joined using your invite",
+    body: `${referredUser?.name ?? "Someone"} signed up with your Kekere link. You'll earn 3 cowries once they buy their first cowries.`,
+    link: "/kekere/invite",
   });
 }
 
