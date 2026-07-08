@@ -4,6 +4,7 @@ import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { ReferralSection } from "@/components/kekere/referral-section";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
+import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,8 @@ export default async function KekereInvitePage() {
   const session = await getCurrentSession();
   if (!session?.user?.id) redirect("/login");
 
-  const [referralCode, totalReferrals, rewardedReferrals, earningsAgg, referrals] = await Promise.all([
-    prisma.referralCode.findUnique({ where: { userId: session.user.id } }),
+  const [code, totalReferrals, rewardedReferrals, earningsAgg, referrals] = await Promise.all([
+    getOrCreateReferralCodeForUser(session.user.id),
     prisma.referral.count({ where: { referrerId: session.user.id } }),
     prisma.referral.count({ where: { referrerId: session.user.id, status: "REWARDED" } }),
     prisma.transaction.aggregate({
@@ -32,8 +33,8 @@ export default async function KekereInvitePage() {
         <KekereNavWrapper />
         <ReferralSection
           stats={{
-            code: referralCode?.code ?? null,
-            shareUrl: referralCode ? `https://narriva.pro/kekere/invite/${referralCode.code}` : null,
+            code,
+            shareUrl: `https://narriva.pro/kekere/invite/${code}`,
             totalReferrals,
             rewardedReferrals,
             totalCowriesEarned: earningsAgg._sum.amountCowries?.toNumber() ?? 0,

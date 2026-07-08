@@ -18,16 +18,57 @@ interface ReferralStats {
   }>;
 }
 
-function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
-  navigator.clipboard.writeText(text).then(() => {
+function legacyCopy(text: string): boolean {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  document.body.removeChild(textarea);
+  return ok;
+}
+
+async function copyToClipboard(
+  text: string,
+  setCopied: (v: boolean) => void,
+  setFailed: (v: boolean) => void
+) {
+  try {
+    await navigator.clipboard.writeText(text);
+    setFailed(false);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }).catch(() => {});
+    return;
+  } catch {
+    // Some in-app/webview browsers restrict the async clipboard API — fall
+    // back to the older execCommand approach before giving up.
+  }
+  if (legacyCopy(text)) {
+    setFailed(false);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  } else {
+    setFailed(true);
+    setTimeout(() => setFailed(false), 3000);
+  }
 }
 
 export function ReferralSection({ stats }: { stats: ReferralStats }) {
   const [codeCopied, setCodeCopied] = useState(false);
+  const [codeCopyFailed, setCodeCopyFailed] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [linkCopyFailed, setLinkCopyFailed] = useState(false);
+  const whatsappMessage = stats.shareUrl
+    ? `Hi! Let me plug you to Kekere Stories where I read the best short fiction: ${stats.shareUrl}`
+    : "";
 
   return (
     <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-6">
@@ -42,10 +83,10 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
             <div className="font-[family-name:var(--font-display)] text-[28px] font-semibold tracking-wider text-[#E9A56B]">{stats.code}</div>
             <button
               type="button"
-              onClick={() => copyToClipboard(stats.code!, setCodeCopied)}
+              onClick={() => copyToClipboard(stats.code!, setCodeCopied, setCodeCopyFailed)}
               className="flex items-center gap-2 rounded-[11px] bg-white/10 px-4 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-white/15"
             >
-              {codeCopied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy code</>}
+              {codeCopied ? <><Check size={14} /> Copied</> : codeCopyFailed ? "Couldn't copy — select it manually" : <><Copy size={14} /> Copy code</>}
             </button>
           </div>
         </div>
@@ -53,13 +94,18 @@ export function ReferralSection({ stats }: { stats: ReferralStats }) {
 
       {/* Share row */}
       <div className="mt-[14px] flex gap-3">
-        <button type="button" onClick={() => stats.shareUrl && copyToClipboard(stats.shareUrl, setLinkCopied)} className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white py-3 text-[13px] font-medium text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30">
-          {linkCopied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy link</>}
+        <button type="button" onClick={() => stats.shareUrl && copyToClipboard(stats.shareUrl, setLinkCopied, setLinkCopyFailed)} className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white py-3 text-[13px] font-medium text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30">
+          {linkCopied ? <><Check size={15} /> Copied</> : linkCopyFailed ? "Couldn't copy" : <><Copy size={15} /> Copy link</>}
         </button>
-        <a href={stats.shareUrl ? `https://wa.me/?text=${encodeURIComponent(`Join Kekere Stories: ${stats.shareUrl}`)}` : "#"} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#25D366] py-3 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
+        <a href={stats.shareUrl ? `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}` : "#"} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#25D366] py-3 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
           <MessageCircle size={15} /> WhatsApp
         </a>
       </div>
+      {linkCopyFailed && (
+        <p className="mt-2 text-center text-[12px] text-[#C0392B]">
+          Couldn&apos;t copy automatically. Your link: {stats.shareUrl}
+        </p>
+      )}
 
       {/* Stats */}
       <div className="mt-5 grid grid-cols-3 gap-[10px]">
