@@ -8,6 +8,7 @@ import { ContractSignedEmail } from "./contract-signed";
 import { StoryRejectedEmail } from "./story-rejected";
 import { RevisionsRequestedEmail } from "./revisions-requested";
 import { ResetPasswordEmail } from "./reset-password";
+import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
   return render(createElement(OtpEmail, props));
@@ -66,4 +67,13 @@ export async function renderResetPasswordEmail(props: {
   expiryMinutes?: number;
 }) {
   return render(createElement(ResetPasswordEmail, props));
+}
+
+export async function renderWalletHistoryEmail(props: {
+  name: string;
+  from: string;
+  to: string;
+  rows: WalletHistoryRow[];
+}) {
+  return render(createElement(WalletHistoryEmail, props));
 }

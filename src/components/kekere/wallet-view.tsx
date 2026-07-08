@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap, Mail } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
+import { HistoryExportModal } from "@/components/kekere/history-export-modal";
 
 export interface WalletTransactionView {
   id: string;
@@ -24,12 +25,19 @@ export interface WalletViewProps {
   userEmail: string;
   isWriter: boolean;
   transactions: readonly WalletTransactionView[];
+  totalTransactionCount: number;
   referralCode: string | null;
   referralEarnings: number;
   tipEarnings: number;
 }
 
 const NAIRA_RATE = 50;
+const HISTORY_PAGE_SIZE = 10;
+
+// Every transaction is stored as a positive magnitude regardless of
+// direction — whether it's a debit (money leaving the wallet) or a credit
+// depends entirely on the type, not the sign of amountCowries.
+const DEBIT_TX_TYPES = new Set(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT"]);
 
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   navigator.clipboard.writeText(text).then(() => {
@@ -40,14 +48,14 @@ function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
 
 const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = {
   TOP_UP: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  UNLOCK: { icon: ArrowUpRight, color: "#8A7565" },
-  WITHDRAWAL: { icon: ArrowUpRight, color: "#8A7565" },
+  UNLOCK: { icon: ArrowUpRight, color: "#C0392B" },
+  WITHDRAWAL: { icon: ArrowUpRight, color: "#C0392B" },
   REFERRAL_REWARD: { icon: ArrowDownLeft, color: "#1F8A5B" },
   EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  TIP_SENT: { icon: ArrowUpRight, color: "#8A7565" },
+  TIP_SENT: { icon: ArrowUpRight, color: "#C0392B" },
   ADMIN_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  ADMIN_DEBIT: { icon: ArrowUpRight, color: "#8A7565" },
+  ADMIN_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
 };
 
 function TxIcon({ type }: { type: string }) {
@@ -80,11 +88,15 @@ function getWalletForTx(type: string): string | null {
 
 export function WalletView({
   spendingBalance, earnedBalance, userId, userEmail, isWriter,
-  transactions, referralCode, referralEarnings, tipEarnings,
+  transactions, totalTransactionCount, referralCode, referralEarnings, tipEarnings,
 }: WalletViewProps) {
   const router = useRouter();
   const [showTopUp, setShowTopUp] = useState(false);
+  const [showHistoryExport, setShowHistoryExport] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const visibleTransactions = transactions.slice(0, HISTORY_PAGE_SIZE);
+  const hasMoreHistory = totalTransactionCount > HISTORY_PAGE_SIZE;
 
   const nairaValue = earnedBalance * NAIRA_RATE;
 
@@ -172,8 +184,8 @@ export function WalletView({
           {transactions.length === 0 && (
             <p className="py-8 text-center text-[14px] text-[#8A7565]">No transactions yet</p>
           )}
-          {transactions.map((tx) => {
-            const isCredit = tx.amountCowries > 0;
+          {visibleTransactions.map((tx) => {
+            const isDebit = DEBIT_TX_TYPES.has(tx.type);
             const wallet = isWriter ? getWalletForTx(tx.type) : null;
             return (
               <div key={tx.id} className="flex items-center gap-3 rounded-[13px] px-3 py-3 transition-colors hover:bg-[rgba(42,26,18,0.03)]">
@@ -189,8 +201,8 @@ export function WalletView({
                   </div>
                 </div>
                 <div className="flex-none text-right">
-                  <div className={cn("text-[14px] font-semibold", isCredit ? "text-[#1F8A5B]" : "text-[#8A7565]")}>
-                    {isCredit ? "+" : ""}{tx.amountCowries}
+                  <div className={cn("text-[14px] font-semibold", isDebit ? "text-[#C0392B]" : "text-[#1F8A5B]")}>
+                    {isDebit ? "-" : "+"}{tx.amountCowries}
                   </div>
                   <div className="text-[11px] text-[#A08C7C]">{new Date(tx.date).toLocaleDateString()}</div>
                 </div>
@@ -198,6 +210,16 @@ export function WalletView({
             );
           })}
         </div>
+
+        {hasMoreHistory && (
+          <button
+            type="button"
+            onClick={() => setShowHistoryExport(true)}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[13px] border border-[rgba(42,26,18,0.10)] bg-white py-3 text-[13px] font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30"
+          >
+            <Mail size={14} /> Request full transaction history
+          </button>
+        )}
       </div>
 
       {/* Top-up modal */}
@@ -207,6 +229,14 @@ export function WalletView({
           userEmail={userEmail}
           onClose={() => setShowTopUp(false)}
           onSuccess={() => { setShowTopUp(false); router.refresh(); }}
+        />
+      )}
+
+      {/* Full history export modal */}
+      {showHistoryExport && (
+        <HistoryExportModal
+          userEmail={userEmail}
+          onClose={() => setShowHistoryExport(false)}
         />
       )}
     </div>

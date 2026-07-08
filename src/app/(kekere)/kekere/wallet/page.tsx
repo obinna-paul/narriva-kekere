@@ -2,7 +2,7 @@ import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { WalletView } from "@/components/kekere/wallet-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
-import { getWalletForUser } from "@/lib/data/kekere-wallet";
+import { getWalletForUser, countTransactionsForUser } from "@/lib/data/kekere-wallet";
 import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function KekereWalletPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [wallet, user] = userId
+  const [wallet, user, totalTransactionCount] = userId
     ? await Promise.all([
         getWalletForUser(userId),
         prisma.user.findUnique({
@@ -22,8 +22,9 @@ export default async function KekereWalletPage() {
             referredBy: true,
           },
         }),
+        countTransactionsForUser(userId),
       ])
-    : [null, null];
+    : [null, null, 0];
 
   const referralEarnings = wallet?.transactions
     .filter((t) => t.type === "REFERRAL" || t.type === "REFERRAL_REWARD")
@@ -45,6 +46,7 @@ export default async function KekereWalletPage() {
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
           isWriter={isWriter}
+          totalTransactionCount={totalTransactionCount}
           referralCode={user?.referralCode ?? null}
           referralEarnings={referralEarnings}
           tipEarnings={tipEarnings}
