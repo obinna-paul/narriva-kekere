@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import type { Transaction, TransactionType, Wallet } from "@prisma/client";
 import { sendEmail } from "@/lib/email/send";
-import { renderFirstTopUpEmail, renderWalletHistoryEmail } from "@/lib/email/templates";
+import { renderWalletHistoryEmail } from "@/lib/email/templates";
 
 export type WalletWithTransactions = Wallet & { transactions: Transaction[] };
 
@@ -120,6 +120,10 @@ export async function listAllTransactions(): Promise<AdminTransactionRow[]> {
  * CEO. Callers gate this on a successful creditTopUp() result, same as
  * triggerReferralRewardOnFirstTopUp — whichever of the webhook or the
  * client-side verify route credits first is the one that sends it.
+ *
+ * Plain text only, sent from Obinna's own address — same reasoning as the
+ * welcome email: a designed HTML template reads as bulk mail, plain text
+ * from a real name reads as the personal note this actually is.
  */
 export async function sendFirstTopUpThankYouEmail(userId: string): Promise<void> {
   const topUpCount = await prisma.transaction.count({
@@ -133,12 +137,11 @@ export async function sendFirstTopUpThankYouEmail(userId: string): Promise<void>
   });
   if (!user) return;
 
-  const html = await renderFirstTopUpEmail({ name: user.name }).catch(() => undefined);
   await sendEmail({
     to: user.email,
-    subject: "Thank you for topping up — a note from our CEO",
-    body: `Hi ${user.name},\n\nObinna here, CEO of Kekere Stories. I saw you just topped up your cowries for the first time, and I wanted to say thank you, personally. Every cowrie you spend goes straight toward keeping African writers paid for their work.\n\nI hope you have a beautiful time on the app, reading amazing short stories from African writers.\n\nWith gratitude,\nObinna Ezeodili\nCEO, Kekere Stories`,
-    html,
+    subject: "Thank you for topping up",
+    from: "Obinna Ezeodili <obinna@narriva.pro>",
+    body: `Hi ${user.name},\n\nObinna here, CEO of Kekere Stories. I saw you just topped up your cowries for the first time, and I wanted to say thank you, personally. Every cowrie you spend goes straight toward keeping African writers paid for their work.\n\nI hope you have a beautiful time on the app, reading amazing short stories from African writers.\n\nWith gratitude,\nObinna`,
   });
 }
 
