@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState, SkeletonTableShell } from "@/components/admin/admin-skeleton";
+import { AdjustCowriesModal } from "@/components/admin/adjust-cowries-modal";
 
 interface User {
   id: string;
@@ -42,6 +43,7 @@ export function AllUsers() {
   const [total, setTotal] = useState(0);
   const [acting, setActing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [adjustingUser, setAdjustingUser] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -214,6 +216,14 @@ export function AllUsers() {
                   <button
                     type="button"
                     disabled={acting === u.id}
+                    onClick={() => setAdjustingUser(u)}
+                    className="rounded-[7px] border border-[rgba(20,22,26,0.14)] px-3 py-1.5 text-[11px] font-semibold text-[#1A1C20] hover:bg-[#F4F5F7] disabled:opacity-40"
+                  >
+                    Cowries
+                  </button>
+                  <button
+                    type="button"
+                    disabled={acting === u.id}
                     onClick={() => toggleSuspend(u)}
                     className={cn(
                       "rounded-[7px] px-3 py-1.5 text-[11px] font-semibold disabled:opacity-40",
@@ -252,6 +262,18 @@ export function AllUsers() {
             </div>
           )}
         </>
+      )}
+
+      {adjustingUser && (
+        <AdjustCowriesModal
+          userId={adjustingUser.id}
+          userName={adjustingUser.name}
+          onClose={() => setAdjustingUser(null)}
+          onSuccess={({ wallet, newBalance }) => {
+            showToast("ok", `${adjustingUser.name}'s ${wallet} balance is now ${newBalance.toLocaleString()} cowries.`);
+            setAdjustingUser(null);
+          }}
+        />
       )}
     </div>
   );

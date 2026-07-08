@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, SkeletonKpiCard, SkeletonChart } from "@/components/admin/admin-skeleton";
+import { AdjustCowriesModal, type CowrieWalletType } from "@/components/admin/adjust-cowries-modal";
 
 interface EconomyOverview {
   reconciliation: {
@@ -31,6 +32,7 @@ interface TimeseriesPoint {
 
 interface WalletAuditRow {
   walletId: string;
+  userId: string;
   email: string;
   name: string;
   spendingDiff: number;
@@ -79,6 +81,7 @@ export function CowrieEconomy() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("30d");
+  const [fixing, setFixing] = useState<{ row: WalletAuditRow; wallet: CowrieWalletType } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,6 +179,7 @@ export function CowrieEconomy() {
                   <th className="pb-2 text-right font-medium">Spending diff</th>
                   <th className="pb-2 text-right font-medium">Earned diff</th>
                   <th className="pb-2 text-right font-medium">Total</th>
+                  <th className="pb-2 text-right font-medium">Reconcile</th>
                 </tr>
               </thead>
               <tbody>
@@ -188,6 +192,28 @@ export function CowrieEconomy() {
                     <td className="py-2 text-right tabular-nums text-[#1A1C20]">{row.spendingDiff.toLocaleString()}</td>
                     <td className="py-2 text-right tabular-nums text-[#1A1C20]">{row.earnedDiff.toLocaleString()}</td>
                     <td className="py-2 text-right font-semibold tabular-nums text-[#C0392B]">{row.totalDiff.toLocaleString()}</td>
+                    <td className="py-2 text-right">
+                      <div className="flex justify-end gap-1.5">
+                        {Math.abs(row.spendingDiff) > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFixing({ row, wallet: "spending" })}
+                            className="rounded-[6px] border border-[rgba(20,22,26,0.14)] px-2.5 py-1 text-[11px] font-semibold text-[#1A1C20] hover:bg-[#F4F5F7]"
+                          >
+                            Spending
+                          </button>
+                        )}
+                        {Math.abs(row.earnedDiff) > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setFixing({ row, wallet: "earned" })}
+                            className="rounded-[6px] border border-[rgba(20,22,26,0.14)] px-2.5 py-1 text-[11px] font-semibold text-[#1A1C20] hover:bg-[#F4F5F7]"
+                          >
+                            Earned
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -277,6 +303,22 @@ export function CowrieEconomy() {
           ]}
         />
       </div>
+
+      {fixing && (
+        <AdjustCowriesModal
+          userId={fixing.row.userId}
+          userName={fixing.row.name}
+          initialWallet={fixing.wallet}
+          initialAmount={fixing.wallet === "spending" ? Math.round(fixing.row.spendingDiff) : fixing.row.earnedDiff}
+          initialReason={`Ledger backfill for ${fixing.row.name}'s untracked ${fixing.wallet} balance found by wallet audit — flagged on the Cowrie Economy dashboard.`}
+          initialRecordOnly
+          onClose={() => setFixing(null)}
+          onSuccess={() => {
+            setFixing(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
