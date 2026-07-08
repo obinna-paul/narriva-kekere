@@ -71,13 +71,16 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
     return { already_unlocked: true, balance: readerWallet.spendingBalance };
   }
 
-  // First-story-free benefit: new users get their first unlock at no cost.
+  // First-story-free benefit: new readers get their first unlock at no
+  // cost. Admin accounts are never eligible — an admin's role already gives
+  // them every other capability an account needs; a free unlock on top of
+  // that is just an untracked cowrie grant with no purchase behind it.
   const reader = await prisma.user.findUnique({
     where: { id: userId },
-    select: { freeReadUsed: true },
+    select: { freeReadUsed: true, role: true },
   });
 
-  if (reader && !reader.freeReadUsed) {
+  if (reader && !reader.freeReadUsed && reader.role !== "ADMIN") {
     const storyUnlockId = randomUUID();
     await prisma.$transaction([
       prisma.storyUnlock.create({

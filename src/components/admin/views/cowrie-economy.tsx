@@ -16,7 +16,6 @@ interface EconomyOverview {
     totalSpentOnUnlocks: number;
     totalWithdrawnCowries: number;
     totalPlatformEarned: number;
-    totalHeldByAdmin: number;
     totalUntrackedBalance: number;
     balanced: boolean;
     equation: { left: number; right: number; difference: number };
@@ -82,6 +81,8 @@ export function CowrieEconomy() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState("30d");
   const [fixing, setFixing] = useState<{ row: WalletAuditRow; wallet: CowrieWalletType } | null>(null);
+  const [clearingAdmins, setClearingAdmins] = useState(false);
+  const [clearResult, setClearResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +109,34 @@ export function CowrieEconomy() {
   }, [range]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function handleClearAdminCowries() {
+    const confirmed = window.confirm(
+      "Zero out every admin account's spending AND earned balance — including any real, withdrawable earnings? This can't be undone. Each wallet gets a logged ADMIN_DEBIT transaction."
+    );
+    if (!confirmed) return;
+
+    setClearingAdmins(true);
+    setClearResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/clear-admin-cowries", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Failed to clear admin cowries");
+      const cleared = data.cleared ?? [];
+      setClearResult(
+        cleared.length === 0
+          ? "No admin accounts had a nonzero balance."
+          : `Cleared ${cleared.length} admin account${cleared.length === 1 ? "" : "s"}: ${cleared
+              .map((c: { name: string }) => c.name)
+              .join(", ")}.`
+      );
+      load();
+    } catch (e) {
+      setClearResult(e instanceof Error ? e.message : "Failed to clear admin cowries");
+    } finally {
+      setClearingAdmins(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -264,12 +293,29 @@ export function CowrieEconomy() {
         </div>
       </div>
 
-      {/* Admin's own wallet — reported for transparency, deliberately left
-          out of every figure above. It's a test/free account, not a real
-          reader or writer, so it isn't "cowries in circulation". */}
-      <div className="flex items-center justify-between gap-3 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-[#FBFBFC] px-5 py-4">
-        <span className="text-[13px] text-[#646B73]">Held by admin accounts (excluded from every figure above)</span>
-        <span className="text-[13px] font-semibold tabular-nums text-[#1A1C20]">{(rec?.totalHeldByAdmin ?? 0).toLocaleString()} cowries</span>
+      {/* Admin cowrie policy: admins no longer get free unlocks (enforced
+          server-side in unlockStory), and never accumulate a balance at
+          all — this clears out whatever they're currently holding,
+          including real earned cowries, as a one-time clean reset. */}
+      <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[13px] font-semibold text-[#1A1C20]">Admin cowrie policy</h3>
+            <p className="mt-0.5 text-[12px] text-[#8B919A]">
+              Admin accounts no longer get free unlocks. This zeroes every admin account&apos;s spending and
+              earned balance right now, each with a logged correction.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearAdminCowries}
+            disabled={clearingAdmins}
+            className="flex-none rounded-[8px] border border-[#C0392B]/30 px-4 py-2 text-[12px] font-semibold text-[#C0392B] hover:bg-[rgba(192,57,43,0.06)] disabled:opacity-50"
+          >
+            {clearingAdmins ? "Clearing…" : "Clear all admin cowries"}
+          </button>
+        </div>
+        {clearResult && <p className="mt-3 text-[12px] text-[#646B73]">{clearResult}</p>}
       </div>
 
       {/* Time-series chart */}
