@@ -83,6 +83,8 @@ export function CowrieEconomy() {
   const [fixing, setFixing] = useState<{ row: WalletAuditRow; wallet: CowrieWalletType } | null>(null);
   const [clearingAdmins, setClearingAdmins] = useState(false);
   const [clearResult, setClearResult] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
+  const [rebuildResult, setRebuildResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -135,6 +137,34 @@ export function CowrieEconomy() {
       setClearResult(e instanceof Error ? e.message : "Failed to clear admin cowries");
     } finally {
       setClearingAdmins(false);
+    }
+  }
+
+  async function handleRebuildFromLedger() {
+    const confirmed = window.confirm(
+      "Rebuild the whole economy from the transaction ledger?\n\n" +
+        "This deletes every manual adjustment / correction transaction and any invalid rows, " +
+        "then recomputes every wallet balance from its real transactions only. Phantom/untracked " +
+        "balances become 0. Real top-ups, unlocks, tips, and earnings are untouched.\n\n" +
+        "This can't be undone."
+    );
+    if (!confirmed) return;
+
+    setRebuilding(true);
+    setRebuildResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/rebuild-from-ledger", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Rebuild failed");
+      setRebuildResult(
+        `Done. Deleted ${data.transactionsDeleted} adjustment/invalid transaction${data.transactionsDeleted === 1 ? "" : "s"}` +
+          ` and corrected ${data.walletsChanged} wallet${data.walletsChanged === 1 ? "" : "s"}. Every balance now matches the ledger.`
+      );
+      load();
+    } catch (e) {
+      setRebuildResult(e instanceof Error ? e.message : "Rebuild failed");
+    } finally {
+      setRebuilding(false);
     }
   }
 
@@ -316,6 +346,32 @@ export function CowrieEconomy() {
           </button>
         </div>
         {clearResult && <p className="mt-3 text-[12px] text-[#646B73]">{clearResult}</p>}
+      </div>
+
+      {/* One-time cleanup: make the whole economy reflect the transaction
+          ledger and nothing else — removes correction noise and phantom
+          balances in a single pass. */}
+      <div className="rounded-[11px] border border-[#C0392B]/20 bg-[rgba(192,57,43,0.03)] px-5 py-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[13px] font-semibold text-[#1A1C20]">Rebuild from the transaction ledger</h3>
+            <p className="mt-0.5 text-[12px] text-[#8B919A]">
+              Deletes every manual-adjustment / correction transaction and any invalid row, then
+              recomputes every balance from real transactions only. Phantom balances become 0; real
+              top-ups, unlocks, tips, and earnings are untouched. Use this to wipe leftover noise so every
+              figure is exactly true.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRebuildFromLedger}
+            disabled={rebuilding}
+            className="flex-none rounded-[8px] bg-[#C0392B] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#a5322380] disabled:opacity-50"
+          >
+            {rebuilding ? "Rebuilding…" : "Rebuild economy from ledger"}
+          </button>
+        </div>
+        {rebuildResult && <p className="mt-3 text-[12px] text-[#646B73]">{rebuildResult}</p>}
       </div>
 
       {/* Time-series chart */}
