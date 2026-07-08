@@ -44,7 +44,7 @@ const REBUILD_BALANCES_SQL = `
     SELECT wal.id AS wallet_id,
       SUM(CASE
         WHEN t."walletField" = 'SPENDING'
-         AND t.type::text IN ('TOP_UP','REFUND','REFERRAL','READ_REWARD','REFERRAL_REWARD')
+         AND t.type::text IN ('TOP_UP','REFUND','REFERRAL','READ_REWARD','REFERRAL_REWARD','EARNED_TO_SPENDING_IN')
           THEN t."amountCowries"
         WHEN t."walletField" = 'SPENDING'
          AND t.type::text IN ('UNLOCK','WITHDRAWAL','TIP_SENT')
@@ -55,7 +55,7 @@ const REBUILD_BALANCES_SQL = `
          AND t.type::text IN ('EARNINGS_CREDIT','TIP_RECEIVED','REFUND')
           THEN t."amountCowries"
         WHEN t."walletField" = 'EARNED'
-         AND t.type::text = 'WITHDRAWAL'
+         AND t.type::text IN ('WITHDRAWAL','EARNED_TO_SPENDING_OUT')
           THEN -t."amountCowries"
         ELSE 0 END) AS earned
     FROM "Wallet" wal

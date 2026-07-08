@@ -179,6 +179,13 @@ enum TransactionType {
   // "untracked balance" flag.
   DATA_CORRECTION_CREDIT
   DATA_CORRECTION_DEBIT
+  // A writer moving their own earned (withdrawable) cowries into their
+  // spending wallet — a one-way, irreversible transfer within a single
+  // user's two wallet buckets. Net-zero for the economy (like tips): the
+  // OUT row debits EARNED, the paired IN row credits SPENDING, so total
+  // cowries in circulation is unchanged and neither is real issuance.
+  EARNED_TO_SPENDING_OUT
+  EARNED_TO_SPENDING_IN
 }
 
 enum TransactionStatus {

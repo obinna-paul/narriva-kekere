@@ -13,7 +13,7 @@ export async function getWalletForUser(userId: string): Promise<WalletWithTransa
 }
 
 /** Transactions are stored as a positive magnitude regardless of direction. */
-const DEBIT_TRANSACTION_TYPES = new Set<TransactionType>(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT"]);
+const DEBIT_TRANSACTION_TYPES = new Set<TransactionType>(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT", "EARNED_TO_SPENDING_OUT"]);
 
 export async function countTransactionsForUser(userId: string): Promise<number> {
   const wallet = await prisma.wallet.findUnique({ where: { userId }, select: { id: true } });
