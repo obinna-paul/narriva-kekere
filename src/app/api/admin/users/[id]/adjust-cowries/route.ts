@@ -6,12 +6,31 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
 import { logAdminAction } from "@/lib/admin/logAction";
+import { round2 } from "@/lib/economy/round";
 
-const adjustSchema = z.object({
-  wallet: z.enum(["spending", "earned"]),
-  amount: z.number().int().refine((v) => v !== 0, "Amount cannot be zero."),
-  reason: z.string().min(10, "Reason must be at least 10 characters."),
-});
+// spendingBalance is a true Int column (top-ups and story costs are always
+// whole numbers), but earnedBalance is Decimal(10,2) — a writer's 70% share
+// is routinely fractional (e.g. 2.10) — so only spending adjustments are
+// restricted to whole cowries.
+const adjustSchema = z
+  .object({
+    wallet: z.enum(["spending", "earned"]),
+    amount: z.number().finite().refine((v) => v !== 0, "Amount cannot be zero."),
+    reason: z.string().min(10, "Reason must be at least 10 characters."),
+    // A normal adjustment moves the wallet's actual balance and records a
+    // transaction for it — the two always move together, so it can never
+    // close a gap between a wallet's stored balance and its own
+    // transaction history (whatever the correction, the gap stays the
+    // same size). recordOnly is for the opposite case: the balance is
+    // already what it should be (e.g. legitimate legacy data), and the
+    // ledger just needs to be told so — it writes the transaction without
+    // touching the balance at all.
+    recordOnly: z.boolean().optional().default(false),
+  })
+  .refine((data) => data.wallet !== "spending" || Number.isInteger(data.amount), {
+    message: "Spending-wallet adjustments must be a whole number of cowries.",
+    path: ["amount"],
+  });
 
 const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
@@ -58,7 +77,8 @@ export const POST = withAuth(
       );
     }
 
-    const { wallet: walletType, amount, reason } = parsed.data;
+    const { wallet: walletType, reason, recordOnly } = parsed.data;
+    const amount = walletType === "earned" ? round2(parsed.data.amount) : parsed.data.amount;
 
     const wallet = await prisma.wallet.findUnique({
       where: { userId: id },
@@ -76,7 +96,7 @@ export const POST = withAuth(
         ? wallet.spendingBalance
         : wallet.earnedBalance.toNumber();
 
-    if (amount < 0 && currentBalance < Math.abs(amount)) {
+    if (!recordOnly && amount < 0 && currentBalance < Math.abs(amount)) {
       return NextResponse.json(
         {
           error: "insufficient_balance",
@@ -88,11 +108,12 @@ export const POST = withAuth(
     }
 
     const absAmount = Math.abs(amount);
+    const reasonPrefix = recordOnly ? "Ledger backfill (no balance change)" : "Manual adjustment";
 
     const [updatedWallet] = await prisma.$transaction([
       prisma.wallet.update({
         where: { id: wallet.id },
-        data: { [balanceField]: { increment: amount } },
+        data: recordOnly ? {} : { [balanceField]: { increment: amount } },
       }),
       prisma.transaction.create({
         data: {
@@ -101,7 +122,7 @@ export const POST = withAuth(
           amountCowries: absAmount,
           walletField:
             walletType === "spending" ? ("SPENDING" as const) : ("EARNED" as const),
-          description: `Manual adjustment: ${reason}`,
+          description: `${reasonPrefix}: ${reason}`,
           status: "COMPLETED",
         },
       }),
@@ -111,6 +132,7 @@ export const POST = withAuth(
       wallet: walletType,
       amount,
       reason,
+      recordOnly,
     });
 
     const newBalance =
