@@ -5,7 +5,6 @@ import Link from "next/link";
 import { LogOut, Link2, Gift } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
-import { DraftBadge } from "@/components/kekere/DraftBadge";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 
@@ -23,36 +22,6 @@ function parseSocialLinks(text: string): { label: string; href: string }[] {
       return { label: label || href, href: href || label };
     });
 }
-
-type StoryStatus = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PUBLISHED" | "REJECTED" | "PENDING_CONTRACT";
-
-export interface MyStorySummary {
-  id: string;
-  title: string;
-  status: StoryStatus;
-}
-
-const STATUS_STYLES: Record<StoryStatus, string> = {
-  DRAFT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-  SUBMITTED: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-  REVIEWING: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-  REVISIONS_REQUESTED: "bg-[var(--color-primary-muted)] text-[var(--color-primary)]",
-  PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
-  REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
-  PENDING_CONTRACT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-};
-
-const STATUS_LABELS: Record<StoryStatus, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "Submitted",
-  REVIEWING: "In review",
-  REVISIONS_REQUESTED: "Revisions requested",
-  PUBLISHED: "Published",
-  REJECTED: "Not accepted",
-  PENDING_CONTRACT: "Pending contract",
-};
-
-const EDITABLE_STATUSES: StoryStatus[] = ["DRAFT", "REVISIONS_REQUESTED"];
 
 function formatStat(n: number): string {
   if (n >= 1000) {
@@ -90,7 +59,6 @@ export interface ProfileViewProps {
   hasAuthoredAnyStory: boolean;
   writingStats: { publishedCount: number; totalReads: number };
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
-  myStories: readonly MyStorySummary[];
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -430,40 +398,6 @@ export function ProfileView(props: ProfileViewProps) {
               <Gift size={16} />
               Invite friends, earn cowries &rarr;
             </Link>
-
-            {props.hasAuthoredAnyStory && props.myStories.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {props.myStories.map((story) => {
-                  const href = EDITABLE_STATUSES.includes(story.status)
-                    ? `/kekere/write?id=${story.id}`
-                    : `/kekere/story/${story.id}`;
-                  return (
-                    <Link
-                      key={story.id}
-                      href={href}
-                      className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 ring-1 ring-[rgba(42,26,18,0.08)] transition-colors hover:ring-[var(--color-primary)]/40"
-                    >
-                      <span className="min-w-0 flex-1 font-medium text-[var(--color-ink)] truncate">
-                        {story.title || "Untitled story"}
-                      </span>
-                      <div className="flex flex-none items-center gap-2">
-                        {EDITABLE_STATUSES.includes(story.status) && (
-                          <DraftBadge storyId={story.id} />
-                        )}
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-                            STATUS_STYLES[story.status]
-                          )}
-                        >
-                          {STATUS_LABELS[story.status]}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
           </section>
 
           <BankDetailsSection bankDetails={props.bankDetails} />
