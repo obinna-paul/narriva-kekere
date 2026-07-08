@@ -2,7 +2,12 @@ import { NarrivaTheme } from "@/components/theme";
 import { PhotoPlaceholder } from "@/components/narriva/photo-placeholder";
 import { NARRIVA_TEAM } from "@/content/narriva-team";
 
-export const metadata = { title: "About — Narriva" };
+export const metadata = {
+  title: "About",
+  description:
+    "Narriva exists to help authors make the best version of their book — editorial care, good design, and a team that stays invested until the book is out in the world.",
+  alternates: { canonical: "/about" },
+};
 
 export default function AboutPage() {
   return (

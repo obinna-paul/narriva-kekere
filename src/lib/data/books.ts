@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import type { Book, Prisma } from "@prisma/client";
 
@@ -73,9 +74,11 @@ export async function listBooks(params: ListBooksParams = {}): Promise<ListBooks
   };
 }
 
-export async function getBookBySlug(slug: string): Promise<BookWithAuthor | null> {
+// Wrapped in React's cache() so generateMetadata and the page component
+// (both of which need the same book) dedupe to a single query per request.
+export const getBookBySlug = cache(async (slug: string): Promise<BookWithAuthor | null> => {
   return prisma.book.findUnique({ where: { slug }, include: authorInclude });
-}
+});
 
 export async function getBookById(id: string): Promise<BookWithAuthor | null> {
   return prisma.book.findUnique({ where: { id }, include: authorInclude });

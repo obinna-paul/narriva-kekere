@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import type { BlogCategory, BlogPost, BlogStatus, Prisma } from "@prisma/client";
 
@@ -56,15 +57,17 @@ export async function listBlogPosts(
   };
 }
 
-export async function getBlogPostBySlug(
+// Wrapped in React's cache() so generateMetadata and the page component
+// (both of which need the same post) dedupe to a single query per request.
+export const getBlogPostBySlug = cache(async (
   slug: string,
   { includeDrafts = false }: { includeDrafts?: boolean } = {}
-): Promise<BlogPost | null> {
+): Promise<BlogPost | null> => {
   const post = await prisma.blogPost.findUnique({ where: { slug } });
   if (!post) return null;
   if (!includeDrafts && post.status !== "PUBLISHED") return null;
   return post;
-}
+});
 
 export async function getBlogPostByIdForAdmin(id: string): Promise<BlogPost | null> {
   return prisma.blogPost.findUnique({ where: { id } });

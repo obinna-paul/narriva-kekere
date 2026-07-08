@@ -2,7 +2,11 @@ import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { TermsOfUse } from "@/content/legal/terms-of-use";
 
-export const metadata = { title: "Terms of Use Ã¢â‚¬â€ Kekere" };
+export const metadata = {
+  title: "Terms of Use",
+  description: "The terms of use governing your access to Kekere Stories.",
+  alternates: { canonical: "/kekere/terms" },
+};
 
 export default function KekereTermsPage() {
   return (

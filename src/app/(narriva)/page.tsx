@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { NarrivaTheme } from "@/components/theme";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
@@ -13,6 +14,10 @@ import { listBlogPosts } from "@/lib/data/blog";
 import { toAuthorCardData, toBlogCardData, toBookCardData } from "@/lib/adapters/narriva";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const OFFERINGS = [
   {

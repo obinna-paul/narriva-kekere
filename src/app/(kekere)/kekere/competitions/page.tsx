@@ -6,6 +6,12 @@ import { toMockCompetition } from "@/lib/adapters/kekere-competitions";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Competitions",
+  description: "Writing competitions open to Kekere Stories writers, with cowrie prizes.",
+  alternates: { canonical: "/kekere/competitions" },
+};
+
 function daysUntil(deadline: Date): number {
   return Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 }

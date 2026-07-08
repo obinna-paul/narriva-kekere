@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
@@ -200,9 +201,12 @@ async function listStoriesTrending(
   return { stories, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
-export async function getStoryById(id: string): Promise<StoryWithAuthor | null> {
+// Wrapped in React's cache() — also used internally by getStoryForReader, so
+// this dedupes both the new SEO generateMetadata call and the page's own
+// call to a single query per request instead of two.
+export const getStoryById = cache(async (id: string): Promise<StoryWithAuthor | null> => {
   return prisma.story.findUnique({ where: { id }, include: authorInclude });
-}
+});
 
 async function isStoryUnlockedFor(
   story: Pick<Story, "id" | "cowrieCost" | "authorId">,
