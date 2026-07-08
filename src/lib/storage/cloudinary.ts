@@ -45,6 +45,13 @@ export function storyCoverUrl(publicId: string): string {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_280,h_373,c_fill/${publicId}`;
 }
 
+/** Same cover image, cropped to the 1200×630 landscape shape social
+ *  platforms expect for og:image/Twitter card previews — the 3:4 portrait
+ *  crop above reads as a tiny sliver when embedded in a share card. */
+export function storyCoverOgImageUrl(publicId: string): string {
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_1200,h_630,c_fill/${publicId}`;
+}
+
 /**
  * Uploads a user's profile photo. The client already cropped this to a
  * square before calling us (see avatar-crop-modal.tsx), so this is mostly

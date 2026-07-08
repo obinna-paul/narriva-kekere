@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import type { Book, User } from "@prisma/client";
 
@@ -39,7 +40,10 @@ export async function listAuthors({ withBooksOnly = false }: { withBooksOnly?: b
   });
 }
 
-export async function getAuthorBySlug(slug: string): Promise<AuthorWithBooks | null> {
+// Wrapped in React's cache() so generateMetadata and the page component
+// (both of which need the same author) dedupe to a single pair of queries
+// per request.
+export const getAuthorBySlug = cache(async (slug: string): Promise<AuthorWithBooks | null> => {
   const author = await prisma.user.findFirst({
     where: { slug, role: "WRITER" },
     select: authorSummarySelect,
@@ -52,7 +56,7 @@ export async function getAuthorBySlug(slug: string): Promise<AuthorWithBooks | n
   });
 
   return { ...author, books };
-}
+});
 
 export async function getAuthorById(id: string): Promise<AuthorSummary | null> {
   return prisma.user.findUnique({ where: { id }, select: authorSummarySelect });

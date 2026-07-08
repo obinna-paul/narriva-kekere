@@ -1,6 +1,12 @@
 import { NarrivaTheme } from "@/components/theme";
 import { SubmissionForm } from "@/components/narriva/submission-form";
 
+export const metadata = {
+  title: "Submit Your Manuscript",
+  description: "Tell us about your book. We read every submission personally.",
+  alternates: { canonical: "/submit" },
+};
+
 export default function SubmitPage() {
   return (
     <NarrivaTheme>

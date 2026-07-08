@@ -5,6 +5,12 @@ import { toAuthorCardData } from "@/lib/adapters/narriva";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Authors",
+  description: "Meet the authors published by Narriva.",
+  alternates: { canonical: "/authors" },
+};
+
 export default async function AuthorsPage() {
   const authors = await listAuthors({ withBooksOnly: true });
 

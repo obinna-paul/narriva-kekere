@@ -8,9 +8,14 @@
 export const COMPANY_NAME = "Narriva" as const;
 
 export const DOMAINS = {
-  narriva: "narriva.com",
+  narriva: "narriva.pro",
   kekere: "narriva.pro/kekere",
 } as const;
+
+// The single shared origin both brands are served from — every canonical
+// URL, sitemap entry, OG url, and JSON-LD `url` field should derive from
+// this rather than hardcoding "https://narriva.pro" at each call site.
+export const SITE_URL = `https://${DOMAINS.narriva}` as const;
 
 export type CowrieTopupPackage = {
   priceNGN: number;

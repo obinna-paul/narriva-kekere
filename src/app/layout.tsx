@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 import "@/styles/globals.css";
+import { SITE_URL } from "@/content/decisions";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -21,8 +22,13 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+// Base for every relative canonical/OG/image URL set anywhere in the app —
+// (narriva)/layout.tsx and (kekere)/layout.tsx set the real per-brand
+// title/description/OG defaults; this is only the neutral fallback used if
+// neither segment overrides it (shouldn't happen in practice).
 export const metadata: Metadata = {
-  title: "Narriva",
+  metadataBase: new URL(SITE_URL),
+  title: "Narriva & Kekere Stories",
   description: "Narriva and Kekere Stories",
 };
 
