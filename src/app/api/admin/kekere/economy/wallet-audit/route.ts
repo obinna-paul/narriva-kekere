@@ -29,28 +29,31 @@ export const GET = withAuth(
           user: { select: { email: true, name: true } },
         },
       }),
-      prisma.transaction.groupBy({
-        by: ["walletId", "walletField"],
+      prisma.transaction.findMany({
         where: { type: { in: CREDIT_TYPES }, status: "COMPLETED" },
-        _sum: { amountCowries: true },
+        select: { walletId: true, walletField: true, amountCowries: true },
       }),
-      prisma.transaction.groupBy({
-        by: ["walletId", "walletField"],
+      prisma.transaction.findMany({
         where: { type: { in: DEBIT_TYPES }, status: "COMPLETED" },
-        _sum: { amountCowries: true },
+        select: { walletId: true, walletField: true, amountCowries: true },
       }),
     ]);
 
+    // Summed as |amountCowries| per row, not a raw SQL SUM — amountCowries
+    // is supposed to always be a positive magnitude, but rows written
+    // before that convention existed can carry a signed value instead, and
+    // a raw SUM would let a stray negative row silently cancel out real
+    // ones.
     const ledgerNet = new Map<string, number>();
     for (const row of creditRows) {
       if (!row.walletField) continue;
       const key = `${row.walletId}:${row.walletField}`;
-      ledgerNet.set(key, (ledgerNet.get(key) ?? 0) + (row._sum.amountCowries?.toNumber() ?? 0));
+      ledgerNet.set(key, (ledgerNet.get(key) ?? 0) + Math.abs(row.amountCowries.toNumber()));
     }
     for (const row of debitRows) {
       if (!row.walletField) continue;
       const key = `${row.walletId}:${row.walletField}`;
-      ledgerNet.set(key, (ledgerNet.get(key) ?? 0) - (row._sum.amountCowries?.toNumber() ?? 0));
+      ledgerNet.set(key, (ledgerNet.get(key) ?? 0) - Math.abs(row.amountCowries.toNumber()));
     }
 
     const rows = wallets
