@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
-import type { Transaction, Wallet } from "@prisma/client";
+import type { Transaction, TransactionType, Wallet } from "@prisma/client";
 import { sendEmail } from "@/lib/email/send";
-import { renderFirstTopUpEmail } from "@/lib/email/templates";
+import { renderFirstTopUpEmail, renderWalletHistoryEmail } from "@/lib/email/templates";
 
 export type WalletWithTransactions = Wallet & { transactions: Transaction[] };
 
@@ -10,6 +10,78 @@ export async function getWalletForUser(userId: string): Promise<WalletWithTransa
     where: { userId },
     include: { transactions: { orderBy: { createdAt: "desc" }, take: 50 } },
   });
+}
+
+/** Transactions are stored as a positive magnitude regardless of direction. */
+const DEBIT_TRANSACTION_TYPES = new Set<TransactionType>(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT"]);
+
+export async function countTransactionsForUser(userId: string): Promise<number> {
+  const wallet = await prisma.wallet.findUnique({ where: { userId }, select: { id: true } });
+  if (!wallet) return 0;
+  return prisma.transaction.count({
+    where: { walletId: wallet.id, type: { not: "COMPLETION_BONUS" } },
+  });
+}
+
+export type WalletHistoryEmailResult = { sent: true } | { sent: false; reason: string };
+
+/**
+ * Emails a user their full transaction history for an arbitrary date range —
+ * the on-screen history only ever shows the 10 most recent rows, so this is
+ * the only way to see older activity.
+ */
+export async function sendWalletHistoryEmail(
+  userId: string,
+  from: Date,
+  to: Date
+): Promise<WalletHistoryEmailResult> {
+  const wallet = await prisma.wallet.findUnique({ where: { userId } });
+  if (!wallet) return { sent: false, reason: "No wallet found for this account." };
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      walletId: wallet.id,
+      type: { not: "COMPLETION_BONUS" },
+      createdAt: { gte: from, lte: to },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (transactions.length === 0) {
+    return { sent: false, reason: "No transactions found in that period." };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  if (!user) return { sent: false, reason: "User not found." };
+
+  const rows = transactions.map((t) => ({
+    date: t.createdAt.toISOString(),
+    label: t.description ?? t.type,
+    amountCowries: t.amountCowries.toNumber(),
+    isDebit: DEBIT_TRANSACTION_TYPES.has(t.type),
+  }));
+
+  const html = await renderWalletHistoryEmail({
+    name: user.name,
+    from: from.toISOString(),
+    to: to.toISOString(),
+    rows,
+  }).catch(() => undefined);
+
+  const fromLabel = from.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+  const toLabel = to.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
+  const textLines = rows.map(
+    (r) => `${new Date(r.date).toLocaleDateString()} — ${r.label}: ${r.isDebit ? "-" : "+"}${r.amountCowries} cowries`
+  );
+
+  await sendEmail({
+    to: user.email,
+    subject: `Your Kekere transaction history: ${fromLabel} – ${toLabel}`,
+    body: `Hi ${user.name},\n\nHere's your Kekere wallet history from ${fromLabel} to ${toLabel}:\n\n${textLines.join("\n")}\n\n${rows.length} transaction${rows.length === 1 ? "" : "s"} in this period.`,
+    html,
+  });
+
+  return { sent: true };
 }
 
 export interface AdminTransactionRow {
