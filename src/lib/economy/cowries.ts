@@ -33,6 +33,11 @@ export type TopUpResult =
   | { success: true; newBalance: number }
   | { already_processed: true };
 
+export type MoveToSpendingResult =
+  | { success: true; newEarnedBalance: number; newSpendingBalance: number }
+  | { error: "invalid_amount" }
+  | { error: "insufficient_earned_balance"; balance: number };
+
 export type ReferralRewardResult =
   | { success: true; reward: number; referrerId: string }
   | { already_rewarded: true }
@@ -239,6 +244,74 @@ export async function sendTip(readerId: string, storyId: string): Promise<TipRes
   });
 
   return { success: true };
+}
+
+/**
+ * Moves whole cowries from a writer's earned (withdrawable) wallet into their
+ * spending wallet. One-way and irreversible by design — there is deliberately
+ * no reverse operation. Whole cowries only: the spending balance is an
+ * integer (stories and tips cost whole cowries), while the earned balance can
+ * carry a fraction (a 70% split), so a writer with 8.1 earned can move up to
+ * 8, leaving 0.1 still withdrawable.
+ *
+ * Records a paired ledger entry — EARNED_TO_SPENDING_OUT (debits EARNED) and
+ * EARNED_TO_SPENDING_IN (credits SPENDING) — so the transfer is net-zero for
+ * the economy and every dashboard/reconciliation figure stays exact.
+ */
+export async function moveEarnedToSpending(userId: string, amount: number): Promise<MoveToSpendingResult> {
+  if (!Number.isInteger(amount) || amount < 1) {
+    return { error: "invalid_amount" };
+  }
+
+  const wallet = await prisma.wallet.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
+
+  const earnedBalance = wallet.earnedBalance.toNumber();
+  if (earnedBalance < amount) {
+    return { error: "insufficient_earned_balance", balance: earnedBalance };
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const w = await tx.wallet.update({
+      where: { id: wallet.id },
+      data: {
+        earnedBalance: { decrement: amount },
+        spendingBalance: { increment: amount },
+      },
+    });
+
+    await tx.transaction.create({
+      data: {
+        walletId: wallet.id,
+        type: "EARNED_TO_SPENDING_OUT",
+        amountCowries: amount,
+        walletField: "EARNED",
+        description: "Moved to spending wallet",
+        status: "COMPLETED",
+      },
+    });
+    await tx.transaction.create({
+      data: {
+        walletId: wallet.id,
+        type: "EARNED_TO_SPENDING_IN",
+        amountCowries: amount,
+        walletField: "SPENDING",
+        description: "Moved from earnings",
+        status: "COMPLETED",
+      },
+    });
+
+    return w;
+  });
+
+  return {
+    success: true,
+    newEarnedBalance: updated.earnedBalance.toNumber(),
+    newSpendingBalance: updated.spendingBalance,
+  };
 }
 
 export async function creditTopUp(

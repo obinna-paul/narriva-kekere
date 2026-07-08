@@ -7,10 +7,11 @@ import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap, Mail } from 
 import { cn } from "@/lib/utils/cn";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
 import { HistoryExportModal } from "@/components/kekere/history-export-modal";
+import { MoveToSpendingModal } from "@/components/kekere/move-to-spending-modal";
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT" | "EARNED_TO_SPENDING_OUT" | "EARNED_TO_SPENDING_IN";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -37,7 +38,7 @@ const HISTORY_PAGE_SIZE = 10;
 // Every transaction is stored as a positive magnitude regardless of
 // direction — whether it's a debit (money leaving the wallet) or a credit
 // depends entirely on the type, not the sign of amountCowries.
-const DEBIT_TX_TYPES = new Set(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT"]);
+const DEBIT_TX_TYPES = new Set(["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT", "EARNED_TO_SPENDING_OUT"]);
 
 function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   navigator.clipboard.writeText(text).then(() => {
@@ -58,6 +59,8 @@ const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = 
   ADMIN_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
   DATA_CORRECTION_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   DATA_CORRECTION_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
+  EARNED_TO_SPENDING_OUT: { icon: ArrowUpRight, color: "#C0392B" },
+  EARNED_TO_SPENDING_IN: { icon: ArrowDownLeft, color: "#1F8A5B" },
 };
 
 function TxIcon({ type }: { type: string }) {
@@ -79,13 +82,14 @@ function TxLabel(type: string): string {
     READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
     ADMIN_CREDIT: "Balance adjustment", ADMIN_DEBIT: "Balance adjustment",
     DATA_CORRECTION_CREDIT: "Balance correction", DATA_CORRECTION_DEBIT: "Balance correction",
+    EARNED_TO_SPENDING_OUT: "Moved to spending", EARNED_TO_SPENDING_IN: "Moved from earnings",
   };
   return map[type] ?? type;
 }
 
 function getWalletForTx(type: string): string | null {
-  if (["TOP_UP", "UNLOCK", "TIP_SENT", "REFERRAL_REWARD"].includes(type)) return "Spending";
-  if (["EARNINGS_CREDIT", "WITHDRAWAL", "TIP_RECEIVED"].includes(type)) return "Earned";
+  if (["TOP_UP", "UNLOCK", "TIP_SENT", "REFERRAL_REWARD", "EARNED_TO_SPENDING_IN"].includes(type)) return "Spending";
+  if (["EARNINGS_CREDIT", "WITHDRAWAL", "TIP_RECEIVED", "EARNED_TO_SPENDING_OUT"].includes(type)) return "Earned";
   return null;
 }
 
@@ -96,6 +100,7 @@ export function WalletView({
   const router = useRouter();
   const [showTopUp, setShowTopUp] = useState(false);
   const [showHistoryExport, setShowHistoryExport] = useState(false);
+  const [showMoveToSpending, setShowMoveToSpending] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const visibleTransactions = transactions.slice(0, HISTORY_PAGE_SIZE);
@@ -127,6 +132,14 @@ export function WalletView({
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-[12px] bg-white py-3 text-[14px] font-semibold text-[#176E48] transition-opacity hover:opacity-90"
               >
                 Withdraw to bank <ArrowRight size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMoveToSpending(true)}
+                disabled={earnedBalance < 1}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-[12px] border border-white/30 py-3 text-[14px] font-semibold text-white transition-opacity hover:bg-white/10 disabled:opacity-50"
+              >
+                Move to spending
               </button>
             </div>
           </div>
@@ -240,6 +253,15 @@ export function WalletView({
         <HistoryExportModal
           userEmail={userEmail}
           onClose={() => setShowHistoryExport(false)}
+        />
+      )}
+
+      {/* Move earned → spending modal */}
+      {showMoveToSpending && (
+        <MoveToSpendingModal
+          earnedBalance={earnedBalance}
+          onClose={() => setShowMoveToSpending(false)}
+          onSuccess={() => { setShowMoveToSpending(false); router.refresh(); }}
         />
       )}
     </div>

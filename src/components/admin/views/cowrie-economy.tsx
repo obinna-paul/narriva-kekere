@@ -86,8 +86,10 @@ export function CowrieEconomy() {
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuildResult, setRebuildResult] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `silent` refreshes the data without flashing the skeletons — used by the
+  // background poll so the dashboard stays live without visibly reloading.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [ovRes, tsRes, auditRes] = await Promise.all([
@@ -104,13 +106,20 @@ export function CowrieEconomy() {
         setAuditRows(audit.rows ?? []);
       }
     } catch (e) {
-      setError((e as Error).message);
+      if (!silent) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [range]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Keep the source-of-truth dashboard live: re-fetch every 15s in the
+  // background so figures track real activity without a manual refresh.
+  useEffect(() => {
+    const id = setInterval(() => { load(true); }, 15000);
+    return () => clearInterval(id);
+  }, [load]);
 
   async function handleClearAdminCowries() {
     const confirmed = window.confirm(
@@ -184,6 +193,13 @@ export function CowrieEconomy() {
 
   return (
     <div className="space-y-7">
+      <div className="flex items-center justify-end">
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#8B919A]">
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#1F8A5B]" />
+          Live · updates every 15s
+        </span>
+      </div>
+
       {/* Balance status banner */}
       <div className={cn(
         "flex items-center gap-3 rounded-[11px] border px-5 py-4",
