@@ -463,7 +463,7 @@ model Tip {
   story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
   tippedAt DateTime @default(now())
 
-  @@unique([readerId, storyId])
+  @@index([readerId, storyId])
 }
 
 model ReferralCode {

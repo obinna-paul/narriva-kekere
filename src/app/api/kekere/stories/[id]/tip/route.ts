@@ -17,9 +17,6 @@ export const POST = withAuth(async (_request, session, { params }: { params: { i
     return NextResponse.json({ error: "insufficient_balance", balance: result.balance }, { status: 402 });
   }
 
-  // Both "already_tipped" and "success" land the reader on the same tipped
-  // UI state — fetch the current balance for either so the wallet display
-  // stays accurate without a full page refresh.
   const wallet = await prisma.wallet.findUnique({ where: { userId: session.user.id } });
   return NextResponse.json({ success: true, balance: wallet?.spendingBalance ?? 0 });
 });
