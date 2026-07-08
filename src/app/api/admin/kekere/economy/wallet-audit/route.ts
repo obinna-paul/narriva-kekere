@@ -9,17 +9,18 @@ const TOLERANCE_COWRIES = 1;
 const MAX_ROWS = 50;
 
 /**
- * Per-wallet version of the reconciliation check: for every non-admin
- * wallet, compares its actual spending/earned balances against what its own
- * transaction history says they should be. Surfaces exactly which accounts
- * hold untracked balance (legacy pre-ledger data, a manual DB edit, etc.)
- * instead of leaving it blended into the system-wide totals.
+ * Per-wallet version of the reconciliation check: for every wallet, compares
+ * its actual spending/earned balances against what its own transaction
+ * history says they should be. Surfaces exactly which accounts hold
+ * untracked balance (legacy pre-ledger data, a manual DB edit, etc.) instead
+ * of leaving it blended into the system-wide totals. Every wallet is
+ * checked regardless of role — an admin account is no less capable of
+ * holding untracked balance than anyone else.
  */
 export const GET = withAuth(
   async () => {
     const [wallets, creditRows, debitRows] = await Promise.all([
       prisma.wallet.findMany({
-        where: { user: { role: { not: "ADMIN" } } },
         select: {
           id: true,
           userId: true,
@@ -30,12 +31,12 @@ export const GET = withAuth(
       }),
       prisma.transaction.groupBy({
         by: ["walletId", "walletField"],
-        where: { type: { in: CREDIT_TYPES }, status: "COMPLETED", wallet: { user: { role: { not: "ADMIN" } } } },
+        where: { type: { in: CREDIT_TYPES }, status: "COMPLETED" },
         _sum: { amountCowries: true },
       }),
       prisma.transaction.groupBy({
         by: ["walletId", "walletField"],
-        where: { type: { in: DEBIT_TYPES }, status: "COMPLETED", wallet: { user: { role: { not: "ADMIN" } } } },
+        where: { type: { in: DEBIT_TYPES }, status: "COMPLETED" },
         _sum: { amountCowries: true },
       }),
     ]);
