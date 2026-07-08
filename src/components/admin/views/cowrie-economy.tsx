@@ -358,6 +358,7 @@ export function CowrieEconomy() {
           initialAmount={fixing.wallet === "spending" ? Math.round(fixing.row.spendingDiff) : fixing.row.earnedDiff}
           initialReason={`Ledger backfill for ${fixing.row.name}'s untracked ${fixing.wallet} balance found by wallet audit — flagged on the Cowrie Economy dashboard.`}
           initialRecordOnly
+          kind="correction"
           onClose={() => setFixing(null)}
           onSuccess={() => {
             setFixing(null);

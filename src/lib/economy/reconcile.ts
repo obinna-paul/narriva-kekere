@@ -66,12 +66,18 @@ const RECONCILE_TOLERANCE_COWRIES = 1;
 
 // A transaction's amountCowries is always a positive magnitude regardless of
 // direction — these lists are what determine the sign of its contribution
-// to a wallet bucket (same convention used by the wallet history UI).
+// to a wallet bucket (same convention used by the wallet history UI). Used
+// for the per-wallet ledger check (totalUntrackedBalance, wallet-audit) —
+// DATA_CORRECTION_* belongs here so a correction properly resolves the gap
+// it was written to fix, even though (unlike ADMIN_CREDIT/DEBIT) it's
+// deliberately excluded from totalFromAdminAdjustments/totalIssued below.
 export const CREDIT_TYPES: TransactionType[] = [
   "TOP_UP", "REFUND", "REFERRAL", "READ_REWARD", "TIP_RECEIVED",
-  "REFERRAL_REWARD", "EARNINGS_CREDIT", "ADMIN_CREDIT",
+  "REFERRAL_REWARD", "EARNINGS_CREDIT", "ADMIN_CREDIT", "DATA_CORRECTION_CREDIT",
 ];
-export const DEBIT_TYPES: TransactionType[] = ["UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT"];
+export const DEBIT_TYPES: TransactionType[] = [
+  "UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT",
+];
 
 async function sumTransactionAmounts(types: TransactionType[]): Promise<number> {
   const result = await prisma.transaction.aggregate({

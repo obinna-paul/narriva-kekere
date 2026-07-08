@@ -10,8 +10,12 @@ const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 /**
  * One-time (repeatable) policy action: zeroes every admin account's
- * SPENDING balance only, each via a real, logged ADMIN_DEBIT transaction —
- * never a silent balance edit. Earned balance is never touched here: it's
+ * SPENDING balance only, each via a real, logged DATA_CORRECTION_DEBIT
+ * transaction — never a silent balance edit. This cowrie was never
+ * legitimately issued in the first place (it's untracked/free balance, not
+ * a business decision), so unlike a normal ADMIN_DEBIT it's excluded from
+ * totalIssued — clearing it shouldn't make "total issued" look like a huge
+ * cowrie giveaway happened. Earned balance is never touched here: it's
  * real, withdrawable writer income regardless of the account's role, and
  * this endpoint has no way to tell "legitimate earnings" apart from
  * anything else in that bucket. Only spending accumulates untracked/free
@@ -43,7 +47,7 @@ export const POST = withAuth(
         prisma.transaction.create({
           data: {
             walletId: wallet.id,
-            type: "ADMIN_DEBIT",
+            type: "DATA_CORRECTION_DEBIT",
             amountCowries: Math.abs(spendingAmount),
             walletField: "SPENDING",
             description: "Admin cowrie policy reset: admin accounts no longer hold spending cowries.",

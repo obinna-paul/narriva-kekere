@@ -168,8 +168,17 @@ enum TransactionType {
   // Manual admin wallet adjustments (e.g. compensating a user, correcting an
   // error) — must never share the TOP_UP type, since every revenue/conversion
   // metric filters on TOP_UP to mean "a real Paystack purchase happened."
+  // A genuine business decision — counted in totalIssued.
   ADMIN_CREDIT
   ADMIN_DEBIT
+  // Fixing a wallet balance that was never backed by any transaction in the
+  // first place (legacy migration artifacts, direct DB edits, bugs) — never
+  // a business decision, so unlike ADMIN_CREDIT/DEBIT this is deliberately
+  // excluded from totalIssued. It still counts toward a wallet's own ledger
+  // history, so applying one correctly resolves that wallet's
+  // "untracked balance" flag.
+  DATA_CORRECTION_CREDIT
+  DATA_CORRECTION_DEBIT
 }
 
 enum TransactionStatus {

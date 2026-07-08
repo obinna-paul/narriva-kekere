@@ -26,6 +26,12 @@ const adjustSchema = z
     // ledger just needs to be told so — it writes the transaction without
     // touching the balance at all.
     recordOnly: z.boolean().optional().default(false),
+    // "business": a deliberate decision (compensate a user, claw back an
+    // error) — counted in totalIssued via ADMIN_CREDIT/ADMIN_DEBIT.
+    // "correction": fixing a balance that was never backed by a real
+    // transaction (untracked/legacy data) — uses DATA_CORRECTION_* instead,
+    // which is excluded from totalIssued since it was never real issuance.
+    kind: z.enum(["business", "correction"]).optional().default("business"),
   })
   .refine((data) => data.wallet !== "spending" || Number.isInteger(data.amount), {
     message: "Spending-wallet adjustments must be a whole number of cowries.",
@@ -77,7 +83,7 @@ export const POST = withAuth(
       );
     }
 
-    const { wallet: walletType, reason, recordOnly } = parsed.data;
+    const { wallet: walletType, reason, recordOnly, kind } = parsed.data;
     const amount = walletType === "earned" ? round2(parsed.data.amount) : parsed.data.amount;
 
     const wallet = await prisma.wallet.findUnique({
@@ -109,6 +115,10 @@ export const POST = withAuth(
 
     const absAmount = Math.abs(amount);
     const reasonPrefix = recordOnly ? "Ledger backfill (no balance change)" : "Manual adjustment";
+    const type =
+      kind === "correction"
+        ? (amount > 0 ? "DATA_CORRECTION_CREDIT" : "DATA_CORRECTION_DEBIT")
+        : (amount > 0 ? "ADMIN_CREDIT" : "ADMIN_DEBIT");
 
     const [updatedWallet] = await prisma.$transaction([
       prisma.wallet.update({
@@ -118,7 +128,7 @@ export const POST = withAuth(
       prisma.transaction.create({
         data: {
           walletId: wallet.id,
-          type: amount > 0 ? "ADMIN_CREDIT" : "ADMIN_DEBIT",
+          type,
           amountCowries: absAmount,
           walletField:
             walletType === "spending" ? ("SPENDING" as const) : ("EARNED" as const),
@@ -133,6 +143,7 @@ export const POST = withAuth(
       amount,
       reason,
       recordOnly,
+      kind,
     });
 
     const newBalance =
