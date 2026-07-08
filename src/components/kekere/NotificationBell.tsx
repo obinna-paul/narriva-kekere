@@ -15,6 +15,7 @@ type NotificationType =
   | "CONTRACT_RECEIVED"
   | "COMPETITION_RESULT"
   | "REFERRAL_REWARD_EARNED"
+  | "REFERRAL_JOINED"
   | "WITHDRAWAL_PROCESSED"
   | "WITHDRAWAL_REJECTED"
   | "VERSION_RESTORED";
@@ -38,6 +39,7 @@ const TYPE_CONFIG: Record<NotificationType, { glyph: string; bg: string; fg: str
   CONTRACT_RECEIVED:         { glyph: "✶", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
   COMPETITION_RESULT:        { glyph: "★", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
   REFERRAL_REWARD_EARNED:    { glyph: "◆", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
+  REFERRAL_JOINED:           { glyph: "◇", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
   WITHDRAWAL_PROCESSED:      { glyph: "₦", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
   WITHDRAWAL_REJECTED:       { glyph: "✕", bg: "rgba(42,26,18,.08)",    fg: "rgba(42,26,18,.5)" },
   VERSION_RESTORED:          { glyph: "⟲", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
