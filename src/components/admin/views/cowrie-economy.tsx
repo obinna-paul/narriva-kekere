@@ -112,7 +112,7 @@ export function CowrieEconomy() {
 
   async function handleClearAdminCowries() {
     const confirmed = window.confirm(
-      "Zero out every admin account's spending AND earned balance — including any real, withdrawable earnings? This can't be undone. Each wallet gets a logged ADMIN_DEBIT transaction."
+      "Zero out every admin account's SPENDING balance only — earned/withdrawable balances are never touched. This can't be undone. Each wallet gets a logged ADMIN_DEBIT transaction."
     );
     if (!confirmed) return;
 
@@ -294,16 +294,16 @@ export function CowrieEconomy() {
       </div>
 
       {/* Admin cowrie policy: admins no longer get free unlocks (enforced
-          server-side in unlockStory), and never accumulate a balance at
-          all — this clears out whatever they're currently holding,
-          including real earned cowries, as a one-time clean reset. */}
+          server-side in unlockStory), so they shouldn't accumulate any
+          spending balance at all. Earned balance is real writer income
+          regardless of role and is never touched here. */}
       <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-[13px] font-semibold text-[#1A1C20]">Admin cowrie policy</h3>
             <p className="mt-0.5 text-[12px] text-[#8B919A]">
-              Admin accounts no longer get free unlocks. This zeroes every admin account&apos;s spending and
-              earned balance right now, each with a logged correction.
+              Admin accounts no longer get free unlocks. This zeroes every admin account&apos;s spending
+              balance only — earned (withdrawable) balances are never touched.
             </p>
           </div>
           <button
@@ -312,7 +312,7 @@ export function CowrieEconomy() {
             disabled={clearingAdmins}
             className="flex-none rounded-[8px] border border-[#C0392B]/30 px-4 py-2 text-[12px] font-semibold text-[#C0392B] hover:bg-[rgba(192,57,43,0.06)] disabled:opacity-50"
           >
-            {clearingAdmins ? "Clearing…" : "Clear all admin cowries"}
+            {clearingAdmins ? "Clearing…" : "Clear admin spending cowries"}
           </button>
         </div>
         {clearResult && <p className="mt-3 text-[12px] text-[#646B73]">{clearResult}</p>}
