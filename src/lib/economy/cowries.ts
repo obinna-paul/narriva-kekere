@@ -24,7 +24,6 @@ export type UnlockResult =
 
 export type TipResult =
   | { success: true }
-  | { already_tipped: true }
   | { insufficient_balance: true; balance: number }
   | { error: "not_completed" }
   | { error: "cannot_tip_self" }
@@ -185,11 +184,6 @@ export async function sendTip(readerId: string, storyId: string): Promise<TipRes
     where: { userId_storyId: { userId: readerId, storyId } },
   });
   if (!completed) return { error: "not_completed" };
-
-  const existingTip = await prisma.tip.findUnique({
-    where: { readerId_storyId: { readerId, storyId } },
-  });
-  if (existingTip) return { already_tipped: true };
 
   const readerWallet = await prisma.wallet.upsert({
     where: { userId: readerId },

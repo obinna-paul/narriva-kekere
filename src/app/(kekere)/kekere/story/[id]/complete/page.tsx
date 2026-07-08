@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth/middleware";
 import { getStoryForReader } from "@/lib/data/kekere-stories";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
+import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,11 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
   const story = await getStoryForReader(params.id, session.user.id);
   if (!story) notFound();
 
-  const [wallet, code] = await Promise.all([
+  const [wallet, code, tipCount] = await Promise.all([
     getWalletForUser(session.user.id),
     getOrCreateReferralCodeForUser(session.user.id),
+    prisma.tip.count({ where: { readerId: session.user.id, storyId: params.id } }),
   ]);
-
-  const alreadyTipped = wallet?.transactions.some((t) => t.type === "TIP_SENT" && t.description?.includes(params.id));
 
   return (
     <KekereTheme>
@@ -30,11 +30,9 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
           storyTitle={story.title}
           authorName={story.author.name ?? "Unknown"}
           spendingBalance={wallet?.spendingBalance ?? 0}
-          tipSent={!!alreadyTipped}
+          tipCount={tipCount}
           rating={0}
           referralCode={code}
-          onTip={async () => {}}
-          onRate={async () => {}}
         />
       </div>
     </KekereTheme>
