@@ -79,27 +79,39 @@ export const DEBIT_TYPES: TransactionType[] = [
   "UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT",
 ];
 
+/**
+ * Sums |amountCowries| across matching transactions — NOT a raw SQL SUM.
+ * amountCowries is supposed to always be a positive magnitude (direction
+ * comes from `type`), but rows written before that convention existed (see
+ * the walletField comment on the Transaction model — pre-migration rows
+ * predate it entirely) can carry a signed value instead. A raw SQL SUM lets
+ * one stray negative row silently cancel out real positive ones, producing
+ * nonsense like "-11 spent on unlocks". Summing the absolute value per row
+ * is correct either way and costs nothing at this app's scale.
+ */
 async function sumTransactionAmounts(types: TransactionType[]): Promise<number> {
-  const result = await prisma.transaction.aggregate({
+  const rows = await prisma.transaction.findMany({
     where: { type: { in: types }, status: "COMPLETED" },
-    _sum: { amountCowries: true },
+    select: { amountCowries: true },
   });
-  return result._sum.amountCowries?.toNumber() ?? 0;
+  return rows.reduce((sum, r) => sum + Math.abs(r.amountCowries.toNumber()), 0);
 }
 
 /** Ledger-derived net (credits minus debits) for one wallet bucket. */
 async function ledgerNetForBucket(walletField: WalletField): Promise<number> {
-  const [credit, debit] = await Promise.all([
-    prisma.transaction.aggregate({
-      where: { walletField, type: { in: CREDIT_TYPES }, status: "COMPLETED" },
-      _sum: { amountCowries: true },
-    }),
-    prisma.transaction.aggregate({
-      where: { walletField, type: { in: DEBIT_TYPES }, status: "COMPLETED" },
-      _sum: { amountCowries: true },
-    }),
+  const [creditTotal, debitTotal] = await Promise.all([
+    sumTransactionAmountsForField(walletField, CREDIT_TYPES),
+    sumTransactionAmountsForField(walletField, DEBIT_TYPES),
   ]);
-  return (credit._sum.amountCowries?.toNumber() ?? 0) - (debit._sum.amountCowries?.toNumber() ?? 0);
+  return creditTotal - debitTotal;
+}
+
+async function sumTransactionAmountsForField(walletField: WalletField, types: TransactionType[]): Promise<number> {
+  const rows = await prisma.transaction.findMany({
+    where: { walletField, type: { in: types }, status: "COMPLETED" },
+    select: { amountCowries: true },
+  });
+  return rows.reduce((sum, r) => sum + Math.abs(r.amountCowries.toNumber()), 0);
 }
 
 export async function reconcileEconomy(): Promise<ReconcileResult> {
