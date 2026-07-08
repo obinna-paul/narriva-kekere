@@ -139,7 +139,10 @@ export const GET = withAuth(
       }),
       prisma.narrivaSubmission.count({ where: { submittedAt: { gte: sevenDaysAgo } } }),
       prisma.narrivaSubmission.count({ where: { submittedAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
-      prisma.wallet.aggregate({ _sum: { spendingBalance: true, earnedBalance: true } }),
+      prisma.wallet.aggregate({
+        where: { user: { role: { not: "ADMIN" } } },
+        _sum: { spendingBalance: true, earnedBalance: true },
+      }),
       prisma.story.count({ where: { status: "SUBMITTED" } }),
       prisma.projectDeliverable.count({ where: { status: "CHANGES_REQUESTED" } }),
       prisma.withdrawalRequest.count({ where: { status: "PENDING" } }),
