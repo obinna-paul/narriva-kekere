@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Copy, RefreshCw, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Copy, RefreshCw, Mail, Plus, X } from "lucide-react";
 
 interface UnclaimedWriter {
   id: string;
@@ -16,10 +17,17 @@ interface UnclaimedWriter {
 }
 
 export function UnclaimedWriters() {
+  const router = useRouter();
   const [writers, setWriters] = useState<UnclaimedWriter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const fetchWriters = useCallback(async () => {
     setLoading(true);
@@ -37,6 +45,35 @@ export function UnclaimedWriters() {
   }, []);
 
   useEffect(() => { fetchWriters(); }, [fetchWriters]);
+
+  async function handleCreateWriter(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim() || !newEmail.trim()) return;
+
+    setCreating(true);
+    setCreateError(null);
+
+    try {
+      const res = await fetch("/api/admin/kekere/writers/placeholder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName.trim(), email: newEmail.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Failed" }));
+        setCreateError(data.error ?? "Failed to create writer");
+        setCreating(false);
+        return;
+      }
+
+      const data = await res.json();
+      router.push(`/admin/kekere/writers/${data.userId}/author-story`);
+    } catch {
+      setCreateError("Network error");
+      setCreating(false);
+    }
+  }
 
   async function copyClaimLink(writerId: string) {
     setCopiedId(writerId);
@@ -69,19 +106,71 @@ export function UnclaimedWriters() {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-[18px] font-bold text-[#15171C]">Unclaimed Writers</h1>
-        <p className="mt-1 text-[13px] text-[#7C828C]">
-          Writers whose accounts were created by an admin and haven&rsquo;t claimed them yet.
-          Share the claim link via WhatsApp or email.
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-[18px] font-bold text-[#15171C]">Unclaimed Writers</h1>
+          <p className="mt-1 text-[13px] text-[#7C828C]">
+            Writers whose accounts were created by an admin and haven&rsquo;t claimed them yet.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setShowForm(!showForm); setCreateError(null); }}
+          className="inline-flex items-center gap-1.5 rounded-[9px] bg-[#C75D2C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E]"
+        >
+          <Plus size={14} />
+          New Writer &amp; Story
+        </button>
       </div>
 
-      {writers.length === 0 ? (
-        <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-8 text-center text-[13px] text-[#7C828C]">
-          No unclaimed writers. Use the &ldquo;New Writer &amp; Story&rdquo; button from the sidebar to create one.
+      {showForm && (
+        <div className="mb-6 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
+          <form onSubmit={handleCreateWriter} className="flex items-end gap-4">
+            <div className="flex-1">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
+                Writer&rsquo;s name
+              </label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Full name"
+                required
+                className="w-full rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-white px-3 py-2 text-[13px] text-[#15171C] placeholder:text-[#B0B5BD] focus:border-[#C75D2C] focus:outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
+                Writer&rsquo;s email
+              </label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="writer@example.com"
+                required
+                className="w-full rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-white px-3 py-2 text-[13px] text-[#15171C] placeholder:text-[#B0B5BD] focus:border-[#C75D2C] focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={creating || !newName.trim() || !newEmail.trim()}
+              className="rounded-[8px] bg-[#C75D2C] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create & author story"}
+            </button>
+          </form>
+          {createError && (
+            <p className="mt-3 text-[12px] text-red-600">{createError}</p>
+          )}
         </div>
-      ) : (
+      )}
+
+      {writers.length === 0 && !showForm ? (
+        <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-8 text-center text-[13px] text-[#7C828C]">
+          No unclaimed writers yet. Click &ldquo;New Writer &amp; Story&rdquo; above to create one and author their first story.
+        </div>
+      ) : writers.length === 0 ? null : (
         <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
           <table className="w-full text-left text-[13px]">
             <thead className="border-b border-[rgba(20,22,26,0.06)] bg-[#F8F9FB]">
