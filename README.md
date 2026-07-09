@@ -3,8 +3,8 @@
 A single Next.js codebase serving two independent web platforms that share only
 a backend.
 
-1. **Narriva** (`narriva.com`) — a selective book publishing house with a public bookstore.
-2. **Kekere Stories** (`kekere.narriva.com`) — a separate short-fiction reading and writing app.
+1. **Narriva** (`narriva.pro`) — a selective book publishing house with a public bookstore.
+2. **Kekere Stories** (`narriva.pro/kekere`) — a separate short-fiction reading and writing app.
 
 ## Brand independence rule
 
@@ -29,7 +29,7 @@ copy that references one brand from the other's surface.
 ```
 src/
 ├── app/
-│   ├── (narriva)/        # Narriva routes — serves "/" on narriva.com
+│   ├── (narriva)/        # Narriva routes — serves "/" on narriva.pro
 │   ├── (kekere)/         # Kekere routes — see "Routing" below
 │   ├── api/               # Shared API routes (auth, payments, etc.)
 │   └── layout.tsx         # Root HTML shell only — no brand styling here
@@ -51,7 +51,7 @@ Brand-specific layouts live in `(narriva)/layout.tsx` and `(kekere)/layout.tsx`,
 each applying only its own Tailwind theme tokens (`narriva-*` / `kekere-*`,
 defined in `tailwind.config.ts`). The root `layout.tsx` stays brand-neutral.
 
-## Routing: route groups today, subdomains in production
+## Routing: route groups, path-based in production
 
 `(narriva)` and `(kekere)` are Next.js **route groups** — they organize files
 without adding a URL segment. That matters here because two route groups can't
@@ -61,19 +61,19 @@ both groups live locally without colliding:
 - `(narriva)/page.tsx` serves `/` — this is the real, public Narriva home.
 - `(kekere)`'s actual page lives at `(kekere)/kekere/page.tsx` (URL `/kekere`).
 - `src/middleware.ts` rewrites requests with a `kekere.` hostname prefix from
-  `/` to `/kekere` internally, so the public URL on the Kekere subdomain still
-  looks like `/`.
+  `/` to `/kekere` internally, so a `kekere.*` subdomain still looks like `/`
+  at that subdomain — a **local-dev-only convenience**, not what production
+  does.
 
 **Local dev:** add `127.0.0.1 kekere.localhost` to your hosts file, then visit
 `http://kekere.localhost:3000` for Kekere and `http://localhost:3000` for
 Narriva.
 
-**Production:** the same middleware approach maps real subdomains —
-`narriva.com` → Narriva, `kekere.narriva.com` → Kekere. Hardening the
-production logic (explicit hostname allow-list, `www`/apex handling, preview
-deployment hostnames, etc.) is deferred to the deployment phase; the local-dev
-rewrite above is the minimal version needed to make the two brands buildable
-and navigable today.
+**Production:** a single domain, `narriva.pro` (see `DOMAINS`/`SITE_URL` in
+`src/content/decisions.ts`) — `narriva.pro/` serves Narriva, `narriva.pro/kekere`
+serves Kekere, both already at their natural route-group paths with no rewrite
+involved. The `kekere.` subdomain-rewrite logic above never triggers on the
+real domain.
 
 ## Business constants
 
@@ -93,11 +93,11 @@ phase introduces each one.
 
 Auth is NextAuth.js (Credentials provider, bcrypt-hashed passwords, JWT
 session strategy — database-strategy sessions don't populate automatically
-for Credentials logins, so JWT is required here). The session cookie is
-scoped to `.narriva.com` in production so a login on either brand carries
-over to the other; locally there's no shared parent domain between
-`localhost` and `kekere.localhost`, so the cookie falls back to per-host
-during development (see `src/lib/auth/options.ts`).
+for Credentials logins, so JWT is required here). In production both brands
+are already on the same origin (`narriva.pro`), so a login on either brand
+carries over to the other with no cross-domain cookie config needed; locally
+`localhost` and `kekere.localhost` are different hosts, so the dev cookie is
+per-host (see `src/lib/auth/options.ts`).
 
 - `src/lib/db/prisma.ts` — Prisma client singleton
 - `src/lib/auth/options.ts` — NextAuth config

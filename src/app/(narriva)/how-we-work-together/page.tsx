@@ -3,7 +3,12 @@ import { NarrivaTheme } from "@/components/theme";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
-export const metadata = { title: "How We Work — Narriva" };
+export const metadata = {
+  title: "How We Work",
+  description:
+    "From submission to launch: how Narriva assesses a manuscript, what to expect at each stage, and how long it takes.",
+  alternates: { canonical: "/how-we-work-together" },
+};
 
 const ASSESS = [
   {

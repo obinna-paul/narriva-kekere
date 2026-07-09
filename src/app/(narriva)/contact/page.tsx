@@ -2,7 +2,12 @@ import { NarrivaTheme } from "@/components/theme";
 import { ContactForm } from "@/components/narriva/contact-form";
 import { CalendlyWidget } from "@/components/narriva/calendly-widget";
 
-export const metadata = { title: "Contact — Narriva" };
+export const metadata = {
+  title: "Contact",
+  description:
+    "Whether you're ready to submit your manuscript or just want to ask a question first, we'd love to hear from you.",
+  alternates: { canonical: "/contact" },
+};
 
 const calendlyUrl = process.env.NEXT_PUBLIC_CALENDLY_URL;
 

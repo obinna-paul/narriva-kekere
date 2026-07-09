@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { NarrivaTheme } from "@/components/theme";
 import { ServicePageTemplate } from "@/components/narriva/service-page-template";
 import { getServiceBySlug as getStaticService } from "@/content/mock/narriva-services";
@@ -7,9 +8,23 @@ import { toServiceContent } from "@/lib/adapters/narriva";
 
 export const dynamic = "force-dynamic";
 
-export default async function GhostwritingServicePage() {
+async function loadService() {
   const dbService = await getServiceBySlug("ghostwriting");
-  const service = dbService ? toServiceContent(dbService) : getStaticService("ghostwriting");
+  return dbService ? toServiceContent(dbService) : getStaticService("ghostwriting");
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const service = await loadService();
+  if (!service) return {};
+  return {
+    title: service.name,
+    description: service.tagline,
+    alternates: { canonical: "/services/ghostwriting" },
+  };
+}
+
+export default async function GhostwritingServicePage() {
+  const service = await loadService();
   if (!service) notFound();
 
   return (

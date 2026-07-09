@@ -2,7 +2,11 @@ import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { RefundsPolicy } from "@/content/legal/refunds-policy";
 
-export const metadata = { title: "Refund & Cancellation Policy Ã¢â‚¬â€ Kekere" };
+export const metadata = {
+  title: "Refund & Cancellation Policy",
+  description: "Kekere Stories' refund and cancellation policy for cowrie top-ups and purchases.",
+  alternates: { canonical: "/kekere/refunds" },
+};
 
 export default function KekereRefundsPage() {
   return (

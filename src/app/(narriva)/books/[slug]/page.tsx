@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { NarrivaTheme } from "@/components/theme";
 import { BookDetailCover } from "@/components/narriva/book-detail-cover";
 import { AuthorBioCard } from "@/components/narriva/author-bio-card";
@@ -9,8 +10,38 @@ import { BuyBookButton } from "@/components/narriva/buy-book-button";
 import { getBookBySlug, getBookPurchase, getReadingProgress } from "@/lib/data/books";
 import { toAuthorCardData, toBookCardData } from "@/lib/adapters/narriva";
 import { getCurrentSession } from "@/lib/auth/middleware";
+import { JsonLd } from "@/components/seo/json-ld";
+import { bookSchema, breadcrumbSchema } from "@/lib/seo/schema";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const book = await getBookBySlug(params.slug);
+  if (!book) return {};
+
+  const description = book.synopsis || book.hookLine;
+  const ogImage = `/api/og?brand=narriva&title=${encodeURIComponent(book.title)}&subtitle=${encodeURIComponent(
+    `by ${book.author.name}`
+  )}&color=${encodeURIComponent(book.coverImageRef)}`;
+
+  return {
+    title: book.title,
+    description,
+    alternates: { canonical: `/books/${book.slug}` },
+    openGraph: {
+      title: book.title,
+      description,
+      url: `/books/${book.slug}`,
+      type: "book",
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: book.title,
+      description,
+    },
+  };
+}
 
 const priceFormatter = new Intl.NumberFormat("en-NG", {
   style: "currency",
@@ -47,6 +78,24 @@ export default async function BookDetailPage({ params }: { params: { slug: strin
 
   return (
     <NarrivaTheme>
+      <JsonLd
+        data={bookSchema({
+          slug: dbBook.slug,
+          title: dbBook.title,
+          hookLine: dbBook.hookLine,
+          synopsis: dbBook.synopsis,
+          price: dbBook.price,
+          genre: dbBook.genre,
+          publishedAt: dbBook.publishedAt,
+          author: { name: dbBook.author.name, slug: dbBook.author.slug },
+        })}
+      />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: "Bookstore", path: "/books" },
+          { name: book.title, path: `/books/${book.slug}` },
+        ])}
+      />
       <main>
         <div className="mx-auto max-w-[1140px] px-8 pt-7">
           <div className="text-[13px] text-[var(--color-muted-3)]">

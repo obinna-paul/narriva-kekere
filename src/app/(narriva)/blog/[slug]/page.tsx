@@ -1,12 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { NarrivaTheme } from "@/components/theme";
 import { PhotoPlaceholder } from "@/components/narriva/photo-placeholder";
 import { getBlogPostBySlug, listBlogPosts } from "@/lib/data/blog";
 import { toBlogCardData } from "@/lib/adapters/narriva";
 import { renderSimpleMarkdown } from "@/lib/utils/markdown";
+import { JsonLd } from "@/components/seo/json-ld";
+import { articleSchema, breadcrumbSchema } from "@/lib/seo/schema";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const post = await getBlogPostBySlug(params.slug);
+  if (!post) return {};
+
+  const ogImage =
+    post.featuredImageRef ||
+    `/api/og?brand=narriva&title=${encodeURIComponent(post.title)}&color=${encodeURIComponent(post.coverColor)}`;
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    alternates: { canonical: `/blog/${post.slug}` },
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      url: `/blog/${post.slug}`,
+      type: "article",
+      publishedTime: (post.publishedAt ?? post.createdAt).toISOString(),
+      modifiedTime: post.updatedAt.toISOString(),
+      authors: [post.authorName],
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+    },
+  };
+}
 
 const WORDS_PER_MINUTE = 200;
 
@@ -28,6 +61,22 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   return (
     <NarrivaTheme>
+      <JsonLd
+        data={articleSchema({
+          slug: dbPost.slug,
+          title: dbPost.title,
+          excerpt: dbPost.excerpt,
+          authorName: dbPost.authorName,
+          publishedAt: dbPost.publishedAt ?? dbPost.createdAt,
+          updatedAt: dbPost.updatedAt,
+        })}
+      />
+      <JsonLd
+        data={breadcrumbSchema([
+          { name: "Blog", path: "/blog" },
+          { name: post.title, path: `/blog/${post.slug}` },
+        ])}
+      />
       <main>
         <article className="mx-auto max-w-[720px] px-8 pt-16">
           <div className="mb-6 flex items-center gap-3.5">

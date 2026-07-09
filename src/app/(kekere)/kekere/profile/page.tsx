@@ -3,7 +3,6 @@ import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { ProfileView } from "@/components/kekere/profile-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
-import { listStoriesByAuthor } from "@/lib/data/kekere-stories";
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
@@ -15,19 +14,17 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, myStories, bankDetails] = userId
+  const [profile, writerStats, readerStats, bankDetails] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
         getReaderStats(userId),
-        listStoriesByAuthor(userId),
         getWriterBankDetails(userId),
       ])
     : [
         null,
         { publishedCount: 0, totalReads: 0, hasAuthoredAnyStory: false },
         { storiesRead: 0, storiesCompleted: 0, savedCount: 0 },
-        [],
         null,
       ];
 
@@ -47,9 +44,6 @@ export default async function KekereProfilePage() {
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
           readingStats={readerStats}
-          myStories={myStories
-            .filter((s) => s.status !== "REJECTED")
-            .map((s) => ({ id: s.id, title: s.title, status: s.status }))}
         />
       </div>
     </KekereTheme>

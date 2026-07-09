@@ -2,7 +2,11 @@ import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { PrivacyPolicy } from "@/content/legal/privacy-policy";
 
-export const metadata = { title: "Privacy Policy Ã¢â‚¬â€ Kekere" };
+export const metadata = {
+  title: "Privacy Policy",
+  description: "How Kekere Stories collects, uses, and protects your personal data.",
+  alternates: { canonical: "/kekere/privacy" },
+};
 
 export default function KekerePrivacyPage() {
   return (

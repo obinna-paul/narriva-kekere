@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { FeedContent } from "@/components/kekere/feed-content";
@@ -19,6 +20,12 @@ import { FEED_TAG_ORDER, TAG_BY_SLUG } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Feed",
+  description: "Discover published short fiction from African writers on Kekere Stories.",
+  alternates: { canonical: "/kekere/feed" },
+};
 
 export interface WinnerStory extends MockStory {
   placement: number;
