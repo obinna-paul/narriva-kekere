@@ -213,12 +213,12 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
+    <div className="mx-auto max-w-3xl p-4 sm:p-6">
       <div className="mb-6">
-        <h1 className="text-[18px] font-bold text-[#15171C]">
+        <h1 className="text-[16px] font-bold text-[#15171C] sm:text-[18px]">
           Author a story for {writerName}
         </h1>
-        <p className="mt-1 text-[13px] text-[#7C828C]">
+        <p className="mt-1 text-[12px] text-[#7C828C] sm:text-[13px]">
           This story will be created under {writerName}&rsquo;s account with a
           PENDING_CONTRACT status. They&rsquo;ll receive an email with the
           publishing agreement and a claim link.
@@ -341,7 +341,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
               Tier
@@ -416,12 +416,12 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         </div>
 
         <div>
-          <div className="mb-1 flex items-center justify-between">
+          <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
               Category (select one)
             </label>
             {selectedTagInfo && (
-              <span className="text-[11px] text-[rgba(199,93,44,0.7)]">
+              <span className="text-[10px] text-[rgba(199,93,44,0.7)] sm:text-[11px]">
                 Feed row: &ldquo;{selectedTagInfo.feedHeading}&rdquo;
               </span>
             )}
@@ -449,15 +449,15 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-[rgba(20,22,26,0.08)] pt-5">
-          <span className="text-[12px] text-[#7C828C]">
+        <div className="flex flex-col gap-3 border-t border-[rgba(20,22,26,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
             Story will be set to PENDING_CONTRACT — the writer must claim and sign to go live.
           </span>
           <button
             type="button"
             disabled={!isValid || submitting}
             onClick={handleSubmit}
-            className="rounded-[9px] bg-[#C75D2C] px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-[9px] bg-[#C75D2C] px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {submitting ? "Sending..." : "Save & send agreement"}
           </button>

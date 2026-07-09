@@ -106,7 +106,7 @@ export function UnclaimedWriters() {
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[18px] font-bold text-[#15171C]">Unclaimed Writers</h1>
           <p className="mt-1 text-[13px] text-[#7C828C]">
@@ -116,7 +116,7 @@ export function UnclaimedWriters() {
         <button
           type="button"
           onClick={() => { setShowForm(!showForm); setCreateError(null); }}
-          className="inline-flex items-center gap-1.5 rounded-[9px] bg-[#C75D2C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E]"
+          className="inline-flex items-center gap-1.5 self-start rounded-[9px] bg-[#C75D2C] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E] sm:self-auto"
         >
           <Plus size={14} />
           New Writer &amp; Story
@@ -124,8 +124,8 @@ export function UnclaimedWriters() {
       </div>
 
       {showForm && (
-        <div className="mb-6 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-5">
-          <form onSubmit={handleCreateWriter} className="flex items-end gap-4">
+        <div className="mb-6 rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-4 sm:p-5">
+          <form onSubmit={handleCreateWriter} className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
             <div className="flex-1">
               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
                 Writer&rsquo;s name
@@ -155,7 +155,7 @@ export function UnclaimedWriters() {
             <button
               type="submit"
               disabled={creating || !newName.trim() || !newEmail.trim()}
-              className="rounded-[8px] bg-[#C75D2C] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[8px] bg-[#C75D2C] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
             >
               {creating ? "Creating..." : "Create & author story"}
             </button>

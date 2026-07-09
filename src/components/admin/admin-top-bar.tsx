@@ -18,6 +18,7 @@ const ROUTE_META: Record<string, { section: string; subsection?: string; title: 
   "/admin/economy": { section: "Kekere", title: "Cowrie Economy" },
   "/admin/withdrawals": { section: "Kekere", title: "Withdrawal Requests" },
   "/admin/user-analytics": { section: "Kekere", title: "User Analytics" },
+  "/admin/kekere/writers/unclaimed": { section: "Kekere", title: "Unclaimed Writers" },
   "/admin/all-users": { section: "Platform", title: "All Users" },
   "/admin/settings": { section: "Platform", title: "Settings" },
 };
@@ -37,7 +38,9 @@ interface AdminTopBarProps {
 
 export function AdminTopBar({ range = "30d", onRangeChange, showRange = true, onMenuClick }: AdminTopBarProps) {
   const pathname = usePathname();
-  const meta = ROUTE_META[pathname] ?? { section: "Admin", title: "Dashboard" };
+  const meta = ROUTE_META[pathname]
+    ?? (pathname.startsWith("/admin/kekere/writers/") ? { section: "Kekere", title: "Author a Story" } : null)
+    ?? { section: "Admin", title: "Dashboard" };
 
   return (
     <header
