@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
+import { randomBytes, createHash } from "node:crypto";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
@@ -9,6 +10,8 @@ import { createPublishingContract } from "@/lib/data/kekere-contracts";
 import { sendEmail } from "@/lib/email/send";
 import { renderPublishingAgreementEmail } from "@/lib/email/templates";
 import { generateUnsignedContractPdf } from "@/lib/contracts/pdf";
+
+const CLAIM_TOKEN_EXPIRY_DAYS = 120;
 
 const schema = z.object({
   title: z.string().min(1).max(200),
@@ -21,6 +24,10 @@ const schema = z.object({
   coverImageRef: z.string().optional(),
   tagIds: z.array(z.string()).min(1, "Select at least one category"),
 });
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export const POST = withAuth(async (request, session, { params }) => {
   const { writerId } = params as { writerId: string };
@@ -40,7 +47,7 @@ export const POST = withAuth(async (request, session, { params }) => {
 
   const writer = await prisma.user.findUnique({
     where: { id: writerId },
-    select: { id: true, name: true, email: true, accountStatus: true, claimToken: true, claimTokenExpiresAt: true },
+    select: { id: true, name: true, email: true, accountStatus: true },
   });
 
   if (!writer) {
@@ -55,7 +62,11 @@ export const POST = withAuth(async (request, session, { params }) => {
   const wordCount = countWords(bodyWithIds);
   const readingTime = Math.max(1, Math.round(wordCount / 200));
 
-  const { contractId, contractBody } = await prisma.$transaction(async (tx) => {
+  const rawToken = randomBytes(32).toString("hex");
+  const newTokenHash = hashToken(rawToken);
+  const claimExpiresAt = new Date(Date.now() + CLAIM_TOKEN_EXPIRY_DAYS * 86400000);
+
+  const result = await prisma.$transaction(async (tx) => {
     const story = await tx.story.create({
       data: {
         authorId: writerId,
@@ -83,6 +94,14 @@ export const POST = withAuth(async (request, session, { params }) => {
       });
     }
 
+    await tx.user.update({
+      where: { id: writerId },
+      data: {
+        claimToken: newTokenHash,
+        claimTokenExpiresAt: claimExpiresAt,
+      },
+    });
+
     const contract = await createPublishingContract({
       storyId: story.id,
       writerId,
@@ -96,36 +115,33 @@ export const POST = withAuth(async (request, session, { params }) => {
   });
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
-  const claimUrl = writer.claimToken
-    ? `${baseUrl}/kekere/claim/${writer.claimToken}` : null;
+  const claimUrl = `${baseUrl}/kekere/claim/${rawToken}`;
 
-  const unsignedPdf = generateUnsignedContractPdf(contractBody);
+  const unsignedPdf = generateUnsignedContractPdf(result.contractBody);
   const pdfAttachment = {
-    filename: `kekere-publishing-agreement-unsigned.pdf`,
+    filename: "kekere-publishing-agreement-unsigned.pdf",
     content: Buffer.from(unsignedPdf),
   };
 
-  const agreementHtml = claimUrl
-    ? await renderPublishingAgreementEmail({
-        writerName: writer.name,
-        storyTitle: title,
-        claimUrl,
-      }).catch(() => undefined)
-    : undefined;
+  const agreementHtml = await renderPublishingAgreementEmail({
+    writerName: writer.name,
+    storyTitle: title,
+    claimUrl,
+  }).catch(() => undefined);
 
   await sendEmail({
     from: "Kekere Stories <submission@narriva.pro>",
     to: writer.email,
     subject: "Publishing agreement",
-    body: `Hi ${writer.name},\n\nCongratulations — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\n${claimUrl ? `When you're ready, visit this link to review, sign, set up your account, and go live:\n${claimUrl}\n\n` : ""}Your story appears in the feed the moment you sign.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+    body: `Hi ${writer.name},\n\nCongratulations \u2014 your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\nWhen you're ready, visit this link to review, sign, set up your account, and go live:\n${claimUrl}\n\nYour story appears in the feed the moment you sign.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
     html: agreementHtml,
     attachments: [pdfAttachment],
   });
 
   return NextResponse.json({
     success: true,
-    storyId: contractId,
-    contractId,
+    storyId: result.storyId,
+    contractId: result.contractId,
     writerName: writer.name,
   }, { status: 201 });
 }, { roles: ["ADMIN"] });

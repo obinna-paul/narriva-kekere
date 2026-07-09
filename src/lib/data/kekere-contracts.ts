@@ -124,7 +124,7 @@ export async function signContractAndPublishStory(
       }
     }
   } catch (err) {
-    console.error("PDF generation failed for contract", contractId, "— falling back to .docx:", err);
+    console.error("PDF generation failed for contract", contractId, "\u2014 falling back to .docx:", err);
     try {
       attachmentBuffer = await generateSignedContractDocx(contract.body, signedName, signedAt, signerIp);
       attachmentFilename = `kekere-publishing-agreement-${contract.id}.docx`;
@@ -133,24 +133,27 @@ export async function signContractAndPublishStory(
     }
   }
 
-  await prisma.kekereContract.update({
-    where: { id: contractId },
-    data: {
-      status: "SIGNED",
-      signedName,
-      signedAt,
-      signerIp,
-      ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
-    },
-  });
-
   const linkedStoryId = contract.storyId;
-  if (linkedStoryId) {
-    await prisma.story.updateMany({
-      where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
-      data: { status: "PUBLISHED", isDraft: false, publishedAt: signedAt },
+
+  await prisma.$transaction(async (tx) => {
+    await tx.kekereContract.update({
+      where: { id: contractId },
+      data: {
+        status: "SIGNED",
+        signedName,
+        signedAt,
+        signerIp,
+        ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
+      },
     });
-  }
+
+    if (linkedStoryId) {
+      await tx.story.updateMany({
+        where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
+        data: { status: "PUBLISHED", isDraft: false, publishedAt: signedAt },
+      });
+    }
+  });
 
   const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;
 
