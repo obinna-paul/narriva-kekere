@@ -7,6 +7,7 @@ import { ContractSignedEmail } from "./contract-signed";
 import { StoryRejectedEmail } from "./story-rejected";
 import { RevisionsRequestedEmail } from "./revisions-requested";
 import { ResetPasswordEmail } from "./reset-password";
+import { PublishingAgreementEmail } from "./publishing-agreement";
 import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
@@ -62,6 +63,14 @@ export async function renderResetPasswordEmail(props: {
   expiryMinutes?: number;
 }) {
   return render(createElement(ResetPasswordEmail, props));
+}
+
+export async function renderPublishingAgreementEmail(props: {
+  writerName: string;
+  storyTitle: string;
+  claimUrl: string;
+}) {
+  return render(createElement(PublishingAgreementEmail, props));
 }
 
 export async function renderWalletHistoryEmail(props: {

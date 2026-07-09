@@ -20,11 +20,16 @@ enum UserRole {
   ADMIN
 }
 
+enum AccountStatus {
+  CLAIMED
+  UNCLAIMED
+}
+
 model User {
   id       String   @id @default(cuid())
   email    String   @unique
   name     String
-  password String
+  password String?
   role     UserRole @default(READER)
   avatar   String?
   bio      String?
@@ -61,6 +66,13 @@ model User {
 
   // First-story-free benefit: each new user gets their first unlock at no cost.
   freeReadUsed Boolean @default(false)
+
+  // Pre-launch onboarding: admins create placeholder WRITER accounts and
+  // author stories into them; the writer later claims via a tokenised link.
+  accountStatus       AccountStatus @default(CLAIMED)
+  claimToken          String?       @unique
+  claimTokenExpiresAt DateTime?
+  createdByAdminId    String?
 
   // Set on every successful sign-in (see authorize() in auth/options.ts) —
   // the only real signal of account activity. updatedAt moves on any
@@ -246,6 +258,11 @@ enum StoryTier {
   PREMIUM
 }
 
+enum StorySource {
+  STANDARD
+  ADMIN_AUTHORED
+}
+
 enum AudioGenerationStatus {
   NOT_GENERATED
   GENERATING
@@ -313,6 +330,9 @@ model Story {
   moderationNotes   String?
   plagiarismFlagged Boolean @default(false)
   featured          Boolean @default(false)
+
+  sourceType        StorySource @default(STANDARD)
+  authoredByAdminId String?
 
   // Set on the DRAFT/REVISIONS_REQUESTED → SUBMITTED transition — used to
   // order the admin moderation queue oldest-first by actual submission time,

@@ -103,6 +103,8 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) return null;
 
+        if (!user.password) return null;
+
         if (user.suspended) {
           if (user.suspendedUntil && user.suspendedUntil.getTime() < Date.now()) {
             await prisma.user.update({
