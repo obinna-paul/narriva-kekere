@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Upload, ImageIcon, Check } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
-import { STORY_TAGS, TAG_BY_SLUG } from "@/content/story-tags";
+import { TAG_BY_SLUG } from "@/content/story-tags";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 
 interface TagItem {
@@ -40,19 +40,20 @@ function extractPlainText(doc: TiptapDoc): string {
 export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorProps) {
   const router = useRouter();
   const editorRef = useRef<StoryEditorHandle>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const [title, setTitle] = useState("");
   const [hookLine, setHookLine] = useState("");
   const [tier, setTier] = useState<string>("STANDARD");
   const [cowrieCost, setCowrieCost] = useState(5);
-  const [genre, setGenre] = useState("Drama");
-  const [coverColor, setCoverColor] = useState("#C75D2C");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [allTags, setAllTags] = useState<TagItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const [suggesting, setSuggesting] = useState(false);
   const [suggestion, setSuggestion] = useState<{
@@ -145,10 +146,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     setSuggestion(null);
   }
 
-  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function uploadFile(file: File) {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -160,6 +158,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       if (res.ok) {
         const data = await res.json();
         setCoverImageRef(data.coverImageRef ?? null);
+        setCoverPreviewUrl(data.previewUrl ?? null);
       }
     } catch {
       setError("Cover upload failed");
@@ -167,6 +166,30 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       setUploading(false);
     }
   }
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && ["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      uploadFile(file);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+  }, []);
 
   async function handleSubmit() {
     if (!isValid) return;
@@ -191,8 +214,8 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           body: bodyContent,
           tier,
           cowrieCost,
-          genre,
-          coverColor,
+          genre: "Drama",
+          coverColor: "#C75D2C",
           coverImageRef: coverImageRef ?? undefined,
           tagIds,
         }),
@@ -219,9 +242,8 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           Author a story for {writerName}
         </h1>
         <p className="mt-1 text-[12px] text-[#7C828C] sm:text-[13px]">
-          This story will be created under {writerName}&rsquo;s account with a
-          PENDING_CONTRACT status. They&rsquo;ll receive an email with the
-          publishing agreement and a claim link.
+          This story will be created under {writerName}&rsquo;s account, set to
+          PENDING_CONTRACT. They&rsquo;ll receive the publishing agreement and a claim link by email.
         </p>
       </div>
 
@@ -232,6 +254,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       )}
 
       <div className="space-y-5">
+        {/* Title */}
         <div>
           <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
             Title
@@ -245,6 +268,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           />
         </div>
 
+        {/* Hook line + Nari suggest */}
         <div>
           <div className="mb-1 flex items-center justify-between">
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
@@ -253,11 +277,11 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             <button
               type="button"
               onClick={handleNariSuggest}
-              disabled={suggesting || !title.trim()}
-              className="inline-flex items-center gap-1 rounded-[7px] border border-[rgba(199,93,44,0.3)] bg-[#FFF8F2] px-2.5 py-1 text-[11px] font-semibold text-[#C75D2C] hover:bg-[#FFEDDD] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={suggesting}
+              className="inline-flex items-center gap-1.5 rounded-[7px] border border-[rgba(199,93,44,0.3)] bg-[#FFF8F2] px-3 py-1.5 text-[11px] font-semibold text-[#C75D2C] hover:bg-[#FFEDDD] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Sparkles size={12} />
-              {suggesting ? "Nari is reading..." : "Nari suggest"}
+              {suggesting ? "Reading..." : "Nari suggest tag & hook"}
             </button>
           </div>
           <input
@@ -269,6 +293,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           />
         </div>
 
+        {/* Nari suggestions panel */}
         {suggestionError && (
           <div className="rounded-[8px] border border-[rgba(199,93,44,0.25)] bg-[#FFF8F2] px-4 py-3 text-[12px] text-[#B0531E]">
             {suggestionError}
@@ -304,14 +329,14 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             {suggestion.tagSlug && (
               <div className="mb-3">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[rgba(31,75,75,0.55)]">
-                  Suggested category &amp; row
+                  Suggested category &amp; feed row
                 </span>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-[rgba(31,75,75,0.2)] bg-white px-2.5 py-0.5 text-[12px] font-medium text-[#1F4B4B]">
                     {suggestion.tagLabel}
                   </span>
                   <span className="text-[12px] text-[rgba(31,75,75,0.6)]">
-                    &rarr; feed row: &ldquo;{suggestion.tagFeedHeading}&rdquo;
+                    &rarr; &ldquo;{suggestion.tagFeedHeading}&rdquo;
                   </span>
                 </div>
               </div>
@@ -327,6 +352,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         )}
 
+        {/* Story content */}
         <div>
           <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
             Story content
@@ -341,7 +367,8 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* Tier + Cowrie cost */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
               Tier
@@ -359,7 +386,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
           <div>
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-              Cowrie cost
+              Cowrie cost (1–10)
             </label>
             <input
               type="number"
@@ -370,51 +397,81 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               className="w-full rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2.5 text-[14px] text-[#15171C] focus:border-[#C75D2C] focus:outline-none"
             />
           </div>
-
-          <div>
-            <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-              Genre
-            </label>
-            <input
-              type="text"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              className="w-full rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2.5 text-[14px] text-[#15171C] focus:border-[#C75D2C] focus:outline-none"
-            />
-          </div>
         </div>
 
+        {/* Cover upload */}
         <div>
           <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-            Cover colour
+            Cover image
           </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="color"
-              value={coverColor}
-              onChange={(e) => setCoverColor(e.target.value)}
-              className="h-[38px] w-[38px] cursor-pointer rounded-[7px] border border-[rgba(20,22,26,0.12)]"
-            />
-            <span className="text-[13px] text-[#7C828C]">{coverColor}</span>
-          </div>
-        </div>
 
-        <div>
-          <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-            Cover image (Cloudinary)
-          </label>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={handleCoverUpload}
-            className="text-[13px] text-[#7C828C] file:mr-3 file:rounded-[7px] file:border-0 file:bg-[#F0F2F5] file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-[#15171C] hover:file:bg-[#E4E7EB]"
-          />
-          {uploading && <span className="mt-1 text-[12px] text-[#7C828C]">Uploading...</span>}
-          {coverImageRef && (
-            <span className="mt-1 text-[12px] text-green-700">Cover uploaded</span>
+          {coverPreviewUrl ? (
+            <div className="relative overflow-hidden rounded-[10px] border border-[rgba(20,22,26,0.1)] bg-[#F8F9FB]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverPreviewUrl}
+                alt="Story cover preview"
+                className="mx-auto max-h-[200px] object-contain"
+              />
+              <div className="flex items-center justify-between border-t border-[rgba(20,22,26,0.06)] px-4 py-2.5">
+                <span className="flex items-center gap-1.5 text-[12px] text-green-700">
+                  <Check size={13} />
+                  Cover uploaded
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setCoverImageRef(null); setCoverPreviewUrl(null); }}
+                  className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-[#7C828C] hover:bg-[rgba(20,22,26,0.06)] hover:text-[#15171C]"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={dropRef}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`relative rounded-[10px] border-2 border-dashed p-8 text-center transition-colors ${
+                dragOver
+                  ? "border-[#C75D2C] bg-[#FFF8F2]"
+                  : "border-[rgba(20,22,26,0.15)] bg-[#F8F9FB] hover:border-[rgba(20,22,26,0.25)]"
+              }`}
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#C75D2C] border-t-transparent" />
+                  <span className="text-[12px] text-[#7C828C]">Uploading...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-[10px] bg-[rgba(199,93,44,0.08)]">
+                    <ImageIcon size={20} className="text-[#C75D2C]" />
+                  </div>
+                  <p className="mb-1 text-[13px] font-medium text-[#15171C]">
+                    Drag &amp; drop a cover image here
+                  </p>
+                  <p className="mb-3 text-[11px] text-[#9AA0A8]">
+                    PNG, JPG, or WebP &middot; recommended 3:4 portrait
+                  </p>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2 text-[12px] font-medium text-[#15171C] hover:bg-[#F0F2F5]">
+                    <Upload size={13} />
+                    Browse files
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </>
+              )}
+            </div>
           )}
         </div>
 
+        {/* Category / tag picker */}
         <div>
           <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
@@ -449,9 +506,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
+        {/* Submit footer */}
         <div className="flex flex-col gap-3 border-t border-[rgba(20,22,26,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
-            Story will be set to PENDING_CONTRACT — the writer must claim and sign to go live.
+            Story will be set to PENDING_CONTRACT &mdash; the writer must claim and sign to go live.
           </span>
           <button
             type="button"
