@@ -368,7 +368,7 @@ export function StoryReader({
   }
 
   return (
-    <div className="relative min-h-screen bg-[var(--color-bg)]">
+    <div className="relative min-h-screen bg-[#FCFCFA]">
       {isLoggedIn && userEmail && (
         <WatermarkOverlay email={userEmail} opacity={0.06} />
       )}

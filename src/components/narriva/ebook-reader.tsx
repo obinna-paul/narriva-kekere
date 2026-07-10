@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   theme: "light",
 };
 
-const FONT_SIZE_PX: Record<FontSize, number> = { S: 17, M: 19, L: 21, XL: 24 };
+const FONT_SIZE_PX: Record<FontSize, number> = { S: 16, M: 18, L: 21, XL: 24 };
 const BUTTON_LABEL_PX: Record<FontSize, number> = { S: 12, M: 13.5, L: 15, XL: 16.5 };
 const LINE_HEIGHT: Record<LineSpacing, number> = { comfortable: 1.85, relaxed: 2.0, open: 2.2 };
 
