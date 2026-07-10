@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { WatermarkOverlay } from "@/components/kekere/watermark-overlay";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
@@ -14,6 +15,75 @@ import { useParagraphReactions } from "@/components/kekere/use-paragraph-reactio
 import { EmojiFloat } from "@/components/kekere/EmojiFloat";
 import { FloatingEmojiPicker } from "@/components/kekere/FloatingEmojiPicker";
 import type { MockStory } from "@/content/mock/kekere-stories";
+
+/**
+ * Reader background modes. `white` is the default (matches the original
+ * `#FCFCFA` reading surface). Each theme overrides the ink CSS variables the
+ * reader chrome + body text read from, so switching re-colours everything at
+ * once; transitions are applied on the reader root so the change is smooth.
+ */
+type ReaderTheme = "white" | "cream" | "dark";
+
+const READER_THEME_STORAGE_KEY = "kekere-reader-theme";
+
+const READER_THEMES: Record<
+  ReaderTheme,
+  {
+    label: string;
+    bg: string;
+    ink: string;
+    inkMuted: string;
+    inkMuted2: string;
+    inkMuted3: string;
+    headerBg: string;
+    border: string;
+    track: string;
+    swatch: string;
+    swatchRing: string;
+  }
+> = {
+  white: {
+    label: "White",
+    bg: "#FCFCFA",
+    ink: "#2A1A12",
+    inkMuted: "#6A5446",
+    inkMuted2: "#8A7565",
+    inkMuted3: "#A08C7C",
+    headerBg: "rgba(252,252,250,0.95)",
+    border: "rgba(42,26,18,0.08)",
+    track: "rgba(42,26,18,0.08)",
+    swatch: "#FCFCFA",
+    swatchRing: "rgba(42,26,18,0.18)",
+  },
+  cream: {
+    label: "Cream",
+    bg: "#F5EBDD",
+    ink: "#2A1A12",
+    inkMuted: "#6A5446",
+    inkMuted2: "#8A7565",
+    inkMuted3: "#A08C7C",
+    headerBg: "rgba(245,235,221,0.95)",
+    border: "rgba(42,26,18,0.08)",
+    track: "rgba(42,26,18,0.08)",
+    swatch: "#F0E2CC",
+    swatchRing: "rgba(42,26,18,0.18)",
+  },
+  dark: {
+    label: "Dark",
+    bg: "#181510",
+    ink: "#EDE6DA",
+    inkMuted: "#B8AE9E",
+    inkMuted2: "#9A9082",
+    inkMuted3: "#7C7366",
+    headerBg: "rgba(24,21,16,0.95)",
+    border: "rgba(237,230,218,0.12)",
+    track: "rgba(237,230,218,0.14)",
+    swatch: "#181510",
+    swatchRing: "rgba(237,230,218,0.3)",
+  },
+};
+
+const READER_THEME_ORDER: ReaderTheme[] = ["white", "cream", "dark"];
 
 export interface StoryReaderProps {
   story: MockStory;
@@ -59,6 +129,38 @@ export function StoryReader({
   const [tipped, setTipped] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
   const [showNoCowryModal, setShowNoCowryModal] = useState(false);
+
+  const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+
+  // Load the saved reader theme after mount (keeps SSR/first paint on the
+  // default `white` so hydration matches, then upgrades to the reader's pick).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(READER_THEME_STORAGE_KEY);
+      if (saved === "white" || saved === "cream" || saved === "dark") {
+        setReaderTheme(saved);
+      }
+    } catch {
+      // ignore unavailable storage
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(READER_THEME_STORAGE_KEY, readerTheme);
+    } catch {
+      // ignore unavailable storage
+    }
+  }, [readerTheme]);
+
+  const theme = READER_THEMES[readerTheme];
+  const themeVars = {
+    "--color-ink": theme.ink,
+    "--color-ink-muted": theme.inkMuted,
+    "--color-ink-muted-2": theme.inkMuted2,
+    "--color-ink-muted-3": theme.inkMuted3,
+  } as CSSProperties;
 
   // Once a successful unlock triggers router.refresh(), this fires when the
   // server's refetched props (now carrying the real, untruncated body) land
@@ -264,8 +366,8 @@ export function StoryReader({
     return (
       <>
       <div
-        className="fixed inset-0 z-60 flex flex-col items-center justify-center bg-[var(--color-bg)] px-7 py-10 text-center"
-        style={{ zIndex: 60 }}
+        className="fixed inset-0 z-60 flex flex-col items-center justify-center px-7 py-10 text-center transition-colors duration-300 [&_h2]:transition-colors [&_h2]:duration-300 [&_p]:transition-colors [&_p]:duration-300"
+        style={{ ...themeVars, backgroundColor: theme.bg, zIndex: 60 }}
       >
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
           You finished
@@ -368,12 +470,15 @@ export function StoryReader({
   }
 
   return (
-    <div className="relative min-h-screen bg-[#FCFCFA]">
+    <div
+      className="relative min-h-screen transition-colors duration-300"
+      style={{ ...themeVars, backgroundColor: theme.bg }}
+    >
       {isLoggedIn && userEmail && (
         <WatermarkOverlay email={userEmail} opacity={0.06} />
       )}
 
-      <div className="fixed inset-x-0 top-0 z-50 h-[3px] bg-[rgba(42,26,18,0.08)]">
+      <div className="fixed inset-x-0 top-0 z-50 h-[3px] transition-colors duration-300" style={{ backgroundColor: theme.track }}>
         <div
           className="h-full bg-[var(--color-primary)] transition-[width] duration-150 ease-linear"
           style={{ width: `${progressPct}%` }}
@@ -382,10 +487,10 @@ export function StoryReader({
 
       <div
         className={cn(
-          "fixed inset-x-0 top-[3px] z-45 border-b border-[rgba(42,26,18,0.08)] bg-[rgba(245,235,221,0.95)] backdrop-blur-[10px] transition-[transform,opacity] duration-[350ms]",
+          "fixed inset-x-0 top-[3px] z-45 border-b backdrop-blur-[10px] transition-[transform,opacity,background-color,border-color] duration-[350ms]",
           chromeVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         )}
-        style={{ zIndex: 45 }}
+        style={{ zIndex: 45, backgroundColor: theme.headerBg, borderBottomColor: theme.border }}
       >
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <Link
@@ -398,7 +503,72 @@ export function StoryReader({
           <div className="min-w-0 flex-1 truncate text-center text-sm font-semibold text-[var(--color-ink)]">
             {story.title}
           </div>
-          <div className="flex flex-none gap-[14px]">
+          <div className="flex flex-none items-center gap-[14px]">
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                aria-label="Reading background"
+                aria-haspopup="true"
+                aria-expanded={themeMenuOpen}
+                onClick={() => setThemeMenuOpen((v) => !v)}
+                className="bg-none text-[17px] transition-colors hover:text-[var(--color-primary)]"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: themeMenuOpen ? "var(--color-primary)" : "var(--color-ink-muted)",
+                }}
+              >
+                <Palette className="h-[17px] w-[17px]" />
+              </button>
+
+              {themeMenuOpen && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Close background menu"
+                    tabIndex={-1}
+                    onClick={() => setThemeMenuOpen(false)}
+                    className="fixed inset-0 z-[55] cursor-default"
+                    style={{ background: "transparent", border: "none" }}
+                  />
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+12px)] z-[56] w-[172px] animate-scale-in rounded-[12px] border p-2 shadow-[0_16px_40px_-18px_rgba(0,0,0,0.45)]"
+                    style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+                  >
+                    <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-3)]">
+                      Background
+                    </p>
+                    {READER_THEME_ORDER.map((key) => {
+                      const opt = READER_THEMES[key];
+                      const active = key === readerTheme;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={active}
+                          onClick={() => {
+                            setReaderTheme(key);
+                            setThemeMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                          style={{ background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          <span
+                            className="inline-block h-[18px] w-[18px] flex-none rounded-full"
+                            style={{ backgroundColor: opt.swatch, boxShadow: `inset 0 0 0 1px ${opt.swatchRing}` }}
+                          />
+                          <span className="flex-1">{opt.label}</span>
+                          {active && <Check className="h-[15px] w-[15px] flex-none text-[var(--color-primary)]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
             {unlocked && (
               <button
                 type="button"
@@ -452,10 +622,10 @@ export function StoryReader({
           <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
             {story.genre.toUpperCase()}
           </span>
-          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)]">
+          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)] transition-colors duration-300">
             {story.title}
           </h1>
-          <p className="mt-[10px] text-[13.5px] text-[var(--color-ink-muted-2)]">
+          <p className="mt-[10px] text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
             by {story.authorName} · {story.readingTimeMinutes} min read
           </p>
         </div>
