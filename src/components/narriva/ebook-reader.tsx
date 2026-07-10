@@ -24,9 +24,9 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   theme: "light",
 };
 
-const FONT_SIZE_PX: Record<FontSize, number> = { S: 16, M: 18, L: 21, XL: 24 };
+const FONT_SIZE_PX: Record<FontSize, number> = { S: 17, M: 19, L: 21, XL: 24 };
 const BUTTON_LABEL_PX: Record<FontSize, number> = { S: 12, M: 13.5, L: 15, XL: 16.5 };
-const LINE_HEIGHT: Record<LineSpacing, number> = { comfortable: 1.7, relaxed: 1.9, open: 2.15 };
+const LINE_HEIGHT: Record<LineSpacing, number> = { comfortable: 1.85, relaxed: 2.0, open: 2.2 };
 
 interface ThemeColors {
   bg: string;
@@ -348,11 +348,14 @@ export function EbookReader({
         </div>
 
         <div
+          className="[hyphens:auto]"
           style={{
-            fontFamily: settings.fontFamily === "serif" ? "var(--font-fraunces)" : "var(--font-inter)",
+            fontFamily: settings.fontFamily === "serif" ? "var(--font-eb-garamond)" : "var(--font-inter)",
             fontSize: `${FONT_SIZE_PX[settings.fontSize]}px`,
             lineHeight: LINE_HEIGHT[settings.lineSpacing],
             color: theme.text,
+            textAlign: "justify",
+            letterSpacing: "0.005em",
           }}
         >
           {loadingChapter && <p style={{ opacity: 0.6 }}>Loading chapter…</p>}
@@ -471,7 +474,7 @@ export function EbookReader({
             <PillButton
               active={settings.fontFamily === "serif"}
               theme={theme}
-              style={{ fontFamily: "var(--font-fraunces)", fontSize: "15px", padding: "13px 0" }}
+              style={{ fontFamily: "var(--font-eb-garamond)", fontSize: "15px", padding: "13px 0" }}
               onClick={() => set("fontFamily", "serif")}
             >
               Serif

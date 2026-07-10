@@ -443,7 +443,7 @@ export function StoryReader({
       <div className={cn(comments.panelOpen && unlocked && "md:flex md:items-start md:justify-center md:gap-6")}>
       <main
         className={cn(
-          "relative z-[5] mx-auto max-w-[620px] px-6 pb-20",
+          "relative z-[5] mx-auto max-w-[680px] px-8 pb-24",
           comments.panelOpen && unlocked && "md:mx-0"
         )}
         style={{ paddingTop: 78 }}
@@ -461,7 +461,6 @@ export function StoryReader({
         </div>
 
         <div
-          className="text-[17px] leading-[1.75] text-[var(--color-ink)]"
           style={{ userSelect: "none" }}
           onContextMenu={(e) => e.preventDefault()}
         >

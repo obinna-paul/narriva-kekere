@@ -50,31 +50,35 @@ export function renderSimpleMarkdown(content: string): ReactNode[] {
       const key = `block-${i}`;
       if (block.startsWith("## ")) {
         return (
-          <h3 key={key} className="font-[family-name:var(--font-display)] text-2xl font-semibold">
+          <h3 key={key} className="mb-[0.6em] mt-[1.6em] font-[family-name:var(--font-display)] text-2xl font-semibold">
             {renderInline(block.slice(3), key)}
           </h3>
         );
       }
       if (block.startsWith("# ")) {
         return (
-          <h2 key={key} className="font-[family-name:var(--font-display)] text-3xl font-semibold">
+          <h2 key={key} className="mb-[0.6em] mt-[2em] font-[family-name:var(--font-display)] text-3xl font-semibold">
             {renderInline(block.slice(2), key)}
           </h2>
         );
       }
       if (/^-{3,}$/.test(block)) {
-        return <hr key={key} className="my-2 border-[var(--color-ink)]/15" />;
+        return (
+          <div key={key} className="my-[2em] text-center text-[var(--color-ink)]/30 tracking-[0.3em]" aria-hidden="true">
+            * * *
+          </div>
+        );
       }
       if (block.startsWith("> ")) {
         return (
           <blockquote
             key={key}
-            className="border-l-2 border-[var(--color-ink)]/20 pl-4 italic text-[var(--color-ink)]/75"
+            className="my-[1.2em] border-l-2 border-[var(--color-ink)]/15 pl-5 italic text-[var(--color-ink)]/75"
           >
             {renderInline(block.slice(2), key)}
           </blockquote>
         );
       }
-      return <p key={key}>{renderInline(block, key)}</p>;
+      return <p key={key} className="mb-[0.6em]">{renderInline(block, key)}</p>;
     });
 }
