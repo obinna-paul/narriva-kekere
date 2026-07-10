@@ -79,6 +79,6 @@ export function renderSimpleMarkdown(content: string): ReactNode[] {
           </blockquote>
         );
       }
-      return <p key={key} className="mb-[0.6em]">{renderInline(block, key)}</p>;
+      return <p key={key} className="mb-[0.6em] text-justify [hyphens:auto]">{renderInline(block, key)}</p>;
     });
 }

@@ -106,3 +106,16 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+/*
+  Reader typography overrides — ProseMirror stores text-align as an inline
+  style on each paragraph (via TipTap's TextAlign extension), so CSS classes
+  alone can't override it without !important. These rules guarantee the
+  literary reading experience (justified text, hyphenation) for paragraphs
+  that aren't explicitly center/right aligned by the writer.
+*/
+.story-reader-prose .ProseMirror p:not([style*="center"]):not([style*="right"]) {
+  text-align: justify !important;
+  hyphens: auto !important;
+  -webkit-hyphens: auto !important;
+}

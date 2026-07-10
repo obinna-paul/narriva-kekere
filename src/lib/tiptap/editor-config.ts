@@ -85,8 +85,8 @@ export function createReaderExtensions(): AnyExtension[] {
     Underline,
     TextAlign.configure({
       types: ["paragraph"],
-      alignments: ["left", "center", "right"],
-      defaultAlignment: "left",
+      alignments: ["left", "center", "right", "justify"],
+      defaultAlignment: "justify",
     }),
     UniqueID.configure({
       types: ["paragraph"],
