@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, RefreshCw, Mail, Plus, Trash2 } from "lucide-react";
+import { Copy, RefreshCw, Mail, Plus, Trash2, UserX } from "lucide-react";
 
 interface OnboardedWriter {
   id: string;
@@ -102,6 +102,44 @@ export function UnclaimedWriters() {
 
   async function resendEmail(writerId: string) {
     await fetch(`/api/admin/kekere/writers/${writerId}/resend-email`, { method: "POST" });
+  }
+
+  async function deleteWriter(writerId: string, name: string, force = false) {
+    if (!force) {
+      if (!window.confirm(
+        `Delete ${name} completely?\n\nThis removes the account AND everything tied to it — their story, wallet, referral code, and contracts. This cannot be undone.`
+      )) {
+        return;
+      }
+    }
+    setDeletingId(writerId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/kekere/writers/${writerId}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force }),
+      });
+      if (res.status === 409) {
+        // Writer has earned cowries — confirm the override, then retry forced.
+        const data = await res.json().catch(() => ({}));
+        setDeletingId(null);
+        if (window.confirm(`${data.message ?? "This writer has earned cowries."}\n\nDelete anyway?`)) {
+          await deleteWriter(writerId, name, true);
+        }
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Delete failed" }));
+        setError(data.message ?? data.error ?? "Delete failed");
+      } else {
+        await fetchWriters();
+      }
+    } catch {
+      setError("Network error while deleting the writer.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function deleteStory(storyId: string, storyTitle: string) {
@@ -288,12 +326,22 @@ export function UnclaimedWriters() {
                           onClick={() => deleteStory(w.storyId!, w.storyTitle ?? "this story")}
                           disabled={deletingId === w.storyId}
                           className="inline-flex items-center gap-1 rounded-[7px] border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
-                          title="Delete story completely"
+                          title="Delete story only (keep the writer account)"
                         >
                           <Trash2 size={12} />
                           {deletingId === w.storyId ? "Deleting…" : "Delete story"}
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => deleteWriter(w.id, w.name)}
+                        disabled={deletingId === w.id}
+                        className="inline-flex items-center gap-1 rounded-[7px] border border-red-300 bg-white px-2.5 py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        title="Delete the whole writer account and all their data"
+                      >
+                        <UserX size={12} />
+                        {deletingId === w.id ? "Deleting…" : "Delete writer"}
+                      </button>
                     </div>
                   </td>
                 </tr>
