@@ -3,25 +3,28 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, RefreshCw, Mail, Plus, X } from "lucide-react";
+import { Copy, RefreshCw, Mail, Plus, Trash2 } from "lucide-react";
 
-interface UnclaimedWriter {
+interface OnboardedWriter {
   id: string;
   name: string;
   email: string;
   createdAt: string;
+  accountStatus: string;
   claimTokenExpiresAt: string | null;
   storyCount: number;
+  storyId: string | null;
   storyTitle: string | null;
   storyStatus: string | null;
 }
 
 export function UnclaimedWriters() {
   const router = useRouter();
-  const [writers, setWriters] = useState<UnclaimedWriter[]>([]);
+  const [writers, setWriters] = useState<OnboardedWriter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -101,6 +104,33 @@ export function UnclaimedWriters() {
     await fetch(`/api/admin/kekere/writers/${writerId}/resend-email`, { method: "POST" });
   }
 
+  async function deleteStory(storyId: string, storyTitle: string) {
+    if (!window.confirm(`Delete "${storyTitle}" completely? This removes the story from the app and cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(storyId);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/kekere/stories/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // force: true so a story that already went live (PUBLISHED) can still
+        // be deleted — the endpoint refuses published stories otherwise.
+        body: JSON.stringify({ storyId, force: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Delete failed" }));
+        setError(data.message ?? data.error ?? "Delete failed");
+      } else {
+        await fetchWriters();
+      }
+    } catch {
+      setError("Network error while deleting the story.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (loading) return <div className="p-8 text-[13px] text-[#7C828C]">Loading...</div>;
   if (error) return <div className="p-8 text-[13px] text-red-600">Error: {error}</div>;
 
@@ -108,9 +138,10 @@ export function UnclaimedWriters() {
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[18px] font-bold text-[#15171C]">Unclaimed Writers</h1>
+          <h1 className="text-[18px] font-bold text-[#15171C]">Onboarded Writers</h1>
           <p className="mt-1 text-[13px] text-[#7C828C]">
-            Writers whose accounts were created by an admin and haven&rsquo;t claimed them yet.
+            Writers whose accounts and stories were created by an admin. Unclaimed ones can be
+            sent a claim link; any onboarded story can be deleted here.
           </p>
         </div>
         <button
@@ -168,7 +199,7 @@ export function UnclaimedWriters() {
 
       {writers.length === 0 && !showForm ? (
         <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white p-8 text-center text-[13px] text-[#7C828C]">
-          No unclaimed writers yet. Click &ldquo;New Writer &amp; Story&rdquo; above to create one and author their first story.
+          No onboarded writers yet. Click &ldquo;New Writer &amp; Story&rdquo; above to create one and author their first story.
         </div>
       ) : writers.length === 0 ? null : (
         <div className="overflow-x-auto rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white">
@@ -178,6 +209,7 @@ export function UnclaimedWriters() {
                 <th className="px-4 py-3 font-semibold text-[#15171C]">Writer</th>
                 <th className="px-4 py-3 font-semibold text-[#15171C]">Email</th>
                 <th className="px-4 py-3 font-semibold text-[#15171C]">Story</th>
+                <th className="px-4 py-3 font-semibold text-[#15171C]">Account</th>
                 <th className="px-4 py-3 font-semibold text-[#15171C]">Expires</th>
                 <th className="px-4 py-3 font-semibold text-[#15171C]">Actions</th>
               </tr>
@@ -204,37 +236,64 @@ export function UnclaimedWriters() {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        w.accountStatus === "CLAIMED"
+                          ? "bg-[#ECFDF3] text-[#1F7A45]"
+                          : "bg-[#F0F2F5] text-[#7C828C]"
+                      }`}
+                    >
+                      {w.accountStatus === "CLAIMED" ? "Claimed" : "Unclaimed"}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-[#7C828C]">
-                    {w.claimTokenExpiresAt
+                    {w.accountStatus === "UNCLAIMED" && w.claimTokenExpiresAt
                       ? new Date(w.claimTokenExpiresAt).toLocaleDateString("en-GB")
                       : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => copyClaimLink(w.id)}
-                        className="inline-flex items-center gap-1 rounded-[7px] bg-[#F0F2F5] px-2.5 py-1.5 text-[11px] font-medium text-[#15171C] hover:bg-[#E4E7EB]"
-                      >
-                        <Copy size={12} />
-                        {copiedId === w.id ? "Copied" : "Copy link"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => regenerateLink(w.id)}
-                        className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
-                        title="Regenerate link"
-                      >
-                        <RefreshCw size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => resendEmail(w.id)}
-                        className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
-                        title="Resend email"
-                      >
-                        <Mail size={13} />
-                      </button>
+                      {w.accountStatus === "UNCLAIMED" && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => copyClaimLink(w.id)}
+                            className="inline-flex items-center gap-1 rounded-[7px] bg-[#F0F2F5] px-2.5 py-1.5 text-[11px] font-medium text-[#15171C] hover:bg-[#E4E7EB]"
+                          >
+                            <Copy size={12} />
+                            {copiedId === w.id ? "Copied" : "Copy link"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => regenerateLink(w.id)}
+                            className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
+                            title="Regenerate link"
+                          >
+                            <RefreshCw size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => resendEmail(w.id)}
+                            className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
+                            title="Resend agreement email"
+                          >
+                            <Mail size={13} />
+                          </button>
+                        </>
+                      )}
+                      {w.storyId && (
+                        <button
+                          type="button"
+                          onClick={() => deleteStory(w.storyId!, w.storyTitle ?? "this story")}
+                          disabled={deletingId === w.storyId}
+                          className="inline-flex items-center gap-1 rounded-[7px] border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          title="Delete story completely"
+                        >
+                          <Trash2 size={12} />
+                          {deletingId === w.storyId ? "Deleting…" : "Delete story"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

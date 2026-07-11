@@ -44,6 +44,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
   const [title, setTitle] = useState("");
   const [hookLine, setHookLine] = useState("");
+  const [genre, setGenre] = useState("Drama");
   const [tier, setTier] = useState<string>("STANDARD");
   const [cowrieCost, setCowrieCost] = useState(5);
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
@@ -77,7 +78,14 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
   const selectedTagInfo = selectedTagSlug ? TAG_BY_SLUG[selectedTagSlug] : null;
 
-  const isValid = title.trim() && hookLine.trim() && tagIds.length >= 1 && cowrieCost >= 1 && cowrieCost <= 10;
+  const isValid =
+    title.trim() &&
+    hookLine.trim() &&
+    genre.trim() &&
+    tagIds.length >= 1 &&
+    cowrieCost >= 1 &&
+    cowrieCost <= 10 &&
+    !!coverImageRef;
 
   async function handleNariSuggest() {
     const content = editorRef.current?.getContent();
@@ -148,6 +156,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
   async function uploadFile(file: File) {
     setUploading(true);
+    setError(null);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -159,9 +168,15 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         const data = await res.json();
         setCoverImageRef(data.coverImageRef ?? null);
         setCoverPreviewUrl(data.previewUrl ?? null);
+      } else {
+        // Previously failures were swallowed silently — the spinner just
+        // stopped and nothing appeared, so the admin couldn't tell the cover
+        // hadn't uploaded. Surface the real reason instead.
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? `Cover upload failed (${res.status}). Please try again.`);
       }
     } catch {
-      setError("Cover upload failed");
+      setError("Cover upload failed — check your connection and try again.");
     } finally {
       setUploading(false);
     }
@@ -214,7 +229,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           body: bodyContent,
           tier,
           cowrieCost,
-          genre: "Drama",
+          genre: genre.trim(),
           coverColor: "#C75D2C",
           coverImageRef: coverImageRef ?? undefined,
           tagIds,
@@ -368,6 +383,23 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
+        {/* Genre — shown to readers on the story header and feed cards */}
+        <div>
+          <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
+            Genre
+          </label>
+          <input
+            type="text"
+            value={genre}
+            onChange={(e) => setGenre(e.target.value)}
+            placeholder="e.g. Drama, Romance, Speculative"
+            className="w-full rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2.5 text-[14px] text-[#15171C] placeholder:text-[#B0B5BD] focus:border-[#C75D2C] focus:outline-none"
+          />
+          <p className="mt-1 text-[11px] text-[#9AA0A8]">
+            Displayed on the story and in the feed. The category below controls which feed row it appears in.
+          </p>
+        </div>
+
         {/* Tier + Cowrie cost */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -510,7 +542,9 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         {/* Submit footer */}
         <div className="flex flex-col gap-3 border-t border-[rgba(20,22,26,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
-            Story will be set to PENDING_CONTRACT &mdash; the writer must claim and sign to go live.
+            {isValid
+              ? "Story will be set to PENDING_CONTRACT — the writer must claim and sign to go live."
+              : "Add a title, hook line, genre, cover image and a category to continue."}
           </span>
           <button
             type="button"
