@@ -16,7 +16,7 @@ const CLAIM_TOKEN_EXPIRY_DAYS = 120;
 const schema = z.object({
   title: z.string().min(1).max(200),
   hookLine: z.string().min(1).max(300),
-  body: z.record(z.unknown()),
+  body: z.record(z.string(), z.unknown()),
   tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]),
   cowrieCost: z.number().int().min(1).max(10),
   genre: z.string().min(1),
@@ -117,7 +117,7 @@ export const POST = withAuth(async (request, session, { params }) => {
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
   const claimUrl = `${baseUrl}/kekere/claim/${rawToken}`;
 
-  const unsignedPdf = generateUnsignedContractPdf(result.contractBody);
+  const unsignedPdf = await generateUnsignedContractPdf(result.contractBody);
   const pdfAttachment = {
     filename: "kekere-publishing-agreement-unsigned.pdf",
     content: Buffer.from(unsignedPdf),

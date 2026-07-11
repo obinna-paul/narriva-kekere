@@ -32,7 +32,7 @@ export const POST = withAuth(async (_request, _session, { params }) => {
 
   const pendingContract = await prisma.kekereContract.findFirst({
     where: { writerId, status: "PENDING" },
-    orderBy: { createdAt: "desc" },
+    orderBy: { sentAt: "desc" },
     select: { id: true, body: true, story: { select: { title: true } } },
   });
 
@@ -55,7 +55,7 @@ export const POST = withAuth(async (_request, _session, { params }) => {
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
   const claimUrl = `${baseUrl}/kekere/claim/${rawToken}`;
 
-  const unsignedPdf = generateUnsignedContractPdf(pendingContract.body);
+  const unsignedPdf = await generateUnsignedContractPdf(pendingContract.body);
   const pdfAttachment = {
     filename: "kekere-publishing-agreement-unsigned.pdf",
     content: Buffer.from(unsignedPdf),

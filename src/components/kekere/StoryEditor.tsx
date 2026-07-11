@@ -26,6 +26,17 @@ export interface StoryEditorProps {
   onReadingTimeChange?: (minutes: number) => void;
   onStatusChange?: (status: SaveStatus) => void;
   editable?: boolean;
+  /**
+   * When false, the editor never talks to the server: no debounced
+   * autosave, no local draft recovery, no version snapshots. It just edits
+   * and exposes getContent()/flush() for the parent to read on demand. Used
+   * by the admin author-on-behalf screen, where the story doesn't exist at
+   * `/api/kekere/stories/[storyId]` yet (and `storyId` there is actually a
+   * writer id) — leaving autosave on made it fire 403/404 PUTs while typing
+   * and pop a spurious "unsaved changes" banner. Defaults to true so the
+   * normal writer flow is completely unchanged.
+   */
+  autosave?: boolean;
 }
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
@@ -48,6 +59,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   onReadingTimeChange,
   onStatusChange,
   editable = true,
+  autosave = true,
 }, ref) {
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [recovery, setRecovery] = useState<RecoveryState | null>(null);
@@ -97,6 +109,10 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       isDirtyRef.current = true;
       setStatus({ kind: "dirty" });
 
+      // Compose-only mode (admin author-on-behalf) never persists anywhere —
+      // the parent reads getContent() on submit instead.
+      if (!autosave) return;
+
       try {
         const savedAt = new Date().toISOString();
         localStorage.setItem(draftStorageKey(storyId), JSON.stringify(json));
@@ -126,6 +142,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   // Recovery check: IndexedDB first, localStorage fallback.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (!autosave) return;
     let cancelled = false;
 
     async function checkRecovery() {
@@ -230,6 +247,8 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   const manualSave = useCallback(
     async (label = "Manual save") => {
       if (!editor) return;
+      // Compose-only mode: nothing to flush to the server.
+      if (!autosave) return;
       clearTimeout(debounceTimer.current);
       const doc = editor.getJSON() as TiptapDoc;
       const count = editor.storage.characterCount.words();
@@ -247,7 +266,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       clearLocalBackup();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [editor, saveToServer, storyId]
+    [editor, saveToServer, storyId, autosave]
   );
 
   const getContent = useCallback(() => {
