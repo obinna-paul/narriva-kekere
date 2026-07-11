@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
   const pendingContract = await prisma.kekereContract.findFirst({
     where: { writerId: user.id, status: "PENDING" },
-    orderBy: { createdAt: "desc" },
+    orderBy: { sentAt: "desc" },
     select: {
       body: true,
       story: { select: { title: true } },
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       writerId: user.id,
       status: "PENDING",
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { sentAt: "desc" },
     select: { id: true, storyId: true, body: true },
   });
 

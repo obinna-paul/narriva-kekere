@@ -363,6 +363,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               storyId={writerId}
               initialContent={EMPTY_DOC}
               initialLastSavedAt={null}
+              autosave={false}
             />
           </div>
         </div>
