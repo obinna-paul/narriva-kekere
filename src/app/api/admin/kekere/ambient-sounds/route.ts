@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { getAmbientSoundUploadUrl } from "@/lib/storage/r2";
+import { uploadAmbientSound } from "@/lib/storage/r2";
 import { logAdminAction } from "@/lib/admin/logAction";
 
 // Browsers report wildly inconsistent MIME types for audio files (varies by
@@ -72,33 +72,34 @@ export const GET = withAuth(
 );
 
 /**
- * Mints a presigned R2 upload URL rather than accepting the file body here.
- * Routing the raw audio bytes through this Next.js route would count against
- * the hosting platform's own serverless request-body size limit (a few MB on
- * most platforms) regardless of the MAX_BYTES check below — a real audio
- * file could get rejected by the platform before this code ever runs. The
- * browser instead PUTs the file straight to R2 using the returned URL.
+ * Accepts the audio file as a multipart body and uploads it to R2 from the
+ * server. Deliberately NOT a presigned direct browser->R2 upload: that would
+ * require CORS configuration on the R2 bucket (a cross-origin PUT from the
+ * app to *.r2.cloudflarestorage.com), which fails with an opaque "Failed to
+ * fetch" until someone sets it up. Routing through our own origin needs no
+ * such config. The real R2-upload blocker was the SDK's default checksum
+ * headers, fixed in the S3Client config in src/lib/storage/r2.ts.
  */
 export const POST = withAuth(
   async (request, session) => {
-    let body: { title?: string; filename?: string; contentType?: string; size?: number };
+    let formData: FormData;
     try {
-      body = await request.json();
+      formData = await request.formData();
     } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
     }
 
-    const title = String(body.title ?? "").trim();
+    const title = String(formData.get("title") ?? "").trim();
     if (!title) {
       return NextResponse.json({ error: "Missing 'title' field" }, { status: 400 });
     }
 
-    const filename = String(body.filename ?? "");
-    if (!filename) {
-      return NextResponse.json({ error: "Missing 'filename' field" }, { status: 400 });
+    const file = formData.get("audio");
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Missing 'audio' field" }, { status: 400 });
     }
 
-    const contentType = resolveContentType(String(body.contentType ?? ""), filename);
+    const contentType = resolveContentType(file.type, file.name);
     if (!contentType) {
       return NextResponse.json(
         { error: `Unsupported file. Use one of: ${Object.keys(EXTENSION_CONTENT_TYPES).join(", ")}` },
@@ -106,23 +107,34 @@ export const POST = withAuth(
       );
     }
 
-    if (typeof body.size === "number" && body.size > MAX_BYTES) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (buffer.byteLength > MAX_BYTES) {
       return NextResponse.json({ error: "Audio must be under 50 MB" }, { status: 400 });
     }
 
     const maxOrder = await prisma.ambientSound.aggregate({ _max: { order: true } });
     const nextOrder = (maxOrder._max.order ?? -1) + 1;
 
-    // Create first to get an id, then key the upload off that id — matches
-    // the uploadStoryCover pattern where the object key is deterministic per
-    // row. Left with a valid audioRef immediately (before the browser has
-    // actually uploaded anything) since the key is fully deterministic; if
-    // the browser-side PUT never completes, the admin UI deletes this row.
-    const sound = await prisma.ambientSound.create({
+    // Create first to get an id, then upload keyed by that id — matches the
+    // uploadStoryCover pattern where the object key is deterministic per row.
+    const created = await prisma.ambientSound.create({
       data: { title, audioRef: "", order: nextOrder },
     });
-    const { key, uploadUrl } = await getAmbientSoundUploadUrl(sound.id, contentType);
-    await prisma.ambientSound.update({ where: { id: sound.id }, data: { audioRef: key } });
+
+    let audioRef: string;
+    try {
+      audioRef = await uploadAmbientSound(created.id, buffer, contentType);
+    } catch (err) {
+      // Don't leave a row pointing at a file that never landed.
+      await prisma.ambientSound.delete({ where: { id: created.id } }).catch(() => {});
+      const detail = err instanceof Error ? err.message : "unknown error";
+      return NextResponse.json({ error: `Storage upload failed: ${detail}` }, { status: 502 });
+    }
+
+    const sound = await prisma.ambientSound.update({
+      where: { id: created.id },
+      data: { audioRef },
+    });
 
     await logAdminAction(session.user.id, session.user.id, "ADD_AMBIENT_SOUND", {
       ambientSoundId: sound.id,
@@ -131,9 +143,7 @@ export const POST = withAuth(
 
     return NextResponse.json({
       success: true,
-      soundId: sound.id,
-      uploadUrl,
-      contentType,
+      sound: { id: sound.id, title: sound.title, order: sound.order, active: sound.active },
     });
   },
   { roles: ["ADMIN"] },

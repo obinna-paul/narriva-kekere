@@ -17,6 +17,16 @@ const r2Client = new S3Client({
     accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ?? "",
     secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ?? "",
   },
+  // AWS SDK v3 >= 3.729 defaults requestChecksumCalculation to
+  // "WHEN_SUPPORTED", which stamps an x-amz-checksum-crc32 header on every
+  // PutObject. Cloudflare R2 rejects/ misbehaves on those checksum headers
+  // (and it breaks presigned PUT URLs, where the checksum is signed over an
+  // empty body and then never matches the real upload). Forcing both to
+  // WHEN_REQUIRED restores the pre-3.729 behaviour that R2 expects — none of
+  // our operations actually require a checksum. This is the single most
+  // likely reason R2 uploads were failing after the SDK bump.
+  requestChecksumCalculation: "WHEN_REQUIRED",
+  responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 const BUCKET = process.env.CLOUDFLARE_R2_BUCKET ?? "";
@@ -206,10 +216,9 @@ function ambientSoundKey(id: string, contentType: string): string {
 
 /** Uploads an admin-provided ambient/white-noise loop. Key is deterministic
  *  so re-uploading under the same AmbientSound id replaces the old file.
- *  Kept for completeness, but the admin upload UI uses
- *  getAmbientSoundUploadUrl instead — routing the file bytes through this
- *  server would hit the hosting platform's serverless request-body limit
- *  (commonly a few MB) well before hitting our own app-level size check. */
+ *  Server-side (same proven path as uploadManuscript / uploadPortalFile) so
+ *  the admin's browser talks only to our own origin — no R2-bucket CORS
+ *  configuration required, unlike a direct browser->R2 presigned PUT. */
 export async function uploadAmbientSound(
   id: string,
   buffer: Buffer,
@@ -222,24 +231,6 @@ export async function uploadAmbientSound(
   );
 
   return key;
-}
-
-/** Signed PUT URL so the admin's browser can upload the audio file directly
- *  to R2, bypassing our own server (and therefore the hosting platform's
- *  serverless function body-size limit) entirely. Returns the object key
- *  alongside the URL since the caller needs both — the key is what gets
- *  stored as AmbientSound.audioRef. */
-export async function getAmbientSoundUploadUrl(
-  id: string,
-  contentType: string,
-): Promise<{ key: string; uploadUrl: string }> {
-  const key = ambientSoundKey(id, contentType);
-  const uploadUrl = await getSignedUrl(
-    r2Client,
-    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType }),
-    { expiresIn: 60 * 10 },
-  );
-  return { key, uploadUrl };
 }
 
 /** Signed playback URL for an ambient sound loop — same 4-hour window as
