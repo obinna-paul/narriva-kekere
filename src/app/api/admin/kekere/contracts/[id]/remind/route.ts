@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderContractReminderEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 export const POST = withAuth(
   async (_request, _session, { params }) => {
@@ -38,10 +40,19 @@ export const POST = withAuth(
       );
     }
 
+    const sentDate = contract.sentAt.toISOString().split("T")[0];
+    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${id}`;
+    const html = await renderContractReminderEmail({
+      writerName: contract.writer.name,
+      sentDate,
+      contractUrl,
+    }).catch(() => undefined);
     await sendEmail({
       to: contract.writer.email,
       subject: `Reminder: You have a publishing contract from Kekere Stories`,
-      body: `Hi ${contract.writer.name},\n\nA ${contract.template.contractType} contract has been waiting for your review since ${contract.sentAt.toISOString().split("T")[0]}. Please log into Kekere Stories and go to your profile to review and sign it before it expires.\n\nIf you have questions, reply to this email or contact support@narriva.pro.`,
+      body: `Hi ${contract.writer.name},\n\nA ${contract.template.contractType} contract has been waiting for your review since ${sentDate}. Please log into Kekere Stories and go to your profile to review and sign it before it expires.\n\nIf you have questions, reply to this email or contact support@narriva.pro.`,
+      from: KEKERE_SUBMISSIONS_FROM,
+      html,
     });
 
     return NextResponse.json({ success: true });

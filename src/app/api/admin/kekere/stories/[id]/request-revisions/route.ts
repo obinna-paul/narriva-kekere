@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderRevisionsRequestedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const revisionsSchema = z.object({
   moderationNotes: z.string().min(20, "Moderation notes must be at least 20 characters."),
@@ -64,6 +65,7 @@ export const PUT = withAuth(
       to: story.author.email,
       subject: `Revisions requested for "${story.title}" — Kekere Stories`,
       body: `Hi ${story.author.name},\n\nAn editor has reviewed your story "${story.title}" and requested revisions:\n\n${moderationNotes}\n\nPlease log in to Kekere Stories, update your story, and resubmit.`,
+      from: KEKERE_SUBMISSIONS_FROM,
       html,
     });
 
