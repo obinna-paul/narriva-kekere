@@ -1,28 +1,6 @@
 import { BorderStyle, Document, Packer, Paragraph, TextRun } from "docx";
 
 /**
- * The blank (unsigned) agreement as a .docx — fallback for
- * generateUnsignedContractPdf when a writer's name or the story title
- * contains characters pdf-lib's standard fonts can't encode (very common:
- * curly quotes, em-dashes, and Yoruba/Igbo diacritics like "Ọláyínká").
- * Without this the whole onboarding request 500s on such names. No signature
- * block — this is the copy the writer reads before signing.
- */
-export async function generateUnsignedContractDocx(contractBody: string): Promise<Buffer> {
-  const bodyParagraphs = contractBody
-    .split(/\n\n+/)
-    .map((para) => para.trim())
-    .filter(Boolean)
-    .map((para) => new Paragraph({ children: [new TextRun(para)], spacing: { after: 200 } }));
-
-  const document = new Document({
-    sections: [{ children: bodyParagraphs }],
-  });
-
-  return Packer.toBuffer(document);
-}
-
-/**
  * Fallback for generateSignedContractPdf (src/lib/contracts/pdf.ts) — that
  * PDF renderer uses pdf-lib's standard 14 fonts, which only support
  * WinAnsi-encodable characters and throw on anything outside that (notably

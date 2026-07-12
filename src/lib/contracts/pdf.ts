@@ -71,17 +71,6 @@ function renderBody(doc: PDFDocument, font: PDFFont, boldFont: PDFFont, contract
   return cursor;
 }
 
-/** The blank (unsigned) agreement — attached to the "Publishing agreement"
- * email so a writer can read the full terms before signing. No signature
- * block. */
-export async function generateUnsignedContractPdf(contractBody: string): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.TimesRoman);
-  const boldFont = await doc.embedFont(StandardFonts.TimesRomanBold);
-  renderBody(doc, font, boldFont, contractBody);
-  return doc.save();
-}
-
 export async function generateSignedContractPdf(
   contractBody: string,
   signedName: string,
