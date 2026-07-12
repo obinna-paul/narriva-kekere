@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderPublishingAgreementEmail } from "@/lib/email/templates";
 import { generateUnsignedContractPdf } from "@/lib/contracts/pdf";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const CLAIM_TOKEN_EXPIRY_DAYS = 120;
 
@@ -70,7 +71,7 @@ export const POST = withAuth(async (_request, _session, { params }) => {
   }).catch(() => undefined);
 
   await sendEmail({
-    from: "Kekere Stories <submission@narriva.pro>",
+    from: KEKERE_SUBMISSIONS_FROM,
     to: writer.email,
     subject: "Publishing agreement",
     body: `Hi ${writer.name},\n\nCongratulations \u2014 your story "${storyTitle}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\nWhen you're ready, visit this link to review, sign, set up your account, and go live:\n${claimUrl}\n\nYour story appears in the feed the moment you sign.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,

@@ -9,7 +9,7 @@ import { generateSignedContractDocx } from "@/lib/contracts/docx";
 import { getPortalFileDownloadUrl, uploadPortalFile } from "@/lib/storage/r2";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const signSchema = z.object({
   signedName: z.string().min(1, "Signed name is required."),
@@ -175,6 +175,7 @@ export const POST = withAuth(async (request, session, { params }) => {
     : undefined;
 
   await sendEmail({
+    from: KEKERE_SUBMISSIONS_FROM,
     to: contract.writer.email,
     subject: linkedStoryId
       ? `Your story is live — "${storyTitle}" is now on Kekere Stories`

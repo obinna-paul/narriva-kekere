@@ -258,7 +258,9 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         </h1>
         <p className="mt-1 text-[12px] text-[#7C828C] sm:text-[13px]">
           This story will be created under {writerName}&rsquo;s account, set to
-          PENDING_CONTRACT. They&rsquo;ll receive the publishing agreement and a claim link by email.
+          PENDING_CONTRACT. They&rsquo;ll receive the publishing agreement by email — a new writer
+          gets a link to set up their account and sign; an existing writer signs from their
+          contracts in the app. It goes live the moment they sign.
         </p>
       </div>
 
