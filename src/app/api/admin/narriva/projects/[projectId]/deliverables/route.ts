@@ -140,7 +140,7 @@ export const POST = withAuth(
       await sendEmail({
         to: project.user.email,
         subject: `A new file is ready for your review — ${deliverable.label}`,
-        body: `Please log into your author portal at narriva.com/portal to review and approve: ${deliverable.label}.`,
+        body: `Please log into your author portal at narriva.pro/portal to review and approve: ${deliverable.label}.`,
       });
     }
 

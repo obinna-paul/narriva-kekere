@@ -39,7 +39,7 @@ export async function generateSignedContractDocx(
           new Paragraph({ text: `Date: ${signedAt.toISOString().replace("T", " ").slice(0, 19)} UTC` }),
           new Paragraph({ text: `IP Address: ${signerIp}`, spacing: { after: 300 } }),
           new Paragraph({
-            children: [new TextRun({ text: "Kekere Stories — narriva.com", size: 20 })],
+            children: [new TextRun({ text: "Kekere Stories — narriva.pro", size: 20 })],
           }),
         ],
       },

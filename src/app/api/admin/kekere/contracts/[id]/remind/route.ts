@@ -41,7 +41,7 @@ export const POST = withAuth(
     await sendEmail({
       to: contract.writer.email,
       subject: `Reminder: You have a publishing contract from Kekere Stories`,
-      body: `Hi ${contract.writer.name},\n\nA ${contract.template.contractType} contract has been waiting for your review since ${contract.sentAt.toISOString().split("T")[0]}. Please log into Kekere Stories and go to your profile to review and sign it before it expires.\n\nIf you have questions, reply to this email or contact support@narriva.com.`,
+      body: `Hi ${contract.writer.name},\n\nA ${contract.template.contractType} contract has been waiting for your review since ${contract.sentAt.toISOString().split("T")[0]}. Please log into Kekere Stories and go to your profile to review and sign it before it expires.\n\nIf you have questions, reply to this email or contact support@narriva.pro.`,
     });
 
     return NextResponse.json({ success: true });

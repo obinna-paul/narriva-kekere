@@ -43,8 +43,8 @@ export function CalendlyWidget({ url }: { url: string }) {
       <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-alt)] p-6">
         <p className="text-[14.5px] leading-[1.6] text-[var(--color-muted)]">
           The scheduling widget couldn&apos;t load right now. Email us at{" "}
-          <a href="mailto:hello@narriva.com" className="text-[var(--color-primary)] underline">
-            hello@narriva.com
+          <a href="mailto:hello@narriva.pro" className="text-[var(--color-primary)] underline">
+            hello@narriva.pro
           </a>{" "}
           and we&apos;ll schedule manually.
         </p>

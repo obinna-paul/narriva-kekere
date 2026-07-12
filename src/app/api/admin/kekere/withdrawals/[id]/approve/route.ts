@@ -41,7 +41,7 @@ export const PUT = withAuth(
       await sendEmail({
         to: withdrawalReq.user.email,
         subject: "Your withdrawal is being processed",
-        body: `Hi ${withdrawalReq.user.name},\n\nYour withdrawal request for ${withdrawalReq.cowriesAmount} cowries (₦${withdrawalReq.ngnAmount}) has been approved and is being processed. It should arrive in your bank account shortly.\n\nIf you have any questions, contact support@narriva.com.`,
+        body: `Hi ${withdrawalReq.user.name},\n\nYour withdrawal request for ${withdrawalReq.cowriesAmount} cowries (₦${withdrawalReq.ngnAmount}) has been approved and is being processed. It should arrive in your bank account shortly.\n\nIf you have any questions, contact support@narriva.pro.`,
       });
 
       return NextResponse.json({

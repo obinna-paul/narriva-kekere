@@ -45,8 +45,8 @@ export default function ContactPage() {
               <div className="mt-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-alt)] p-6">
                 <p className="text-[14.5px] leading-[1.6] text-[var(--color-muted)]">
                   Booking is being set up — email us at{" "}
-                  <a href="mailto:hello@narriva.com" className="text-[var(--color-primary)] underline">
-                    hello@narriva.com
+                  <a href="mailto:hello@narriva.pro" className="text-[var(--color-primary)] underline">
+                    hello@narriva.pro
                   </a>{" "}
                   and we&apos;ll schedule manually.
                 </p>
@@ -74,8 +74,8 @@ export default function ContactPage() {
         <div className="mt-16 border-t border-[var(--color-border)] pt-10 text-center">
           <p className="text-[14px] text-[var(--color-muted)]">
             Or email us directly at{" "}
-            <a href="mailto:hello@narriva.com" className="font-medium text-[var(--color-primary)] underline">
-              hello@narriva.com
+            <a href="mailto:hello@narriva.pro" className="font-medium text-[var(--color-primary)] underline">
+              hello@narriva.pro
             </a>
           </p>
         </div>
