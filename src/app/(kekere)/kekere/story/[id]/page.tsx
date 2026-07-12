@@ -80,7 +80,6 @@ export default async function KekereStoryPage({ params }: { params: { id: string
       <StoryReader
         story={toReaderStoryData(dbStory)}
         isLoggedIn={!!userId}
-        userEmail={session?.user?.email ?? undefined}
         initialUnlocked={dbStory.unlocked}
         initialBalance={wallet?.spendingBalance ?? 0}
         initialSaved={saved}
