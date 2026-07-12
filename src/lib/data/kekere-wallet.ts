@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import type { Transaction, TransactionType, Wallet } from "@prisma/client";
 import { sendEmail } from "@/lib/email/send";
 import { renderWalletHistoryEmail } from "@/lib/email/templates";
-import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { KEKERE_GENERAL_FROM, OBINNA_FROM } from "@/lib/constants";
 
 export type WalletWithTransactions = Wallet & { transactions: Transaction[] };
 
@@ -79,7 +79,7 @@ export async function sendWalletHistoryEmail(
     to: user.email,
     subject: `Your Kekere transaction history: ${fromLabel} – ${toLabel}`,
     body: `Hi ${user.name},\n\nHere's your Kekere wallet history from ${fromLabel} to ${toLabel}:\n\n${textLines.join("\n")}\n\n${rows.length} transaction${rows.length === 1 ? "" : "s"} in this period.`,
-    from: KEKERE_SUBMISSIONS_FROM,
+    from: KEKERE_GENERAL_FROM,
     html,
   });
 
@@ -142,7 +142,7 @@ export async function sendFirstTopUpThankYouEmail(userId: string): Promise<void>
   await sendEmail({
     to: user.email,
     subject: "Thank you for topping up",
-    from: "Obinna Ezeodili <obinna@narriva.pro>",
+    from: OBINNA_FROM,
     body: `Hi ${user.name},\n\nObinna here, CEO of Kekere Stories. I saw you just topped up your cowries for the first time, and I wanted to say thank you, personally. Every cowrie you spend goes straight toward keeping African writers paid for their work.\n\nI hope you have a beautiful time on the app, reading amazing short stories from African writers.\n\nWith gratitude,\nObinna`,
   });
 }

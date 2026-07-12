@@ -11,7 +11,7 @@ import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderWithdrawalFailedEmail } from "@/lib/email/templates";
-import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 /**
  * Source of truth for payment outcomes — unlike /api/paystack/verify (which
@@ -101,7 +101,7 @@ async function handleTransferFailed(data: { transfer_code: string }) {
       to: writer.email,
       subject: "Your withdrawal could not be processed",
       body: `Your withdrawal of ${result.cowriesAmount} cowries could not be processed. Your balance has been restored. Please contact support.`,
-      from: KEKERE_SUBMISSIONS_FROM,
+      from: KEKERE_GENERAL_FROM,
       html,
     });
   }

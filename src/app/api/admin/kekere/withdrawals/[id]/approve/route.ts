@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderWithdrawalProcessingEmail } from "@/lib/email/templates";
 import { createTransferRecipient, initiateTransfer } from "@/lib/paystack/client";
 import { markWithdrawalProcessing, failWithdrawal } from "@/lib/economy/withdrawals";
-import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 export const PUT = withAuth(
   async (_request, _session, { params }: { params: { id: string } }) => {
@@ -49,7 +49,7 @@ export const PUT = withAuth(
         to: withdrawalReq.user.email,
         subject: "Your withdrawal is being processed",
         body: `Hi ${withdrawalReq.user.name},\n\nYour withdrawal request for ${withdrawalReq.cowriesAmount} cowries (₦${withdrawalReq.ngnAmount}) has been approved and is being processed. It should arrive in your bank account shortly.\n\nIf you have any questions, contact support@narriva.pro.`,
-        from: KEKERE_SUBMISSIONS_FROM,
+        from: KEKERE_GENERAL_FROM,
         html,
       });
 
