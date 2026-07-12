@@ -5,7 +5,8 @@ import { generateSignedContractDocx } from "@/lib/contracts/docx";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
-import { uploadPortalFile, getPortalFileDownloadUrl } from "@/lib/storage/r2";
+import { uploadPortalFile } from "@/lib/storage/r2";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
 
 export interface CreateContractParams {
@@ -155,8 +156,6 @@ export async function signContractAndPublishStory(
     }
   });
 
-  const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;
-
   let storyTitle = "your story";
   if (linkedStoryId) {
     const story = await prisma.story.findUnique({ where: { id: linkedStoryId }, select: { title: true } });
@@ -181,6 +180,7 @@ export async function signContractAndPublishStory(
     : undefined;
 
   await sendEmail({
+    from: KEKERE_SUBMISSIONS_FROM,
     to: contract.writer.email,
     subject: linkedStoryId
       ? `Your story is live — "${storyTitle}" is now on Kekere Stories`

@@ -122,16 +122,26 @@ export async function verifyOtp(
     },
   });
 
-  // Send welcome email now that the address is confirmed. Plain text only,
-  // deliberately no HTML — a designed template with a logo/card reads as
-  // bulk mail to Gmail's tab classifier, plain text from a real name reads
-  // as a personal note, which is what this actually is.
-  await sendEmail({
-    to: user.email,
-    subject: "Welcome to Kekere Stories",
-    from: "Obinna Ezeodili <obinna@narriva.pro>",
-    body: `Hi ${user.name},\n\nI'm Obinna, co-founder and CEO of Kekere Stories. I'm genuinely glad you're here, and I can't wait for you to read all the short stories we've curated for you!\n\nYou see, we chose short fiction on purpose, not novels. Life in Lagos, in Nairobi, in London, wherever you're reading this from, doesn't leave much room for a 400-page commitment. But it always leaves room for one great story in the time it takes to wait for a bus, finish a meal, or fall asleep. Small doesn't mean small stakes. Some of the best storytelling we've ever read has happened in a few thousand words.\n\nI wonder which of our stories you'll read first 🙃\n\nCheers,\nObinna`,
-  });
+  // Send welcome email now that the address is confirmed.
+  await sendWelcomeEmail(user.name, user.email);
 
   return { success: true };
+}
+
+/**
+ * The personal welcome-from-the-CEO email, sent once when an account first
+ * becomes usable. Fired from OTP verification for normal signups, and from
+ * the claim flow for a pre-launch writer claiming their placeholder account
+ * (which is auto-verified and so never goes through OTP). Plain text only,
+ * deliberately no HTML — a designed template with a logo/card reads as bulk
+ * mail to Gmail's tab classifier, plain text from a real name reads as a
+ * personal note, which is what this actually is.
+ */
+export async function sendWelcomeEmail(name: string, email: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: "Welcome to Kekere Stories",
+    from: "Obinna Ezeodili <obinna@narriva.pro>",
+    body: `Hi ${name},\n\nI'm Obinna, co-founder and CEO of Kekere Stories. I'm genuinely glad you're here, and I can't wait for you to read all the short stories we've curated for you!\n\nYou see, we chose short fiction on purpose, not novels. Life in Lagos, in Nairobi, in London, wherever you're reading this from, doesn't leave much room for a 400-page commitment. But it always leaves room for one great story in the time it takes to wait for a bus, finish a meal, or fall asleep. Small doesn't mean small stakes. Some of the best storytelling we've ever read has happened in a few thousand words.\n\nI wonder which of our stories you'll read first 🙃\n\nCheers,\nObinna`,
+  });
 }

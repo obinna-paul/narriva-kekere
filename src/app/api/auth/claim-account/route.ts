@@ -6,6 +6,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { signContractAndPublishStory } from "@/lib/data/kekere-contracts";
+import { sendWelcomeEmail } from "@/lib/auth/verify-email";
 
 const claimSchema = z.object({
   token: z.string().min(1),
@@ -140,6 +141,11 @@ export async function POST(request: Request) {
     signedName,
     signerIp: ip,
   });
+
+  // First time this account is truly usable — send the personal welcome
+  // from the CEO, same as a normal signup gets after OTP verification.
+  // Best-effort: a mail hiccup must not fail the claim itself.
+  await sendWelcomeEmail(user.name, user.email).catch(() => {});
 
   return NextResponse.json({
     success: true,

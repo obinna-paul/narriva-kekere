@@ -7,9 +7,11 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { isValidTiptapDoc, ensureParagraphIds, countWords } from "@/lib/tiptap/doc-utils";
 import { createPublishingContract } from "@/lib/data/kekere-contracts";
+import { createNotification } from "@/lib/notifications/create";
 import { sendEmail } from "@/lib/email/send";
 import { renderPublishingAgreementEmail } from "@/lib/email/templates";
 import { generateUnsignedContractPdf } from "@/lib/contracts/pdf";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const CLAIM_TOKEN_EXPIRY_DAYS = 120;
 
@@ -62,9 +64,23 @@ export const POST = withAuth(async (request, session, { params }) => {
   const wordCount = countWords(bodyWithIds);
   const readingTime = Math.max(1, Math.round(wordCount / 200));
 
-  const rawToken = randomBytes(32).toString("hex");
-  const newTokenHash = hashToken(rawToken);
-  const claimExpiresAt = new Date(Date.now() + CLAIM_TOKEN_EXPIRY_DAYS * 86400000);
+  // Two onboarding paths depending on whether this writer already has a real
+  // account:
+  //   UNCLAIMED (placeholder we created): they need to set a password, so we
+  //     mint a claim token and email them a claim link that sets the password
+  //     and signs in one step.
+  //   CLAIMED (a writer who already signed up): they must NOT be sent a
+  //     password-setting link (it would reset the password they already have,
+  //     and the claim page only accepts UNCLAIMED accounts anyway). Instead
+  //     the contract simply waits in their account \u2014 they log in, open their
+  //     contracts, and sign in-app. We still email them (with the agreement
+  //     PDF) and drop an in-app notification so they know to sign.
+  const isPlaceholder = writer.accountStatus === "UNCLAIMED";
+
+  const rawToken = isPlaceholder ? randomBytes(32).toString("hex") : null;
+  const claimExpiresAt = isPlaceholder
+    ? new Date(Date.now() + CLAIM_TOKEN_EXPIRY_DAYS * 86400000)
+    : null;
 
   const result = await prisma.$transaction(async (tx) => {
     const story = await tx.story.create({
@@ -94,13 +110,15 @@ export const POST = withAuth(async (request, session, { params }) => {
       });
     }
 
-    await tx.user.update({
-      where: { id: writerId },
-      data: {
-        claimToken: newTokenHash,
-        claimTokenExpiresAt: claimExpiresAt,
-      },
-    });
+    if (isPlaceholder && rawToken) {
+      await tx.user.update({
+        where: { id: writerId },
+        data: {
+          claimToken: hashToken(rawToken),
+          claimTokenExpiresAt: claimExpiresAt,
+        },
+      });
+    }
 
     const contract = await createPublishingContract({
       storyId: story.id,
@@ -115,7 +133,6 @@ export const POST = withAuth(async (request, session, { params }) => {
   });
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
-  const claimUrl = `${baseUrl}/kekere/claim/${rawToken}`;
 
   const unsignedPdf = await generateUnsignedContractPdf(result.contractBody);
   const pdfAttachment = {
@@ -123,25 +140,50 @@ export const POST = withAuth(async (request, session, { params }) => {
     content: Buffer.from(unsignedPdf),
   };
 
-  const agreementHtml = await renderPublishingAgreementEmail({
-    writerName: writer.name,
-    storyTitle: title,
-    claimUrl,
-  }).catch(() => undefined);
+  if (isPlaceholder && rawToken) {
+    // New account \u2014 claim link sets the password and signs in one step.
+    const claimUrl = `${baseUrl}/kekere/claim/${rawToken}`;
+    const agreementHtml = await renderPublishingAgreementEmail({
+      writerName: writer.name,
+      storyTitle: title,
+      claimUrl,
+    }).catch(() => undefined);
 
-  await sendEmail({
-    from: "Kekere Stories <submission@narriva.pro>",
-    to: writer.email,
-    subject: "Publishing agreement",
-    body: `Hi ${writer.name},\n\nCongratulations \u2014 your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\nWhen you're ready, visit this link to review, sign, set up your account, and go live:\n${claimUrl}\n\nYour story appears in the feed the moment you sign.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
-    html: agreementHtml,
-    attachments: [pdfAttachment],
-  });
+    await sendEmail({
+      from: KEKERE_SUBMISSIONS_FROM,
+      to: writer.email,
+      subject: "Publishing agreement",
+      body: `Hi ${writer.name},\n\nCongratulations \u2014 your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\nWhen you're ready, visit this link to review, sign, set up your account, and go live:\n${claimUrl}\n\nYour story appears in the feed the moment you sign.\n\nWelcome to Kekere Stories.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+      html: agreementHtml,
+      attachments: [pdfAttachment],
+    });
+  } else {
+    // Existing account \u2014 contract waits in the app. No password link; they
+    // log in and sign from their contracts. Email + in-app notification let
+    // them know it's there.
+    const contractsUrl = `${baseUrl}/kekere/contracts`;
+    await sendEmail({
+      from: KEKERE_SUBMISSIONS_FROM,
+      to: writer.email,
+      subject: "Publishing agreement",
+      body: `Hi ${writer.name},\n\nCongratulations \u2014 your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nThe full publishing agreement is attached as a PDF. Take your time reading through it.\n\nA publishing contract is now waiting in your account. Log in, open your contracts, and sign it \u2014 your story appears in the feed the moment you sign:\n${contractsUrl}\n\nThank you,\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+      attachments: [pdfAttachment],
+    });
+
+    await createNotification({
+      userId: writerId,
+      type: "CONTRACT_RECEIVED",
+      title: `Publishing contract for "${title}"`,
+      body: "Your story has been accepted! Tap to review and sign your publishing contract \u2014 it goes live the moment you sign.",
+      link: "/kekere/contracts",
+    });
+  }
 
   return NextResponse.json({
     success: true,
     storyId: result.storyId,
     contractId: result.contractId,
     writerName: writer.name,
+    accountStatus: writer.accountStatus,
   }, { status: 201 });
 }, { roles: ["ADMIN"] });
