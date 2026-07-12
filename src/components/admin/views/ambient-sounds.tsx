@@ -139,7 +139,7 @@ export function AmbientSoundsView() {
           <input
             ref={fileRef}
             type="file"
-            accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/mp4,audio/x-m4a"
+            accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,.mp4"
             className="flex-1 text-[12px] text-[#646B73]"
           />
           <button

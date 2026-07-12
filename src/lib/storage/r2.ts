@@ -200,9 +200,12 @@ export async function uploadAmbientSound(
   buffer: Buffer,
   contentType: string,
 ): Promise<string> {
-  const ext = contentType === "audio/wav" || contentType === "audio/x-wav" ? "wav"
-    : contentType === "audio/ogg" ? "ogg"
+  const ext = contentType === "audio/wav" || contentType === "audio/x-wav" || contentType === "audio/wave" || contentType === "audio/vnd.wave" ? "wav"
+    : contentType === "audio/ogg" || contentType === "application/ogg" ? "ogg"
     : contentType === "audio/mp4" || contentType === "audio/x-m4a" ? "m4a"
+    : contentType === "audio/aac" ? "aac"
+    : contentType === "audio/flac" || contentType === "audio/x-flac" ? "flac"
+    : contentType === "audio/webm" ? "webm"
     : "mp3";
   const key = `audio/ambient/${id}.${ext}`;
 
