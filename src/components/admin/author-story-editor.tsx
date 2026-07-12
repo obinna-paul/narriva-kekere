@@ -257,10 +257,9 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           Author a story for {writerName}
         </h1>
         <p className="mt-1 text-[12px] text-[#7C828C] sm:text-[13px]">
-          This story will be created under {writerName}&rsquo;s account, set to
-          PENDING_CONTRACT. They&rsquo;ll receive the publishing agreement by email — a new writer
-          gets a link to set up their account and sign; an existing writer signs from their
-          contracts in the app. It goes live the moment they sign.
+          This saves the story under {writerName}&rsquo;s account as PENDING_CONTRACT. Nothing is
+          sent to the writer yet — after saving, use &ldquo;Send email&rdquo; in the Onboarded
+          Writers list to invite them to review, sign, and go live.
         </p>
       </div>
 
@@ -549,7 +548,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         <div className="flex flex-col gap-3 border-t border-[rgba(20,22,26,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
             {isValid
-              ? "Story will be set to PENDING_CONTRACT — the writer must claim and sign to go live."
+              ? "Saves as PENDING_CONTRACT. Send the agreement email afterwards from Onboarded Writers."
               : "Add a title, hook line, genre, cover image and a category to continue."}
           </span>
           <button
@@ -558,7 +557,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             onClick={handleSubmit}
             className="w-full rounded-[9px] bg-[#C75D2C] px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            {submitting ? "Sending..." : "Save & send agreement"}
+            {submitting ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
