@@ -85,6 +85,8 @@ export function CowrieEconomy() {
   const [clearResult, setClearResult] = useState<string | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuildResult, setRebuildResult] = useState<string | null>(null);
+  const [reconcilingRefs, setReconcilingRefs] = useState(false);
+  const [reconcileRefsResult, setReconcileRefsResult] = useState<string | null>(null);
 
   // `silent` refreshes the data without flashing the skeletons — used by the
   // background poll so the dashboard stays live without visibly reloading.
@@ -174,6 +176,26 @@ export function CowrieEconomy() {
       setRebuildResult(e instanceof Error ? e.message : "Rebuild failed");
     } finally {
       setRebuilding(false);
+    }
+  }
+
+  async function handleReconcileReferrals() {
+    setReconcilingRefs(true);
+    setReconcileRefsResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/reconcile-referrals", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Reconcile failed");
+      setReconcileRefsResult(
+        data.rewarded > 0
+          ? `Paid ${data.rewarded} missed referral reward${data.rewarded === 1 ? "" : "s"} (checked ${data.checked} pending).`
+          : `Nothing to pay — checked ${data.checked} pending referral${data.checked === 1 ? "" : "s"}, none were owed yet.`
+      );
+      load();
+    } catch (e) {
+      setReconcileRefsResult(e instanceof Error ? e.message : "Reconcile failed");
+    } finally {
+      setReconcilingRefs(false);
     }
   }
 
@@ -362,6 +384,31 @@ export function CowrieEconomy() {
           </button>
         </div>
         {clearResult && <p className="mt-3 text-[12px] text-[#646B73]">{clearResult}</p>}
+      </div>
+
+      {/* Recovery sweep: pay every referral reward that was earned but
+          missed (invitee already topped up, referral still PENDING). Safe to
+          run any number of times — only genuinely-unpaid rewards move money. */}
+      <div className="rounded-[11px] border border-[#1E874B]/20 bg-[rgba(30,135,75,0.03)] px-5 py-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[13px] font-semibold text-[#1A1C20]">Pay missed referral rewards</h3>
+            <p className="mt-0.5 text-[12px] text-[#8B919A]">
+              Finds every pending referral whose invitee has already bought cowries but whose referrer
+              was never paid, then credits the reward, sends the notification, and emails the referrer.
+              Idempotent — it never double-pays an already-rewarded referral.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleReconcileReferrals}
+            disabled={reconcilingRefs}
+            className="flex-none rounded-[8px] bg-[#1E874B] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#1a743f] disabled:opacity-50"
+          >
+            {reconcilingRefs ? "Reconciling…" : "Pay missed referral rewards"}
+          </button>
+        </div>
+        {reconcileRefsResult && <p className="mt-3 text-[12px] text-[#646B73]">{reconcileRefsResult}</p>}
       </div>
 
       {/* One-time cleanup: make the whole economy reflect the transaction

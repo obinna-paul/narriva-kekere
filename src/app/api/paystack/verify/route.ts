@@ -68,9 +68,15 @@ export const POST = withAuth(async (request, session) => {
 
   const result = await creditTopUp(session.user.id, pkg.cowries + pkg.bonusCowries, reference);
 
-  if ("success" in result) {
-    triggerReferralRewardOnFirstTopUp(session.user.id, paidNGN).catch(() => {});
-    sendFirstTopUpThankYouEmail(session.user.id).catch(() => {});
+  // Run the post-top-up hooks whenever the top-up is on record — whether we
+  // just credited it ("success") or the webhook/verify race already did
+  // ("already_processed"). AWAIT them: a fire-and-forget promise can be killed
+  // when the serverless response returns, which is exactly how referral
+  // rewards were silently getting dropped. The hooks are idempotent, so
+  // running them on both paths never double-pays.
+  if ("success" in result || "already_processed" in result) {
+    await triggerReferralRewardOnFirstTopUp(session.user.id, paidNGN).catch(() => {});
+    await sendFirstTopUpThankYouEmail(session.user.id).catch(() => {});
   }
 
   return NextResponse.json(result);
