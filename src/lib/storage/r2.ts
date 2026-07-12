@@ -31,11 +31,32 @@ const r2Client = new S3Client({
 
 const BUCKET = process.env.CLOUDFLARE_R2_BUCKET ?? "";
 
+/** Every R2 operation needs all four of these. Without this check, a missing
+ *  one surfaces as an opaque AWS SDK error deep inside request serialization
+ *  (e.g. "No value provided for input HTTP label: Bucket") that gives no hint
+ *  it's a configuration problem rather than a code bug. Called at the start
+ *  of every exported function below so the failure is instant and clear. */
+function assertR2Configured(): void {
+  const missing = [
+    !process.env.CLOUDFLARE_R2_ENDPOINT && "CLOUDFLARE_R2_ENDPOINT",
+    !process.env.CLOUDFLARE_R2_ACCESS_KEY_ID && "CLOUDFLARE_R2_ACCESS_KEY_ID",
+    !process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY && "CLOUDFLARE_R2_SECRET_ACCESS_KEY",
+    !process.env.CLOUDFLARE_R2_BUCKET && "CLOUDFLARE_R2_BUCKET",
+  ].filter((v): v is string => Boolean(v));
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Cloudflare R2 isn't configured on this server — missing environment variable${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}. Set ${missing.length > 1 ? "these" : "it"} in your hosting platform's environment variables, then redeploy.`,
+    );
+  }
+}
+
 export async function uploadManuscript(
   buffer: Buffer,
   filename: string,
   contentType: string
 ): Promise<string> {
+  assertR2Configured();
   const key = `submissions/${crypto.randomUUID()}-${filename}`;
 
   await r2Client.send(
@@ -52,6 +73,7 @@ export async function uploadManuscript(
 
 /** Short-lived signed download URL for the admin submissions queue. */
 export async function getManuscriptDownloadUrl(key: string): Promise<string> {
+  assertR2Configured();
   return getSignedUrl(
     r2Client,
     new GetObjectCommand({ Bucket: BUCKET, Key: key }),
@@ -62,6 +84,7 @@ export async function getManuscriptDownloadUrl(key: string): Promise<string> {
 /** Signed download URL for author portal files (deliverables, documents).
  *  Expires in 15 minutes. */
 export async function getPortalFileDownloadUrl(key: string): Promise<string> {
+  assertR2Configured();
   return getSignedUrl(
     r2Client,
     new GetObjectCommand({ Bucket: BUCKET, Key: key }),
@@ -76,6 +99,7 @@ export async function uploadPortalFile(
   filename: string,
   contentType: string
 ): Promise<string> {
+  assertR2Configured();
   const key = `portal/${crypto.randomUUID()}-${filename}`;
 
   await r2Client.send(
@@ -105,6 +129,7 @@ export interface EbookContent {
 /** Fetches and parses ebook content from R2. Content is stored as structured
  * JSON — never returned as a downloadable file. */
 export async function getEbookContent(key: string): Promise<EbookContent> {
+  assertR2Configured();
   const response = await r2Client.send(
     new GetObjectCommand({ Bucket: BUCKET, Key: key })
   );
@@ -121,6 +146,7 @@ export async function getEbookContent(key: string): Promise<EbookContent> {
  * existing content at that key — re-uploading is how an admin corrects a
  * book's content after the fact. */
 export async function uploadEbookJson(bookId: string, content: EbookContent): Promise<string> {
+  assertR2Configured();
   const key = `ebooks/${bookId}.json`;
 
   await r2Client.send(
@@ -142,6 +168,7 @@ export async function uploadStoryCover(
   buffer: Buffer,
   contentType: string,
 ): Promise<string> {
+  assertR2Configured();
   const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
   const key = `story-covers/${storyId}.${ext}`;
 
@@ -157,6 +184,7 @@ export async function uploadStoryCover(
 export async function getStoryCoverStream(
   key: string,
 ): Promise<{ body: ReadableStream; contentType: string }> {
+  assertR2Configured();
   const res = await r2Client.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
   if (!res.Body) throw new Error("Cover not found");
   return {
@@ -179,6 +207,7 @@ export async function getEbookChapter(
  * existing file at the same key — re-generation (Phase B6) replaces the
  * old audio rather than accumulating orphaned files. */
 export async function uploadStoryAudio(storyId: string, buffer: Buffer): Promise<string> {
+  assertR2Configured();
   const key = `audio/stories/${storyId}.mp3`;
 
   await r2Client.send(
@@ -196,6 +225,7 @@ export async function uploadStoryAudio(storyId: string, buffer: Buffer): Promise
 /** Signed playback URL for a story's narration audio — long enough for a
  * full reading/listening session, short enough to deter link sharing. */
 export async function getStoryAudioUrl(key: string): Promise<string> {
+  assertR2Configured();
   return getSignedUrl(
     r2Client,
     new GetObjectCommand({ Bucket: BUCKET, Key: key }),
@@ -224,6 +254,7 @@ export async function uploadAmbientSound(
   buffer: Buffer,
   contentType: string,
 ): Promise<string> {
+  assertR2Configured();
   const key = ambientSoundKey(id, contentType);
 
   await r2Client.send(
@@ -243,6 +274,7 @@ export async function getAmbientSoundUploadUrl(
   id: string,
   contentType: string,
 ): Promise<{ key: string; uploadUrl: string }> {
+  assertR2Configured();
   const key = ambientSoundKey(id, contentType);
   const uploadUrl = await getSignedUrl(
     r2Client,
@@ -261,6 +293,7 @@ export async function getAmbientSoundUploadUrl(
 let corsConfigured = false;
 export async function ensureUploadCorsConfigured(): Promise<void> {
   if (corsConfigured) return;
+  assertR2Configured();
   await r2Client.send(
     new PutBucketCorsCommand({
       Bucket: BUCKET,
@@ -283,6 +316,7 @@ export async function ensureUploadCorsConfigured(): Promise<void> {
 /** Signed playback URL for an ambient sound loop — same 4-hour window as
  *  story narration, plenty for one reading session. */
 export async function getAmbientSoundUrl(key: string): Promise<string> {
+  assertR2Configured();
   return getSignedUrl(
     r2Client,
     new GetObjectCommand({ Bucket: BUCKET, Key: key }),
@@ -293,5 +327,6 @@ export async function getAmbientSoundUrl(key: string): Promise<string> {
 /** Deletes an ambient sound's file from R2 — called when an admin removes it
  *  from the library entirely (not just deactivating it). */
 export async function deleteAmbientSound(key: string): Promise<void> {
+  assertR2Configured();
   await r2Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
