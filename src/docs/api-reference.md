@@ -121,6 +121,7 @@ All portal endpoints require auth + ownership verification (403 for wrong user).
 | POST | `/api/kekere/contracts/[id]/decline` | Auth | Decline → emails admin + writer |
 | GET | `/api/kekere/contracts/[id]/download` | Auth | Signed PDF download URL |
 | GET | `/api/admin/cron/expire-contracts` | Cron (Bearer CRON_SECRET) | Auto-expire stale PENDING contracts |
+| GET | `/api/admin/cron/reconcile-referrals` | Cron (Bearer CRON_SECRET) | Pay any referral reward missed by the payment-time hooks |
 
 ---
 
