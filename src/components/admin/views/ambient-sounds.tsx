@@ -17,13 +17,21 @@ export function AmbientSoundsView() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/admin/kekere/ambient-sounds")
-      .then((r) => r.json())
-      .then((d) => setSounds(d.sounds ?? []))
-      .catch(() => {})
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setLoadError(d.error ?? `Couldn't load the library (HTTP ${r.status}).`);
+          return;
+        }
+        setLoadError(null);
+        setSounds(d.sounds ?? []);
+      })
+      .catch(() => setLoadError("Couldn't reach the server."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -185,7 +193,9 @@ export function AmbientSoundsView() {
 
       <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
         <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Library ({sorted.length})</h3>
-        {loading ? (
+        {loadError ? (
+          <p className="text-[13px] text-[#C0392B]">{loadError}</p>
+        ) : loading ? (
           <p className="text-[13px] text-[#8B919A]">Loading…</p>
         ) : sorted.length === 0 ? (
           <p className="text-[13px] text-[#8B919A]">No tracks yet — add one above.</p>
