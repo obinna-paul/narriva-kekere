@@ -423,14 +423,18 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
               Cowrie cost (1–10)
             </label>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={cowrieCost}
-              onChange={(e) => setCowrieCost(Number(e.target.value))}
-              className="w-full rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2.5 text-[14px] text-[#15171C] focus:border-[#C75D2C] focus:outline-none"
-            />
+            <div className="flex items-center gap-3 rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-[11px]">
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={1}
+                value={cowrieCost}
+                onChange={(e) => setCowrieCost(Number(e.target.value))}
+                className="flex-1 accent-[#C75D2C]"
+              />
+              <span className="w-6 text-center text-[15px] font-bold text-[#15171C]">{cowrieCost}</span>
+            </div>
           </div>
         </div>
 
