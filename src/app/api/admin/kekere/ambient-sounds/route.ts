@@ -42,6 +42,19 @@ function extensionOf(filename: string): string | undefined {
   return filename.split(".").pop()?.toLowerCase();
 }
 
+/** Turns a DB error into an actionable message. The most common one here is a
+ *  missing table (Prisma P2021) — which happens when the AmbientSound
+ *  migration hasn't been applied to the database, since the deploy build
+ *  ("prisma generate && next build") does NOT run "prisma migrate deploy". */
+function describeDbError(err: unknown): string {
+  const code = typeof err === "object" && err !== null && "code" in err ? (err as { code?: string }).code : undefined;
+  const message = err instanceof Error ? err.message : String(err);
+  if (code === "P2021" || /does not exist in the current database|relation .* does not exist/i.test(message)) {
+    return "The ambient-sounds database table doesn't exist yet. Run database migrations on the server (npx prisma migrate deploy, or npx prisma db push) to create it, then try again.";
+  }
+  return message;
+}
+
 /** Prefers the browser-reported type when it's one we recognize; falls back
  *  to the file extension when the browser reports nothing usable (common
  *  across OS/browser combos for audio files) — returns undefined if neither
@@ -54,19 +67,23 @@ function resolveContentType(reportedType: string, filename: string): string | un
 
 export const GET = withAuth(
   async () => {
-    const sounds = await prisma.ambientSound.findMany({
-      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
-    });
+    try {
+      const sounds = await prisma.ambientSound.findMany({
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      });
 
-    return NextResponse.json({
-      sounds: sounds.map((s) => ({
-        id: s.id,
-        title: s.title,
-        order: s.order,
-        active: s.active,
-        createdAt: s.createdAt.toISOString(),
-      })),
-    });
+      return NextResponse.json({
+        sounds: sounds.map((s) => ({
+          id: s.id,
+          title: s.title,
+          order: s.order,
+          active: s.active,
+          createdAt: s.createdAt.toISOString(),
+        })),
+      });
+    } catch (err) {
+      return NextResponse.json({ error: describeDbError(err) }, { status: 500 });
+    }
   },
   { roles: ["ADMIN"] },
 );
@@ -121,14 +138,21 @@ export const POST = withAuth(
       corsWarning = err instanceof Error ? err.message : "could not auto-configure bucket CORS";
     }
 
-    const maxOrder = await prisma.ambientSound.aggregate({ _max: { order: true } });
-    const nextOrder = (maxOrder._max.order ?? -1) + 1;
+    let sound: { id: string; title: string; order: number; active: boolean };
+    try {
+      const maxOrder = await prisma.ambientSound.aggregate({ _max: { order: true } });
+      const nextOrder = (maxOrder._max.order ?? -1) + 1;
 
-    // Create the row, then key the upload off its id. The browser uploads
-    // next; if that PUT never completes the admin UI deletes this row.
-    const sound = await prisma.ambientSound.create({
-      data: { title, audioRef: "", order: nextOrder },
-    });
+      // Create the row, then key the upload off its id. The browser uploads
+      // next; if that PUT never completes the admin UI deletes this row.
+      sound = await prisma.ambientSound.create({
+        data: { title, audioRef: "", order: nextOrder },
+      });
+    } catch (err) {
+      // Most likely the AmbientSound table hasn't been migrated onto the DB —
+      // surface that clearly instead of a bare 500.
+      return NextResponse.json({ error: describeDbError(err) }, { status: 500 });
+    }
 
     let uploadUrl: string;
     let key: string;
