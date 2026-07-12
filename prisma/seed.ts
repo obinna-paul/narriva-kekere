@@ -427,10 +427,10 @@ async function seedPublishingContractTemplate() {
 async function seedAdminUser() {
   const passwordHash = await bcrypt.hash("admin123!", 10);
   await prisma.user.upsert({
-    where: { email: "admin@narriva.com" },
+    where: { email: "admin@narriva.pro" },
     update: { role: "ADMIN", emailVerified: new Date() },
     create: {
-      email: "admin@narriva.com",
+      email: "admin@narriva.pro",
       name: "Admin",
       password: passwordHash,
       role: "ADMIN",

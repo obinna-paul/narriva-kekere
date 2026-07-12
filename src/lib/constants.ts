@@ -1,4 +1,4 @@
-export const SUPPORT_EMAIL = "support@narriva.com";
+export const SUPPORT_EMAIL = "support@narriva.pro";
 
 // The address writers reach the Kekere editorial/submissions team at. Note
 // it's narriva.PRO, not .com (SUPPORT_EMAIL above is the separate general

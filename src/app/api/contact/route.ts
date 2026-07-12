@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const { name, email, subject, message } = parsed.data;
 
   await sendEmail({
-    to: "hello@narriva.com",
+    to: "hello@narriva.pro",
     subject: `[Contact] ${subject} — ${name}`,
     body: `From: ${name} <${email}>\nSubject: ${subject}\n\n${message}`,
   });

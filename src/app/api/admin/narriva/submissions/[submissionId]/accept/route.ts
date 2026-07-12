@@ -47,7 +47,7 @@ export const POST = withAuth(
     await sendEmail({
       to: submission.authorEmail,
       subject: `Your manuscript has been accepted — ${submission.manuscriptTitle}`,
-      body: `Hi ${submission.authorName},\n\nWe've accepted your manuscript "${submission.manuscriptTitle}" for publication with Narriva. An editor has been assigned to your project and work will begin shortly.\n\nYou can track your book's progress in your author portal at narriva.com/portal.\n\nWelcome to Narriva.`,
+      body: `Hi ${submission.authorName},\n\nWe've accepted your manuscript "${submission.manuscriptTitle}" for publication with Narriva. An editor has been assigned to your project and work will begin shortly.\n\nYou can track your book's progress in your author portal at narriva.pro/portal.\n\nWelcome to Narriva.`,
     });
 
     return NextResponse.json({
