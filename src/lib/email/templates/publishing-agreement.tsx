@@ -23,9 +23,9 @@ export function PublishingAgreementEmail({
       </Text>
 
       <Text style={styles.p}>
-        We&rsquo;ve attached the full publishing agreement as a PDF. Take your
-        time reading it — the agreement covers your 70% writer earnings share,
-        copyright ownership, and publishing terms.
+        The full agreement is waiting for you in the app — it covers your 70%
+        writer earnings share, copyright ownership, and publishing terms. You
+        can read every line before you sign anything.
       </Text>
 
       <Section style={{
@@ -39,9 +39,9 @@ export function PublishingAgreementEmail({
           Next step
         </Text>
         <Text style={{ margin: 0, fontSize: 14, color: "#2A1A12", lineHeight: "1.6" }}>
-          When you&rsquo;re ready, click the button below to review and sign your
-          agreement, set up your writer account, and go live. Your story will
-          appear in the feed the moment you sign.
+          Click the button below to open Kekere Stories, review your publishing
+          agreement, and sign it. Your story appears in the feed the moment you
+          sign.
         </Text>
       </Section>
 

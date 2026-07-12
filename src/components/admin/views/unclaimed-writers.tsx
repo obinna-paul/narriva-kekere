@@ -25,6 +25,8 @@ export function UnclaimedWriters() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
@@ -100,8 +102,23 @@ export function UnclaimedWriters() {
     }
   }
 
-  async function resendEmail(writerId: string) {
-    await fetch(`/api/admin/kekere/writers/${writerId}/resend-email`, { method: "POST" });
+  async function sendEmail(writerId: string) {
+    setSendingId(writerId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/kekere/writers/${writerId}/resend-email`, { method: "POST" });
+      if (res.ok) {
+        setSentId(writerId);
+        setTimeout(() => setSentId((id) => (id === writerId ? null : id)), 2500);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Couldn't send the email.");
+      }
+    } catch {
+      setError("Network error while sending the email.");
+    } finally {
+      setSendingId(null);
+    }
   }
 
   async function deleteWriter(writerId: string, name: string, force = false) {
@@ -292,6 +309,22 @@ export function UnclaimedWriters() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      {/* Send email — the deliberate step after saving a story.
+                          Only meaningful while a contract is pending (i.e. the
+                          story hasn't been signed/published yet). Works for both
+                          new (claim link) and existing (in-app contract) writers. */}
+                      {w.storyId && w.storyStatus === "PENDING_CONTRACT" && (
+                        <button
+                          type="button"
+                          onClick={() => sendEmail(w.id)}
+                          disabled={sendingId === w.id}
+                          className="inline-flex items-center gap-1 rounded-[7px] bg-[#C75D2C] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#B0531E] disabled:opacity-50"
+                          title="Email the writer their publishing agreement invitation"
+                        >
+                          <Mail size={12} />
+                          {sendingId === w.id ? "Sending…" : sentId === w.id ? "Sent ✓" : "Send email"}
+                        </button>
+                      )}
                       {w.accountStatus === "UNCLAIMED" && (
                         <>
                           <button
@@ -309,14 +342,6 @@ export function UnclaimedWriters() {
                             title="Regenerate link"
                           >
                             <RefreshCw size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => resendEmail(w.id)}
-                            className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
-                            title="Resend agreement email"
-                          >
-                            <Mail size={13} />
                           </button>
                         </>
                       )}
