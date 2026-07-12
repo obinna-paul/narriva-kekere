@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, PutBucketCorsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
@@ -214,11 +214,11 @@ function ambientSoundKey(id: string, contentType: string): string {
   return `audio/ambient/${id}.${ext}`;
 }
 
-/** Uploads an admin-provided ambient/white-noise loop. Key is deterministic
- *  so re-uploading under the same AmbientSound id replaces the old file.
- *  Server-side (same proven path as uploadManuscript / uploadPortalFile) so
- *  the admin's browser talks only to our own origin — no R2-bucket CORS
- *  configuration required, unlike a direct browser->R2 presigned PUT. */
+/** Server-side upload of an ambient loop. Kept for parity with the other
+ *  R2 helpers, but the admin UI uploads via getAmbientSoundUploadUrl instead:
+ *  routing the file bytes through our own server hits the hosting platform's
+ *  request-body size limit (often 1–4.5 MB) before our code runs, which
+ *  surfaces as a generic upload failure for any real-sized audio file. */
 export async function uploadAmbientSound(
   id: string,
   buffer: Buffer,
@@ -231,6 +231,53 @@ export async function uploadAmbientSound(
   );
 
   return key;
+}
+
+/** Presigned PUT URL so the admin's browser uploads the audio straight to R2,
+ *  bypassing our server entirely (and therefore any platform request-body
+ *  limit). The S3Client's requestChecksumCalculation is WHEN_REQUIRED, so the
+ *  signed URL carries no x-amz-checksum-* params — which is what makes a
+ *  browser PUT to R2 actually succeed (the default checksum params are signed
+ *  over an empty body and never match the real upload). */
+export async function getAmbientSoundUploadUrl(
+  id: string,
+  contentType: string,
+): Promise<{ key: string; uploadUrl: string }> {
+  const key = ambientSoundKey(id, contentType);
+  const uploadUrl = await getSignedUrl(
+    r2Client,
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType }),
+    { expiresIn: 60 * 10 },
+  );
+  return { key, uploadUrl };
+}
+
+// A browser PUT to *.r2.cloudflarestorage.com is cross-origin, so R2 must
+// return CORS headers allowing it or the browser blocks the upload. We set a
+// permissive PUT/GET policy once per server instance (best-effort — cached so
+// we don't re-send it on every upload). Non-credentialed presigned PUTs make
+// AllowedOrigins "*" safe: possessing the short-lived signed URL is the only
+// thing that authorizes the write.
+let corsConfigured = false;
+export async function ensureUploadCorsConfigured(): Promise<void> {
+  if (corsConfigured) return;
+  await r2Client.send(
+    new PutBucketCorsCommand({
+      Bucket: BUCKET,
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedMethods: ["PUT", "GET"],
+            AllowedOrigins: ["*"],
+            AllowedHeaders: ["*"],
+            ExposeHeaders: ["ETag"],
+            MaxAgeSeconds: 3600,
+          },
+        ],
+      },
+    }),
+  );
+  corsConfigured = true;
 }
 
 /** Signed playback URL for an ambient sound loop — same 4-hour window as

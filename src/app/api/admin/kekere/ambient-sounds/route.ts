@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { uploadAmbientSound } from "@/lib/storage/r2";
+import { getAmbientSoundUploadUrl, ensureUploadCorsConfigured } from "@/lib/storage/r2";
 import { logAdminAction } from "@/lib/admin/logAction";
 
 // Browsers report wildly inconsistent MIME types for audio files (varies by
@@ -72,34 +72,33 @@ export const GET = withAuth(
 );
 
 /**
- * Accepts the audio file as a multipart body and uploads it to R2 from the
- * server. Deliberately NOT a presigned direct browser->R2 upload: that would
- * require CORS configuration on the R2 bucket (a cross-origin PUT from the
- * app to *.r2.cloudflarestorage.com), which fails with an opaque "Failed to
- * fetch" until someone sets it up. Routing through our own origin needs no
- * such config. The real R2-upload blocker was the SDK's default checksum
- * headers, fixed in the S3Client config in src/lib/storage/r2.ts.
+ * Mints a presigned R2 upload URL — the browser PUTs the file straight to R2
+ * rather than sending it through this route. A multipart upload through here
+ * would be rejected by the hosting platform's request-body size limit (often
+ * 1–4.5 MB) before our code even runs, surfacing as a generic upload failure
+ * for any real-sized audio file. Also best-effort configures the bucket CORS
+ * policy so the cross-origin browser PUT is allowed.
  */
 export const POST = withAuth(
   async (request, session) => {
-    let formData: FormData;
+    let body: { title?: string; filename?: string; contentType?: string; size?: number };
     try {
-      formData = await request.formData();
+      body = await request.json();
     } catch {
-      return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const title = String(formData.get("title") ?? "").trim();
+    const title = String(body.title ?? "").trim();
     if (!title) {
       return NextResponse.json({ error: "Missing 'title' field" }, { status: 400 });
     }
 
-    const file = formData.get("audio");
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Missing 'audio' field" }, { status: 400 });
+    const filename = String(body.filename ?? "");
+    if (!filename) {
+      return NextResponse.json({ error: "Missing 'filename' field" }, { status: 400 });
     }
 
-    const contentType = resolveContentType(file.type, file.name);
+    const contentType = resolveContentType(String(body.contentType ?? ""), filename);
     if (!contentType) {
       return NextResponse.json(
         { error: `Unsupported file. Use one of: ${Object.keys(EXTENSION_CONTENT_TYPES).join(", ")}` },
@@ -107,44 +106,48 @@ export const POST = withAuth(
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    if (buffer.byteLength > MAX_BYTES) {
+    if (typeof body.size === "number" && body.size > MAX_BYTES) {
       return NextResponse.json({ error: "Audio must be under 50 MB" }, { status: 400 });
+    }
+
+    // Best-effort: make sure the bucket allows cross-origin browser PUTs. If
+    // the R2 token lacks permission to set CORS this throws — we don't fail
+    // the request over it (the PUT may still work if CORS was set manually),
+    // but we surface a clear hint so the cause isn't a mystery.
+    let corsWarning: string | undefined;
+    try {
+      await ensureUploadCorsConfigured();
+    } catch (err) {
+      corsWarning = err instanceof Error ? err.message : "could not auto-configure bucket CORS";
     }
 
     const maxOrder = await prisma.ambientSound.aggregate({ _max: { order: true } });
     const nextOrder = (maxOrder._max.order ?? -1) + 1;
 
-    // Create first to get an id, then upload keyed by that id — matches the
-    // uploadStoryCover pattern where the object key is deterministic per row.
-    const created = await prisma.ambientSound.create({
+    // Create the row, then key the upload off its id. The browser uploads
+    // next; if that PUT never completes the admin UI deletes this row.
+    const sound = await prisma.ambientSound.create({
       data: { title, audioRef: "", order: nextOrder },
     });
 
-    let audioRef: string;
+    let uploadUrl: string;
+    let key: string;
     try {
-      audioRef = await uploadAmbientSound(created.id, buffer, contentType);
+      ({ key, uploadUrl } = await getAmbientSoundUploadUrl(sound.id, contentType));
     } catch (err) {
-      // Don't leave a row pointing at a file that never landed.
-      await prisma.ambientSound.delete({ where: { id: created.id } }).catch(() => {});
+      await prisma.ambientSound.delete({ where: { id: sound.id } }).catch(() => {});
       const detail = err instanceof Error ? err.message : "unknown error";
-      return NextResponse.json({ error: `Storage upload failed: ${detail}` }, { status: 502 });
+      return NextResponse.json({ error: `Could not prepare upload: ${detail}` }, { status: 502 });
     }
 
-    const sound = await prisma.ambientSound.update({
-      where: { id: created.id },
-      data: { audioRef },
-    });
+    await prisma.ambientSound.update({ where: { id: sound.id }, data: { audioRef: key } });
 
     await logAdminAction(session.user.id, session.user.id, "ADD_AMBIENT_SOUND", {
       ambientSoundId: sound.id,
       title: sound.title,
     });
 
-    return NextResponse.json({
-      success: true,
-      sound: { id: sound.id, title: sound.title, order: sound.order, active: sound.active },
-    });
+    return NextResponse.json({ success: true, soundId: sound.id, uploadUrl, contentType, corsWarning });
   },
   { roles: ["ADMIN"] },
 );

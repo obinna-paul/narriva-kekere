@@ -41,20 +41,50 @@ export function AmbientSoundsView() {
 
     setUploading(true);
     setUploadError(null);
+    let soundId: string | undefined;
     try {
-      const formData = new FormData();
-      formData.append("title", title.trim());
-      formData.append("audio", file);
+      // Step 1 — ask our server for a presigned R2 upload URL. Only tiny JSON
+      // crosses to our server here, so the platform's request-body limit
+      // (which rejects a full audio file before our code runs) never applies.
+      const mintRes = await fetch("/api/admin/kekere/ambient-sounds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim(), filename: file.name, contentType: file.type, size: file.size }),
+      });
+      const mintData = await mintRes.json().catch(() => ({}));
+      if (!mintRes.ok) {
+        throw new Error(mintData.error ?? `Could not start upload (HTTP ${mintRes.status})`);
+      }
+      soundId = mintData.soundId;
 
-      const res = await fetch("/api/admin/kekere/ambient-sounds", { method: "POST", body: formData });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      // Step 2 — PUT the file straight to R2.
+      const putRes = await fetch(mintData.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": mintData.contentType },
+        body: file,
+      });
+      if (!putRes.ok) {
+        const hint = mintData.corsWarning
+          ? " Your R2 bucket may be blocking browser uploads (CORS) — the storage token couldn't set it automatically."
+          : "";
+        throw new Error(`Storage rejected the file (HTTP ${putRes.status}).${hint}`);
+      }
 
       setTitle("");
       if (fileRef.current) fileRef.current.value = "";
       load();
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Upload failed");
+      // "Failed to fetch" on the PUT is almost always the R2 bucket blocking
+      // the cross-origin request (CORS) — translate it into something useful.
+      const raw = e instanceof Error ? e.message : "Upload failed";
+      const msg = /failed to fetch/i.test(raw) && soundId
+        ? "The browser couldn't reach storage (likely an R2 CORS block). Check the bucket's CORS policy allows PUT."
+        : raw;
+      setUploadError(msg);
+      if (soundId) {
+        // Clean up the row if the file never landed.
+        fetch(`/api/admin/kekere/ambient-sounds/${soundId}`, { method: "DELETE" }).catch(() => {});
+      }
     } finally {
       setUploading(false);
     }
