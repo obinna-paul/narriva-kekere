@@ -42,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/competitions", label: "Competitions", dotColor: "kekere" },
       { href: "/admin/contracts", label: "Contracts", dotColor: "kekere" },
       { href: "/admin/economy", label: "Cowrie Economy", dotColor: "kekere" },
+      { href: "/admin/ambient-sounds", label: "Ambient Sounds", dotColor: "kekere" },
       { href: "/admin/withdrawals", label: "Withdrawals", dotColor: "kekere", countKey: "withdrawalsPending" },
       { href: "/admin/user-analytics", label: "User Analytics", dotColor: "kekere" },
     ],
