@@ -3,6 +3,7 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderResetPasswordEmail } from "@/lib/email/templates";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 const RESET_EXPIRY_MINUTES = 60;
 
@@ -44,6 +45,7 @@ export async function createPasswordReset(email: string): Promise<void> {
     to: user.email,
     subject: "Reset your password — Kekere Stories",
     body: `Hi ${user.name},\n\nWe received a request to reset your Kekere Stories password.\n\nClick the link below to set a new password (expires in ${RESET_EXPIRY_MINUTES} minutes):\n${resetUrl}\n\nIf you didn't request this, you can safely ignore this email. Your password won't change.\n\nThe Kekere Stories Team`,
+    from: KEKERE_GENERAL_FROM,
     html,
   });
 }

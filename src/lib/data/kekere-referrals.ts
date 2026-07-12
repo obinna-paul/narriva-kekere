@@ -3,7 +3,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderReferralRewardEmail } from "@/lib/email/templates";
 import { creditReferralReward } from "@/lib/economy/cowries";
 import { createNotification } from "@/lib/notifications/create";
-import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 const CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const CODE_LENGTH = 8;
@@ -121,7 +121,7 @@ async function payReferralReward(referralId: string, referredUserId: string): Pr
       to: referrer.email,
       subject: "Someone you invited just bought cowries",
       body: `You earned ${result.reward} cowries! ${inviteeName} joined Kekere with your referral link and just bought cowries for the first time. Your balance has been updated.`,
-      from: KEKERE_SUBMISSIONS_FROM,
+      from: KEKERE_GENERAL_FROM,
       html,
     }).catch(() => {});
   }
