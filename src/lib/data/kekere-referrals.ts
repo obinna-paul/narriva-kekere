@@ -92,9 +92,52 @@ export async function recordReferralFromCode(code: string, referredUserId: strin
 const MIN_QUALIFYING_NGN = 500;
 
 /**
- * Called after every successful cowrie top-up. If this was the referred
- * user's first-ever top-up of ≥ 500 NGN, credits the referrer 3 cowries,
- * flips Referral → REWARDED, and notifies the referrer.
+ * Pays a referrer their reward for one PENDING referral and notifies them.
+ * Idempotent: creditReferralReward atomically flips PENDING → REWARDED and
+ * only moves money on the call that wins that flip, so this is safe to call
+ * from every code path (fast-path verify, webhook, and the reconcile sweep)
+ * without ever double-paying. Returns true only on the call that actually
+ * paid. Notification/email failures never undo a paid reward.
+ */
+async function payReferralReward(referralId: string, referredUserId: string): Promise<boolean> {
+  const result = await creditReferralReward(referralId);
+  if (!("success" in result)) return false;
+
+  const [referrer, referredUser] = await Promise.all([
+    prisma.user.findUnique({ where: { id: result.referrerId }, select: { email: true } }),
+    prisma.user.findUnique({ where: { id: referredUserId }, select: { name: true } }),
+  ]);
+
+  if (referrer) {
+    await sendEmail({
+      to: referrer.email,
+      subject: "Someone you invited just bought cowries",
+      body: `You earned ${result.reward} cowries! ${referredUser?.name ?? "Someone"} joined Kekere with your referral link and just bought cowries for the first time. Your balance has been updated.`,
+    }).catch(() => {});
+  }
+
+  await createNotification({
+    userId: result.referrerId,
+    type: "REFERRAL_REWARD_EARNED",
+    title: "Referral reward earned",
+    body: `Someone you invited just bought cowries. You've earned ${result.reward} cowries!`,
+    link: "/kekere/wallet",
+  }).catch(() => {});
+
+  return true;
+}
+
+/**
+ * Called after a referred user's cowrie top-up. Pays the referrer's reward if
+ * the invitee has actually topped up and the referral is still PENDING.
+ *
+ * IMPORTANT: callers must `await` this. It used to only fire on the *first*
+ * top-up (topUpCount === 1); combined with the callers firing it
+ * fire-and-forget and only when creditTopUp returned a fresh "success", a
+ * dropped serverless promise meant the reward was never paid and never
+ * retried. Now it fires whenever the invitee has any completed top-up and the
+ * referral is still pending, so a later top-up (or the webhook re-running)
+ * self-heals a missed reward. Idempotent via payReferralReward.
  */
 export async function triggerReferralRewardOnFirstTopUp(
   userId: string,
@@ -105,33 +148,38 @@ export async function triggerReferralRewardOnFirstTopUp(
   const topUpCount = await prisma.transaction.count({
     where: { wallet: { userId }, type: "TOP_UP", status: "COMPLETED" },
   });
-  if (topUpCount !== 1) return; // only reward the very first top-up
+  if (topUpCount < 1) return; // must have an on-record top-up
 
   const referral = await prisma.referral.findFirst({
     where: { referredUserId: userId, status: "PENDING" },
   });
   if (!referral) return;
 
-  const result = await creditReferralReward(referral.id);
-  if (!("success" in result)) return;
+  await payReferralReward(referral.id, userId);
+}
 
-  const [referrer, referredUser] = await Promise.all([
-    prisma.user.findUnique({ where: { id: result.referrerId }, select: { email: true } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
-  ]);
-  if (!referrer) return;
-
-  await sendEmail({
-    to: referrer.email,
-    subject: "Someone you invited just bought cowries",
-    body: `You earned ${result.reward} cowries! ${referredUser?.name ?? "Someone"} joined Kekere with your referral link and just bought cowries for the first time. Your balance has been updated.`,
+/**
+ * Recovery sweep: pays every PENDING referral whose invitee has already made
+ * a qualifying top-up but whose reward was missed (e.g. dropped by the old
+ * un-awaited call, or credited by the webhook while the reward step was
+ * skipped). Idempotent and safe to run any number of times.
+ */
+export async function reconcilePendingReferralRewards(): Promise<{ checked: number; rewarded: number }> {
+  const pending = await prisma.referral.findMany({
+    where: { status: "PENDING" },
+    select: { id: true, referredUserId: true },
   });
 
-  await createNotification({
-    userId: result.referrerId,
-    type: "REFERRAL_REWARD_EARNED",
-    title: "Referral reward earned",
-    body: `Someone you invited just bought cowries. You've earned ${result.reward} cowries!`,
-    link: "/kekere/wallet",
-  });
+  let rewarded = 0;
+  for (const referral of pending) {
+    const topUps = await prisma.transaction.count({
+      where: { wallet: { userId: referral.referredUserId }, type: "TOP_UP", status: "COMPLETED" },
+    });
+    if (topUps < 1) continue; // invitee hasn't paid yet — legitimately still pending
+
+    const paid = await payReferralReward(referral.id, referral.referredUserId);
+    if (paid) rewarded++;
+  }
+
+  return { checked: pending.length, rewarded };
 }

@@ -55,9 +55,14 @@ async function handleChargeSuccess(data: { reference: string; amount: number; me
     if (pkg) {
       const cowriesTotal = pkg.cowries + pkg.bonusCowries;
       const topUpResult = await creditTopUp(metadata.userId, cowriesTotal, reference);
-      if ("success" in topUpResult) {
-        triggerReferralRewardOnFirstTopUp(metadata.userId, paidNGN).catch(() => {});
-        sendFirstTopUpThankYouEmail(metadata.userId).catch(() => {});
+      // Fire the hooks even when the top-up was "already_processed" (i.e. the
+      // client-side verify credited it first) — that's the whole point of the
+      // webhook safety net. Previously this only ran on a fresh "success", so
+      // if verify credited the top-up but its un-awaited reward promise died,
+      // the referral reward was never paid. These are awaited + idempotent.
+      if ("success" in topUpResult || "already_processed" in topUpResult) {
+        await triggerReferralRewardOnFirstTopUp(metadata.userId, paidNGN).catch(() => {});
+        await sendFirstTopUpThankYouEmail(metadata.userId).catch(() => {});
       }
     }
   }
