@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { WatermarkOverlay } from "@/components/kekere/watermark-overlay";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
 import { CommentPanel } from "@/components/kekere/CommentPanel";
@@ -88,7 +87,6 @@ const READER_THEME_ORDER: ReaderTheme[] = ["white", "cream", "dark"];
 export interface StoryReaderProps {
   story: MockStory;
   isLoggedIn: boolean;
-  userEmail?: string;
   initialUnlocked: boolean;
   initialBalance: number;
   initialSaved: boolean;
@@ -102,7 +100,6 @@ export interface StoryReaderProps {
 export function StoryReader({
   story,
   isLoggedIn,
-  userEmail,
   initialUnlocked,
   initialBalance,
   initialSaved,
@@ -132,6 +129,34 @@ export function StoryReader({
 
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [contentHidden, setContentHidden] = useState(false);
+
+  // Lightweight anti-piracy deterrent for unlocked (paid) content, in place of
+  // the old visible email watermark: blur the story the moment the tab/window
+  // loses focus, so a screen recording or an OS app-switcher thumbnail can't
+  // capture readable text. A browser has no API to block an actual OS
+  // screenshot keypress, so this is a deterrent, not a guarantee — paired with
+  // the existing text-selection/copy/context-menu blocks below.
+  useEffect(() => {
+    if (!unlocked) return;
+    function handleVisibility() {
+      setContentHidden(document.visibilityState === "hidden");
+    }
+    function handleBlur() {
+      setContentHidden(true);
+    }
+    function handleFocus() {
+      setContentHidden(false);
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [unlocked]);
 
   // Load the saved reader theme after mount (keeps SSR/first paint on the
   // default `white` so hydration matches, then upgrades to the reader's pick).
@@ -322,7 +347,9 @@ export function StoryReader({
   }
 
   const canAfford = firstReadFree || balance >= story.cowrieCost;
-  const completionPct = Math.round(story.completionRate * 100);
+  // story.completionRate is already stored 0-100 (see recalculateCompletionRate) —
+  // do not multiply by 100 again here, that produced e.g. "3300%".
+  const completionPct = Math.round(story.completionRate);
   const progressPct = Math.round(progress * 100);
 
   function handleRate(n: number) {
@@ -474,10 +501,6 @@ export function StoryReader({
       className="relative min-h-screen transition-colors duration-300"
       style={{ ...themeVars, backgroundColor: theme.bg }}
     >
-      {isLoggedIn && userEmail && (
-        <WatermarkOverlay email={userEmail} opacity={0.06} />
-      )}
-
       <div className="fixed inset-x-0 top-0 z-50 h-[3px] transition-colors duration-300" style={{ backgroundColor: theme.track }}>
         <div
           className="h-full bg-[var(--color-primary)] transition-[width] duration-150 ease-linear"
@@ -631,8 +654,13 @@ export function StoryReader({
         </div>
 
         <div
-          style={{ userSelect: "none" }}
+          style={{
+            userSelect: "none",
+            filter: contentHidden ? "blur(24px)" : undefined,
+            transition: "filter 150ms ease",
+          }}
           onContextMenu={(e) => e.preventDefault()}
+          onCopy={(e) => e.preventDefault()}
         >
           {unlocked ? (
             <div className="flex flex-col">
