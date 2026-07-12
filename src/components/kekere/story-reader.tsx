@@ -209,6 +209,10 @@ export function StoryReader({
     : null;
 
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  // While the ambient-sound dropdown is open, the chrome (which the
+  // headphone icon lives in) must not auto-hide out from under it — see
+  // showChrome() below and AmbientSoundMenu's onOpenChange.
+  const soundMenuOpenRef = useRef(false);
   const progressTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastProgressSaved = useRef(0);
   const pendingFrac = useRef<number | null>(null);
@@ -255,8 +259,17 @@ export function StoryReader({
   const showChrome = useCallback(() => {
     setChromeVisible(true);
     clearTimeout(hideTimer.current);
+    // Don't schedule the auto-hide while the reader has the ambient-sound
+    // dropdown open — it should stay up until they close it themselves, not
+    // vanish out from under them after a few seconds of not scrolling.
+    if (soundMenuOpenRef.current) return;
     hideTimer.current = setTimeout(() => setChromeVisible(false), 3000);
   }, []);
+
+  function handleSoundMenuOpenChange(isOpen: boolean) {
+    soundMenuOpenRef.current = isOpen;
+    showChrome();
+  }
 
   useEffect(() => {
     showChrome();
@@ -595,7 +608,12 @@ export function StoryReader({
                 </>
               )}
             </div>
-            <AmbientSoundMenu ref={ambientSoundRef} themeBg={theme.bg} themeBorder={theme.border} />
+            <AmbientSoundMenu
+              ref={ambientSoundRef}
+              themeBg={theme.bg}
+              themeBorder={theme.border}
+              onOpenChange={handleSoundMenuOpenChange}
+            />
             {unlocked && (
               <button
                 type="button"

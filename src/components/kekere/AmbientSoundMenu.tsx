@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   Bird,
   CloudRain,
@@ -85,6 +86,11 @@ export interface AmbientSoundMenuProps {
   /** Matches the reader's current background theme, same as the palette dropdown. */
   themeBg: string;
   themeBorder: string;
+  /** Fires whenever the dropdown opens/closes. The trigger button lives in
+   *  the reader's chrome bar, which auto-hides after a few seconds of
+   *  inactivity — the reader uses this to suspend that auto-hide while the
+   *  menu is open, so it doesn't fade away out from under the reader. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -97,7 +103,7 @@ export interface AmbientSoundMenuProps {
 export const AmbientSoundMenu = forwardRef<
   AmbientSoundMenuHandle,
   AmbientSoundMenuProps
->(function AmbientSoundMenu({ themeBg, themeBorder }, ref) {
+>(function AmbientSoundMenu({ themeBg, themeBorder, onOpenChange }, ref) {
   const [open, setOpen] = useState(false);
   const [sounds, setSounds] = useState<AmbientTrack[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -109,6 +115,7 @@ export const AmbientSoundMenu = forwardRef<
   const audioRef = useRef<HTMLAudioElement>(null);
   const lastVolumeRef = useRef(DEFAULT_VOLUME);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     stop: () => {
@@ -117,21 +124,27 @@ export const AmbientSoundMenu = forwardRef<
     },
   }));
 
-  // Close on outside click/tap or Escape. Deliberately not a fixed-overlay
-  // backdrop: the header this menu lives in has backdrop-blur, which per
-  // spec makes it a containing block for position:fixed descendants — a
-  // "fixed inset-0" backdrop nested inside it only covers the header's own
-  // box, not the viewport, so clicks anywhere in the story body would never
-  // reach it. A document-level listener has no such pitfall.
+  useEffect(() => {
+    onOpenChange?.(open);
+    // onOpenChange is a fresh closure from the parent every render — only
+    // fire when open itself actually changes, not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Close on outside click/tap or Escape. The panel is portaled to
+  // document.body (see below), so "outside" means outside both the trigger
+  // button (wrapperRef) and the portaled panel itself (panelRef) — a plain
+  // "fixed inset-0" backdrop nested in the header doesn't work here anyway:
+  // the header has backdrop-blur, which per spec makes it a containing block
+  // for position:fixed descendants, so such a backdrop would only ever cover
+  // the header's own thin strip, not the viewport.
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(e: PointerEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (wrapperRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -275,143 +288,157 @@ export const AmbientSoundMenu = forwardRef<
         )}
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-[calc(100%+12px)] z-[56] w-[252px] animate-scale-in overflow-hidden rounded-[16px] border shadow-[0_20px_50px_-18px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-          style={{
-            backgroundColor: `color-mix(in srgb, ${themeBg} 92%, transparent)`,
-            borderColor: themeBorder,
-          }}
-        >
-          <div className="px-3 pb-2 pt-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-3)]">
-              Background sound
-            </p>
-            <p className="mt-[2px] text-[11.5px] text-[var(--color-ink-muted-2)]">
-              Loop something quiet while you read
-            </p>
-          </div>
+      {open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            role="menu"
+            className="fixed left-1/2 top-[84px] z-[70] w-[264px] -translate-x-1/2 animate-scale-in overflow-hidden rounded-[16px] border shadow-[0_20px_50px_-18px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+            style={{
+              backgroundColor: `color-mix(in srgb, ${themeBg} 92%, transparent)`,
+              borderColor: themeBorder,
+            }}
+          >
+            <div className="px-3 pb-2 pt-3">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-3)]">
+                Background sound
+              </p>
+              <p className="mt-[2px] text-[11.5px] text-[var(--color-ink-muted-2)]">
+                Loop something quiet while you read
+              </p>
+              <p
+                className="mt-[7px] inline-flex items-center gap-[5px] rounded-full px-[9px] py-[3px] text-[10.5px] font-medium"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                  color: "var(--color-primary)",
+                }}
+              >
+                <Headphones className="h-[10px] w-[10px]" />
+                Best enjoyed with headphones on
+              </p>
+            </div>
 
-          <div className="max-h-[240px] overflow-y-auto px-2 pb-2">
-            {loading && (
-              <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
-                Loading…
-              </p>
-            )}
-            {error && (
-              <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
-                Couldn&apos;t load sounds.
-              </p>
-            )}
-            {!loading && !error && sounds?.length === 0 && (
-              <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
-                No sounds available yet.
-              </p>
-            )}
+            <div className="max-h-[240px] overflow-y-auto px-2 pb-2">
+              {loading && (
+                <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
+                  Loading…
+                </p>
+              )}
+              {error && (
+                <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
+                  Couldn&apos;t load sounds.
+                </p>
+              )}
+              {!loading && !error && sounds?.length === 0 && (
+                <p className="px-2 py-3 text-[12.5px] text-[var(--color-ink-muted)]">
+                  No sounds available yet.
+                </p>
+              )}
 
-            {sounds?.map((track) => {
-              const active = track.id === selectedId && playing;
-              const Icon = iconForTitle(track.title);
-              return (
+              {sounds?.map((track) => {
+                const active = track.id === selectedId && playing;
+                const Icon = iconForTitle(track.title);
+                return (
+                  <button
+                    key={track.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={active}
+                    onClick={() => selectTrack(track)}
+                    className="group flex w-full items-center gap-[10px] rounded-[10px] px-[6px] py-[7px] text-left transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_7%,transparent)]"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span
+                      className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full transition-colors"
+                      style={{
+                        backgroundColor: active
+                          ? "var(--color-primary)"
+                          : "color-mix(in srgb, var(--color-ink) 8%, transparent)",
+                      }}
+                    >
+                      <Icon
+                        className="h-[14px] w-[14px]"
+                        style={{
+                          color: active ? "#fff" : "var(--color-ink-muted)",
+                        }}
+                      />
+                    </span>
+                    <span
+                      className="flex-1 truncate text-[13.5px] font-medium"
+                      style={{ color: "var(--color-ink)" }}
+                    >
+                      {track.title}
+                    </span>
+                    {active ? (
+                      <EqualizerBars />
+                    ) : (
+                      <Play className="h-[12px] w-[12px] flex-none text-[var(--color-ink-muted-3)] opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedTrack && (
+              <div
+                className="flex items-center gap-[10px] border-t px-3 py-[10px]"
+                style={{ borderColor: themeBorder }}
+              >
                 <button
-                  key={track.id}
                   type="button"
-                  role="menuitemradio"
-                  aria-checked={active}
-                  onClick={() => selectTrack(track)}
-                  className="group flex w-full items-center gap-[10px] rounded-[10px] px-[6px] py-[7px] text-left transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_7%,transparent)]"
+                  onClick={togglePlayPause}
+                  aria-label={
+                    playing ? "Pause background sound" : "Play background sound"
+                  }
+                  className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-white transition-transform active:scale-90"
                   style={{
-                    background: "none",
+                    background: "var(--color-primary)",
                     border: "none",
                     cursor: "pointer",
                   }}
                 >
-                  <span
-                    className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full transition-colors"
-                    style={{
-                      backgroundColor: active
-                        ? "var(--color-primary)"
-                        : "color-mix(in srgb, var(--color-ink) 8%, transparent)",
-                    }}
-                  >
-                    <Icon
-                      className="h-[14px] w-[14px]"
-                      style={{
-                        color: active ? "#fff" : "var(--color-ink-muted)",
-                      }}
-                    />
-                  </span>
-                  <span
-                    className="flex-1 truncate text-[13.5px] font-medium"
-                    style={{ color: "var(--color-ink)" }}
-                  >
-                    {track.title}
-                  </span>
-                  {active ? (
-                    <EqualizerBars />
+                  {playing ? (
+                    <Pause className="h-[13px] w-[13px]" fill="currentColor" />
                   ) : (
-                    <Play className="h-[12px] w-[12px] flex-none text-[var(--color-ink-muted-3)] opacity-0 transition-opacity group-hover:opacity-100" />
+                    <Play
+                      className="ml-[1px] h-[13px] w-[13px]"
+                      fill="currentColor"
+                    />
                   )}
                 </button>
-              );
-            })}
-          </div>
-
-          {selectedTrack && (
-            <div
-              className="flex items-center gap-[10px] border-t px-3 py-[10px]"
-              style={{ borderColor: themeBorder }}
-            >
-              <button
-                type="button"
-                onClick={togglePlayPause}
-                aria-label={
-                  playing ? "Pause background sound" : "Play background sound"
-                }
-                className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full text-white transition-transform active:scale-90"
-                style={{
-                  background: "var(--color-primary)",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {playing ? (
-                  <Pause className="h-[13px] w-[13px]" fill="currentColor" />
-                ) : (
-                  <Play
-                    className="ml-[1px] h-[13px] w-[13px]"
-                    fill="currentColor"
-                  />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={toggleMute}
-                aria-label={volume === 0 ? "Unmute" : "Mute"}
-                className="flex-none"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--color-ink-muted-3)",
-                }}
-              >
-                <VolumeIcon className="h-[14px] w-[14px]" />
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(volume * 100)}
-                onChange={(e) => setVolume(Number(e.target.value) / 100)}
-                aria-label="Background sound volume"
-                className="h-1 flex-1 accent-[var(--color-primary)]"
-              />
-            </div>
-          )}
-        </div>
-      )}
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  aria-label={volume === 0 ? "Unmute" : "Mute"}
+                  className="flex-none"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--color-ink-muted-3)",
+                  }}
+                >
+                  <VolumeIcon className="h-[14px] w-[14px]" />
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(volume * 100)}
+                  onChange={(e) => setVolume(Number(e.target.value) / 100)}
+                  aria-label="Background sound volume"
+                  className="h-1 flex-1 accent-[var(--color-primary)]"
+                />
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
 
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- ambient white noise, no captionable content */}
       <audio ref={audioRef} loop />
