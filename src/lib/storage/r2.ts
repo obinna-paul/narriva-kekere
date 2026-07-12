@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
@@ -191,4 +191,40 @@ export async function getStoryAudioUrl(key: string): Promise<string> {
     new GetObjectCommand({ Bucket: BUCKET, Key: key }),
     { expiresIn: 60 * 60 * 4 }
   );
+}
+
+/** Uploads an admin-provided ambient/white-noise loop. Key is deterministic
+ *  so re-uploading under the same AmbientSound id replaces the old file. */
+export async function uploadAmbientSound(
+  id: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  const ext = contentType === "audio/wav" || contentType === "audio/x-wav" ? "wav"
+    : contentType === "audio/ogg" ? "ogg"
+    : contentType === "audio/mp4" || contentType === "audio/x-m4a" ? "m4a"
+    : "mp3";
+  const key = `audio/ambient/${id}.${ext}`;
+
+  await r2Client.send(
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }),
+  );
+
+  return key;
+}
+
+/** Signed playback URL for an ambient sound loop — same 4-hour window as
+ *  story narration, plenty for one reading session. */
+export async function getAmbientSoundUrl(key: string): Promise<string> {
+  return getSignedUrl(
+    r2Client,
+    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+    { expiresIn: 60 * 60 * 4 }
+  );
+}
+
+/** Deletes an ambient sound's file from R2 — called when an admin removes it
+ *  from the library entirely (not just deactivating it). */
+export async function deleteAmbientSound(key: string): Promise<void> {
+  await r2Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }

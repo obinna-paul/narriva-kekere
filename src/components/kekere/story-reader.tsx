@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { AmbientSoundMenu } from "@/components/kekere/AmbientSoundMenu";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
 import { CommentPanel } from "@/components/kekere/CommentPanel";
@@ -592,6 +593,7 @@ export function StoryReader({
                 </>
               )}
             </div>
+            <AmbientSoundMenu themeBg={theme.bg} themeBorder={theme.border} />
             {unlocked && (
               <button
                 type="button"
