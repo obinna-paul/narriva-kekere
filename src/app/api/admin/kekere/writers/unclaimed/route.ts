@@ -11,7 +11,18 @@ import { prisma } from "@/lib/db/prisma";
 // set, but its onboarded story is exactly what an admin wants to clean up).
 export const GET = withAuth(async () => {
   const writers = await prisma.user.findMany({
-    where: { createdByAdminId: { not: null } },
+    // Anyone in the admin onboarding pipeline: a placeholder we created
+    // (createdByAdminId set), OR — crucially — a writer who ALREADY had a
+    // real account for whom we authored a story. The latter has
+    // createdByAdminId = null (they signed up themselves), so without the
+    // sourceType clause they'd silently never appear here, leaving the admin
+    // with no "Send email" button for them.
+    where: {
+      OR: [
+        { createdByAdminId: { not: null } },
+        { stories: { some: { sourceType: "ADMIN_AUTHORED" } } },
+      ],
+    },
     select: {
       id: true,
       name: true,
@@ -20,6 +31,10 @@ export const GET = withAuth(async () => {
       accountStatus: true,
       claimTokenExpiresAt: true,
       stories: {
+        // Only the admin-authored story — an existing writer may also have
+        // their own self-submitted stories, which aren't what this view
+        // manages and would otherwise show the wrong title/status.
+        where: { sourceType: "ADMIN_AUTHORED" },
         select: { id: true, title: true, status: true },
         orderBy: { createdAt: "desc" },
         take: 1,
