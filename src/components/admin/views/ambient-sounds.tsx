@@ -41,20 +41,40 @@ export function AmbientSoundsView() {
 
     setUploading(true);
     setUploadError(null);
+    let soundId: string | undefined;
     try {
-      const formData = new FormData();
-      formData.append("title", title.trim());
-      formData.append("audio", file);
+      // Step 1: ask our server for a presigned R2 upload URL — the file
+      // itself never passes through our server, so it can't hit the hosting
+      // platform's own request-body size limit (typically just a few MB,
+      // well under what a real audio file needs).
+      const mintRes = await fetch("/api/admin/kekere/ambient-sounds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim(), filename: file.name, contentType: file.type, size: file.size }),
+      });
+      const mintData = await mintRes.json().catch(() => ({}));
+      if (!mintRes.ok) throw new Error(mintData.error ?? "Upload failed");
+      soundId = mintData.soundId;
 
-      const res = await fetch("/api/admin/kekere/ambient-sounds", { method: "POST", body: formData });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+      // Step 2: upload the file directly to R2.
+      const putRes = await fetch(mintData.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": mintData.contentType },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error("Upload to storage failed. Please try again.");
 
       setTitle("");
       if (fileRef.current) fileRef.current.value = "";
       load();
     } catch (e) {
       setUploadError(e instanceof Error ? e.message : "Upload failed");
+      // Clean up the row created in step 1 if step 2 (the actual upload)
+      // never completed — otherwise it'd sit there pointing at a file that
+      // doesn't exist.
+      if (soundId) {
+        fetch(`/api/admin/kekere/ambient-sounds/${soundId}`, { method: "DELETE" }).catch(() => {});
+      }
     } finally {
       setUploading(false);
     }

@@ -193,13 +193,7 @@ export async function getStoryAudioUrl(key: string): Promise<string> {
   );
 }
 
-/** Uploads an admin-provided ambient/white-noise loop. Key is deterministic
- *  so re-uploading under the same AmbientSound id replaces the old file. */
-export async function uploadAmbientSound(
-  id: string,
-  buffer: Buffer,
-  contentType: string,
-): Promise<string> {
+function ambientSoundKey(id: string, contentType: string): string {
   const ext = contentType === "audio/wav" || contentType === "audio/x-wav" || contentType === "audio/wave" || contentType === "audio/vnd.wave" ? "wav"
     : contentType === "audio/ogg" || contentType === "application/ogg" ? "ogg"
     : contentType === "audio/mp4" || contentType === "audio/x-m4a" ? "m4a"
@@ -207,13 +201,45 @@ export async function uploadAmbientSound(
     : contentType === "audio/flac" || contentType === "audio/x-flac" ? "flac"
     : contentType === "audio/webm" ? "webm"
     : "mp3";
-  const key = `audio/ambient/${id}.${ext}`;
+  return `audio/ambient/${id}.${ext}`;
+}
+
+/** Uploads an admin-provided ambient/white-noise loop. Key is deterministic
+ *  so re-uploading under the same AmbientSound id replaces the old file.
+ *  Kept for completeness, but the admin upload UI uses
+ *  getAmbientSoundUploadUrl instead — routing the file bytes through this
+ *  server would hit the hosting platform's serverless request-body limit
+ *  (commonly a few MB) well before hitting our own app-level size check. */
+export async function uploadAmbientSound(
+  id: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  const key = ambientSoundKey(id, contentType);
 
   await r2Client.send(
     new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }),
   );
 
   return key;
+}
+
+/** Signed PUT URL so the admin's browser can upload the audio file directly
+ *  to R2, bypassing our own server (and therefore the hosting platform's
+ *  serverless function body-size limit) entirely. Returns the object key
+ *  alongside the URL since the caller needs both — the key is what gets
+ *  stored as AmbientSound.audioRef. */
+export async function getAmbientSoundUploadUrl(
+  id: string,
+  contentType: string,
+): Promise<{ key: string; uploadUrl: string }> {
+  const key = ambientSoundKey(id, contentType);
+  const uploadUrl = await getSignedUrl(
+    r2Client,
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, ContentType: contentType }),
+    { expiresIn: 60 * 10 },
+  );
+  return { key, uploadUrl };
 }
 
 /** Signed playback URL for an ambient sound loop — same 4-hour window as
