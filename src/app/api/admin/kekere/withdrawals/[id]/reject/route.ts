@@ -6,7 +6,9 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { failWithdrawal } from "@/lib/economy/withdrawals";
 import { sendEmail } from "@/lib/email/send";
+import { renderWithdrawalRejectedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const rejectSchema = z.object({ reason: z.string().min(1) });
 
@@ -37,12 +39,19 @@ export const PUT = withAuth(
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const writer = await prisma.user.findUnique({ where: { id: result.userId }, select: { email: true } });
+    const writer = await prisma.user.findUnique({ where: { id: result.userId }, select: { name: true, email: true } });
     if (writer) {
+      const html = await renderWithdrawalRejectedEmail({
+        writerName: writer.name,
+        cowries: result.cowriesAmount,
+        reason: parsed.data.reason,
+      }).catch(() => undefined);
       await sendEmail({
         to: writer.email,
         subject: "Your withdrawal request was not approved",
         body: `Your withdrawal request for ${result.cowriesAmount} cowries was rejected.\n\nReason: ${parsed.data.reason}\n\nYour earned balance has been restored — the cowries are back in your wallet and you're welcome to submit a new request.`,
+        from: KEKERE_SUBMISSIONS_FROM,
+        html,
       });
     }
 

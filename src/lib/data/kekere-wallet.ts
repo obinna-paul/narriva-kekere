@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import type { Transaction, TransactionType, Wallet } from "@prisma/client";
 import { sendEmail } from "@/lib/email/send";
 import { renderWalletHistoryEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 export type WalletWithTransactions = Wallet & { transactions: Transaction[] };
 
@@ -78,6 +79,7 @@ export async function sendWalletHistoryEmail(
     to: user.email,
     subject: `Your Kekere transaction history: ${fromLabel} – ${toLabel}`,
     body: `Hi ${user.name},\n\nHere's your Kekere wallet history from ${fromLabel} to ${toLabel}:\n\n${textLines.join("\n")}\n\n${rows.length} transaction${rows.length === 1 ? "" : "s"} in this period.`,
+    from: KEKERE_SUBMISSIONS_FROM,
     html,
   });
 

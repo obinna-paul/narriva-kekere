@@ -6,7 +6,9 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { renderContractBody } from "@/lib/contracts/render";
 import { sendEmail } from "@/lib/email/send";
+import { renderContractOfferEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { KekereContractStatus } from "@prisma/client";
 
 export const GET = withAuth(
@@ -122,10 +124,17 @@ export const POST = withAuth(
       },
     });
 
+    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${contract.id}`;
+    const html = await renderContractOfferEmail({
+      writerName: writer.name,
+      contractUrl,
+    }).catch(() => undefined);
     await sendEmail({
       to: writer.email,
       subject: "You have a publishing contract from Kekere Stories",
       body: "A publishing contract has been sent to you. Please log into Kekere Stories and go to your profile to review and sign it.",
+      from: KEKERE_SUBMISSIONS_FROM,
+      html,
     });
 
     await createNotification({

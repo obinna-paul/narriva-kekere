@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderStoryRejectedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const rejectSchema = z.object({
   moderationNotes: z.string().min(1, "Moderation notes are required."),
@@ -66,6 +67,7 @@ export const PUT = withAuth(
       to: story.author.email,
       subject: `Editor feedback on "${story.title}" — Kekere Stories`,
       body: `Hi ${story.author.name},\n\nAfter reviewing your story "${story.title}", we've decided not to publish it at this time.\n\n${moderationNotes}`,
+      from: KEKERE_SUBMISSIONS_FROM,
       html,
     });
 

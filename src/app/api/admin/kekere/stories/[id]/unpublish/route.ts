@@ -5,6 +5,8 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderStoryUnpublishedEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const unpublishSchema = z.object({
   reason: z.string().min(1, "Reason is required."),
@@ -45,10 +47,17 @@ export const PUT = withAuth(
       data: { status: "DRAFT" },
     });
 
+    const html = await renderStoryUnpublishedEmail({
+      writerName: story.author.name,
+      storyTitle: story.title,
+      reason,
+    }).catch(() => undefined);
     await sendEmail({
       to: story.author.email,
       subject: "Your story has been unpublished",
       body: `Hi ${story.author.name},\n\nYour story "${story.title}" has been unpublished from Kekere Stories.\n\nReason: ${reason}\n\nYour story is now back in draft status. Readers who previously unlocked it retain access. You can edit and resubmit it for review.`,
+      from: KEKERE_SUBMISSIONS_FROM,
+      html,
     });
 
     return NextResponse.json({ success: true });

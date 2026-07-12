@@ -10,6 +10,8 @@ import { completeWithdrawal, failWithdrawal } from "@/lib/economy/withdrawals";
 import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderWithdrawalFailedEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 /**
  * Source of truth for payment outcomes — unlike /api/paystack/verify (which
@@ -89,12 +91,18 @@ async function handleTransferFailed(data: { transfer_code: string }) {
   });
   if ("error" in result) return;
 
-  const writer = await prisma.user.findUnique({ where: { id: result.userId }, select: { email: true } });
+  const writer = await prisma.user.findUnique({ where: { id: result.userId }, select: { name: true, email: true } });
   if (writer) {
+    const html = await renderWithdrawalFailedEmail({
+      writerName: writer.name,
+      cowries: result.cowriesAmount,
+    }).catch(() => undefined);
     await sendEmail({
       to: writer.email,
       subject: "Your withdrawal could not be processed",
       body: `Your withdrawal of ${result.cowriesAmount} cowries could not be processed. Your balance has been restored. Please contact support.`,
+      from: KEKERE_SUBMISSIONS_FROM,
+      html,
     });
   }
 }

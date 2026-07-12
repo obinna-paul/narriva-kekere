@@ -13,7 +13,9 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { renderWithdrawalCompletedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { WithdrawalRequestStatus } from "@prisma/client";
 
 export type CreateWithdrawalResult =
@@ -163,10 +165,18 @@ export async function completeWithdrawal(
     }),
   ]);
 
+  const html = await renderWithdrawalCompletedEmail({
+    writerName: request.user.name,
+    cowries: cowriesAmount,
+    ngnAmount: request.ngnAmount,
+    reference: paystackTransferRef,
+  }).catch(() => undefined);
   await sendEmail({
     to: request.user.email,
     subject: "Your withdrawal has been completed",
     body: `Hi ${request.user.name},\n\nYour withdrawal of ${cowriesAmount} cowries (₦${request.ngnAmount}) has been completed and should arrive in your bank account within 24 hours.\n\nReference: ${paystackTransferRef}`,
+    from: KEKERE_SUBMISSIONS_FROM,
+    html,
   });
 
   await createNotification({

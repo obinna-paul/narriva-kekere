@@ -6,9 +6,11 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { renderContractBody } from "@/lib/contracts/render";
 import { sendEmail } from "@/lib/email/send";
+import { renderStoryAcceptedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { plainTextToDoc } from "@/lib/tiptap/doc-utils";
 import { countWords } from "@/lib/tiptap/doc-utils";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 
 const schema = z.object({
   writerId: z.string().min(1),
@@ -149,10 +151,19 @@ export const POST = withAuth(
       return { story, contract };
     });
 
+    const acceptedHtml = await renderStoryAcceptedEmail({
+      writerName: writer.name,
+      storyTitle: title,
+      cowrieCost,
+      expiresInDays,
+      contractUrl: `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${contract.id}`,
+    }).catch(() => undefined);
     await sendEmail({
       to: writer.email,
       subject: `"${title}" has been accepted for publishing — Kekere Stories`,
       body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the publishing terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of every sale\n\nA publishing contract is waiting for you in the app. Open Kekere Stories, check your notifications, and sign it with one tap. Your story goes live the moment you sign.\n\nThe contract offer expires in ${expiresInDays} days — please sign before then.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+      from: KEKERE_SUBMISSIONS_FROM,
+      html: acceptedHtml,
     });
 
     await createNotification({
