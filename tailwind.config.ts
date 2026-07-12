@@ -85,6 +85,9 @@ const config: Config = {
         "fade-in": "fadeIn 0.3s ease-out",
         "scale-in": "scaleIn 0.2s ease-out",
         "fade-out": "fadeOut 3s ease-out forwards",
+        // Now-playing equalizer bars (AmbientSoundMenu) — each bar uses this
+        // with a staggered [animation-delay:...ms] so they bounce out of sync.
+        "eq-bar": "eqBar 0.9s ease-in-out infinite",
       },
       keyframes: {
         fadeInUp: {
@@ -103,6 +106,10 @@ const config: Config = {
           "0%": { opacity: "1" },
           "80%": { opacity: "0" },
           "100%": { opacity: "0" },
+        },
+        eqBar: {
+          "0%, 100%": { transform: "scaleY(0.35)" },
+          "50%": { transform: "scaleY(1)" },
         },
       },
     },

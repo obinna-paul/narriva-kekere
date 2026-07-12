@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { AmbientSoundMenu } from "@/components/kekere/AmbientSoundMenu";
+import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
 import { CommentPanel } from "@/components/kekere/CommentPanel";
@@ -198,6 +198,7 @@ export function StoryReader({
   }, [initialUnlocked]);
 
   const contentRef = useRef<HTMLDivElement>(null);
+  const ambientSoundRef = useRef<AmbientSoundMenuHandle>(null);
   const comments = useParagraphComments(story.id, unlocked);
   const commentCounts = Object.fromEntries(
     Object.entries(comments.commentsByParagraph).map(([id, g]) => [id, g.count])
@@ -366,6 +367,7 @@ export function StoryReader({
 
   function handleFinish() {
     setFinished(true);
+    ambientSoundRef.current?.stop();
     if (isLoggedIn) {
       fetch(`/api/kekere/stories/${story.id}/complete`, { method: "POST" }).catch(() => {});
     }
@@ -593,7 +595,7 @@ export function StoryReader({
                 </>
               )}
             </div>
-            <AmbientSoundMenu themeBg={theme.bg} themeBorder={theme.border} />
+            <AmbientSoundMenu ref={ambientSoundRef} themeBg={theme.bg} themeBorder={theme.border} />
             {unlocked && (
               <button
                 type="button"
