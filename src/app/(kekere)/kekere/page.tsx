@@ -240,8 +240,7 @@ export default async function KekereLandingPage() {
               </div>
 
               <h1 className="font-[family-name:var(--font-display)] text-[clamp(40px,5.4vw,66px)] font-semibold leading-[1.04] text-[var(--color-cream)]">
-                Short fiction, specially curated, from the finest African
-                writers.
+                Short fiction, specially curated
               </h1>
 
               <p className="mt-6 max-w-[430px] text-[clamp(16px,1.4vw,18px)] leading-[1.6] text-[rgba(245,235,221,0.74)]">
