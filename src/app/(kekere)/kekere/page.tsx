@@ -218,9 +218,9 @@ export default async function KekereLandingPage() {
               <Image
                 src="/kekere-logo.png"
                 alt="Kekere Stories"
-                width={48}
-                height={48}
-                className="h-[48px] w-auto"
+                width={76}
+                height={76}
+                className="h-[76px] w-auto"
                 priority
               />
             </Link>
