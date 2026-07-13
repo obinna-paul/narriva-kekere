@@ -242,10 +242,10 @@ export default async function KekereLandingPage() {
               <h1 className="font-[family-name:var(--font-display)] text-[clamp(40px,5.4vw,66px)] font-semibold leading-[1.04] text-[var(--color-cream)]">
                 Kekere means small.
                 <br />
-                <span className="italic text-[var(--color-sand-accent)]">
-                  The stories don&apos;t
+                <span className="block text-[clamp(30px,4vw,42px)] italic leading-[1.14] text-[var(--color-sand-accent)]">
+                  The stories
                   <br />
-                  stay that way.
+                  don&apos;t stay that way.
                 </span>
               </h1>
 
