@@ -43,7 +43,9 @@ export const STORY_TIER_RANGES: Record<StoryTier, readonly [number, number]> = {
 // tip_amount_cowries); keep both in sync if either changes.
 export const WRITER_EARNINGS_RATE = 0.7 as const;
 export const TIP_AMOUNT_COWRIES = 1 as const;
-export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;
+// TEMPORARY: lowered from 10 to 5 for live testing of the manual withdrawal
+// flow (PR #98) — revert to 10 once that test is done.
+export const MINIMUM_WITHDRAWAL_COWRIES = 5 as const;
 
 // Story pricing: admin sets cost at publish time. All stories are paid.
 // Range: 1–10 cowries (inclusive). Tier is an editorial classification
