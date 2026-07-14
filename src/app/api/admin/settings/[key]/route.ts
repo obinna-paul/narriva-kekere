@@ -11,6 +11,7 @@ const ALLOWED_KEYS = [
   "referral_reward_cowries",
   "tip_amount_cowries",
   "withdrawal_rate_ngn_per_cowrie",
+  "minimum_withdrawal_cowries",
 ];
 
 function validateValue(key: string, value: string): string | null {
@@ -29,6 +30,9 @@ function validateValue(key: string, value: string): string | null {
       break;
     case "withdrawal_rate_ngn_per_cowrie":
       if (!Number.isInteger(num) || num <= 0) return "Must be a positive integer.";
+      break;
+    case "minimum_withdrawal_cowries":
+      if (!Number.isInteger(num) || num < 1 || num > 1000) return "Must be an integer between 1 and 1000.";
       break;
   }
 

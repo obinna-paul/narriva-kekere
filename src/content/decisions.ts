@@ -40,7 +40,10 @@ export const STORY_TIER_RANGES: Record<StoryTier, readonly [number, number]> = {
 
 // Cowrie economy constants — see docs/Narriva_Todays_Decisions_And_Specs.md.
 // Mirrors the seeded PlatformSetting rows (writer_earnings_rate,
-// tip_amount_cowries); keep both in sync if either changes.
+// tip_amount_cowries, minimum_withdrawal_cowries); keep both in sync if
+// either changes. minimum_withdrawal_cowries is editable live from the
+// admin settings panel (Economy settings) — this constant is only the
+// fallback used if no PlatformSetting row exists for it.
 export const WRITER_EARNINGS_RATE = 0.7 as const;
 export const TIP_AMOUNT_COWRIES = 1 as const;
 export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;

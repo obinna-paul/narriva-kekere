@@ -312,6 +312,7 @@ const PLATFORM_SETTINGS = [
   { key: "completion_bonus_cowries", value: "1" },
   { key: "tip_amount_cowries", value: "1" },
   { key: "withdrawal_rate_ngn_per_cowrie", value: "50" },
+  { key: "minimum_withdrawal_cowries", value: "10" },
 ];
 
 async function seedPlatformConfig() {
