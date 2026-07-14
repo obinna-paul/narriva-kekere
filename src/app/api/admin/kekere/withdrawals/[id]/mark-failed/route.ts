@@ -6,17 +6,23 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { failWithdrawal } from "@/lib/economy/withdrawals";
 import { sendEmail } from "@/lib/email/send";
-import { renderWithdrawalRejectedEmail } from "@/lib/email/templates";
+import { renderWithdrawalFailedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { logAdminAction } from "@/lib/admin/logAction";
 import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
-const rejectSchema = z.object({ reason: z.string().min(1) });
+const markFailedSchema = z.object({ reason: z.string().min(1) });
 
+/**
+ * Interim manual payment flow (see /approve) — use this when an approved
+ * transfer didn't actually go through (wrong account, bank error, etc.)
+ * after the admin already attempted to send it. Restores the writer's
+ * balance, same as the dead transfer.failed webhook path would have.
+ */
 export const PUT = withAuth(
   async (request, session, { params }: { params: { id: string } }) => {
     const body = await request.json().catch(() => null);
-    const parsed = rejectSchema.safeParse(body);
+    const parsed = markFailedSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
@@ -28,29 +34,28 @@ export const PUT = withAuth(
     if (!existing) {
       return NextResponse.json({ error: "Withdrawal request not found" }, { status: 404 });
     }
-    if (existing.status !== "PENDING") {
+    if (existing.status !== "APPROVED" && existing.status !== "PROCESSING") {
       return NextResponse.json(
-        { error: `Cannot reject a request with status ${existing.status}` },
+        { error: `Cannot mark a request with status ${existing.status} as failed — it must be APPROVED first.` },
         { status: 400 }
       );
     }
 
-    const result = await failWithdrawal(params.id, { kind: "REJECTED", reason: parsed.data.reason });
+    const result = await failWithdrawal(params.id, { kind: "FAILED", adminNote: parsed.data.reason });
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
     const writer = await prisma.user.findUnique({ where: { id: result.userId }, select: { name: true, email: true } });
     if (writer) {
-      const html = await renderWithdrawalRejectedEmail({
+      const html = await renderWithdrawalFailedEmail({
         writerName: writer.name,
         cowries: result.cowriesAmount,
-        reason: parsed.data.reason,
       }).catch(() => undefined);
       await sendEmail({
         to: writer.email,
-        subject: "Your withdrawal request was not approved",
-        body: `Your withdrawal request for ${result.cowriesAmount} cowries was rejected.\n\nReason: ${parsed.data.reason}\n\nYour earned balance has been restored — the cowries are back in your wallet and you're welcome to submit a new request.`,
+        subject: "Your withdrawal could not be processed",
+        body: `Your withdrawal of ${result.cowriesAmount} cowries could not be processed. Your balance has been restored. Please contact support.`,
         from: KEKERE_GENERAL_FROM,
         html,
       });
@@ -59,15 +64,15 @@ export const PUT = withAuth(
     await createNotification({
       userId: result.userId,
       type: "WITHDRAWAL_REJECTED",
-      title: "Withdrawal request declined",
-      body: `Your request to withdraw ${result.cowriesAmount} cowries was not approved. Your balance has been restored. Reason: ${parsed.data.reason}`,
+      title: "Withdrawal couldn't be completed",
+      body: `Your withdrawal of ${result.cowriesAmount} cowries could not be completed. Your balance has been restored.`,
       link: "/kekere/wallet",
     });
 
-    await logAdminAction(session.user.id, result.userId, "REJECT_WITHDRAWAL", {
-      withdrawalId: params.id,
+    await logAdminAction(session.user.id, existing.userId, "MARK_WITHDRAWAL_FAILED", {
+      withdrawalId: existing.id,
       reason: parsed.data.reason,
-      cowriesAmount: result.cowriesAmount,
+      cowriesAmount: existing.cowriesAmount.toNumber(),
     });
 
     return NextResponse.json({ success: true });
