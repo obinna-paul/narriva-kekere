@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { uploadPortalFile } from "@/lib/storage/r2";
-import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
 
 export interface CreateContractParams {
@@ -205,4 +205,57 @@ export async function signContractAndPublishStory(
   });
 
   return { storyId: linkedStoryId, signedPdfBuffer: pdfBuffer, pdfFilename: attachmentFilename };
+}
+
+/**
+ * Declines a pending contract — notifies the internal team and sends the
+ * writer the same warm "sorry to see it go" note regardless of which flow
+ * triggered the decline (the in-app contracts inbox for an already-claimed
+ * writer, or the pre-launch claim-link page for one who never signed up).
+ */
+export async function declineContract(
+  contractId: string,
+  reason?: string,
+): Promise<{ success: true } | { error: "not_found" | "not_pending" }> {
+  const contract = await prisma.kekereContract.findUnique({
+    where: { id: contractId },
+    include: {
+      template: { select: { contractType: true } },
+      writer: { select: { name: true, email: true } },
+      story: { select: { title: true } },
+    },
+  });
+
+  if (!contract) return { error: "not_found" };
+  if (contract.status !== "PENDING") return { error: "not_pending" };
+
+  const now = new Date();
+
+  await prisma.kekereContract.update({
+    where: { id: contractId },
+    data: {
+      status: "DECLINED",
+      declinedAt: now,
+      declineReason: reason?.trim() || null,
+    },
+  });
+
+  await sendEmail({
+    to: SUPPORT_EMAIL,
+    subject: `${contract.writer.name} declined a ${contract.template.contractType} contract`,
+    body: `Writer: ${contract.writer.name} (${contract.writer.email})\nContract type: ${contract.template.contractType}\nDeclined at: ${now.toISOString()}\nReason: ${reason?.trim() || "Not provided"}`,
+  });
+
+  // A warmer note than a dry "you have declined…" — this is an emotional
+  // moment for a writer, so it reads like a person wrote it (plain text, no
+  // bulk-mail template) and leaves the door wide open without any pressure.
+  const storyLabel = contract.story?.title ? `“${contract.story.title}”` : "your story";
+  await sendEmail({
+    from: KEKERE_SUBMISSIONS_FROM,
+    to: contract.writer.email,
+    subject: `Sorry to see ${storyLabel} go`,
+    body: `Hi ${contract.writer.name},\n\nAh — we were quietly hoping you'd say yes. You've declined the publishing agreement for ${storyLabel}, and that's completely your call. Your story, your rights, always.\n\nWe'll be honest: we're a little sad about it. We don't send an agreement for a story we aren't genuinely excited about, so ${storyLabel} slipping away stings just a bit on our end.\n\nBut there's zero pressure here. If you tapped decline by mistake, if you'd like to talk anything through, or if you simply change your mind next week, next month, or next year — we're one email away at ${KEKERE_SUBMISSIONS_EMAIL}. The door stays wide open.\n\nAnd if this is where we part ways for now: thank you for trusting us with your work long enough to consider it. Please keep writing. Stories like yours are exactly why Kekere exists.\n\nWarmly,\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+  });
+
+  return { success: true };
 }
