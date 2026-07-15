@@ -10,6 +10,7 @@ import { sendWelcomeEmail } from "@/lib/auth/verify-email";
 
 const claimSchema = z.object({
   token: z.string().min(1),
+  name: z.string().min(1).max(120),
   password: z.string().min(8).max(72),
   signedName: z.string().min(1, "Full legal name is required to sign"),
 });
@@ -45,20 +46,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ valid: false, expired: true });
   }
 
-  const pendingContract = await prisma.kekereContract.findFirst({
-    where: { writerId: user.id, status: "PENDING" },
+  const latestContract = await prisma.kekereContract.findFirst({
+    where: { writerId: user.id },
     orderBy: { sentAt: "desc" },
     select: {
+      status: true,
       body: true,
       story: { select: { title: true } },
     },
   });
 
+  const declined = latestContract?.status === "DECLINED";
+  const pending = latestContract?.status === "PENDING";
+
   return NextResponse.json({
     valid: true,
     writerName: user.name,
-    storyTitle: pendingContract?.story?.title ?? null,
-    contractBody: pendingContract?.body ?? null,
+    storyTitle: latestContract?.story?.title ?? null,
+    contractBody: pending ? latestContract?.body ?? null : null,
+    declined,
   });
 }
 
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { token, password, signedName } = parsed.data;
+  const { token, name, password, signedName } = parsed.data;
   const tokenHash = hashToken(token);
 
   const user = await prisma.user.findFirst({
@@ -128,6 +134,7 @@ export async function POST(request: Request) {
   await prisma.user.update({
     where: { id: user.id },
     data: {
+      name,
       password: hashedPassword,
       emailVerified: new Date(),
       accountStatus: "CLAIMED",
@@ -143,9 +150,11 @@ export async function POST(request: Request) {
   });
 
   // First time this account is truly usable — send the personal welcome
-  // from the CEO, same as a normal signup gets after OTP verification.
-  // Best-effort: a mail hiccup must not fail the claim itself.
-  await sendWelcomeEmail(user.name, user.email).catch(() => {});
+  // from the CEO, same as a normal signup gets after OTP verification. Uses
+  // the name they just chose for themselves, not the admin-set placeholder
+  // name `user` was fetched with above. Best-effort: a mail hiccup must not
+  // fail the claim itself.
+  await sendWelcomeEmail(name, user.email).catch(() => {});
 
   return NextResponse.json({
     success: true,
