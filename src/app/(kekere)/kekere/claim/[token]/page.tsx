@@ -172,12 +172,14 @@ export default function ClaimPageClient() {
           <p className="mb-5 text-[14px] text-[rgba(42,26,18,.6)]">
             No hard feelings — you&apos;ve declined this publishing offer. If you change your mind,
             just reach out to <strong className="text-[#2A1A12]">submission@narriva.pro</strong>.
+            You&apos;re still welcome to read on Kekere Stories — create an account with this same
+            email whenever you like.
           </p>
           <Link
-            href="/kekere"
+            href="/login?mode=signup"
             className="inline-block rounded-[10px] bg-[#C75D2C] px-6 py-3 text-[14px] font-semibold text-white hover:bg-[#B0531E]"
           >
-            Go to Kekere Stories
+            Create a reader account
           </Link>
         </div>
       </div>

@@ -49,16 +49,45 @@ export async function POST(request: Request) {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   try {
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashedPassword,
-        termsAcceptedAt: new Date(),
-        wallet: { create: {} },
-      },
-      select: { id: true, email: true, name: true, role: true },
+    // A placeholder account (created by an admin for pre-launch onboarding,
+    // e.g. a writer who declined their publishing offer before ever signing
+    // up) sits on this email with no password. Rather than let the unique
+    // email constraint block a genuine signup with a confusing "account
+    // already exists" error, adopt that row into a real account — same
+    // outcome as prisma.user.create below, just reusing the existing id.
+    const placeholder = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, accountStatus: true, password: true },
     });
+
+    const user = placeholder && placeholder.accountStatus === "UNCLAIMED" && !placeholder.password
+      ? await prisma.user.update({
+          where: { id: placeholder.id },
+          data: {
+            name,
+            password: hashedPassword,
+            termsAcceptedAt: new Date(),
+            accountStatus: "CLAIMED",
+            claimToken: null,
+            claimTokenExpiresAt: null,
+          },
+          select: { id: true, email: true, name: true, role: true },
+        })
+      : await prisma.user.create({
+          data: {
+            email,
+            name,
+            password: hashedPassword,
+            termsAcceptedAt: new Date(),
+            wallet: { create: {} },
+          },
+          select: { id: true, email: true, name: true, role: true },
+        });
+
+    // The placeholder path above doesn't create a wallet inline like the
+    // fresh-user path does — ensure one exists either way (upsert is a
+    // no-op if the admin's placeholder-creation route already made one).
+    await prisma.wallet.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
 
     await createAndSendOtp(user.id, user.email, user.name);
 
