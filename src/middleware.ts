@@ -67,12 +67,20 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (effectivePathname.startsWith("/admin") && token.role !== "ADMIN") {
-      const homeUrl = request.nextUrl.clone();
-      homeUrl.pathname = "/";
-      homeUrl.search = "";
-      return NextResponse.redirect(homeUrl);
-    }
+    // No ADMIN-role check here on purpose. token.role is baked into the JWT
+    // at sign-in and never refreshed — session strategy is "jwt", and
+    // nothing in this app ever calls a NextAuth session-update trigger — so
+    // a role granted (or revoked) via the admin dashboard would silently
+    // not take effect here until that browser's session token happens to be
+    // reissued. That's exactly the bug this comment replaces: an admin
+    // promotes someone, that person is still logged in with their old
+    // session, and gets bounced right back out. The authoritative,
+    // DB-fresh ADMIN check now lives in src/app/admin/layout.tsx instead —
+    // a Server Component, so it can hit Postgres directly on every /admin
+    // navigation (this file runs on the edge runtime, which can decode the
+    // JWT cheaply but can't reach Prisma). This still blocks a logged-out
+    // visitor immediately above; a logged-in non-admin just takes one extra
+    // hop through the layout's check instead of being turned away here.
   }
 
   if (needsRewrite) {

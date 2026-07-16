@@ -99,21 +99,11 @@ export function AllUsers() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Failed");
       setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role } : u)));
-      // Role lives in the session's JWT, refreshed only at sign-in — a role
-      // change takes effect in the database immediately, but not in a
-      // session that was already issued before the change, which is what
-      // actually gates access to /admin. Only worth flagging for ADMIN:
-      // that's the one role change with an access consequence the promoted
-      // user would immediately try to exercise.
-      if (role === "ADMIN") {
-        showToast(
-          "ok",
-          `${user.name} is now admin. They'll need to sign out and back in before /admin will let them in.`,
-          6000
-        );
-      } else {
-        showToast("ok", `${user.name} is now ${role.toLowerCase()}.`);
-      }
+      // /admin's own gate (src/app/admin/layout.tsx) checks the role fresh
+      // from the database on every navigation rather than trusting the
+      // session's JWT-cached role, so this takes effect on their very next
+      // page load — no sign-out required, even if they're already logged in.
+      showToast("ok", `${user.name} is now ${role.toLowerCase()}.`);
     } catch (e) {
       showToast("err", e instanceof Error ? e.message : "Action failed.");
     } finally {
