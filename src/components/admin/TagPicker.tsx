@@ -39,8 +39,13 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  function selectTag(id: string) {
-    onChange([id]);
+  function toggleTag(id: string) {
+    if (value.includes(id)) {
+      onChange(value.filter((v) => v !== id));
+      return;
+    }
+    if (value.length >= 2) return; // cap at 2 — the picker's caller enforces this too
+    onChange([...value, id]);
   }
 
   const filtered = tags.filter((t) =>
@@ -64,7 +69,7 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
         )}
       >
         {selectedTags.length === 0 ? (
-          <span className="text-[#9AA0A8]">Select a category…</span>
+          <span className="text-[#9AA0A8]">Select 1–2 tags…</span>
         ) : (
           selectedTags.map((t) => (
             <span
@@ -74,7 +79,7 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
               {t.label}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onChange([]); }}
+                onClick={(e) => { e.stopPropagation(); onChange(value.filter((v) => v !== t.id)); }}
                 className="ml-0.5 text-[#9AA0A8] hover:text-white"
                 aria-label={`Remove ${t.label}`}
               >
@@ -104,15 +109,24 @@ export function TagPicker({ value, onChange, error }: TagPickerProps) {
             ) : (
               filtered.map((t) => {
                 const selected = value.includes(t.id);
+                const atLimit = !selected && value.length >= 2;
                 return (
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => { selectTag(t.id); setOpen(false); setSearch(""); }}
+                    disabled={atLimit}
+                    onClick={() => {
+                      const closing = !selected && value.length + 1 >= 2;
+                      toggleTag(t.id);
+                      setSearch("");
+                      if (closing) setOpen(false);
+                    }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] font-medium transition-colors",
                       selected
                         ? "bg-[rgba(20,22,26,0.07)] text-[#1A1C20]"
+                        : atLimit
+                        ? "cursor-not-allowed text-[#C4C8CD]"
                         : "text-[#4A5058] hover:bg-[rgba(20,22,26,0.04)]"
                     )}
                   >

@@ -84,7 +84,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const tagError = tab === "publish" && tagIds.length !== 1;
+  const tagError = tab === "publish" && (tagIds.length < 1 || tagIds.length > 2);
   const coverError = tab === "publish" && !coverPreview && !coverImageRef;
 
   // Nari tag suggestions
@@ -113,7 +113,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
 
   function applySuggestions() {
     if (!suggestions || suggestions.length === 0) return;
-    setTagIds([suggestions[0].id]);
+    setTagIds(suggestions.slice(0, 2).map((s) => s.id));
     setSuggestions(null);
     setNewTagSuggestion(null);
   }
@@ -232,7 +232,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
-                Tags <span className="normal-case text-[#C0392B]">(required)</span>
+                Tags <span className="normal-case text-[#C0392B]">(1–2, required)</span>
               </label>
               <button
                 type="button"
@@ -283,7 +283,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
 
             <TagPicker value={tagIds} onChange={setTagIds} error={tagError} />
             {tagError && (
-              <p className="mt-1 text-[10px] text-[#C0392B]">Select exactly one category before publishing.</p>
+              <p className="mt-1 text-[10px] text-[#C0392B]">Select 1 or 2 tags before publishing.</p>
             )}
           </div>
         </>

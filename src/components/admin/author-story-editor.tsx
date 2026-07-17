@@ -109,9 +109,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
   const [suggesting, setSuggesting] = useState(false);
   const [suggestion, setSuggestion] = useState<{
-    tagSlug: string;
-    tagLabel: string;
-    tagFeedHeading: string;
+    tags: { slug: string; label: string; feedHeading: string }[];
     hookLine: string;
   } | null>(null);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
@@ -234,19 +232,24 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     editorRef.current?.setContent(EMPTY_DOC);
   }
 
-  const selectedTagSlug = tagIds.length === 1
-    ? allTags.find((t) => t.id === tagIds[0])?.slug ?? null
-    : null;
+  const selectedTagObjs = tagIds
+    .map((id) => allTags.find((t) => t.id === id))
+    .filter((t): t is TagItem => !!t);
 
   // The category title is what actually appears as the feed row heading —
   // for a tag grouped with others (e.g. dark/creepy/psychological) that's
-  // a shared title, not the tag's own individual feedHeading.
-  const selectedTagCategory = selectedTagSlug ? categoryForTag(selectedTagSlug) : null;
+  // a shared title, not the tag's own individual feedHeading. A story with
+  // two tags that happen to share a category still only appears in one row;
+  // two tags in different categories appear in both.
+  const selectedCategories = Array.from(
+    new Map(selectedTagObjs.map((t) => [categoryForTag(t.slug).slug, categoryForTag(t.slug)])).values()
+  );
 
   const isValid =
     title.trim() &&
     hookLine.trim() &&
     tagIds.length >= 1 &&
+    tagIds.length <= 2 &&
     cowrieCost >= 1 &&
     cowrieCost <= 10 &&
     !!coverImageRef;
@@ -284,11 +287,9 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
       const data = await res.json();
 
-      if (data.suggestedTag || data.suggestedHookLine) {
+      if ((data.suggestedTags && data.suggestedTags.length > 0) || data.suggestedHookLine) {
         setSuggestion({
-          tagSlug: data.suggestedTag?.slug ?? "",
-          tagLabel: data.suggestedTag?.label ?? "",
-          tagFeedHeading: data.suggestedTag?.feedHeading ?? "",
+          tags: data.suggestedTags ?? [],
           hookLine: data.suggestedHookLine ?? "",
         });
       } else {
@@ -308,11 +309,12 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       setHookLine(suggestion.hookLine);
     }
 
-    if (suggestion.tagSlug) {
-      const dbTag = allTags.find((t) => t.slug === suggestion.tagSlug);
-      if (dbTag) {
-        setTagIds([dbTag.id]);
-      }
+    if (suggestion.tags.length > 0) {
+      const matchedIds = suggestion.tags
+        .map((t) => allTags.find((at) => at.slug === t.slug)?.id)
+        .filter((id): id is string => !!id)
+        .slice(0, 2);
+      if (matchedIds.length > 0) setTagIds(matchedIds);
     }
 
     setSuggestion(null);
@@ -532,18 +534,22 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               </div>
             )}
 
-            {suggestion.tagSlug && (
+            {suggestion.tags.length > 0 && (
               <div className="mb-3">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[rgba(31,75,75,0.55)]">
-                  Suggested category &amp; feed row
+                  Suggested {suggestion.tags.length > 1 ? "tags" : "category"} &amp; feed row{suggestion.tags.length > 1 ? "s" : ""}
                 </span>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[rgba(31,75,75,0.2)] bg-white px-2.5 py-0.5 text-[12px] font-medium text-[#1F4B4B]">
-                    {suggestion.tagLabel}
-                  </span>
-                  <span className="text-[12px] text-[rgba(31,75,75,0.6)]">
-                    &rarr; &ldquo;{suggestion.tagFeedHeading}&rdquo;
-                  </span>
+                <div className="mt-1 flex flex-col gap-1.5">
+                  {suggestion.tags.map((t) => (
+                    <div key={t.slug} className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[rgba(31,75,75,0.2)] bg-white px-2.5 py-0.5 text-[12px] font-medium text-[#1F4B4B]">
+                        {t.label}
+                      </span>
+                      <span className="text-[12px] text-[rgba(31,75,75,0.6)]">
+                        &rarr; &ldquo;{t.feedHeading}&rdquo;
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -697,12 +703,20 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         <div>
           <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-              Category (select one)
+              Tags (pick 1 — or 2 only if the story truly spans two themes)
             </label>
-            {selectedTagCategory && (
+            {selectedCategories.length > 0 && (
               <span className="text-[10px] text-[rgba(199,93,44,0.7)] sm:text-[11px]">
-                Feed row: &ldquo;{selectedTagCategory.title}&rdquo;
-                {selectedTagCategory.tagSlugs.length > 1 && " (shared with related tags)"}
+                {selectedCategories.length === 1 ? (
+                  <>
+                    Feed row: &ldquo;{selectedCategories[0].title}&rdquo;
+                    {selectedCategories[0].tagSlugs.length > 1 && " (shared with related tags)"}
+                  </>
+                ) : (
+                  <>
+                    Appears in {selectedCategories.length} feed rows: {selectedCategories.map((c) => `"${c.title}"`).join(" & ")}
+                  </>
+                )}
               </span>
             )}
           </div>
@@ -710,14 +724,24 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             {allTags.map((tag) => {
               const category = categoryForTag(tag.slug);
               const isActive = tagIds.includes(tag.id);
+              const atLimit = !isActive && tagIds.length >= 2;
               return (
                 <button
                   key={tag.slug}
                   type="button"
-                  onClick={() => setTagIds([tag.id])}
+                  disabled={atLimit}
+                  onClick={() => {
+                    setTagIds((prev) => {
+                      if (prev.includes(tag.id)) return prev.filter((id) => id !== tag.id);
+                      if (prev.length >= 2) return prev;
+                      return [...prev, tag.id];
+                    });
+                  }}
                   className={`rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${
                     isActive
                       ? "border-[#C75D2C] bg-[#C75D2C] text-white"
+                      : atLimit
+                      ? "cursor-not-allowed border-[rgba(20,22,26,0.08)] bg-[#F8F9FB] text-[#B0B5BD]"
                       : "border-[rgba(20,22,26,0.12)] bg-white text-[#15171C] hover:bg-[#F0F2F5]"
                   }`}
                   title={category.title}
@@ -734,7 +758,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
             {isValid
               ? "Saves as PENDING_CONTRACT. Send the agreement email afterwards from Onboarded Writers."
-              : "Add a title, hook line, cover image and a category to continue."}
+              : "Add a title, hook line, cover image and at least one tag to continue."}
           </span>
           <button
             type="button"

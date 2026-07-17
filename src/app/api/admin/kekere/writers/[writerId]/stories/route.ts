@@ -16,7 +16,7 @@ const schema = z.object({
   genre: z.string().min(1),
   coverColor: z.string().default("#C75D2C"),
   coverImageRef: z.string().optional(),
-  tagIds: z.array(z.string()).min(1, "Select at least one category"),
+  tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
 });
 
 // Saves an admin-authored story under a writer's account and creates the

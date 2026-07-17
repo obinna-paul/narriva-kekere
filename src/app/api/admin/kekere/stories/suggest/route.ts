@@ -14,7 +14,10 @@ const AVAILABLE_TAGS = STORY_TAGS.map((t) => `"${t.slug}" — ${t.label} (${t.de
 
 const SYSTEM_PROMPT = `You are Nari, the in-house story editor for Kekere Stories, a short-fiction platform for African and diaspora writers. Given a story's title and opening text, you produce two things a scrolling reader would actually stop for.
 
-1. TAG — the single most fitting tag from the list below, matching the story's dominant tone, theme, or genre. Reply with the tag SLUG only, not the label or description. Example reply: "thriller"
+1. TAGS — one or two tags from the list below, matching the story's dominant tone, theme, or genre.
+   Default to ONE tag: the single tag that best captures what the story is actually about.
+   Only reach for a SECOND tag when the story genuinely, substantively spans two distinct themes — for example, a story that is both a love story AND fundamentally about grief deserves both "romance" and "grief", because a reader browsing either category would want to find it. Do not add a second tag just because it is loosely related, a close synonym, or the same mood as the first (e.g. don't tag both "dark" and "creepy" — pick whichever fits best). The bar for a second tag is high; most stories deserve exactly one.
+   Reply with SLUGs only, comma-separated if two. Example replies: "thriller" or "romance, grief"
 
 2. HOOK — one sentence, max 150 characters, that makes a stranger tap in. Follow these rules without exception:
    - Be SPECIFIC to this story. Reference an actual detail, choice, or stake from the text itself. If your hook could be pasted onto a different story with the same tag and still make sense, it has failed.
@@ -27,7 +30,7 @@ Available tags:
 ${AVAILABLE_TAGS}
 
 Reply in this exact format (each on its own line):
-TAG: <slug>
+TAGS: <slug>[, <slug>]
 HOOK: <hookline>`;
 
 export const POST = withAuth(async (request) => {
@@ -79,17 +82,27 @@ export const POST = withAuth(async (request) => {
       return NextResponse.json({ error: "No suggestions returned" }, { status: 503 });
     }
 
-    const tagMatch = raw.match(/TAG:\s*(\S+)/i);
+    const tagMatch = raw.match(/TAGS?:\s*(.+)/i);
     const hookMatch = raw.match(/HOOK:\s*(.+)/i);
 
-    const suggestedSlug = tagMatch?.[1]?.trim().toLowerCase() ?? null;
+    const suggestedSlugs = (tagMatch?.[1] ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
     const suggestedHook = hookMatch?.[1]?.trim() ?? null;
 
     const result: Record<string, unknown> = {};
 
-    if (suggestedSlug && TAG_BY_SLUG[suggestedSlug]) {
-      const tag = TAG_BY_SLUG[suggestedSlug];
-      result.suggestedTag = { slug: tag.slug, label: tag.label, feedHeading: tag.feedHeading };
+    const suggestedTags = Array.from(new Set(suggestedSlugs))
+      .filter((slug) => TAG_BY_SLUG[slug])
+      .slice(0, 2)
+      .map((slug) => {
+        const tag = TAG_BY_SLUG[slug];
+        return { slug: tag.slug, label: tag.label, feedHeading: tag.feedHeading };
+      });
+
+    if (suggestedTags.length > 0) {
+      result.suggestedTags = suggestedTags;
     }
 
     if (suggestedHook && suggestedHook.length <= 150) {
