@@ -15,24 +15,24 @@ export interface StoryTag {
 export const STORY_TAGS: readonly StoryTag[] = [
   // Tone / mood
   { slug: "funny",           label: "Funny",           feedHeading: "Fancy a laugh?",                         description: "Comedic, witty, or humorous" },
-  { slug: "dark",            label: "Dark",             feedHeading: "Read alone at night. We dare you",       description: "Bleak, unsettling, or morally heavy" },
+  { slug: "dark",            label: "Dark",             feedHeading: "Not every story gets a happy ending",    description: "Bleak, unsettling, or morally heavy" },
   { slug: "creepy",          label: "Creepy",           feedHeading: "Read alone at night. We dare you",       description: "Eerie, disturbing, or horror-adjacent" },
   { slug: "heartwarming",    label: "Heartwarming",     feedHeading: "Stories that hug you back",              description: "Feel-good, uplifting, or affirming" },
-  { slug: "tense",           label: "Tense",            feedHeading: "Hold your breath",                       description: "High-stakes, nail-biting suspense" },
-  { slug: "melancholy",      label: "Melancholy",       feedHeading: "Beautifully sad",                        description: "Bittersweet or quietly sorrowful" },
-  { slug: "rage",            label: "Rage",             feedHeading: "Stories that make you furious",          description: "Anger, injustice, or burning frustration" },
+  { slug: "tense",           label: "Tense",            feedHeading: "Your heart rate is about to change",     description: "High-stakes, nail-biting suspense" },
+  { slug: "melancholy",      label: "Melancholy",       feedHeading: "The ache that doesn't want fixing",      description: "Bittersweet or quietly sorrowful" },
+  { slug: "rage",            label: "Rage",             feedHeading: "This will make your blood boil, on purpose", description: "Anger, injustice, or burning frustration" },
   { slug: "poetic",          label: "Poetic",           feedHeading: "Words that sing",                        description: "Lyrical, metaphor-rich prose" },
   { slug: "absurdist",       label: "Absurdist",        feedHeading: "Nothing makes sense. That's the point.", description: "Surreal or intentionally illogical" },
 
   // Themes / subject matter
-  { slug: "romance",         label: "Romance",          feedHeading: "Stories about the heart",                description: "Love, desire, or romantic tension" },
+  { slug: "romance",         label: "Romance",          feedHeading: "Fall for someone who isn't real (yet)", description: "Love, desire, or romantic tension" },
   { slug: "erotic",          label: "Erotic",           feedHeading: "18+ — proceed knowingly",               description: "Explicit adult content" },
-  { slug: "grief",           label: "Grief",            feedHeading: "Stories that know loss",                 description: "Death, mourning, or processing pain" },
+  { slug: "grief",           label: "Grief",            feedHeading: "For the goodbyes that never felt finished", description: "Death, mourning, or processing pain" },
   { slug: "heartbreak",      label: "Heartbreak",       feedHeading: "They never really got over it",         description: "Romantic loss or emotional devastation" },
   { slug: "revenge",         label: "Revenge",          feedHeading: "Served cold. Very cold.",               description: "Retribution, score-settling, or payback" },
   { slug: "survival",        label: "Survival",         feedHeading: "They made it. Barely.",                 description: "Endurance against the odds" },
   { slug: "identity",        label: "Identity",         feedHeading: "Who are you, really?",                  description: "Self-discovery, belonging, or reinvention" },
-  { slug: "trauma",          label: "Trauma",           feedHeading: "Unflinching and honest",                 description: "Processing pain, abuse, or difficult pasts" },
+  { slug: "trauma",          label: "Trauma",           feedHeading: "The parts they don't usually tell you",  description: "Processing pain, abuse, or difficult pasts" },
   { slug: "family",          label: "Family",           feedHeading: "Blood, chosen and otherwise",           description: "Parents, siblings, or found family" },
   { slug: "friendship",      label: "Friendship",       feedHeading: "Ride or die",                           description: "Platonic bonds, loyalty, or betrayal" },
   { slug: "betrayal",        label: "Betrayal",         feedHeading: "The knife you didn't see coming",       description: "Broken trust or shocking disloyalty" },
@@ -41,8 +41,8 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "religion",        label: "Religion",         feedHeading: "Faith, doubt, and everything between",  description: "Spiritual belief, practice, or crisis" },
   { slug: "money",           label: "Money",            feedHeading: "Follow the money",                      description: "Wealth, poverty, or the lure of cash" },
   { slug: "politics",        label: "Politics",         feedHeading: "Power plays and dirty hands",           description: "Government, activism, or systemic issues" },
-  { slug: "justice",         label: "Justice",          feedHeading: "The system doesn't always work",        description: "Law, fairness, or moral reckoning" },
-  { slug: "class",           label: "Class",            feedHeading: "Where you come from shapes everything", description: "Social class, wealth gaps, or aspiration" },
+  { slug: "justice",         label: "Justice",          feedHeading: "Somebody has to answer for this",       description: "Law, fairness, or moral reckoning" },
+  { slug: "class",           label: "Class",            feedHeading: "Same city, different worlds",           description: "Social class, wealth gaps, or aspiration" },
   { slug: "race",            label: "Race",             feedHeading: "The conversation we keep having",       description: "Racial identity, bias, or solidarity" },
   { slug: "gender",          label: "Gender",           feedHeading: "Redefining the rules",                  description: "Gender roles, identity, or expectations" },
   { slug: "parenthood",      label: "Parenthood",       feedHeading: "Nobody's ready for it",                 description: "Raising children, mother- or fatherhood" },
@@ -57,9 +57,9 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "historical",      label: "Historical",       feedHeading: "Before your time",                      description: "Set in a defined historical era" },
 
   // Genre / form
-  { slug: "thriller",        label: "Thriller",         feedHeading: "Can't stop, won't stop",                description: "Suspense and fast-paced plot" },
-  { slug: "mystery",         label: "Mystery",          feedHeading: "What really happened?",                 description: "Puzzles, secrets, or whodunits" },
-  { slug: "psychological",   label: "Psychological",    feedHeading: "Read alone at night. We dare you",       description: "Mind games, unreliable narrators, or mental tension" },
+  { slug: "thriller",        label: "Thriller",         feedHeading: "Your pulse won't thank you",             description: "Suspense and fast-paced plot" },
+  { slug: "mystery",         label: "Mystery",          feedHeading: "Everyone's lying. Find out why.",       description: "Puzzles, secrets, or whodunits" },
+  { slug: "psychological",   label: "Psychological",    feedHeading: "Are you sure you're the one telling this story?", description: "Mind games, unreliable narrators, or mental tension" },
   { slug: "speculative",     label: "Speculative",      feedHeading: "What if the world worked differently?", description: "Sci-fi, alternate history, or near-future" },
   { slug: "literary",        label: "Literary",         feedHeading: "Prose that stays with you",             description: "Character-driven, language-forward fiction" },
   { slug: "crime",           label: "Crime",            feedHeading: "Someone's going to get caught",         description: "Heists, murders, con artists, or detectives" },
@@ -67,14 +67,14 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "satire",          label: "Satire",           feedHeading: "Nigeria, you cannot shout",             description: "Social, political, or cultural satire" },
 
   // Character types / archetypes
-  { slug: "killer",          label: "Killer",           feedHeading: "Someone in this story is dangerous",    description: "A murderer, assassin, or violent antagonist" },
+  { slug: "killer",          label: "Killer",           feedHeading: "Not everyone survives this one",        description: "A murderer, assassin, or violent antagonist" },
   { slug: "antihero",        label: "Antihero",         feedHeading: "Not the hero. But close.",              description: "Morally grey or flawed protagonist" },
-  { slug: "outsider",        label: "Outsider",         feedHeading: "They never quite fit in",               description: "A character on the margins of society" },
+  { slug: "outsider",        label: "Outsider",         feedHeading: "Watching from just outside the circle", description: "A character on the margins of society" },
   { slug: "con-artist",      label: "Con Artist",       feedHeading: "Everyone's playing a game",             description: "Deception, schemes, or long cons" },
 
   // Reader experience
   { slug: "twist-ending",    label: "Twist Ending",     feedHeading: "You will not see it coming",            description: "Stories with a surprising final turn" },
-  { slug: "slow-burn",       label: "Slow Burn",        feedHeading: "Patience pays off",                     description: "Building tension or romance over time" },
+  { slug: "slow-burn",       label: "Slow Burn",        feedHeading: "Worth every slow page",                 description: "Building tension or romance over time" },
   { slug: "quick-read",      label: "Quick Read",       feedHeading: "One sitting, no excuses",               description: "Short, punchy, or fast-paced stories" },
   { slug: "binge-worthy",    label: "Binge-Worthy",     feedHeading: "You said five minutes. It's been two hours.", description: "Addictive, page-turner energy" },
   { slug: "thought-provoking", label: "Thought-Provoking", feedHeading: "Still thinking about it tomorrow",   description: "Ideas that linger long after the last page" },

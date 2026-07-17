@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, X, Upload, ImageIcon, Check } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { TAG_BY_SLUG } from "@/content/story-tags";
+import { formatRelativeTime } from "@/lib/tiptap/save-status";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 
 interface TagItem {
@@ -19,6 +20,56 @@ interface AuthorStoryEditorProps {
 }
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
+
+// Matches AdminTopBar's fixed h-[62px] (src/components/admin/admin-top-bar.tsx)
+// — the editor's sticky toolbar reads this same CSS variable
+// (StoryEditor.tsx) to stick just below the admin header instead of
+// underneath it at top:0, where it'd be invisible behind a higher z-index bar.
+const ADMIN_TOP_BAR_HEIGHT = "62px";
+
+interface AdminDraft {
+  title: string;
+  hookLine: string;
+  tier: string;
+  cowrieCost: number;
+  coverImageRef: string | null;
+  coverPreviewUrl: string | null;
+  tagIds: string[];
+  body: TiptapDoc;
+  savedAt: string;
+}
+
+function draftKey(writerId: string): string {
+  return `kekere_admin_author_draft_${writerId}`;
+}
+
+function loadDraft(writerId: string): AdminDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(writerId));
+    if (!raw) return null;
+    return JSON.parse(raw) as AdminDraft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(writerId: string, draft: Omit<AdminDraft, "savedAt">): string {
+  const savedAt = new Date().toISOString();
+  try {
+    localStorage.setItem(draftKey(writerId), JSON.stringify({ ...draft, savedAt }));
+  } catch {
+    // Storage full/unavailable — non-fatal, matches StoryEditor's own handling.
+  }
+  return savedAt;
+}
+
+function clearDraft(writerId: string) {
+  try {
+    localStorage.removeItem(draftKey(writerId));
+  } catch {
+    // ignore
+  }
+}
 
 function extractPlainText(doc: TiptapDoc): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,10 +92,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const router = useRouter();
   const editorRef = useRef<StoryEditorHandle>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [title, setTitle] = useState("");
   const [hookLine, setHookLine] = useState("");
-  const [genre, setGenre] = useState("Drama");
   const [tier, setTier] = useState<string>("STANDARD");
   const [cowrieCost, setCowrieCost] = useState(5);
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
@@ -65,12 +116,123 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   } | null>(null);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
 
+  // Local draft persistence — this form has no server-side draft to save
+  // against until "Save" is clicked (storyId doesn't exist yet), so work is
+  // preserved in localStorage instead, keyed per writer. draftChecked gates
+  // <StoryEditor>'s first render so a restored draft's body can be passed in
+  // as its initialContent (which Tiptap only reads once, at mount) rather
+  // than needing to be set imperatively after the fact.
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [initialBody, setInitialBody] = useState<TiptapDoc | null>(null);
+  const [restoredAt, setRestoredAt] = useState<string | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftSavedAtLabel, setDraftSavedAtLabel] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/kekere/tags")
       .then((r) => r.json())
       .then((d) => setAllTags(d.tags ?? []))
       .catch(() => {});
   }, []);
+
+  // Restore any existing draft for this writer, once, before StoryEditor
+  // ever mounts. Runs client-only (localStorage doesn't exist during SSR),
+  // which is why this can't happen in a lazy useState initializer.
+  useEffect(() => {
+    const draft = loadDraft(writerId);
+    if (draft) {
+      setTitle(draft.title);
+      setHookLine(draft.hookLine);
+      setTier(draft.tier);
+      setCowrieCost(draft.cowrieCost);
+      setCoverImageRef(draft.coverImageRef);
+      setCoverPreviewUrl(draft.coverPreviewUrl);
+      setTagIds(draft.tagIds);
+      setInitialBody(draft.body);
+      setRestoredAt(draft.savedAt);
+      setDraftSavedAt(draft.savedAt);
+    }
+    setDraftChecked(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writerId]);
+
+  // Keep the relative-time label ticking without re-saving anything.
+  useEffect(() => {
+    if (!draftSavedAt) {
+      setDraftSavedAtLabel(null);
+      return;
+    }
+    setDraftSavedAtLabel(formatRelativeTime(draftSavedAt));
+    const interval = setInterval(() => setDraftSavedAtLabel(formatRelativeTime(draftSavedAt)), 15000);
+    return () => clearInterval(interval);
+  }, [draftSavedAt]);
+
+  const scheduleDraftSave = useCallback(() => {
+    if (!draftChecked) return; // don't clobber a restore that hasn't applied yet
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const body = editorRef.current?.getContent() ?? initialBody ?? EMPTY_DOC;
+      // A "blank" Tiptap doc still contains one empty paragraph node (the
+      // schema requires at least one block), so checking body.content.length
+      // alone is never actually zero — extract real text instead.
+      const hasContent = title.trim() || hookLine.trim() || tagIds.length > 0 || coverImageRef || extractPlainText(body).trim().length > 0;
+      if (!hasContent) return; // nothing worth remembering on a still-blank form
+      const savedAt = saveDraft(writerId, {
+        title,
+        hookLine,
+        tier,
+        cowrieCost,
+        coverImageRef,
+        coverPreviewUrl,
+        tagIds,
+        body,
+      });
+      setDraftSavedAt(savedAt);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, 1200);
+  }, [draftChecked, writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
+
+  // Covers every field except the editor body (which has no onChange of its
+  // own to hook — see onWordCountChange on <StoryEditor> below).
+  useEffect(() => {
+    scheduleDraftSave();
+  }, [scheduleDraftSave]);
+
+  // Best-effort immediate flush if the admin closes/navigates away inside
+  // the 1.2s debounce window, so the last few keystrokes aren't lost.
+  useEffect(() => {
+    function flush() {
+      clearTimeout(saveTimerRef.current);
+      const body = editorRef.current?.getContent();
+      if (!body) return;
+      saveDraft(writerId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
+    }
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") flush();
+    }
+    window.addEventListener("beforeunload", flush);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds]);
+
+  function discardDraft() {
+    if (!window.confirm("Discard this draft and start over? This can't be undone.")) return;
+    clearDraft(writerId);
+    setTitle("");
+    setHookLine("");
+    setTier("STANDARD");
+    setCowrieCost(5);
+    setCoverImageRef(null);
+    setCoverPreviewUrl(null);
+    setTagIds([]);
+    setRestoredAt(null);
+    setDraftSavedAt(null);
+    editorRef.current?.setContent(EMPTY_DOC);
+  }
 
   const selectedTagSlug = tagIds.length === 1
     ? allTags.find((t) => t.id === tagIds[0])?.slug ?? null
@@ -81,7 +243,6 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const isValid =
     title.trim() &&
     hookLine.trim() &&
-    genre.trim() &&
     tagIds.length >= 1 &&
     cowrieCost >= 1 &&
     cowrieCost <= 10 &&
@@ -220,6 +381,13 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         return;
       }
 
+      // Genre is no longer a field admins fill in directly — tags are the
+      // real categorization mechanism now. The story-creation API still
+      // requires some genre string (it's rendered into the signed
+      // publishing contract's "Genre:" line), so derive a reasonable one
+      // from whichever tag was picked rather than asking for it twice.
+      const derivedGenre = allTags.find((t) => t.id === tagIds[0])?.label ?? "Fiction";
+
       const res = await fetch(`/api/admin/kekere/writers/${writerId}/stories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -229,7 +397,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           body: bodyContent,
           tier,
           cowrieCost,
-          genre: genre.trim(),
+          genre: derivedGenre,
           coverColor: "#C75D2C",
           coverImageRef: coverImageRef ?? undefined,
           tagIds,
@@ -243,6 +411,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         return;
       }
 
+      clearDraft(writerId);
       router.push("/admin/kekere/writers/unclaimed");
     } catch {
       setError("Network error");
@@ -251,7 +420,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-4 sm:p-6">
+    <div
+      className="mx-auto max-w-3xl p-4 sm:p-6"
+      style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}
+    >
       <div className="mb-6">
         <h1 className="text-[16px] font-bold text-[#15171C] sm:text-[18px]">
           Author a story for {writerName}
@@ -262,6 +434,21 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           Writers list to invite them to review, sign, and go live.
         </p>
       </div>
+
+      {restoredAt && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-[8px] border border-[#E8C98C] bg-[#FBEFD9] px-4 py-3 text-[12.5px] text-[#5A4419]">
+          <span>
+            Restored your unsaved draft from {formatRelativeTime(restoredAt)} — nothing was lost.
+          </span>
+          <button
+            type="button"
+            onClick={discardDraft}
+            className="flex-none rounded-[6px] border border-[rgba(90,68,25,0.3)] px-2.5 py-1 text-[11px] font-semibold hover:bg-[rgba(90,68,25,0.08)]"
+          >
+            Discard &amp; start over
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
@@ -370,35 +557,29 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
 
         {/* Story content */}
         <div>
-          <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-            Story content
-          </label>
-          <div className="rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white p-4">
-            <StoryEditor
-              ref={editorRef}
-              storyId={writerId}
-              initialContent={EMPTY_DOC}
-              initialLastSavedAt={null}
-              autosave={false}
-            />
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
+              Story content
+            </label>
+            {draftSavedAtLabel && (
+              <span className="flex items-center gap-1 text-[11px] text-[#9AA0A8]">
+                <Check size={11} className="text-green-600" />
+                Draft saved {draftSavedAtLabel}
+              </span>
+            )}
           </div>
-        </div>
-
-        {/* Genre — shown to readers on the story header and feed cards */}
-        <div>
-          <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
-            Genre
-          </label>
-          <input
-            type="text"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            placeholder="e.g. Drama, Romance, Speculative"
-            className="w-full rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white px-3.5 py-2.5 text-[14px] text-[#15171C] placeholder:text-[#B0B5BD] focus:border-[#C75D2C] focus:outline-none"
-          />
-          <p className="mt-1 text-[11px] text-[#9AA0A8]">
-            Displayed on the story and in the feed. The category below controls which feed row it appears in.
-          </p>
+          <div className="rounded-[9px] border border-[rgba(20,22,26,0.12)] bg-white p-[22px]">
+            {draftChecked && (
+              <StoryEditor
+                ref={editorRef}
+                storyId={writerId}
+                initialContent={initialBody ?? EMPTY_DOC}
+                initialLastSavedAt={null}
+                autosave={false}
+                onWordCountChange={scheduleDraftSave}
+              />
+            )}
+          </div>
         </div>
 
         {/* Tier + Cowrie cost */}
@@ -549,7 +730,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
             {isValid
               ? "Saves as PENDING_CONTRACT. Send the agreement email afterwards from Onboarded Writers."
-              : "Add a title, hook line, genre, cover image and a category to continue."}
+              : "Add a title, hook line, cover image and a category to continue."}
           </span>
           <button
             type="button"

@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import { createEditorExtensions } from "@/lib/tiptap/editor-config";
 import { cn } from "@/lib/utils/cn";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
@@ -49,6 +49,7 @@ interface RecoveryState {
 export interface StoryEditorHandle {
   flush: (label?: string) => Promise<void>;
   getContent: () => TiptapDoc | null;
+  setContent: (doc: TiptapDoc) => void;
 }
 
 export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(function StoryEditor({
@@ -273,7 +274,14 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     return editor ? (editor.getJSON() as TiptapDoc) : null;
   }, [editor]);
 
-  useImperativeHandle(ref, () => ({ flush: manualSave, getContent }), [manualSave, getContent]);
+  const setContent = useCallback(
+    (doc: TiptapDoc) => {
+      editor?.commands.setContent(doc);
+    },
+    [editor]
+  );
+
+  useImperativeHandle(ref, () => ({ flush: manualSave, getContent, setContent }), [manualSave, getContent, setContent]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -390,6 +398,13 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         >
           <AlignRight size={16} />
         </ToolbarButton>
+        <ToolbarButton
+          label="Justify"
+          active={editor.isActive({ textAlign: "justify" })}
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+        >
+          <AlignJustify size={16} />
+        </ToolbarButton>
 
         <div className="flex-1" />
 
@@ -416,7 +431,14 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           "[&_.ProseMirror_em]:italic",
           "[&_.ProseMirror_u]:underline",
           "[&_.ProseMirror_p[style*='center']]:text-center",
-          "[&_.ProseMirror_p[style*='right']]:text-right"
+          "[&_.ProseMirror_p[style*='right']]:text-right",
+          // TextAlign only writes an inline style when a paragraph's
+          // alignment differs from defaultAlignment ("justify", set in
+          // editor-config.ts) — so a paragraph at the default has no style
+          // attribute at all and needs this fallback to actually render
+          // justified. Excludes anything with an explicit left/center/right
+          // style so those choices still visibly win.
+          "[&_.ProseMirror_p:not([style*='left']):not([style*='center']):not([style*='right'])]:text-justify"
         )}
       />
     </div>
