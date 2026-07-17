@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { STORY_TAGS, TAG_BY_SLUG } from "@/content/story-tags";
+import { TAG_BY_SLUG, buildTagCatalogForAI } from "@/content/story-tags";
 
 function bodyToPlainText(body: unknown): string {
   if (!body || typeof body === "string") return (body as string) ?? "";
@@ -34,11 +34,9 @@ export const POST = withAuth(
     const bodyText = bodyToPlainText(story.body);
     const excerpt = bodyText.slice(0, 2500);
 
-    const tagList = STORY_TAGS.map(
-      (t) => `- ${t.slug}: "${t.label}" — ${t.description}`
-    ).join("\n");
+    const tagCatalog = buildTagCatalogForAI();
 
-    const prompt = `You are a literary editor tagging short stories for an African fiction platform called Kekere Stories.
+    const prompt = `You are a literary editor tagging short stories for an African fiction platform called Kekere Stories. Tags determine exactly where a story is placed on the feed, so precision matters more than coverage — a reader browsing a tag's row has a specific expectation of what they're about to read, and the wrong tag actively misleads them.
 
 Here is the story to tag:
 
@@ -51,14 +49,21 @@ ${excerpt}
 
 ---
 
-Available tags (slug: label — description):
-${tagList}
+Available tags, grouped by dimension — TONE, THEME, SETTING, GENRE, CHARACTER TYPE, and READER EXPERIENCE. That grouping matters: identify which dimension is actually doing the defining work for this story before you pick within it.
+
+${tagCatalog}
 
 ---
 
 Your task:
-1. Choose 1 or 2 tags from the list above that best describe this story. Default to ONE tag: the single most specific, most useful tag a reader would rely on when deciding whether to read this story. Only add a SECOND tag when the story genuinely, substantively spans two distinct themes — for example, a story that is both a love story AND fundamentally about grief deserves both "romance" and "grief". Do not add a second tag just because it is loosely related, a close synonym, or shares the same mood as the first (e.g. don't pick both "dark" and "creepy" — pick whichever fits best). The bar for a second tag is high; most stories deserve exactly one.
-2. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
+1. STEP 1 — Ask what the story's DOMINANT MODE is: how does it actually feel to read, start to finish? Is its identity really its TONE (funny, dark, creepy, heartwarming, tense, melancholy, rage, poetic, absurdist), or is it really its GENRE/FORM (thriller, mystery, psychological, speculative, literary, crime, coming-of-age, satire)? Pick ONE tag from whichever dimension is most defining — this is almost always your primary tag.
+
+   THE MOST COMMON MISTAKE: TONE is not a checklist of "serious subjects the story touches on." A story can depict corruption, violence, or grief and still not be "dark" — "dark" specifically means the story's own tone is genuinely bleak or unsettling, with no comedic distance. If the story handles a heavy subject through irony, exaggeration, or a pointed comedic lens, its tone is satire, funny, or absurdist — NOT dark — no matter how serious the underlying topic is. Do not default to "dark" just because something bad happens in the story.
+
+   Other commonly confused pairs: dark vs. creepy vs. psychological (bleak/morally-heavy vs. eerie/horror-adjacent vs. mind-games/unreliable-narration — pick the actual driver, not all three); tragic vs. dark (tragic is about how the story ends, not its overall tone — a warm, funny story can still land tragic); grief vs. heartbreak vs. melancholy (death/mourning vs. specifically romantic loss vs. a general bittersweet tone unrelated to either).
+
+2. STEP 2 — Only add a SECOND tag if a genuinely different, equally-dominant dimension applies — most often a THEME the story is fundamentally about, not merely mentions in passing (e.g. a love story that's also fundamentally about grief deserves both "romance" and "grief"). Do not add a second tag from the SAME dimension as a hedge (don't pick both "dark" and "creepy," or both "funny" and "satire" — pick whichever is actually dominant). The bar for a second tag is high; most stories deserve exactly one.
+3. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
 
 Respond ONLY with valid JSON in this exact shape:
 {
