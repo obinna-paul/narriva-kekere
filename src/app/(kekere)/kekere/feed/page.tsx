@@ -16,7 +16,7 @@ import { getAllWinners } from "@/lib/data/kekere-competitions";
 import { getReadingProgressBatch } from "@/lib/data/kekere-progress";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
-import { FEED_TAG_ORDER, TAG_BY_SLUG } from "@/content/story-tags";
+import { FEED_TAG_ORDER, resolveCategoryBySlug } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -77,7 +77,7 @@ export default async function KekereFeedPage() {
 
   const feedTagRows: FeedTagRow[] = tagRows.map((row, i) => ({
     slug: row.slug,
-    feedHeading: TAG_BY_SLUG[row.slug]?.feedHeading ?? row.slug,
+    feedHeading: resolveCategoryBySlug(row.slug)?.title ?? row.slug,
     stories: (tagStoryMaps[i] ?? []).map((s) => toFeedStoryData(s)),
   }));
 

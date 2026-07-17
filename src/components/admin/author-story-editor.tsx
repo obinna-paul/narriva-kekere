@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback, type CSSProperties } from "re
 import { useRouter } from "next/navigation";
 import { Sparkles, X, Upload, ImageIcon, Check } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
-import { TAG_BY_SLUG } from "@/content/story-tags";
+import { categoryForTag } from "@/content/story-tags";
 import { formatRelativeTime } from "@/lib/tiptap/save-status";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 
@@ -238,7 +238,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     ? allTags.find((t) => t.id === tagIds[0])?.slug ?? null
     : null;
 
-  const selectedTagInfo = selectedTagSlug ? TAG_BY_SLUG[selectedTagSlug] : null;
+  // The category title is what actually appears as the feed row heading —
+  // for a tag grouped with others (e.g. dark/creepy/psychological) that's
+  // a shared title, not the tag's own individual feedHeading.
+  const selectedTagCategory = selectedTagSlug ? categoryForTag(selectedTagSlug) : null;
 
   const isValid =
     title.trim() &&
@@ -696,15 +699,16 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
               Category (select one)
             </label>
-            {selectedTagInfo && (
+            {selectedTagCategory && (
               <span className="text-[10px] text-[rgba(199,93,44,0.7)] sm:text-[11px]">
-                Feed row: &ldquo;{selectedTagInfo.feedHeading}&rdquo;
+                Feed row: &ldquo;{selectedTagCategory.title}&rdquo;
+                {selectedTagCategory.tagSlugs.length > 1 && " (shared with related tags)"}
               </span>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             {allTags.map((tag) => {
-              const info = TAG_BY_SLUG[tag.slug];
+              const category = categoryForTag(tag.slug);
               const isActive = tagIds.includes(tag.id);
               return (
                 <button
@@ -716,7 +720,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
                       ? "border-[#C75D2C] bg-[#C75D2C] text-white"
                       : "border-[rgba(20,22,26,0.12)] bg-white text-[#15171C] hover:bg-[#F0F2F5]"
                   }`}
-                  title={info?.feedHeading ?? ""}
+                  title={category.title}
                 >
                   {tag.label}
                 </button>

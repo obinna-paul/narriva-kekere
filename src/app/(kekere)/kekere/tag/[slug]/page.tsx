@@ -4,7 +4,7 @@ import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { listStoriesByTag } from "@/lib/data/kekere-stories";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
-import { TAG_BY_SLUG } from "@/content/story-tags";
+import { TAG_BY_SLUG, resolveCategoryBySlug } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -80,8 +80,15 @@ export default async function TagBrowsePage({
   params: { slug: string };
   searchParams: { page?: string };
 }) {
-  const tag = TAG_BY_SLUG[params.slug];
-  if (!tag) notFound();
+  const category = resolveCategoryBySlug(params.slug);
+  if (!category) notFound();
+
+  // A merged category (e.g. dark/creepy/psychological) has no single tag
+  // label of its own — show every member tag's label instead of just one.
+  const eyebrow = category.tagSlugs
+    .map((s) => TAG_BY_SLUG[s]?.label)
+    .filter((label): label is string => !!label)
+    .join(" · ");
 
   const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
   const result = await listStoriesByTag(params.slug, page, 12);
@@ -100,10 +107,10 @@ export default async function TagBrowsePage({
             ← Back to feed
           </Link>
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-primary)]">
-            {tag.label}
+            {eyebrow}
           </p>
           <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold leading-[1.15] text-[var(--color-ink)]">
-            {tag.feedHeading}
+            {category.title}
           </h1>
           <p className="mt-2 text-[14px] text-[var(--color-ink-muted)]">
             {result.total} {result.total === 1 ? "story" : "stories"}
