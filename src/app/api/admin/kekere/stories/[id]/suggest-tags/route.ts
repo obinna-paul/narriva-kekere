@@ -57,7 +57,7 @@ ${tagList}
 ---
 
 Your task:
-1. Choose 2–3 tags from the list above that best describe this story. Prioritise specificity — pick the tags a reader would find most useful when deciding whether to read this story.
+1. Choose 1 or 2 tags from the list above that best describe this story. Default to ONE tag: the single most specific, most useful tag a reader would rely on when deciding whether to read this story. Only add a SECOND tag when the story genuinely, substantively spans two distinct themes — for example, a story that is both a love story AND fundamentally about grief deserves both "romance" and "grief". Do not add a second tag just because it is loosely related, a close synonym, or shares the same mood as the first (e.g. don't pick both "dark" and "creepy" — pick whichever fits best). The bar for a second tag is high; most stories deserve exactly one.
 2. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
 
 Respond ONLY with valid JSON in this exact shape:
@@ -116,8 +116,8 @@ No markdown fences. No commentary. JSON only.`;
       return NextResponse.json({ error: "AI returned invalid JSON", raw }, { status: 500 });
     }
 
-    // Validate slugs exist in our tag list
-    const validSlugs = (parsed.existingTagSlugs ?? []).filter((s) => TAG_BY_SLUG[s]);
+    // Validate slugs exist in our tag list, capped at 2 per the platform's 1–2 tag policy
+    const validSlugs = (parsed.existingTagSlugs ?? []).filter((s) => TAG_BY_SLUG[s]).slice(0, 2);
 
     // Look up DB tag IDs for valid slugs
     const dbTags = await prisma.tag.findMany({

@@ -110,6 +110,46 @@ export const TAG_CATEGORIES: readonly TagCategory[] = [
     title: "Read alone at night. We dare you",
     tagSlugs: ["dark", "creepy", "psychological"],
   },
+  {
+    slug: "thriller-tense",
+    title: "Your pulse won't thank you",
+    tagSlugs: ["thriller", "tense"],
+  },
+  {
+    slug: "grief-heartbreak",
+    title: "Loss doesn't knock before it enters",
+    tagSlugs: ["grief", "heartbreak"],
+  },
+  {
+    slug: "revenge-justice",
+    title: "Somebody's going to pay for this",
+    tagSlugs: ["revenge", "justice"],
+  },
+  {
+    slug: "power-politics",
+    title: "Power plays and dirty hands",
+    tagSlugs: ["power", "politics"],
+  },
+  {
+    slug: "family-parenthood",
+    title: "Blood, chosen and otherwise",
+    tagSlugs: ["family", "parenthood"],
+  },
+  {
+    slug: "campus-coming-of-age",
+    title: "Growing up is a full-body experience",
+    tagSlugs: ["campus", "coming-of-age"],
+  },
+  {
+    slug: "quick-read-binge-worthy",
+    title: "You said five minutes. It's been two hours.",
+    tagSlugs: ["quick-read", "binge-worthy"],
+  },
+  {
+    slug: "money-class",
+    title: "Same city, different worlds",
+    tagSlugs: ["money", "class"],
+  },
 ];
 
 const CATEGORY_BY_TAG_SLUG: Readonly<Record<string, TagCategory>> = Object.fromEntries(
