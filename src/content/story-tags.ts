@@ -14,7 +14,7 @@ export interface StoryTag {
  */
 export const STORY_TAGS: readonly StoryTag[] = [
   // Tone / mood
-  { slug: "funny",           label: "Funny",           feedHeading: "Fancy a laugh?",                         description: "Comedic, witty, or humorous" },
+  { slug: "funny",           label: "Funny",           feedHeading: "Laugh now, explain later",               description: "Comedic, witty, or humorous" },
   { slug: "dark",            label: "Dark",             feedHeading: "Not every story gets a happy ending",    description: "Bleak, unsettling, or morally heavy" },
   { slug: "creepy",          label: "Creepy",           feedHeading: "Read alone at night. We dare you",       description: "Eerie, disturbing, or horror-adjacent" },
   { slug: "heartwarming",    label: "Heartwarming",     feedHeading: "Stories that hug you back",              description: "Feel-good, uplifting, or affirming" },
@@ -42,7 +42,7 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "money",           label: "Money",            feedHeading: "Follow the money",                      description: "Wealth, poverty, or the lure of cash" },
   { slug: "politics",        label: "Politics",         feedHeading: "Power plays and dirty hands",           description: "Government, activism, or systemic issues" },
   { slug: "justice",         label: "Justice",          feedHeading: "Somebody has to answer for this",       description: "Law, fairness, or moral reckoning" },
-  { slug: "class",           label: "Class",            feedHeading: "Same city, different worlds",           description: "Social class, wealth gaps, or aspiration" },
+  { slug: "class",           label: "Class",            feedHeading: "Different wallets, different rules",    description: "Social class, wealth gaps, or aspiration" },
   { slug: "race",            label: "Race",             feedHeading: "The conversation we keep having",       description: "Racial identity, bias, or solidarity" },
   { slug: "gender",          label: "Gender",           feedHeading: "Redefining the rules",                  description: "Gender roles, identity, or expectations" },
   { slug: "parenthood",      label: "Parenthood",       feedHeading: "Nobody's ready for it",                 description: "Raising children, mother- or fatherhood" },
@@ -64,7 +64,7 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "literary",        label: "Literary",         feedHeading: "Prose that stays with you",             description: "Character-driven, language-forward fiction" },
   { slug: "crime",           label: "Crime",            feedHeading: "Someone's going to get caught",         description: "Heists, murders, con artists, or detectives" },
   { slug: "coming-of-age",   label: "Coming-of-Age",    feedHeading: "Growing up is a full-body experience",  description: "Youth, transition, or first encounters" },
-  { slug: "satire",          label: "Satire",           feedHeading: "Nigeria, you cannot shout",             description: "Social, political, or cultural satire" },
+  { slug: "satire",          label: "Satire",           feedHeading: "Funny, until you notice what it's really saying", description: "Social, political, or cultural satire" },
 
   // Character types / archetypes
   { slug: "killer",          label: "Killer",           feedHeading: "Not everyone survives this one",        description: "A murderer, assassin, or violent antagonist" },
@@ -200,7 +200,7 @@ export const TAG_CATEGORIES: readonly TagCategory[] = [
   },
   {
     slug: "money-class",
-    title: "Same city, different worlds",
+    title: "Different wallets, different rules",
     tagSlugs: ["money", "class"],
   },
 ];
