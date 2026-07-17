@@ -95,7 +95,7 @@ const updateStorySchema = z.object({
   hookLine: z.string().min(1).max(300).optional(),
   body: z.any().refine((v) => v === undefined || isValidTiptapDoc(v), "body must be a valid Tiptap document").optional(),
   genre: z.string().optional(),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]).optional(),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]).optional(),
   cowrieCost: z.number().int().min(0).optional(),
   readingTime: z.number().int().min(1).optional(),
   isSerialized: z.boolean().optional(),
@@ -132,6 +132,15 @@ export const PUT = withAuth(
     }
 
     const { body: rawBody, expectedLastSavedAt, ...rest } = parsed.data;
+
+    // Champion tier means "verified competition winner" and drives Winner's
+    // Circle placement — writers can't self-assign it, only an admin can.
+    if (rest.tier === "CHAMPION" && session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Only an admin can set a story to Champion tier." },
+        { status: 403 }
+      );
+    }
 
     if (rawBody) {
       const current = await prisma.story.findUnique({

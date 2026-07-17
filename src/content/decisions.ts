@@ -30,12 +30,12 @@ export const COWRIE_TOPUP_PACKAGES: readonly CowrieTopupPackage[] = [
   { priceNGN: 2000, cowries: 45, bonusCowries: 5 },
 ] as const;
 
-export type StoryTier = "standard" | "featured" | "premium";
+export type StoryTier = "standard" | "featured" | "champion";
 
 export const STORY_TIER_RANGES: Record<StoryTier, readonly [number, number]> = {
   standard: [10, 30],
   featured: [40, 60],
-  premium: [70, 100],
+  champion: [70, 100],
 } as const;
 
 // Cowrie economy constants — see docs/Narriva_Todays_Decisions_And_Specs.md.

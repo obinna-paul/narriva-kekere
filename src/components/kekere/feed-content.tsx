@@ -281,15 +281,15 @@ export function FeedContent({
                   <span
                     className="absolute bottom-[9px] left-[9px] flex items-center gap-1 rounded-[20px] px-[7px] py-[3px] text-[9.5px] font-semibold text-white"
                     style={{
-                      background: story.placement === 1
+                      background: story.placement === 1 || story.placement === null
                         ? "rgba(199,93,44,0.9)"
                         : "rgba(42,26,18,0.55)",
                     }}
                   >
                     <span aria-hidden="true">
-                      {story.placement === 1 ? "\u{1F3C6}" : "\u{1F3C5}"}
+                      {story.placement === 1 || story.placement === null ? "\u{1F3C6}" : "\u{1F3C5}"}
                     </span>
-                    {story.placement === 1 ? "Winner" : "Runner-up"}
+                    {story.placement === 1 ? "Winner" : story.placement === null ? "Champion" : "Runner-up"}
                   </span>
                 </div>
                 <h3 className="mt-[10px] font-[family-name:var(--font-display)] text-base font-semibold leading-[1.2] text-[var(--color-ink)]">
@@ -298,9 +298,11 @@ export function FeedContent({
                 <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] italic leading-[1.35] text-[var(--color-ink-muted)]">
                   {story.hookLine}
                 </p>
-                <p className="mt-[7px] text-xs font-semibold text-[var(--color-primary)]">
-                  {story.competitionTitle}
-                </p>
+                {story.competitionTitle && (
+                  <p className="mt-[7px] text-xs font-semibold text-[var(--color-primary)]">
+                    {story.competitionTitle}
+                  </p>
+                )}
               </Link>
             ))}
             <div className="w-[6px] flex-none" />

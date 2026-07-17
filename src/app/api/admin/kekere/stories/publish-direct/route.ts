@@ -18,7 +18,7 @@ const schema = z.object({
   hookLine: z.string().min(1),
   genre: z.string().min(1),
   cowrieCost: z.number().int().min(1).max(100),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]).default("STANDARD"),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]).default("STANDARD"),
   readingTime: z.number().int().min(1),
   /** Plain-text story body — blank lines separate paragraphs. */
   body: z.string().min(1),

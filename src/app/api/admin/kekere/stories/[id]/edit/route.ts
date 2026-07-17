@@ -62,7 +62,7 @@ const editSchema = z.object({
   title: z.string().min(1).max(200),
   hookLine: z.string().min(1).max(300),
   body: z.record(z.string(), z.unknown()),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]),
   cowrieCost: z.number().int().min(1).max(10),
   tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
   // Omitted entirely = keep the existing cover; present = replace it.

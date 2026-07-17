@@ -28,7 +28,7 @@ interface StoryDetail extends QueueStory {
 const TIER_COLORS: Record<string, string> = {
   STANDARD: "bg-[rgba(20,22,26,0.07)] text-[#646B73]",
   FEATURED: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
-  PREMIUM: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
+  CHAMPION: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
 };
 
 function relativeTime(iso: string) {
