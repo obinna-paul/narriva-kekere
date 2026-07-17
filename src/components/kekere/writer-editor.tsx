@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils/cn";
-import { STORY_TIER_RANGES, READING_WPM, type StoryTier as LowercaseTier } from "@/content/decisions";
+import { READING_WPM } from "@/content/decisions";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { plainTextToDoc, countWords as countWordsInDoc, docToPlainText, type TiptapDoc } from "@/lib/tiptap/doc-utils";
@@ -30,7 +30,6 @@ const RELATIVE_TIME_TICK_MS = 30000;
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
-type DbTier = "STANDARD" | "FEATURED" | "CHAMPION";
 type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED";
 type Mode = "scroll" | "chapters";
 
@@ -60,10 +59,6 @@ function countWords(text: string): number {
   return text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
 }
 
-function tierToLower(tier: DbTier): LowercaseTier {
-  return tier.toLowerCase() as LowercaseTier;
-}
-
 const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED", "PENDING_CONTRACT"];
 
 const STATUS_STYLES: Record<Status, string> = {
@@ -86,11 +81,6 @@ const STATUS_LABELS: Record<Status, string> = {
   REJECTED: "Not accepted",
 };
 
-// Champion is admin-only — it marks a verified competition winner and drives
-// Winner's Circle placement, so it's deliberately excluded here. A writer
-// can only choose between Standard and Featured for their own story.
-const TIERS: DbTier[] = ["STANDARD", "FEATURED"];
-
 export function WriterEditor({
   competitionId,
   competitionSlug,
@@ -105,7 +95,6 @@ export function WriterEditor({
   const [initError, setInitError] = useState(false);
   const [title, setTitle] = useState("");
   const [hookLine, setHookLine] = useState("");
-  const [tier, setTier] = useState<DbTier>("STANDARD");
   const [mode, setMode] = useState<Mode>("scroll");
   const [initialContent, setInitialContent] = useState<TiptapDoc>(EMPTY_DOC);
   const [serverLastSavedAt, setServerLastSavedAt] = useState<string | null>(null);
@@ -213,7 +202,6 @@ export function WriterEditor({
         if (cancelled) return;
         setTitle(story.title);
         setHookLine(story.hookLine);
-        setTier(story.tier);
         setStatus(story.status);
         setModerationNotes(story.moderationNotes ?? null);
         setServerLastSavedAt(story.lastSavedAt ?? null);
@@ -239,7 +227,7 @@ export function WriterEditor({
         const res = await fetch("/api/kekere/stories", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: "Untitled story", hookLine: " ", body: EMPTY_DOC, tier: "STANDARD" }),
+          body: JSON.stringify({ title: "Untitled story", hookLine: " ", body: EMPTY_DOC }),
         });
         if (!res.ok) throw res;
         const { story } = await res.json();
@@ -273,7 +261,6 @@ export function WriterEditor({
     const payload: Record<string, unknown> = {
       title: title || "Untitled story",
       hookLine: hookLine || " ",
-      tier,
       readingTime: readingTimeMinutes,
       isSerialized: mode === "chapters",
     };
@@ -291,14 +278,14 @@ export function WriterEditor({
     } catch {
       // Best-effort
     }
-  }, [storyId, title, hookLine, tier, mode, chapters, isEditable, readingTimeMinutes]);
+  }, [storyId, title, hookLine, mode, chapters, isEditable, readingTimeMinutes]);
 
   useEffect(() => {
     if (hydrating.current || !storyId) return;
     clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(saveDraft, AUTOSAVE_DEBOUNCE_MS);
     return () => clearTimeout(autosaveTimer.current);
-  }, [title, hookLine, tier, mode, chapters, storyId, saveDraft]);
+  }, [title, hookLine, mode, chapters, storyId, saveDraft]);
 
   function addChapter() {
     setChapters((prev) => [
@@ -860,45 +847,6 @@ export function WriterEditor({
             >
               ×
             </button>
-          </div>
-
-          <div className="mb-3.5 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
-            Tier
-          </div>
-          <div className="mb-[30px] flex flex-col gap-2.5">
-            {TIERS.map((t) => {
-              const active = tier === t;
-              const [min, max] = STORY_TIER_RANGES[tierToLower(t)];
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  disabled={!isEditable}
-                  onClick={() => setTier(t)}
-                  className={cn(
-                    "flex items-center justify-between rounded-xl border-[1.5px] px-4 py-3.5 text-left transition-colors disabled:opacity-60",
-                    active
-                      ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
-                      : "border-[var(--color-ink)]/[0.12] bg-[var(--color-surface)]"
-                  )}
-                >
-                  <div>
-                    <div className="text-[15px] font-semibold text-[var(--color-ink)]">
-                      {t[0] + t.slice(1).toLowerCase()}
-                    </div>
-                    <div className="mt-0.5 text-xs text-[var(--color-ink-muted-2)]">
-                      {min}–{max} cowries to unlock
-                    </div>
-                  </div>
-                  <span
-                    className={cn(
-                      "h-[18px] w-[18px] flex-none rounded-full border-[1.5px]",
-                      active ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-[var(--color-ink)]/25 bg-transparent"
-                    )}
-                  />
-                </button>
-              );
-            })}
           </div>
 
           <div className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
