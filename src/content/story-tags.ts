@@ -88,6 +88,59 @@ export const TAG_BY_SLUG: Readonly<Record<string, StoryTag>> = Object.fromEntrie
   STORY_TAGS.map((t) => [t.slug, t])
 );
 
+/**
+ * The same six groupings as the comments above STORY_TAGS, made real so an
+ * AI prompt can be told which *dimension* a tag belongs to — not just its
+ * one-line description. A flat, ungrouped tag list left Nari treating every
+ * tag as interchangeable, most visibly by picking a TONE tag (e.g. "dark")
+ * for a story whose dominant identity was actually a GENRE tag ("satire")
+ * that merely touched on a dark subject. Keep this in sync with the
+ * grouping comments in STORY_TAGS above if tags are added or moved.
+ */
+const TAG_DIMENSIONS: readonly { heading: string; slugs: readonly string[] }[] = [
+  {
+    heading: "TONE / MOOD — how the story feels to read, moment to moment",
+    slugs: ["funny", "dark", "creepy", "heartwarming", "tense", "melancholy", "rage", "poetic", "absurdist"],
+  },
+  {
+    heading: "THEME / SUBJECT — what the story is fundamentally about, not just what it mentions",
+    slugs: [
+      "romance", "erotic", "grief", "heartbreak", "revenge", "survival", "identity", "trauma",
+      "family", "friendship", "betrayal", "ambition", "power", "religion", "money", "politics",
+      "justice", "class", "race", "gender", "parenthood",
+    ],
+  },
+  {
+    heading: "SETTING / PLACE — where and when it happens",
+    slugs: ["lagos", "city", "village", "diaspora", "campus", "workplace", "historical"],
+  },
+  {
+    heading: "GENRE / FORM — its narrative mode; often the single most defining tag for the whole story",
+    slugs: ["thriller", "mystery", "psychological", "speculative", "literary", "crime", "coming-of-age", "satire"],
+  },
+  {
+    heading: "CHARACTER TYPE — a defining figure the story revolves around",
+    slugs: ["killer", "antihero", "outsider", "con-artist"],
+  },
+  {
+    heading: "READER EXPERIENCE — the pacing or payoff a reader gets, independent of tone or subject",
+    slugs: ["twist-ending", "slow-burn", "quick-read", "binge-worthy", "thought-provoking", "tragic", "redemption"],
+  },
+];
+
+/** Renders the full tag catalog grouped by dimension, for embedding in an
+ *  AI prompt — see TAG_DIMENSIONS above for why the grouping matters. */
+export function buildTagCatalogForAI(): string {
+  return TAG_DIMENSIONS.map(({ heading, slugs }) => {
+    const lines = slugs
+      .map((slug) => TAG_BY_SLUG[slug])
+      .filter((t): t is StoryTag => !!t)
+      .map((t) => `  - "${t.slug}" (${t.label}): ${t.description}`)
+      .join("\n");
+    return `${heading}\n${lines}`;
+  }).join("\n\n");
+}
+
 export interface TagCategory {
   /** Identifies a multi-tag category in feed-row and browse-page URLs —
    *  distinct from any individual tag's own slug. */
