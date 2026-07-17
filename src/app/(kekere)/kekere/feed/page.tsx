@@ -28,8 +28,10 @@ export const metadata: Metadata = {
 };
 
 export interface WinnerStory extends MockStory {
-  placement: number;
-  competitionTitle: string;
+  // null for a story marked CHAMPION tier directly rather than through a
+  // formal competition entry — see getAllWinners().
+  placement: number | null;
+  competitionTitle: string | null;
 }
 
 export interface FeedTagRow {
@@ -43,8 +45,9 @@ export default async function KekereFeedPage() {
   const userId = session?.user?.id;
 
   // Fetch all sections in parallel
-  const [trendingData, winners, wallet, inProgress, recommended, tagRows, firstReadFree] = await Promise.all([
+  const [trendingData, featuredTierData, winners, wallet, inProgress, recommended, tagRows, firstReadFree] = await Promise.all([
     listStories({ sort: "trending", pageSize: 12 }),
+    listStories({ tier: "FEATURED", pageSize: 50 }),
     getAllWinners(),
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getInProgressStories(userId) : Promise.resolve([]),
@@ -60,10 +63,13 @@ export default async function KekereFeedPage() {
 
   const trending = trendingData.stories.map((s) => toFeedStoryData(s, true));
 
-  // Featured: pick today's story deterministically from trending (or all published)
+  // Featured Today: pick deterministically (rotates once a day) from stories
+  // an admin has explicitly marked FEATURED tier — not from trending. With
+  // zero FEATURED stories, the section simply doesn't render.
+  const featuredPool = featuredTierData.stories.map((s) => toFeedStoryData(s, true));
   const todaySeed = Math.floor(Date.now() / 86400000); // changes once per day
-  const featuredStory = trending.length > 0
-    ? trending[todaySeed % trending.length]
+  const featuredStory = featuredPool.length > 0
+    ? featuredPool[todaySeed % featuredPool.length]
     : null;
 
   const winnerStories: WinnerStory[] = winners.map((w) => ({

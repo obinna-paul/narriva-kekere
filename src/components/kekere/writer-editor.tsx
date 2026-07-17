@@ -30,7 +30,7 @@ const RELATIVE_TIME_TICK_MS = 30000;
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
-type DbTier = "STANDARD" | "FEATURED" | "PREMIUM";
+type DbTier = "STANDARD" | "FEATURED" | "CHAMPION";
 type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED";
 type Mode = "scroll" | "chapters";
 
@@ -86,7 +86,10 @@ const STATUS_LABELS: Record<Status, string> = {
   REJECTED: "Not accepted",
 };
 
-const TIERS: DbTier[] = ["STANDARD", "FEATURED", "PREMIUM"];
+// Champion is admin-only — it marks a verified competition winner and drives
+// Winner's Circle placement, so it's deliberately excluded here. A writer
+// can only choose between Standard and Featured for their own story.
+const TIERS: DbTier[] = ["STANDARD", "FEATURED"];
 
 export function WriterEditor({
   competitionId,

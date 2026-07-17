@@ -51,7 +51,7 @@ const createStorySchema = z.object({
   hookLine: z.string().min(1).max(300),
   body: z.any().refine(isValidTiptapDoc, "body must be a valid Tiptap document"),
   genre: z.string().optional(),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]).optional(),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]).optional(),
   cowrieCost: z.number().int().min(0).optional(),
   isSerialized: z.boolean().optional(),
   chapters: z.any().optional(),
@@ -78,6 +78,15 @@ export const POST = withAuth(async (request, session) => {
     return NextResponse.json(
       { error: "Invalid input", details: parsed.error.flatten() },
       { status: 400 }
+    );
+  }
+
+  // Champion tier means "verified competition winner" and drives Winner's
+  // Circle placement — writers can't self-assign it, only an admin can.
+  if (parsed.data.tier === "CHAMPION" && session.user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "Only an admin can set a story to Champion tier." },
+      { status: 403 }
     );
   }
 

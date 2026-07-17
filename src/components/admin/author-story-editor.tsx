@@ -27,6 +27,12 @@ const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 // underneath it at top:0, where it'd be invisible behind a higher z-index bar.
 const ADMIN_TOP_BAR_HEIGHT = "62px";
 
+const TIER_HINTS: Record<string, string> = {
+  STANDARD: "Regular feed placement — no special treatment.",
+  FEATURED: "Also enters the daily rotation for the \"Featured Today\" spot on the feed.",
+  CHAMPION: "Marks this as a competition winner or finalist — appears in the Winners' Circle.",
+};
+
 interface AdminDraft {
   title: string;
   hookLine: string;
@@ -630,8 +636,9 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             >
               <option value="STANDARD">Standard</option>
               <option value="FEATURED">Featured</option>
-              <option value="PREMIUM">Premium</option>
+              <option value="CHAMPION">Champion</option>
             </select>
+            <p className="mt-1 text-[11px] text-[#9AA0A8]">{TIER_HINTS[tier] ?? TIER_HINTS.STANDARD}</p>
           </div>
 
           <div>

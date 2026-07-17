@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type DbTier = "STANDARD" | "FEATURED" | "PREMIUM";
+type DbTier = "STANDARD" | "FEATURED" | "CHAMPION";
 
 export interface KekereStoryDecisionProps {
   storyId: string;
@@ -82,7 +82,7 @@ export function KekereStoryDecision({
             <SelectContent>
               <SelectItem value="STANDARD">Standard</SelectItem>
               <SelectItem value="FEATURED">Featured</SelectItem>
-              <SelectItem value="PREMIUM">Premium</SelectItem>
+              <SelectItem value="CHAMPION">Champion</SelectItem>
             </SelectContent>
           </Select>
         </div>

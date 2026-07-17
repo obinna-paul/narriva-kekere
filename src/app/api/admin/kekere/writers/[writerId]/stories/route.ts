@@ -11,7 +11,7 @@ const schema = z.object({
   title: z.string().min(1).max(200),
   hookLine: z.string().min(1).max(300),
   body: z.record(z.string(), z.unknown()),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]),
   cowrieCost: z.number().int().min(1).max(10),
   genre: z.string().min(1),
   coverColor: z.string().default("#C75D2C"),

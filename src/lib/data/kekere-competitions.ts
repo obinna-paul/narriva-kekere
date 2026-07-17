@@ -64,8 +64,10 @@ export async function getPublicWinners(competitionId: string): Promise<WinnerEnt
 
 export interface AllWinnerEntry {
   story: StoryWithAuthor;
-  placement: number;
-  competitionTitle: string;
+  // null for a story marked CHAMPION tier directly rather than through a
+  // formal, judged competition entry — see the second query below.
+  placement: number | null;
+  competitionTitle: string | null;
 }
 
 const storyWithAuthorInclude = {
@@ -73,6 +75,16 @@ const storyWithAuthorInclude = {
   tags: { include: { tag: true } },
 } as const;
 
+/**
+ * Winner's Circle sourcing has two independent paths, both surfaced here:
+ * 1. A formal competition entry with a placement, once that competition is
+ *    COMPLETE — the full judged-competition pipeline.
+ * 2. A story an admin has directly marked CHAMPION tier — a lighter-weight
+ *    way to feature a past winner or shortlisted story that was never run
+ *    through a formal CompetitionEntry (e.g. onboarded pre-launch). These
+ *    have no real placement/competition to show, so both are null.
+ * A story covered by path 1 is excluded from path 2 so it isn't duplicated.
+ */
 export async function getAllWinners(): Promise<AllWinnerEntry[]> {
   const entries = await prisma.competitionEntry.findMany({
     where: {
@@ -86,11 +98,29 @@ export async function getAllWinners(): Promise<AllWinnerEntry[]> {
     orderBy: { placement: "asc" },
   });
 
-  return entries.map((e) => ({
+  const competitionWinners: AllWinnerEntry[] = entries.map((e) => ({
     story: e.story,
     placement: e.placement!,
     competitionTitle: e.competition.title,
   }));
+
+  const championStories = await prisma.story.findMany({
+    where: {
+      tier: "CHAMPION",
+      status: "PUBLISHED",
+      id: { notIn: entries.map((e) => e.story.id) },
+    },
+    include: storyWithAuthorInclude,
+    orderBy: { publishedAt: "desc" },
+  });
+
+  const tierChampions: AllWinnerEntry[] = championStories.map((story) => ({
+    story,
+    placement: null,
+    competitionTitle: null,
+  }));
+
+  return [...competitionWinners, ...tierChampions];
 }
 
 /** Admin-only — every entry, any status, regardless of where judging stands

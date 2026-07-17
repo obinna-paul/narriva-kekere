@@ -9,7 +9,7 @@ import { StoryIllegalStateError, StoryNotFoundError } from "@/lib/data/kekere-st
 const decisionSchema = z.object({
   action: z.enum(["approve", "request_revisions", "reject"]),
   moderationNotes: z.string().min(1).max(2000).optional(),
-  tier: z.enum(["STANDARD", "FEATURED", "PREMIUM"]).optional(),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]).optional(),
   cowrieCost: z.number().int().min(0).optional(),
   plagiarismFlagged: z.boolean().optional(),
 });
