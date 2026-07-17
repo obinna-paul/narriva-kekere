@@ -49,21 +49,28 @@ ${excerpt}
 
 ---
 
-Available tags, grouped by dimension — TONE, THEME, SETTING, GENRE, CHARACTER TYPE, and READER EXPERIENCE. That grouping matters: identify which dimension is actually doing the defining work for this story before you pick within it.
+Available tags, grouped by dimension — this shows what each tag actually covers; the removal test below decides which ones apply. This platform allows at most 2 tags per story — never suggest more than 2.
 
 ${tagCatalog}
 
 ---
 
 Your task:
-1. STEP 1 — Ask what the story's DOMINANT MODE is: how does it actually feel to read, start to finish? Is its identity really its TONE (funny, dark, creepy, heartwarming, tense, melancholy, rage, poetic, absurdist), or is it really its GENRE/FORM (thriller, mystery, psychological, speculative, literary, crime, coming-of-age, satire)? Pick ONE tag from whichever dimension is most defining — this is almost always your primary tag.
 
-   THE MOST COMMON MISTAKE: TONE is not a checklist of "serious subjects the story touches on." A story can depict corruption, violence, or grief and still not be "dark" — "dark" specifically means the story's own tone is genuinely bleak or unsettling, with no comedic distance. If the story handles a heavy subject through irony, exaggeration, or a pointed comedic lens, its tone is satire, funny, or absurdist — NOT dark — no matter how serious the underlying topic is. Do not default to "dark" just because something bad happens in the story.
+1. THE ONE RULE FOR THE PRIMARY TAG — THE REMOVAL TEST: ask yourself, if I stripped this element out entirely, does the story still have a shape? If yes, it's flavor, not structure — don't tag it as primary. If no — the story collapses without it — that's your primary tag. A story can be funny throughout without "funny" being primary, if the humor is voice rather than engine. The test isn't "is this present," it's "is this load-bearing."
 
-   Other commonly confused pairs: dark vs. creepy vs. psychological (bleak/morally-heavy vs. eerie/horror-adjacent vs. mind-games/unreliable-narration — pick the actual driver, not all three); tragic vs. dark (tragic is about how the story ends, not its overall tone — a warm, funny story can still land tragic); grief vs. heartbreak vs. melancholy (death/mourning vs. specifically romantic loss vs. a general bittersweet tone unrelated to either).
+   Reading procedure: before matching to the tag list, answer in a phrase — "what is this story mechanically about, what makes it move forward?" — then match that to the closest tag. Run the removal test on it to confirm.
 
-2. STEP 2 — Only add a SECOND tag if a genuinely different, equally-dominant dimension applies — most often a THEME the story is fundamentally about, not merely mentions in passing (e.g. a love story that's also fundamentally about grief deserves both "romance" and "grief"). Do not add a second tag from the SAME dimension as a hedge (don't pick both "dark" and "creepy," or both "funny" and "satire" — pick whichever is actually dominant). The bar for a second tag is high; most stories deserve exactly one.
-3. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
+2. A SECOND tag gets added for one of two different reasons — do not conflate them:
+   - REASON 1, a true structural hybrid: two engines are BOTH load-bearing — remove either one and the story collapses or becomes a fundamentally different, lesser story. Example: two rival chefs sabotaging each other's dishes while falling for each other, told through constant comic set-pieces — strip the romance and it's a workplace comedy with no through-line; strip the comedy and it's a generic romance. Both independently pass the removal test → tag both "romance" and "funny."
+   - REASON 2, a dominant tone riding alongside a single structural primary: only ONE load-bearing engine, but a tone tag needs to surface anyway because it materially changes what a reader should expect. Example: a woman returns to her childhood home after her mother's death; small objects keep moving; the ending stays ambiguous, no genre horror payoff. Remove the unsettling atmosphere and it's still fundamentally a story about grief — "grief" is load-bearing, the eeriness is texture. Primary: "grief". Secondary: "creepy" — a tone modifier, not a second engine.
+   Ask which situation you're actually in — conflating these two is what makes tagging feel inconsistent. Do not add a second tag from the SAME dimension as a hedge (don't pick both "dark" and "creepy," or both "funny" and "satire" — pick whichever is actually dominant). The bar for a second tag is high; most stories deserve exactly one.
+
+3. THE CONTENT-FLAG EXCEPTION: "erotic" doesn't answer "what kind of story is this" — it answers "what does a reader need to know before they open this, regardless of genre." Its job is disclosure, not classification. If the story depicts explicit adult content, "erotic" applies REGARDLESS of whether you've already used your slots on genre or theme — tag what's depicted, never what the writing "earns" through plot-relevance. Because tags are capped at 2, the content flag always outranks a Reason-2 tone modifier for the second slot; it never competes with the primary tag either (e.g. primary "romance" + explicit content → "romance, erotic").
+
+4. COMMON MISTAKES: do not default to "dark" just because the story depicts something serious — "dark" means the story's own tone is genuinely bleak with no comedic distance; a heavy subject handled through irony or exaggeration is "satire," "funny," or "absurdist," not "dark," no matter how serious the topic. Other frequently confused pairs: dark vs. creepy vs. psychological (bleak/morally-heavy vs. eerie/horror-adjacent vs. mind-games/unreliable-narration — pick the actual driver, not all three); tragic vs. dark (tragic is about how the story ends, not its overall tone — a warm, funny story can still land tragic); grief vs. heartbreak vs. melancholy (death/mourning vs. specifically romantic loss vs. a general bittersweet tone unrelated to either).
+
+5. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
 
 Respond ONLY with valid JSON in this exact shape:
 {
@@ -121,8 +128,14 @@ No markdown fences. No commentary. JSON only.`;
       return NextResponse.json({ error: "AI returned invalid JSON", raw }, { status: 500 });
     }
 
-    // Validate slugs exist in our tag list, capped at 2 per the platform's 1–2 tag policy
-    const validSlugs = (parsed.existingTagSlugs ?? []).filter((s) => TAG_BY_SLUG[s]).slice(0, 2);
+    // Validate slugs exist in our tag list, capped at 2 per the platform's 1–2 tag
+    // policy. "erotic" is a content-disclosure flag, not a creative
+    // classification — sort it to the front so it's never the one silently
+    // dropped by the cap if the model lists 3+ despite the prompt's instructions.
+    const validSlugs = (parsed.existingTagSlugs ?? [])
+      .filter((s) => TAG_BY_SLUG[s])
+      .sort((a, b) => (a === "erotic" ? -1 : b === "erotic" ? 1 : 0))
+      .slice(0, 2);
 
     // Look up DB tag IDs for valid slugs
     const dbTags = await prisma.tag.findMany({
