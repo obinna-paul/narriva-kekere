@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Sparkles, X, Upload, ImageIcon, Check, RefreshCw } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { categoryForTag } from "@/content/story-tags";
@@ -14,20 +14,45 @@ interface TagItem {
   label: string;
 }
 
-interface AuthorStoryEditorProps {
-  writerId: string;
-  writerName: string;
+interface AdminStoryEditorInitial {
+  title: string;
+  hookLine: string;
+  body: TiptapDoc;
+  tier: string;
+  cowrieCost: number;
+  coverImageRef: string | null;
+  coverPreviewUrl: string | null;
+  tagIds: string[];
+  lastSavedAt: string;
 }
 
-const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
+interface AdminStoryEditorProps {
+  storyId: string;
+  authorName: string;
+  status: string;
+  initial: AdminStoryEditorInitial;
+}
 
 // Matches AdminTopBar's fixed h-[62px] (src/components/admin/admin-top-bar.tsx)
-// — the editor's sticky toolbar reads this same CSS variable
-// (StoryEditor.tsx) to stick just below the admin header instead of
-// underneath it at top:0, where it'd be invisible behind a higher z-index bar.
 const ADMIN_TOP_BAR_HEIGHT = "62px";
 
-interface AdminDraft {
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted — awaiting review",
+  REVIEWING: "Under review",
+  REVISIONS_REQUESTED: "Revisions requested",
+  PENDING_CONTRACT: "Pending contract",
+  PUBLISHED: "Published — live on the feed",
+  REJECTED: "Rejected",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  PUBLISHED: "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]",
+  PENDING_CONTRACT: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
+  REJECTED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
+};
+
+interface EditDraft {
   title: string;
   hookLine: string;
   tier: string;
@@ -39,33 +64,33 @@ interface AdminDraft {
   savedAt: string;
 }
 
-function draftKey(writerId: string): string {
-  return `kekere_admin_author_draft_${writerId}`;
+function draftKey(storyId: string): string {
+  return `kekere_admin_edit_draft_${storyId}`;
 }
 
-function loadDraft(writerId: string): AdminDraft | null {
+function loadDraft(storyId: string): EditDraft | null {
   try {
-    const raw = localStorage.getItem(draftKey(writerId));
+    const raw = localStorage.getItem(draftKey(storyId));
     if (!raw) return null;
-    return JSON.parse(raw) as AdminDraft;
+    return JSON.parse(raw) as EditDraft;
   } catch {
     return null;
   }
 }
 
-function saveDraft(writerId: string, draft: Omit<AdminDraft, "savedAt">): string {
+function saveDraftToStorage(storyId: string, draft: Omit<EditDraft, "savedAt">): string {
   const savedAt = new Date().toISOString();
   try {
-    localStorage.setItem(draftKey(writerId), JSON.stringify({ ...draft, savedAt }));
+    localStorage.setItem(draftKey(storyId), JSON.stringify({ ...draft, savedAt }));
   } catch {
-    // Storage full/unavailable — non-fatal, matches StoryEditor's own handling.
+    // Storage full/unavailable — non-fatal.
   }
   return savedAt;
 }
 
-function clearDraft(writerId: string) {
+function clearDraft(storyId: string) {
   try {
-    localStorage.removeItem(draftKey(writerId));
+    localStorage.removeItem(draftKey(storyId));
   } catch {
     // ignore
   }
@@ -88,22 +113,22 @@ function extractPlainText(doc: TiptapDoc): string {
     .join(" ");
 }
 
-export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorProps) {
-  const router = useRouter();
+export function AdminStoryEditor({ storyId, authorName, status, initial }: AdminStoryEditorProps) {
   const editorRef = useRef<StoryEditorHandle>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const [title, setTitle] = useState("");
-  const [hookLine, setHookLine] = useState("");
-  const [tier, setTier] = useState<string>("STANDARD");
-  const [cowrieCost, setCowrieCost] = useState(5);
-  const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
-  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [title, setTitle] = useState(initial.title);
+  const [hookLine, setHookLine] = useState(initial.hookLine);
+  const [tier, setTier] = useState<string>(initial.tier);
+  const [cowrieCost, setCowrieCost] = useState(initial.cowrieCost);
+  const [coverImageRef, setCoverImageRef] = useState<string | null>(initial.coverImageRef);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(initial.coverPreviewUrl);
+  const [tagIds, setTagIds] = useState<string[]>(initial.tagIds);
   const [allTags, setAllTags] = useState<TagItem[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -115,14 +140,11 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const suggestionHistoryRef = useRef<{ tagSlugs: string[]; hookLine: string }[]>([]);
 
-  // Local draft persistence — this form has no server-side draft to save
-  // against until "Save" is clicked (storyId doesn't exist yet), so work is
-  // preserved in localStorage instead, keyed per writer. draftChecked gates
-  // <StoryEditor>'s first render so a restored draft's body can be passed in
-  // as its initialContent (which Tiptap only reads once, at mount) rather
-  // than needing to be set imperatively after the fact.
+  // Local draft persistence — a safety net so an admin who navigates away
+  // mid-edit doesn't lose work before hitting Save. Only offered as a
+  // restore if it's actually newer than the server's own last save.
   const [draftChecked, setDraftChecked] = useState(false);
-  const [initialBody, setInitialBody] = useState<TiptapDoc | null>(null);
+  const [initialBody, setInitialBody] = useState<TiptapDoc>(initial.body);
   const [restoredAt, setRestoredAt] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftSavedAtLabel, setDraftSavedAtLabel] = useState<string | null>(null);
@@ -134,12 +156,12 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       .catch(() => {});
   }, []);
 
-  // Restore any existing draft for this writer, once, before StoryEditor
-  // ever mounts. Runs client-only (localStorage doesn't exist during SSR),
-  // which is why this can't happen in a lazy useState initializer.
+  // Restore a local draft only if it postdates the server's own content —
+  // otherwise a stale draft from a previous unrelated edit session could
+  // clobber content another admin (or this one, elsewhere) saved since.
   useEffect(() => {
-    const draft = loadDraft(writerId);
-    if (draft) {
+    const draft = loadDraft(storyId);
+    if (draft && new Date(draft.savedAt).getTime() > new Date(initial.lastSavedAt).getTime()) {
       setTitle(draft.title);
       setHookLine(draft.hookLine);
       setTier(draft.tier);
@@ -150,12 +172,13 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       setInitialBody(draft.body);
       setRestoredAt(draft.savedAt);
       setDraftSavedAt(draft.savedAt);
+    } else if (draft) {
+      clearDraft(storyId); // stale — older than what's already saved server-side
     }
     setDraftChecked(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [writerId]);
+  }, [storyId]);
 
-  // Keep the relative-time label ticking without re-saving anything.
   useEffect(() => {
     if (!draftSavedAt) {
       setDraftSavedAtLabel(null);
@@ -167,16 +190,27 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   }, [draftSavedAt]);
 
   const scheduleDraftSave = useCallback(() => {
-    if (!draftChecked) return; // don't clobber a restore that hasn't applied yet
+    if (!draftChecked) return;
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const body = editorRef.current?.getContent() ?? initialBody ?? EMPTY_DOC;
-      // A "blank" Tiptap doc still contains one empty paragraph node (the
-      // schema requires at least one block), so checking body.content.length
-      // alone is never actually zero — extract real text instead.
-      const hasContent = title.trim() || hookLine.trim() || tagIds.length > 0 || coverImageRef || extractPlainText(body).trim().length > 0;
-      if (!hasContent) return; // nothing worth remembering on a still-blank form
-      const savedAt = saveDraft(writerId, {
+      const body = editorRef.current?.getContent() ?? initialBody;
+      // Unlike the create flow (which starts blank), edit mode starts
+      // already full of real content — without this check, the safety net
+      // would fire the moment the page loads and claim "Draft saved" before
+      // the admin has touched anything. Only persist once something has
+      // actually changed from the baseline (initialBody: the server's
+      // content, or a restored draft's, whichever we're currently diffing
+      // against).
+      const changed =
+        title !== initial.title ||
+        hookLine !== initial.hookLine ||
+        tier !== initial.tier ||
+        cowrieCost !== initial.cowrieCost ||
+        coverImageRef !== initial.coverImageRef ||
+        JSON.stringify(tagIds) !== JSON.stringify(initial.tagIds) ||
+        extractPlainText(body).trim() !== extractPlainText(initialBody).trim();
+      if (!changed) return;
+      const savedAt = saveDraftToStorage(storyId, {
         title,
         hookLine,
         tier,
@@ -187,24 +221,21 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         body,
       });
       setDraftSavedAt(savedAt);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, 1200);
-  }, [draftChecked, writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
+    // initial.* is a stable prop (set once at mount) — safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftChecked, storyId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
 
-  // Covers every field except the editor body (which has no onChange of its
-  // own to hook — see onWordCountChange on <StoryEditor> below).
   useEffect(() => {
     scheduleDraftSave();
   }, [scheduleDraftSave]);
 
-  // Best-effort immediate flush if the admin closes/navigates away inside
-  // the 1.2s debounce window, so the last few keystrokes aren't lost.
   useEffect(() => {
     function flush() {
       clearTimeout(saveTimerRef.current);
       const body = editorRef.current?.getContent();
       if (!body) return;
-      saveDraft(writerId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
+      saveDraftToStorage(storyId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
     }
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") flush();
@@ -216,32 +247,27 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds]);
+  }, [storyId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds]);
 
   function discardDraft() {
-    if (!window.confirm("Discard this draft and start over? This can't be undone.")) return;
-    clearDraft(writerId);
-    setTitle("");
-    setHookLine("");
-    setTier("STANDARD");
-    setCowrieCost(5);
-    setCoverImageRef(null);
-    setCoverPreviewUrl(null);
-    setTagIds([]);
+    if (!window.confirm("Discard this unsaved draft and go back to the last saved version? This can't be undone.")) return;
+    clearDraft(storyId);
+    setTitle(initial.title);
+    setHookLine(initial.hookLine);
+    setTier(initial.tier);
+    setCowrieCost(initial.cowrieCost);
+    setCoverImageRef(initial.coverImageRef);
+    setCoverPreviewUrl(initial.coverPreviewUrl);
+    setTagIds(initial.tagIds);
     setRestoredAt(null);
     setDraftSavedAt(null);
-    editorRef.current?.setContent(EMPTY_DOC);
+    editorRef.current?.setContent(initial.body);
   }
 
   const selectedTagObjs = tagIds
     .map((id) => allTags.find((t) => t.id === id))
     .filter((t): t is TagItem => !!t);
 
-  // The category title is what actually appears as the feed row heading —
-  // for a tag grouped with others (e.g. dark/creepy/psychological) that's
-  // a shared title, not the tag's own individual feedHeading. A story with
-  // two tags that happen to share a category still only appears in one row;
-  // two tags in different categories appear in both.
   const selectedCategories = Array.from(
     new Map(selectedTagObjs.map((t) => [categoryForTag(t.slug).slug, categoryForTag(t.slug)])).values()
   );
@@ -252,8 +278,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     tagIds.length >= 1 &&
     tagIds.length <= 2 &&
     cowrieCost >= 1 &&
-    cowrieCost <= 10 &&
-    !!coverImageRef;
+    cowrieCost <= 10;
 
   async function handleNariSuggest(regenerate = false) {
     const content = editorRef.current?.getContent();
@@ -341,6 +366,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("storyId", storyId);
       const res = await fetch("/api/admin/kekere/cover-upload", {
         method: "POST",
         body: formData,
@@ -350,9 +376,6 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         setCoverImageRef(data.coverImageRef ?? null);
         setCoverPreviewUrl(data.previewUrl ?? null);
       } else {
-        // Previously failures were swallowed silently — the spinner just
-        // stopped and nothing appeared, so the admin couldn't tell the cover
-        // hadn't uploaded. Surface the real reason instead.
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? `Cover upload failed (${res.status}). Please try again.`);
       }
@@ -370,6 +393,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     if (file && ["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
       uploadFile(file);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -385,31 +409,26 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) uploadFile(file);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleSubmit() {
+  async function handleSave() {
     if (!isValid) return;
 
-    setSubmitting(true);
+    setSaving(true);
     setError(null);
+    setSaved(false);
 
     try {
       const bodyContent = editorRef.current?.getContent();
       if (!bodyContent) {
         setError("Story content is empty");
-        setSubmitting(false);
+        setSaving(false);
         return;
       }
 
-      // Genre is no longer a field admins fill in directly — tags are the
-      // real categorization mechanism now. The story-creation API still
-      // requires some genre string (it's rendered into the signed
-      // publishing contract's "Genre:" line), so derive a reasonable one
-      // from whichever tag was picked rather than asking for it twice.
-      const derivedGenre = allTags.find((t) => t.id === tagIds[0])?.label ?? "Fiction";
-
-      const res = await fetch(`/api/admin/kekere/writers/${writerId}/stories`, {
-        method: "POST",
+      const res = await fetch(`/api/admin/kekere/stories/${storyId}/edit`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
@@ -417,25 +436,27 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           body: bodyContent,
           tier,
           cowrieCost,
-          genre: derivedGenre,
-          coverColor: "#C75D2C",
-          coverImageRef: coverImageRef ?? undefined,
           tagIds,
+          ...(coverImageRef ? { coverImageRef } : {}),
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: "Unknown error" }));
-        setError(data.error ?? "Failed to create story");
-        setSubmitting(false);
+        setError(data.error ?? "Failed to save story");
+        setSaving(false);
         return;
       }
 
-      clearDraft(writerId);
-      router.push("/admin/kekere/writers/unclaimed");
+      clearDraft(storyId);
+      setRestoredAt(null);
+      setDraftSavedAt(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch {
       setError("Network error");
-      setSubmitting(false);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -445,27 +466,31 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}
     >
       <div className="mb-6">
-        <h1 className="text-[16px] font-bold text-[#15171C] sm:text-[18px]">
-          Author a story for {writerName}
-        </h1>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <h1 className="text-[16px] font-bold text-[#15171C] sm:text-[18px]">Edit story</h1>
+          <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${STATUS_COLORS[status] ?? "bg-[rgba(20,22,26,0.07)] text-[#646B73]"}`}>
+            {STATUS_LABELS[status] ?? status}
+          </span>
+        </div>
         <p className="mt-1 text-[12px] text-[#7C828C] sm:text-[13px]">
-          This saves the story under {writerName}&rsquo;s account as PENDING_CONTRACT. Nothing is
-          sent to the writer yet — after saving, use &ldquo;Send email&rdquo; in the Onboarded
-          Writers list to invite them to review, sign, and go live.
+          by {authorName}.{" "}
+          {status === "PUBLISHED"
+            ? "This story is live — any change you save here updates the feed and the reader immediately."
+            : "Changes save directly to this story, wherever it is in the pipeline."}
         </p>
       </div>
 
       {restoredAt && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-[8px] border border-[#E8C98C] bg-[#FBEFD9] px-4 py-3 text-[12.5px] text-[#5A4419]">
           <span>
-            Restored your unsaved draft from {formatRelativeTime(restoredAt)} — nothing was lost.
+            Restored an unsaved draft from {formatRelativeTime(restoredAt)} — nothing was lost.
           </span>
           <button
             type="button"
             onClick={discardDraft}
             className="flex-none rounded-[6px] border border-[rgba(90,68,25,0.3)] px-2.5 py-1 text-[11px] font-semibold hover:bg-[rgba(90,68,25,0.08)]"
           >
-            Discard &amp; start over
+            Discard &amp; revert
           </button>
         </div>
       )}
@@ -607,8 +632,8 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
             {draftChecked && (
               <StoryEditor
                 ref={editorRef}
-                storyId={writerId}
-                initialContent={initialBody ?? EMPTY_DOC}
+                storyId={storyId}
+                initialContent={initialBody}
                 initialLastSavedAt={null}
                 autosave={false}
                 onWordCountChange={scheduleDraftSave}
@@ -653,7 +678,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
-        {/* Cover upload */}
+        {/* Cover upload / replace */}
         <div>
           <label className="mb-1 block text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
             Cover image
@@ -670,15 +695,18 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               <div className="flex items-center justify-between border-t border-[rgba(20,22,26,0.06)] px-4 py-2.5">
                 <span className="flex items-center gap-1.5 text-[12px] text-green-700">
                   <Check size={13} />
-                  Cover uploaded
+                  {status === "PUBLISHED" ? "Live cover — replace below" : "Cover uploaded"}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => { setCoverImageRef(null); setCoverPreviewUrl(null); }}
-                  className="rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-[#7C828C] hover:bg-[rgba(20,22,26,0.06)] hover:text-[#15171C]"
-                >
-                  Remove
-                </button>
+                <label className="cursor-pointer rounded-[6px] px-2.5 py-1 text-[11px] font-medium text-[#C75D2C] hover:bg-[rgba(199,93,44,0.08)]">
+                  {uploading ? "Uploading…" : "Replace"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                </label>
               </div>
             </div>
           ) : (
@@ -725,7 +753,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           )}
         </div>
 
-        {/* Category / tag picker */}
+        {/* Tag picker */}
         <div>
           <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <label className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[#7C828C]">
@@ -779,21 +807,33 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           </div>
         </div>
 
-        {/* Submit footer */}
+        {/* Save footer */}
         <div className="flex flex-col gap-3 border-t border-[rgba(20,22,26,0.08)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[11px] text-[#7C828C] sm:text-[12px]">
-            {isValid
-              ? "Saves as PENDING_CONTRACT. Send the agreement email afterwards from Onboarded Writers."
-              : "Add a title, hook line, cover image and at least one tag to continue."}
+            {saved
+              ? "Saved ✓ — changes are live now."
+              : isValid
+              ? status === "PUBLISHED"
+                ? "Saving updates the feed and reader immediately."
+                : "Saves directly to this story."
+              : "Add a title, hook line, and 1–2 tags to save."}
           </span>
-          <button
-            type="button"
-            disabled={!isValid || submitting}
-            onClick={handleSubmit}
-            className="w-full rounded-[9px] bg-[#C75D2C] px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-          >
-            {submitting ? "Saving..." : "Save"}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/kekere/stories/all"
+              className="text-[12px] font-medium text-[#7C828C] hover:text-[#15171C]"
+            >
+              ← All Stories
+            </Link>
+            <button
+              type="button"
+              disabled={!isValid || saving}
+              onClick={handleSave}
+              className="rounded-[9px] bg-[#C75D2C] px-6 py-2.5 text-[13px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

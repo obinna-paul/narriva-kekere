@@ -275,8 +275,14 @@ export function UnclaimedWriters() {
                   <td className="px-4 py-3 font-medium text-[#15171C]">{w.name}</td>
                   <td className="px-4 py-3 text-[#7C828C]">{w.email}</td>
                   <td className="px-4 py-3">
-                    {w.storyTitle ? (
-                      <span className="text-[#15171C]">{w.storyTitle}</span>
+                    {w.storyTitle && w.storyId ? (
+                      <Link
+                        href={`/admin/kekere/stories/${w.storyId}/edit`}
+                        className="text-[#15171C] hover:text-[#C75D2C] hover:underline"
+                        title="Edit this story"
+                      >
+                        {w.storyTitle}
+                      </Link>
                     ) : (
                       <Link
                         href={`/admin/kekere/writers/${w.id}/author-story`}
