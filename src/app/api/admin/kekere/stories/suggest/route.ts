@@ -8,6 +8,13 @@ import { STORY_TAGS, TAG_BY_SLUG } from "@/content/story-tags";
 const schema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(50, "Story too short for meaningful suggestions"),
+  // Previous attempts the admin already rejected — when present, Nari is
+  // asked to avoid repeating them, so hitting "Try another idea" actually
+  // surfaces a different angle instead of re-rolling the same answer.
+  avoid: z
+    .array(z.object({ tagSlugs: z.array(z.string()).max(2), hookLine: z.string() }))
+    .max(4)
+    .optional(),
 });
 
 const AVAILABLE_TAGS = STORY_TAGS.map((t) => `"${t.slug}" — ${t.label} (${t.description})`).join("\n");
@@ -44,7 +51,7 @@ export const POST = withAuth(async (request) => {
     );
   }
 
-  const { title, body: storyText } = parsed.data;
+  const { title, body: storyText, avoid } = parsed.data;
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
@@ -52,6 +59,13 @@ export const POST = withAuth(async (request) => {
   }
 
   const truncated = storyText.slice(0, 2500);
+
+  const avoidSection =
+    avoid && avoid.length > 0
+      ? `\n\nThe admin already saw these attempts and asked for something different — do NOT repeat any tag combination or hook line close to these, give a genuinely different angle on the story:\n${avoid
+          .map((a, i) => `${i + 1}. TAGS: ${a.tagSlugs.join(", ") || "(none)"} — HOOK: "${a.hookLine || "(none)"}"`)
+          .join("\n")}`
+      : "";
 
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -64,9 +78,10 @@ export const POST = withAuth(async (request) => {
         model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Title: ${title}\n\nStory text:\n${truncated}` },
+          { role: "user", content: `Title: ${title}\n\nStory text:\n${truncated}${avoidSection}` },
         ],
-        temperature: 0.75,
+        // Nudge more variety on a regenerate request than the first pass.
+        temperature: avoidSection ? 0.95 : 0.75,
         max_tokens: 220,
       }),
       signal: AbortSignal.timeout(15000),
