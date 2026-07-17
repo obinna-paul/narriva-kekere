@@ -133,11 +133,12 @@ export const PUT = withAuth(
 
     const { body: rawBody, expectedLastSavedAt, ...rest } = parsed.data;
 
-    // Champion tier means "verified competition winner" and drives Winner's
-    // Circle placement — writers can't self-assign it, only an admin can.
-    if (rest.tier === "CHAMPION" && session.user.role !== "ADMIN") {
+    // Tier is an editorial/curatorial decision — Featured drives the daily
+    // "Featured Today" rotation and Champion drives Winner's Circle placement,
+    // so writers can't set it themselves at all, only an admin can.
+    if (rest.tier !== undefined && session.user.role !== "ADMIN") {
       return NextResponse.json(
-        { error: "Only an admin can set a story to Champion tier." },
+        { error: "Only an admin can set a story's tier." },
         { status: 403 }
       );
     }
