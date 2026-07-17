@@ -2,7 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
 import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
-import { TAG_BY_SLUG } from "@/content/story-tags";
+import { categoryForTag, resolveCategoryBySlug, type TagCategory } from "@/content/story-tags";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
 
@@ -494,60 +494,50 @@ export async function getRecommendedStories(userId: string, limit = 12): Promise
   return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
 }
 
-/** Stories grouped by tag slug, for the tag rows on the feed.
- *  Returns only tags that have at least one published story, in the order supplied. */
+/** Stories grouped by category, for the tag rows on the feed. Multiple
+ *  requested tag slugs that share an explicit category (see
+ *  categoryForTag/TAG_CATEGORIES in story-tags.ts — e.g. dark, creepy, and
+ *  psychological) collapse into a single combined row instead of one row
+ *  each. Returns only categories that have at least one published story, in
+ *  the order their first member tag appears in the input list. */
 export async function getFeedTagRows(
   tagSlugs: readonly string[],
   limit = 8
 ): Promise<Array<{ slug: string; storyIds: string[] }>> {
-  const tags = await prisma.tag.findMany({
-    where: { slug: { in: Array.from(tagSlugs) } },
-    select: { id: true, slug: true },
-  });
-
-  // Group tags by feedHeading so related tags (dark, creepy, psychological)
-  // appear in a single combined feed row instead of 3 separate rows
-  const tagsByHeading = new Map<string, Array<{ id: string; slug: string }>>();
-  const headingOrder = new Map<string, number>();
-
-  for (const tag of tags) {
-    const tagInfo = TAG_BY_SLUG[tag.slug];
-    const heading = tagInfo?.feedHeading ?? tag.slug;
-    const firstSlugForHeading = Array.from(tagSlugs).find(
-      (slug) => (TAG_BY_SLUG[slug]?.feedHeading ?? slug) === heading
-    );
-
-    if (firstSlugForHeading && !headingOrder.has(heading)) {
-      headingOrder.set(heading, Array.from(tagSlugs).indexOf(firstSlugForHeading));
+  const categoriesInOrder: TagCategory[] = [];
+  const seenCategorySlugs = new Set<string>();
+  for (const slug of tagSlugs) {
+    const category = categoryForTag(slug);
+    if (!seenCategorySlugs.has(category.slug)) {
+      seenCategorySlugs.add(category.slug);
+      categoriesInOrder.push(category);
     }
-
-    if (!tagsByHeading.has(heading)) {
-      tagsByHeading.set(heading, []);
-    }
-    tagsByHeading.get(heading)!.push(tag);
   }
 
-  // Fetch stories for each feedHeading group
+  const allSlugsNeeded = Array.from(new Set(categoriesInOrder.flatMap((c) => c.tagSlugs)));
+  const tags = await prisma.tag.findMany({
+    where: { slug: { in: allSlugsNeeded } },
+    select: { id: true, slug: true },
+  });
+  const tagIdBySlug = new Map(tags.map((t) => [t.slug, t.id]));
+
   const results = await Promise.all(
-    Array.from(tagsByHeading.entries()).map(async ([heading, tagGroup]) => {
-      const tagIds = tagGroup.map((t) => t.id);
+    categoriesInOrder.map(async (category) => {
+      const tagIds = category.tagSlugs
+        .map((slug) => tagIdBySlug.get(slug))
+        .filter((id): id is string => !!id);
+      if (tagIds.length === 0) return { slug: category.slug, storyIds: [] as string[] };
+
       const rows = await prisma.storyTag.findMany({
         where: { tagId: { in: tagIds }, story: { status: "PUBLISHED" } },
         select: { storyId: true },
         take: limit,
       });
-      // Use the first tag's slug as the row identifier
-      return { slug: tagGroup[0].slug, storyIds: rows.map((r) => r.storyId) };
+      return { slug: category.slug, storyIds: rows.map((r) => r.storyId) };
     })
   );
 
-  return results
-    .filter((r) => r.storyIds.length > 0)
-    .sort(
-      (a, b) =>
-        (headingOrder.get(TAG_BY_SLUG[a.slug]?.feedHeading ?? a.slug) ?? 99) -
-        (headingOrder.get(TAG_BY_SLUG[b.slug]?.feedHeading ?? b.slug) ?? 99)
-    );
+  return results.filter((r) => r.storyIds.length > 0);
 }
 
 /** Fetch full story rows for a set of IDs, preserving the given order. */
@@ -561,25 +551,37 @@ export async function getStoriesByIds(ids: string[]): Promise<StoryWithAuthor[]>
   return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
 }
 
-/** Stories for a tag browse page (/kekere/tag/[slug]). */
+/** Stories for a tag/category browse page (/kekere/tag/[slug]). `slug` can
+ *  be either a single tag's own slug (the common case — still works exactly
+ *  as before for every tag with no explicit category) or a combined
+ *  category slug, in which case this queries across every member tag —
+ *  otherwise "See more" from a merged feed row would silently drop
+ *  everything but one representative tag's stories. */
 export async function listStoriesByTag(
   slug: string,
   page = 1,
   pageSize = 12
 ): Promise<ListStoriesResult> {
-  const tag = await prisma.tag.findUnique({ where: { slug } });
-  if (!tag) return { stories: [], total: 0, page, pageSize, totalPages: 0 };
+  const category = resolveCategoryBySlug(slug);
+  if (!category) return { stories: [], total: 0, page, pageSize, totalPages: 0 };
+
+  const tags = await prisma.tag.findMany({
+    where: { slug: { in: [...category.tagSlugs] } },
+    select: { id: true },
+  });
+  const tagIds = tags.map((t) => t.id);
+  if (tagIds.length === 0) return { stories: [], total: 0, page, pageSize, totalPages: 0 };
 
   const [storiesRaw, total] = await Promise.all([
     prisma.story.findMany({
-      where: { status: "PUBLISHED", tags: { some: { tagId: tag.id } } },
+      where: { status: "PUBLISHED", tags: { some: { tagId: { in: tagIds } } } },
       include: authorInclude,
       orderBy: { publishedAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
     prisma.story.count({
-      where: { status: "PUBLISHED", tags: { some: { tagId: tag.id } } },
+      where: { status: "PUBLISHED", tags: { some: { tagId: { in: tagIds } } } },
     }),
   ]);
 

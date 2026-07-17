@@ -88,6 +88,53 @@ export const TAG_BY_SLUG: Readonly<Record<string, StoryTag>> = Object.fromEntrie
   STORY_TAGS.map((t) => [t.slug, t])
 );
 
+export interface TagCategory {
+  /** Identifies a multi-tag category in feed-row and browse-page URLs —
+   *  distinct from any individual tag's own slug. */
+  slug: string;
+  /** Shared feed heading for every tag in this category. */
+  title: string;
+  tagSlugs: readonly string[];
+}
+
+/**
+ * Explicit groupings of tags that genuinely overlap in reader experience —
+ * e.g. dark, creepy, and psychological are all "something unsettling to
+ * read alone at night," so they share one feed row instead of splitting
+ * attention across three thin ones. Most tags don't need a group; they
+ * just stand alone as their own single-tag category (see categoryForTag).
+ */
+export const TAG_CATEGORIES: readonly TagCategory[] = [
+  {
+    slug: "dark-creepy-psychological",
+    title: "Read alone at night. We dare you",
+    tagSlugs: ["dark", "creepy", "psychological"],
+  },
+];
+
+const CATEGORY_BY_TAG_SLUG: Readonly<Record<string, TagCategory>> = Object.fromEntries(
+  TAG_CATEGORIES.flatMap((category) => category.tagSlugs.map((slug) => [slug, category]))
+);
+
+/** The category a tag belongs to — its explicit group if one exists, or a
+ *  synthetic single-tag category (using that tag's own feedHeading)
+ *  otherwise. Every tag resolves to exactly one category either way. */
+export function categoryForTag(tagSlug: string): TagCategory {
+  const explicit = CATEGORY_BY_TAG_SLUG[tagSlug];
+  if (explicit) return explicit;
+  const tag = TAG_BY_SLUG[tagSlug];
+  return { slug: tagSlug, title: tag?.feedHeading ?? tagSlug, tagSlugs: [tagSlug] };
+}
+
+/** Resolves any slug that could appear in a feed-row or browse-page URL —
+ *  either a plain tag slug (the common case, still works for every
+ *  ungrouped tag exactly as before) or a combined category slug — to its
+ *  display title and full member tag list. Null if neither matches. */
+export function resolveCategoryBySlug(slug: string): TagCategory | null {
+  if (TAG_BY_SLUG[slug]) return categoryForTag(slug);
+  return TAG_CATEGORIES.find((c) => c.slug === slug) ?? null;
+}
+
 /** Tags that should appear as feed rows, in the order they appear on the feed */
 export const FEED_TAG_ORDER: readonly StoryTagSlug[] = [
   "funny",
