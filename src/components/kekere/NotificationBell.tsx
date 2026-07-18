@@ -21,7 +21,9 @@ type NotificationType =
   | "VERSION_RESTORED"
   | "STREAK_MILESTONE_REACHED"
   | "NEW_FOLLOWER"
-  | "WRITER_PUBLISHED";
+  | "WRITER_PUBLISHED"
+  | "NOTE_RECEIVED"
+  | "NOTE_REPLIED";
 
 interface Notification {
   id: string;
@@ -49,6 +51,8 @@ const TYPE_CONFIG: Record<NotificationType, { glyph: string; bg: string; fg: str
   STREAK_MILESTONE_REACHED:  { glyph: "🔥", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
   NEW_FOLLOWER:              { glyph: "★", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
   WRITER_PUBLISHED:          { glyph: "✎", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
+  NOTE_RECEIVED:             { glyph: "✉", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
+  NOTE_REPLIED:              { glyph: "↩", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
 };
 
 function formatRelativeTime(iso: string): string {

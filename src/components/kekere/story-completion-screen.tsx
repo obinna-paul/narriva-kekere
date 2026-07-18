@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Star, Send, Copy, MessageCircle } from "lucide-react";
+import { Check, Star, Send, Copy, MessageCircle, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
@@ -21,6 +21,9 @@ interface CompletionProps {
   referralCode: string | null;
   initialFollowing: boolean;
   isOwnStory: boolean;
+  /** Server-computed: finished the story, writer accepts notes, no note
+   * already sent for this story, and the writer hasn't blocked this reader. */
+  noteEligible: boolean;
 }
 
 export function StoryCompletionScreen({
@@ -36,6 +39,7 @@ export function StoryCompletionScreen({
   referralCode,
   initialFollowing,
   isOwnStory,
+  noteEligible,
 }: CompletionProps) {
   const [tipping, setTipping] = useState(false);
   const [tipCount, setTipCount] = useState(initialTipCount);
@@ -45,6 +49,10 @@ export function StoryCompletionScreen({
   const [hoverRating, setHoverRating] = useState(0);
   const [submittedRating, setSubmittedRating] = useState(rating);
   const [shareCopied, setShareCopied] = useState(false);
+  const [noteBody, setNoteBody] = useState("");
+  const [noteSending, setNoteSending] = useState(false);
+  const [noteSent, setNoteSent] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const shareUrl = referralCode
     ? `https://narriva.pro/kekere/invite/${referralCode}`
@@ -91,6 +99,34 @@ export function StoryCompletionScreen({
     } catch {}
   }
 
+  async function handleSendNote() {
+    setNoteSending(true);
+    setNoteError(null);
+    try {
+      const res = await fetch("/api/kekere/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId, body: noteBody }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const messages: Record<string, string> = {
+          profanity: "Please remove inappropriate language and try again.",
+          too_long: "That's a bit long — keep it under 500 characters.",
+          empty: "Write something before sending.",
+          already_sent: "You've already sent a note for this story.",
+        };
+        setNoteError(messages[data.error] ?? "Couldn't send your note — try again.");
+        return;
+      }
+      setNoteSent(true);
+    } catch {
+      setNoteError("Couldn't send your note — try again.");
+    } finally {
+      setNoteSending(false);
+    }
+  }
+
   function handleCopy() {
     navigator.clipboard.writeText(shareText).then(() => {
       setShareCopied(true);
@@ -134,6 +170,44 @@ export function StoryCompletionScreen({
           ))}
         </div>
       </div>
+
+      {/* Note to writer */}
+      {noteEligible && (
+        <div className="mt-[14px] rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
+          <p className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-[#2A1A12]">
+            <PenLine size={14} className="text-[#C75D2C]" /> Send a note to {authorName}
+          </p>
+          {noteSent ? (
+            <p className="flex items-center gap-1.5 text-[13px] text-[#1F8A5B]">
+              <Check size={14} /> Sent — {authorName} will see it next time they check Kekere.
+            </p>
+          ) : (
+            <>
+              <textarea
+                value={noteBody}
+                onChange={(e) => setNoteBody(e.target.value)}
+                maxLength={500}
+                rows={3}
+                placeholder="Tell them what stuck with you…"
+                disabled={noteSending}
+                className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.14)] px-3 py-2.5 text-[13.5px] text-[#2A1A12] transition-colors focus:border-[#C75D2C] focus:outline-none disabled:opacity-60"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[11px] text-[#A08C7C]">{noteBody.length} / 500</span>
+                <button
+                  type="button"
+                  onClick={handleSendNote}
+                  disabled={noteSending || !noteBody.trim()}
+                  className="flex items-center gap-1.5 rounded-[10px] bg-[#C75D2C] px-3.5 py-2 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Send size={13} /> {noteSending ? "Sending…" : "Send note"}
+                </button>
+              </div>
+              {noteError && <p className="mt-2 text-[12px] text-[#A13A3A]">{noteError}</p>}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Tip section */}
       <div className="mt-[14px] rounded-[16px] bg-[#2A1A12] px-4 py-4">
