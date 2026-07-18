@@ -112,7 +112,7 @@ function StoryRow({
   const hasMore = stories.length > 8;
   return (
     <section className="py-2">
-      <h2 className="px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+      <h2 className="px-5 pb-[14px] font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--color-ink)]">
         {title}
       </h2>
       <div
@@ -249,7 +249,7 @@ export function FeedContent({
       {/* 1. Winners' Circle */}
       {winnerStories.length > 0 && (
         <section className="py-2">
-          <h2 className="flex items-center gap-2 px-5 pb-[14px] font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+          <h2 className="flex items-center gap-2 px-5 pb-[14px] font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--color-ink)]">
             <span aria-hidden="true" className="text-2xl">&#127942;</span>
             Winners&apos; Circle
           </h2>
@@ -358,7 +358,7 @@ export function FeedContent({
       {inProgressStories.length > 0 && (
         <section className="py-2">
           <div className="flex items-center justify-between px-5 pb-[14px]">
-            <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+            <h2 className="font-[family-name:var(--font-display)] text-[15px] font-semibold text-[var(--color-ink)]">
               Continue reading
             </h2>
           </div>

@@ -6,6 +6,7 @@ import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 import { getStreakStats } from "@/lib/data/kekere-streaks";
 import { getUnreadNoteCount } from "@/lib/data/kekere-notes";
+import { getFollowingWriters } from "@/lib/data/kekere-follows";
 import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, bankDetails, streakStats, unreadNoteCount] = userId
+  const [profile, writerStats, readerStats, bankDetails, streakStats, unreadNoteCount, followingWriters] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
@@ -24,6 +25,7 @@ export default async function KekereProfilePage() {
         getWriterBankDetails(userId),
         getStreakStats(userId),
         getUnreadNoteCount(userId),
+        getFollowingWriters(userId),
       ])
     : [
         null,
@@ -32,6 +34,7 @@ export default async function KekereProfilePage() {
         null,
         { currentStreak: 0, longestStreak: 0, hasAnyActivity: false, activeToday: false },
         0,
+        [],
       ];
 
   return (
@@ -53,6 +56,12 @@ export default async function KekereProfilePage() {
           readingStats={readerStats}
           streakStats={streakStats}
           unreadNoteCount={unreadNoteCount}
+          followingWriters={followingWriters.map((w) => ({
+            id: w.id,
+            name: w.name,
+            avatarColor: w.avatarColor,
+            avatarUrl: w.avatar ? userAvatarUrl(w.avatar) : null,
+          }))}
         />
       </div>
     </KekereTheme>
