@@ -7,6 +7,7 @@ import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
+import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -59,6 +60,7 @@ export interface ProfileViewProps {
   hasAuthoredAnyStory: boolean;
   writingStats: { publishedCount: number; totalReads: number };
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
+  streakStats: StreakCardProps;
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -343,6 +345,8 @@ export function ProfileView(props: ProfileViewProps) {
           </section>
 
           <section className="px-[22px]">
+            <StreakCard {...props.streakStats} />
+
             {props.hasAuthoredAnyStory && (
               <>
                 <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
