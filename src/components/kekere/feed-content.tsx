@@ -154,6 +154,7 @@ export interface FeedContentProps {
   winnerStories: readonly WinnerStory[];
   inProgressStories: readonly MockStory[];
   recommendedStories: readonly MockStory[];
+  signatureRow?: FeedTagRow | null;
   tagRows: readonly FeedTagRow[];
   balance: number;
   isLoggedIn?: boolean;
@@ -167,6 +168,7 @@ export function FeedContent({
   winnerStories,
   inProgressStories,
   recommendedStories,
+  signatureRow,
   tagRows,
   balance,
   isLoggedIn = false,
@@ -385,7 +387,18 @@ export function FeedContent({
         />
       )}
 
-      {/* 6. Tag-based rows */}
+      {/* 6. Signature row (only for a user with a clear top affinity) */}
+      {signatureRow && signatureRow.stories.length > 0 && (
+        <StoryRow
+          title={signatureRow.feedHeading}
+          stories={signatureRow.stories}
+          seeMoreHref={`/kekere/tag/${signatureRow.slug}`}
+          readingProgress={readingProgress}
+          onPreview={setPreviewStory}
+        />
+      )}
+
+      {/* 7. Tag-based rows */}
       {tagRows.map((row) => (
         <StoryRow
           key={row.slug}

@@ -11,12 +11,13 @@ import {
   getStoriesByIds,
   hasFreeReadAvailable,
 } from "@/lib/data/kekere-stories";
+import { getPersonalizedTagOrder, getSignatureRow } from "@/lib/data/kekere-taste";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getAllWinners } from "@/lib/data/kekere-competitions";
 import { getReadingProgressBatch } from "@/lib/data/kekere-progress";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
-import { FEED_TAG_ORDER, resolveCategoryBySlug } from "@/content/story-tags";
+import { FEED_TAG_ORDER, resolveCategoryBySlug, type StoryTagSlug } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -45,15 +46,24 @@ export default async function KekereFeedPage() {
   const userId = session?.user?.id;
 
   // Fetch all sections in parallel
-  const [trendingData, featuredTierData, winners, wallet, inProgress, recommended, tagRows, firstReadFree] = await Promise.all([
-    listStories({ sort: "trending", pageSize: 12 }),
-    listStories({ tier: "FEATURED", pageSize: 50 }),
-    getAllWinners(),
-    userId ? getWalletForUser(userId) : Promise.resolve(null),
-    userId ? getInProgressStories(userId) : Promise.resolve([]),
-    userId ? getRecommendedStories(userId, 12) : Promise.resolve([]),
-    getFeedTagRows(FEED_TAG_ORDER, 8),
-    hasFreeReadAvailable(userId),
+  const [trendingData, featuredTierData, winners, wallet, inProgress, recommended, tagOrder, signatureRowMeta, firstReadFree] =
+    await Promise.all([
+      listStories({ sort: "trending", pageSize: 12 }),
+      listStories({ tier: "FEATURED", pageSize: 50 }),
+      getAllWinners(),
+      userId ? getWalletForUser(userId) : Promise.resolve(null),
+      userId ? getInProgressStories(userId) : Promise.resolve([]),
+      userId ? getRecommendedStories(userId, 12) : Promise.resolve([]),
+      userId ? getPersonalizedTagOrder(userId, FEED_TAG_ORDER) : Promise.resolve<StoryTagSlug[]>([...FEED_TAG_ORDER]),
+      userId ? getSignatureRow(userId, 8) : Promise.resolve(null),
+      hasFreeReadAvailable(userId),
+    ]);
+
+  // Tag rows and the signature row both depend on the (possibly
+  // personalized) tag order resolved above, so they run as a second stage.
+  const [tagRows, signatureStories] = await Promise.all([
+    getFeedTagRows(tagOrder, 8),
+    signatureRowMeta ? getStoriesByIds(signatureRowMeta.storyIds) : Promise.resolve([]),
   ]);
 
   // Fetch story data for all tag rows in parallel
@@ -87,11 +97,16 @@ export default async function KekereFeedPage() {
     stories: (tagStoryMaps[i] ?? []).map((s) => toFeedStoryData(s)),
   }));
 
+  const signatureRow: FeedTagRow | null = signatureRowMeta
+    ? { slug: signatureRowMeta.slug, feedHeading: signatureRowMeta.title, stories: signatureStories.map((s) => toFeedStoryData(s)) }
+    : null;
+
   // Collect all visible story IDs to batch-fetch reading progress
   const allStoryIds = [
     ...trending.map((s) => s.id),
     ...inProgressStories.map((s) => s.id),
     ...recommendedStories.map((s) => s.id),
+    ...(signatureRow?.stories.map((s) => s.id) ?? []),
     ...feedTagRows.flatMap((row) => row.stories.map((s) => s.id)),
   ];
   const readingProgress = userId
@@ -107,6 +122,7 @@ export default async function KekereFeedPage() {
         winnerStories={winnerStories}
         inProgressStories={inProgressStories}
         recommendedStories={recommendedStories}
+        signatureRow={signatureRow}
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
         isLoggedIn={!!userId}
