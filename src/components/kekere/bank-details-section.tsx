@@ -80,13 +80,9 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
   }
 
   return (
-    <div id="bank-details" className="border-t border-[rgba(42,26,18,0.1)] px-[22px] pb-[22px] pt-[22px] scroll-mt-6">
-      <p className="mb-[14px] text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
-        Bank details for withdrawals
-      </p>
-
+    <>
       {!editing && saved ? (
-        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
+        <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate text-[14.5px] font-semibold text-[var(--color-ink)]">{saved.bankName}</span>
@@ -193,6 +189,6 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
