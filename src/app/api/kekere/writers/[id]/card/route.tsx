@@ -359,6 +359,16 @@ export async function GET(_request: Request, { params }: { params: { id: string 
         </div>
       </div>
     ),
-    { width: WIDTH, height: HEIGHT, fonts }
+    {
+      width: WIDTH,
+      height: HEIGHT,
+      fonts,
+      // Explicit, not just relying on ImageResponse's default — this card
+      // is meant to always reflect whatever the writer's profile/stories
+      // look like right now, never a cached snapshot from before their
+      // last edit. `must-revalidate` is redundant with no-store in
+      // spec-compliant caches but covers any layer that only honors it.
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" },
+    }
   );
 }
