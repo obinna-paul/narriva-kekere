@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2 } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -11,6 +11,7 @@ import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
+import { ShareProfileSheet } from "@/components/kekere/share-profile-sheet";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -77,12 +78,14 @@ function ListCard({ children }: { children: ReactNode }) {
 
 function ListRow({
   href,
+  onClick,
   icon,
   tone,
   label,
   trailing,
 }: {
-  href: string;
+  href?: string;
+  onClick?: () => void;
   icon: ReactNode;
   tone: "primary" | "accent" | "neutral";
   label: ReactNode;
@@ -94,18 +97,32 @@ function ListRow({
     neutral: "bg-[rgba(42,26,18,0.06)] text-[var(--color-ink-muted)]",
   }[tone];
 
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[13px] transition-colors last:border-b-0 hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]"
-    >
+  const className =
+    "flex w-full items-center gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[13px] text-left transition-colors last:border-b-0 hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]";
+
+  const content = (
+    <>
       <span className={cn("flex h-8 w-8 flex-none items-center justify-center rounded-full", toneClasses)}>
         {icon}
       </span>
       <span className="flex-1 text-[14.5px] font-semibold text-[var(--color-ink)]">{label}</span>
       {trailing}
       <ChevronRight size={16} className="flex-none text-[var(--color-ink-muted-3)]" />
-    </Link>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
   );
 }
 
@@ -161,6 +178,7 @@ export function ProfileView(props: ProfileViewProps) {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [followingWriters, setFollowingWriters] = useState(props.followingWriters);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function openEdit() {
@@ -338,19 +356,20 @@ export function ProfileView(props: ProfileViewProps) {
                 htmlFor="profile-bio"
                 className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
               >
-                Bio
+                Brief author bio
               </label>
               <textarea
                 id="profile-bio"
-                rows={3}
-                maxLength={160}
+                rows={4}
+                maxLength={280}
                 value={draftBio}
                 onChange={(e) => setDraftBio(e.target.value)}
+                placeholder="A couple of sentences readers will see on your public profile and shareable profile card."
                 className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                 style={{ fontFamily: "inherit" }}
               />
               <div className="mt-[6px] text-right text-xs text-[var(--color-ink-muted-3)]">
-                {draftBio.length} / 160
+                {draftBio.length} / 280
               </div>
             </div>
             <div>
@@ -523,12 +542,20 @@ export function ProfileView(props: ProfileViewProps) {
               <SectionLabel>Quick actions</SectionLabel>
               <ListCard>
                 {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
-                  <ListRow
-                    href={`/kekere/writer/${props.userId}`}
-                    icon={<Eye size={15} />}
-                    tone="primary"
-                    label="View your public profile"
-                  />
+                  <>
+                    <ListRow
+                      href={`/kekere/writer/${props.userId}`}
+                      icon={<Eye size={15} />}
+                      tone="primary"
+                      label="View your public profile"
+                    />
+                    <ListRow
+                      onClick={() => setShareSheetOpen(true)}
+                      icon={<Share2 size={15} />}
+                      tone="primary"
+                      label="Share profile"
+                    />
+                  </>
                 )}
                 <ListRow href="/kekere/library" icon={<BookOpen size={15} />} tone="primary" label="My library" />
                 <ListRow
@@ -564,6 +591,14 @@ export function ProfileView(props: ProfileViewProps) {
               Log out
             </button>
           </div>
+
+          {shareSheetOpen && (
+            <ShareProfileSheet
+              writerId={props.userId}
+              writerName={name}
+              onClose={() => setShareSheetOpen(false)}
+            />
+          )}
         </>
       )}
     </>
