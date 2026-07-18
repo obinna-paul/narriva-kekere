@@ -494,6 +494,33 @@ export async function getRecommendedStories(userId: string, limit = 12): Promise
   return stories.sort((a, b) => (pos.get(a.id) ?? 0) - (pos.get(b.id) ?? 0));
 }
 
+/** Ranks a set of story ids by recent-unlock popularity (the same signal
+ *  "Now Trending" uses), tiebreaking by publish recency — a sensible
+ *  default order for any row that doesn't have a more specific ranking of
+ *  its own. Used by getFeedTagRows below, and by the taste-profile
+ *  signature row in kekere-taste.ts. */
+export async function rankStoryIdsByRecentPopularity(storyIds: string[], limit: number): Promise<string[]> {
+  if (storyIds.length === 0) return [];
+  const windowStart = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const [unlockCounts, stories] = await Promise.all([
+    prisma.storyUnlock.groupBy({
+      by: ["storyId"],
+      where: { storyId: { in: storyIds }, unlockedAt: { gte: windowStart } },
+      _count: { storyId: true },
+    }),
+    prisma.story.findMany({ where: { id: { in: storyIds } }, select: { id: true, publishedAt: true } }),
+  ]);
+  const unlockByStory = new Map(unlockCounts.map((u) => [u.storyId, u._count.storyId]));
+  const publishedByStory = new Map(stories.map((s) => [s.id, s.publishedAt?.getTime() ?? 0]));
+  return [...storyIds]
+    .sort((a, b) => {
+      const unlockDiff = (unlockByStory.get(b) ?? 0) - (unlockByStory.get(a) ?? 0);
+      if (unlockDiff !== 0) return unlockDiff;
+      return (publishedByStory.get(b) ?? 0) - (publishedByStory.get(a) ?? 0);
+    })
+    .slice(0, limit);
+}
+
 /** Stories grouped by category, for the tag rows on the feed. Multiple
  *  requested tag slugs that share an explicit category (see
  *  categoryForTag/TAG_CATEGORIES in story-tags.ts — e.g. dark, creepy, and
@@ -521,6 +548,11 @@ export async function getFeedTagRows(
   });
   const tagIdBySlug = new Map(tags.map((t) => [t.slug, t.id]));
 
+  // Pull a wider candidate pool than we'll actually show, so ranking by
+  // popularity has something real to sort — a plain `take: limit` with no
+  // orderBy was returning whatever order Postgres happened to hand back.
+  const CANDIDATE_MULTIPLIER = 5;
+
   const results = await Promise.all(
     categoriesInOrder.map(async (category) => {
       const tagIds = category.tagSlugs
@@ -531,9 +563,11 @@ export async function getFeedTagRows(
       const rows = await prisma.storyTag.findMany({
         where: { tagId: { in: tagIds }, story: { status: "PUBLISHED" } },
         select: { storyId: true },
-        take: limit,
+        take: limit * CANDIDATE_MULTIPLIER,
       });
-      return { slug: category.slug, storyIds: rows.map((r) => r.storyId) };
+      const candidateIds = Array.from(new Set(rows.map((r) => r.storyId)));
+      const storyIds = await rankStoryIdsByRecentPopularity(candidateIds, limit);
+      return { slug: category.slug, storyIds };
     })
   );
 
