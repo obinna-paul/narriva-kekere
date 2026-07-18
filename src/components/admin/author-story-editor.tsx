@@ -7,6 +7,7 @@ import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEd
 import { categoryForTag } from "@/content/story-tags";
 import { formatRelativeTime } from "@/lib/tiptap/save-status";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { saveDraft as saveDraftIDB, getDraft as getDraftIDB, clearDraft as clearDraftIDB } from "@/lib/offline/draft-store";
 
 interface TagItem {
   id: string;
@@ -49,7 +50,22 @@ function draftKey(writerId: string): string {
   return `kekere_admin_author_draft_${writerId}`;
 }
 
-function loadDraft(writerId: string): AdminDraft | null {
+// This form has no server-side draft at all until "Save" is clicked (the
+// story doesn't exist yet), so local persistence is the ONLY safety net —
+// unlike the real writer StoryEditor, which additionally syncs to the
+// server every few seconds. That single point of failure is exactly what
+// caused a real data-loss report: localStorage.setItem can silently throw
+// (quota exceeded, private browsing, a browser privacy setting) and the
+// UI used to show "Draft saved" regardless, because the write's success
+// was never actually checked. IndexedDB is added here as a second,
+// independent layer with a much larger quota, and — critically — every
+// save now reports whether it actually landed anywhere, so the "Draft
+// saved" indicator can stop lying when both layers fail.
+function idbDraftId(writerId: string): string {
+  return `admin-author-draft-${writerId}`;
+}
+
+function loadDraftFromLocalStorage(writerId: string): AdminDraft | null {
   try {
     const raw = localStorage.getItem(draftKey(writerId));
     if (!raw) return null;
@@ -59,14 +75,48 @@ function loadDraft(writerId: string): AdminDraft | null {
   }
 }
 
-function saveDraft(writerId: string, draft: Omit<AdminDraft, "savedAt">): string {
+/** Checks both storage layers and returns whichever draft is newer. */
+async function loadDraft(writerId: string): Promise<AdminDraft | null> {
+  const local = loadDraftFromLocalStorage(writerId);
+  const idb = await getDraftIDB(idbDraftId(writerId)).catch(() => null);
+
+  if (!idb) return local;
+  if (!local) {
+    return {
+      title: idb.title,
+      hookLine: idb.hookLine,
+      tier: "STANDARD",
+      cowrieCost: 5,
+      coverImageRef: null,
+      coverPreviewUrl: null,
+      tagIds: [],
+      body: idb.content as TiptapDoc,
+      savedAt: idb.timestamp,
+    };
+  }
+
+  return new Date(idb.timestamp).getTime() > new Date(local.savedAt).getTime()
+    ? { ...local, body: idb.content as TiptapDoc, title: idb.title || local.title, hookLine: idb.hookLine || local.hookLine, savedAt: idb.timestamp }
+    : local;
+}
+
+/** Returns the timestamp plus whether the draft actually landed anywhere —
+ *  callers must check `ok` instead of assuming the write succeeded. */
+async function saveDraft(
+  writerId: string,
+  draft: Omit<AdminDraft, "savedAt">
+): Promise<{ savedAt: string; ok: boolean }> {
   const savedAt = new Date().toISOString();
+  let localOk = true;
   try {
     localStorage.setItem(draftKey(writerId), JSON.stringify({ ...draft, savedAt }));
   } catch {
-    // Storage full/unavailable — non-fatal, matches StoryEditor's own handling.
+    localOk = false;
   }
-  return savedAt;
+
+  const idbOk = await saveDraftIDB(idbDraftId(writerId), draft.body, draft.title, draft.hookLine, savedAt);
+
+  return { savedAt, ok: localOk || idbOk };
 }
 
 function clearDraft(writerId: string) {
@@ -75,6 +125,7 @@ function clearDraft(writerId: string) {
   } catch {
     // ignore
   }
+  void clearDraftIDB(idbDraftId(writerId));
 }
 
 function extractPlainText(doc: TiptapDoc): string {
@@ -132,6 +183,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const [restoredAt, setRestoredAt] = useState<string | null>(null);
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftSavedAtLabel, setDraftSavedAtLabel] = useState<string | null>(null);
+  // True the moment a save attempt fails on every available storage layer —
+  // the whole point of tracking this is to stop the "Draft saved" indicator
+  // from lying when nothing actually persisted (see saveDraft's comment).
+  const [draftSaveError, setDraftSaveError] = useState(false);
 
   useEffect(() => {
     fetch("/api/kekere/tags")
@@ -141,23 +196,29 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   }, []);
 
   // Restore any existing draft for this writer, once, before StoryEditor
-  // ever mounts. Runs client-only (localStorage doesn't exist during SSR),
-  // which is why this can't happen in a lazy useState initializer.
+  // ever mounts. Runs client-only (localStorage/IndexedDB don't exist
+  // during SSR), which is why this can't happen in a lazy useState
+  // initializer. Checks both storage layers since a save may have only
+  // landed in one of them.
   useEffect(() => {
-    const draft = loadDraft(writerId);
-    if (draft) {
-      setTitle(draft.title);
-      setHookLine(draft.hookLine);
-      setTier(draft.tier);
-      setCowrieCost(draft.cowrieCost);
-      setCoverImageRef(draft.coverImageRef);
-      setCoverPreviewUrl(draft.coverPreviewUrl);
-      setTagIds(draft.tagIds);
-      setInitialBody(draft.body);
-      setRestoredAt(draft.savedAt);
-      setDraftSavedAt(draft.savedAt);
-    }
-    setDraftChecked(true);
+    let cancelled = false;
+    loadDraft(writerId).then((draft) => {
+      if (cancelled) return;
+      if (draft) {
+        setTitle(draft.title);
+        setHookLine(draft.hookLine);
+        setTier(draft.tier);
+        setCowrieCost(draft.cowrieCost);
+        setCoverImageRef(draft.coverImageRef);
+        setCoverPreviewUrl(draft.coverPreviewUrl);
+        setTagIds(draft.tagIds);
+        setInitialBody(draft.body);
+        setRestoredAt(draft.savedAt);
+        setDraftSavedAt(draft.savedAt);
+      }
+      setDraftChecked(true);
+    });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [writerId]);
 
@@ -182,7 +243,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       // alone is never actually zero — extract real text instead.
       const hasContent = title.trim() || hookLine.trim() || tagIds.length > 0 || coverImageRef || extractPlainText(body).trim().length > 0;
       if (!hasContent) return; // nothing worth remembering on a still-blank form
-      const savedAt = saveDraft(writerId, {
+      void saveDraft(writerId, {
         title,
         hookLine,
         tier,
@@ -191,8 +252,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         coverPreviewUrl,
         tagIds,
         body,
+      }).then(({ savedAt, ok }) => {
+        setDraftSaveError(!ok);
+        if (ok) setDraftSavedAt(savedAt);
       });
-      setDraftSavedAt(savedAt);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, 1200);
   }, [draftChecked, writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
@@ -210,7 +273,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       clearTimeout(saveTimerRef.current);
       const body = editorRef.current?.getContent();
       if (!body) return;
-      saveDraft(writerId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
+      void saveDraft(writerId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
     }
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") flush();
@@ -236,6 +299,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     setTagIds([]);
     setRestoredAt(null);
     setDraftSavedAt(null);
+    setDraftSaveError(false);
     editorRef.current?.setContent(EMPTY_DOC);
   }
 
@@ -473,6 +537,15 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           >
             Discard &amp; start over
           </button>
+        </div>
+      )}
+
+      {draftSaveError && (
+        <div className="mb-4 rounded-[8px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
+          Your browser just failed to save a local draft — nothing you type from here on is being
+          backed up. Copy your work somewhere safe before closing this tab or clicking &ldquo;Save&rdquo;
+          as soon as you can. (This can happen if local storage is full, blocked, or you&rsquo;re in a
+          private/incognito window.)
         </div>
       )}
 
