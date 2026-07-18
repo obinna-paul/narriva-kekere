@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, Settings } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, Settings, BookOpen, Eye, ChevronRight } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -34,18 +35,92 @@ function formatStat(n: number): string {
   return n.toString();
 }
 
-function StatCard({ value, label, accent }: { value: string; label: string; accent: "orange" | "teal" }) {
+/** Small uppercase group label, used consistently above every card on the
+ *  page so the eye can scan section-to-section the same way every time. */
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-3 py-[18px] text-center">
+    <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
+      {children}
+    </div>
+  );
+}
+
+/** Lighter-weight label for a sub-group *inside* a card (e.g. "Writing" vs
+ *  "Reading" within one Stats card) — a step down from SectionLabel so the
+ *  hierarchy between "this is a section" and "this is a subdivision of one"
+ *  stays legible. */
+function CardSubLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-2.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--color-ink-muted-3)]">
+      {children}
+    </div>
+  );
+}
+
+/** The one card shape used everywhere on this page — padded content. */
+function Card({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white p-4", className)}>
+      {children}
+    </div>
+  );
+}
+
+/** The one "grouped list" card shape — a set of full-width rows separated
+ *  by hairlines instead of each row being its own separately-tinted pill
+ *  floating on the page background. */
+function ListCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white">{children}</div>
+  );
+}
+
+function ListRow({
+  href,
+  icon,
+  tone,
+  label,
+  trailing,
+}: {
+  href: string;
+  icon: ReactNode;
+  tone: "primary" | "accent" | "neutral";
+  label: ReactNode;
+  trailing?: ReactNode;
+}) {
+  const toneClasses = {
+    primary: "bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]",
+    accent: "bg-[rgba(31,75,75,0.1)] text-[var(--color-accent)]",
+    neutral: "bg-[rgba(42,26,18,0.06)] text-[var(--color-ink-muted)]",
+  }[tone];
+
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[13px] transition-colors last:border-b-0 hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]"
+    >
+      <span className={cn("flex h-8 w-8 flex-none items-center justify-center rounded-full", toneClasses)}>
+        {icon}
+      </span>
+      <span className="flex-1 text-[14.5px] font-semibold text-[var(--color-ink)]">{label}</span>
+      {trailing}
+      <ChevronRight size={16} className="flex-none text-[var(--color-ink-muted-3)]" />
+    </Link>
+  );
+}
+
+function StatBlock({ value, label, accent }: { value: string; label: string; accent: "orange" | "teal" }) {
+  return (
+    <div className="text-center">
       <div
         className={cn(
-          "font-[family-name:var(--font-display)] text-[26px] font-semibold leading-none",
+          "font-[family-name:var(--font-display)] text-[22px] font-semibold leading-none",
           accent === "orange" ? "text-[var(--color-primary)]" : "text-[var(--color-accent)]"
         )}
       >
         {value}
       </div>
-      <div className="mt-1 text-[11.5px] leading-[1.3] text-[var(--color-ink-muted-2)]">{label}</div>
+      <div className="mt-[6px] text-[11px] leading-[1.3] text-[var(--color-ink-muted-2)]">{label}</div>
     </div>
   );
 }
@@ -375,68 +450,48 @@ export function ProfileView(props: ProfileViewProps) {
             </button>
           </section>
 
-          <section className="px-[22px]">
+          <section className="flex flex-col gap-6 px-[22px]">
             <StreakCard {...props.streakStats} />
 
-            {props.hasAuthoredAnyStory && (
-              <>
-                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
-                  As a writer
-                </div>
-                <div className="mb-6 grid grid-cols-2 gap-[10px]">
-                  <StatCard
-                    value={String(props.writingStats.publishedCount)}
-                    label="Published stories"
-                    accent="orange"
-                  />
-                  <StatCard
-                    value={formatStat(props.writingStats.totalReads)}
-                    label="Total reads"
-                    accent="orange"
-                  />
-                </div>
-                {props.writingStats.publishedCount > 0 && (
-                  <Link
-                    href={`/kekere/writer/${props.userId}`}
-                    className="mb-6 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
-                  >
-                    View your public profile &rarr;
-                  </Link>
+            <div>
+              <SectionLabel>Stats</SectionLabel>
+              <Card className="flex flex-col gap-4">
+                {props.hasAuthoredAnyStory && (
+                  <div className="border-b border-[rgba(42,26,18,0.07)] pb-4">
+                    <CardSubLabel>Writing</CardSubLabel>
+                    <div className="grid grid-cols-2 gap-3">
+                      <StatBlock
+                        value={String(props.writingStats.publishedCount)}
+                        label="Published stories"
+                        accent="orange"
+                      />
+                      <StatBlock
+                        value={formatStat(props.writingStats.totalReads)}
+                        label="Total reads"
+                        accent="orange"
+                      />
+                    </div>
+                  </div>
                 )}
-              </>
-            )}
-
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
-              As a reader
-            </div>
-            <div className="mb-6 grid grid-cols-3 gap-[10px]">
-              <StatCard
-                value={String(props.readingStats.storiesRead)}
-                label="Stories read"
-                accent="teal"
-              />
-              <StatCard
-                value={String(props.readingStats.storiesCompleted)}
-                label="Completed"
-                accent="teal"
-              />
-              <StatCard
-                value={String(props.readingStats.savedCount)}
-                label="Stories saved"
-                accent="teal"
-              />
+                <div>
+                  <CardSubLabel>Reading</CardSubLabel>
+                  <div className="grid grid-cols-3 gap-3">
+                    <StatBlock value={String(props.readingStats.storiesRead)} label="Stories read" accent="teal" />
+                    <StatBlock value={String(props.readingStats.storiesCompleted)} label="Completed" accent="teal" />
+                    <StatBlock value={String(props.readingStats.savedCount)} label="Stories saved" accent="teal" />
+                  </div>
+                </div>
+              </Card>
             </div>
 
             {followingWriters.length > 0 && (
-              <div className="mb-6">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
-                  Following ({followingWriters.length})
-                </div>
-                <div className="flex flex-col gap-2">
+              <div>
+                <SectionLabel>Following ({followingWriters.length})</SectionLabel>
+                <ListCard>
                   {followingWriters.map((writer) => (
                     <div
                       key={writer.id}
-                      className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-[14px] py-[11px]"
+                      className="flex items-center justify-between gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[11px] last:border-b-0"
                     >
                       <AuthorChip
                         authorId={writer.id}
@@ -460,51 +515,47 @@ export function ProfileView(props: ProfileViewProps) {
                       />
                     </div>
                   ))}
-                </div>
+                </ListCard>
               </div>
             )}
 
-            <Link
-              href="/kekere/library"
-              className="mb-3 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
-            >
-              Go to my library &rarr;
-            </Link>
-
-            <Link
-              href="/kekere/notes"
-              className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
-            >
-              <Mail size={16} />
-              Notes
-              {props.unreadNoteCount > 0 && (
-                <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[11px] font-bold text-white">
-                  {props.unreadNoteCount}
-                </span>
-              )}
-              &rarr;
-            </Link>
-
-            <Link
-              href="/kekere/invite"
-              className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-[rgba(31,75,75,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-accent)]"
-            >
-              <Gift size={16} />
-              Invite friends, earn cowries &rarr;
-            </Link>
-
-            <Link
-              href="/kekere/settings"
-              className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-[rgba(42,26,18,0.12)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-ink-muted)]"
-            >
-              <Settings size={16} />
-              Settings &rarr;
-            </Link>
+            <div>
+              <SectionLabel>Quick actions</SectionLabel>
+              <ListCard>
+                {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
+                  <ListRow
+                    href={`/kekere/writer/${props.userId}`}
+                    icon={<Eye size={15} />}
+                    tone="primary"
+                    label="View your public profile"
+                  />
+                )}
+                <ListRow href="/kekere/library" icon={<BookOpen size={15} />} tone="primary" label="My library" />
+                <ListRow
+                  href="/kekere/notes"
+                  icon={<Mail size={15} />}
+                  tone="primary"
+                  label="Notes"
+                  trailing={
+                    props.unreadNoteCount > 0 ? (
+                      <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                        {props.unreadNoteCount}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                <ListRow href="/kekere/invite" icon={<Gift size={15} />} tone="accent" label="Invite friends, earn cowries" />
+                <ListRow href="/kekere/settings" icon={<Settings size={15} />} tone="neutral" label="Settings" />
+              </ListCard>
+            </div>
           </section>
 
-          <BankDetailsSection bankDetails={props.bankDetails} />
+          <section id="bank-details" className="scroll-mt-6 px-[22px] pt-6">
+            <SectionLabel>Payout account</SectionLabel>
+            <BankDetailsSection bankDetails={props.bankDetails} />
+          </section>
 
-          <div className="px-[22px] pb-[100px] pt-[10px]">
+          <div className="px-[22px] pb-[100px] pt-8">
             <button
               type="button"
               onClick={() => hardSignOut("/kekere")}
