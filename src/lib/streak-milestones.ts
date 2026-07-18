@@ -18,11 +18,11 @@ export interface StreakMilestone {
 const FIXED_MILESTONES: readonly StreakMilestone[] = [
   { days: 7, reward: 1 },
   { days: 30, reward: 3 },
-  { days: 60, reward: 10 },
+  { days: 60, reward: 7 },
 ];
 
 const LOOP_DAYS = 60;
-const LOOP_REWARD = 10;
+const LOOP_REWARD = 7;
 
 /** The milestone this exact streak length lands on, if any — the trigger for crediting a reward. */
 export function milestoneAt(streak: number): StreakMilestone | null {
