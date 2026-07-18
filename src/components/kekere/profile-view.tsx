@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
+import { AuthorChip } from "@/components/kekere/author-chip";
+import { FollowButton } from "@/components/kekere/follow-button";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -63,6 +65,7 @@ export interface ProfileViewProps {
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   streakStats: StreakCardProps;
   unreadNoteCount: number;
+  followingWriters: readonly { id: string; name: string; avatarColor: string | null; avatarUrl: string | null }[];
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -82,6 +85,7 @@ export function ProfileView(props: ProfileViewProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [followingWriters, setFollowingWriters] = useState(props.followingWriters);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function openEdit() {
@@ -422,6 +426,43 @@ export function ProfileView(props: ProfileViewProps) {
                 accent="teal"
               />
             </div>
+
+            {followingWriters.length > 0 && (
+              <div className="mb-6">
+                <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-2)]">
+                  Following ({followingWriters.length})
+                </div>
+                <div className="flex flex-col gap-2">
+                  {followingWriters.map((writer) => (
+                    <div
+                      key={writer.id}
+                      className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-[14px] py-[11px]"
+                    >
+                      <AuthorChip
+                        authorId={writer.id}
+                        authorName={writer.name}
+                        avatarColor={writer.avatarColor}
+                        avatarUrl={writer.avatarUrl}
+                        size="md"
+                      />
+                      <FollowButton
+                        writerId={writer.id}
+                        isLoggedIn
+                        initialFollowing
+                        variant="compact"
+                        // This card only ever starts as "Following," so the only
+                        // toggle possible here is unfollowing — drop the row once
+                        // that succeeds rather than leaving a stale "Follow" card.
+                        onFollowerCountChange={() =>
+                          setFollowingWriters((prev) => prev.filter((w) => w.id !== writer.id))
+                        }
+                        className="flex-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Link
               href="/kekere/library"
