@@ -75,13 +75,17 @@ export async function sendWalletHistoryEmail(
     (r) => `${new Date(r.date).toLocaleDateString()} — ${r.label}: ${r.isDebit ? "-" : "+"}${r.amountCowries} cowries`
   );
 
-  await sendEmail({
+  const result = await sendEmail({
     to: user.email,
     subject: `Your Kekere transaction history: ${fromLabel} – ${toLabel}`,
     body: `Hi ${user.name},\n\nHere's your Kekere wallet history from ${fromLabel} to ${toLabel}:\n\n${textLines.join("\n")}\n\n${rows.length} transaction${rows.length === 1 ? "" : "s"} in this period.`,
     from: KEKERE_GENERAL_FROM,
     html,
   });
+
+  if (!result.success) {
+    return { sent: false, reason: result.error ?? "Couldn't send the email — please try again." };
+  }
 
   return { sent: true };
 }
