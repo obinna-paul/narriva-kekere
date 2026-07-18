@@ -14,12 +14,19 @@ export interface PublicWriterProfile {
 }
 
 /**
- * Public, unauthenticated-visible writer profile. Returns null unless this
- * user has at least one PUBLISHED story — that's the privacy boundary in
- * lieu of a real per-user visibility setting: a plain reader account with no
- * published work never gets a public page, only genuine writers do.
+ * Two different reasons this page can come up empty, kept distinct on
+ * purpose: an unknown/mistyped id is a genuine 404, but an account that
+ * exists and simply hasn't published anything is a normal, expected state —
+ * "no public profile," not a broken link. Being a published writer is the
+ * privacy boundary here in lieu of a real per-user visibility setting: a
+ * plain reader account never gets a public page, only genuine writers do.
  */
-export async function getPublicWriterProfile(userId: string): Promise<PublicWriterProfile | null> {
+export type PublicWriterProfileResult =
+  | { kind: "writer"; profile: PublicWriterProfile }
+  | { kind: "not_a_writer"; name: string }
+  | { kind: "not_found" };
+
+export async function getPublicWriterProfile(userId: string): Promise<PublicWriterProfileResult> {
   const [user, publishedCount] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
@@ -28,17 +35,21 @@ export async function getPublicWriterProfile(userId: string): Promise<PublicWrit
     prisma.story.count({ where: { authorId: userId, status: "PUBLISHED" } }),
   ]);
 
-  if (!user || publishedCount === 0) return null;
+  if (!user) return { kind: "not_found" };
+  if (publishedCount === 0) return { kind: "not_a_writer", name: user.name };
 
   return {
-    id: user.id,
-    name: user.name,
-    bio: user.bio,
-    country: user.country,
-    avatarColor: user.avatarColor,
-    avatar: user.avatar,
-    socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
-    memberSince: user.createdAt,
+    kind: "writer",
+    profile: {
+      id: user.id,
+      name: user.name,
+      bio: user.bio,
+      country: user.country,
+      avatarColor: user.avatarColor,
+      avatar: user.avatar,
+      socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
+      memberSince: user.createdAt,
+    },
   };
 }
 
