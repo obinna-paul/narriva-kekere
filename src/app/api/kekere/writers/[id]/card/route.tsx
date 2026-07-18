@@ -7,6 +7,7 @@ import {
   getPublicWriterProfile,
   getWriterProfileStats,
   getWriterPublishedStories,
+  type WriterProfileStory,
 } from "@/lib/data/kekere-writer-profile";
 import { userAvatarCardUrl, storyCoverCardUrl } from "@/lib/storage/cloudinary-urls";
 import { loadGoogleFont } from "@/lib/og/google-font";
@@ -50,27 +51,39 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     readFile(path.join(process.cwd(), "public", "kekere-logo.png")),
   ]);
 
+  // Top story first (most-unlocked, falling back to most recent), then one
+  // more distinct story if the writer has published more than one — "their
+  // top story and another story," not just a single highlight.
   const topStory = stories.find((s) => s.mostPopular) ?? stories[0] ?? null;
+  const secondStory = stories.find((s) => s.id !== topStory?.id) ?? null;
+  const featuredStories = [topStory, secondStory].filter((s): s is WriterProfileStory => !!s);
+
   const logoDataUri = `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
   const name = truncate(profile.name || "A Kekere writer", 42);
-  const bio = profile.bio ? truncate(profile.bio, 150) : null;
-  const storyTitle = topStory ? truncate(topStory.title, 56) : null;
-  const storyHook = topStory ? truncate(topStory.hookLine, 90) : null;
+  const bio = profile.bio ? truncate(profile.bio, 130) : null;
   const memberSince = formatMemberSince(profile.memberSince);
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
   const avatarColor = profile.avatarColor ?? "#C75D2C";
+  const hasRating = stats.rating.average !== null && stats.rating.count > 0;
+
+  const cardStories = featuredStories.map((s, i) => ({
+    story: s,
+    label: i === 0 ? (s.mostPopular ? "TOP STORY" : "FEATURED STORY") : "ALSO PUBLISHED",
+    title: truncate(s.title, 44),
+    hook: truncate(s.hookLine, 66),
+  }));
 
   const cardText = [
     "KEKERE STORIES",
     "WRITER",
+    "★",
     name,
     bio,
     profile.country ? `Writer from ${profile.country}` : "",
-    storyTitle,
-    storyHook,
-    "TOP STORY",
-    "FEATURED STORY",
+    hasRating ? stats.rating.average!.toFixed(1) : "",
+    hasRating ? `${stats.rating.count} rating${stats.rating.count === 1 ? "" : "s"}` : "",
+    ...cardStories.flatMap((c) => [c.label, c.title, c.hook]),
     `${stats.publishedCount} ${stats.publishedCount === 1 ? "story" : "stories"}`,
     `Since ${memberSince}`,
     "Kekere Stories",
@@ -172,18 +185,19 @@ export async function GET(_request: Request, { params }: { params: { id: string 
             </div>
           </div>
 
-          <div style={{ display: "flex", width: 60, height: 2, backgroundColor: GOLD, marginTop: 40, marginBottom: 38 }} />
+          <div style={{ display: "flex", width: 60, height: 2, backgroundColor: GOLD, marginTop: 32, marginBottom: 32 }} />
 
-          {/* Avatar */}
+          {/* Avatar — deliberately large: the bio is usually short, so this
+              is what fills the card's upper half rather than empty space. */}
           <div
             style={{
               display: "flex",
-              width: 176,
-              height: 176,
-              borderRadius: 88,
-              border: `3px solid ${GOLD}`,
-              padding: 6,
-              marginBottom: 30,
+              width: 300,
+              height: 300,
+              borderRadius: 150,
+              border: `4px solid ${GOLD}`,
+              padding: 8,
+              marginBottom: 28,
             }}
           >
             {profile.avatar ? (
@@ -191,21 +205,21 @@ export async function GET(_request: Request, { params }: { params: { id: string 
               <img
                 alt=""
                 src={userAvatarCardUrl(profile.avatar)}
-                width={164}
-                height={164}
-                style={{ display: "flex", borderRadius: 82, objectFit: "cover" }}
+                width={284}
+                height={284}
+                style={{ display: "flex", borderRadius: 142, objectFit: "cover" }}
               />
             ) : (
               <div
                 style={{
                   display: "flex",
-                  width: 164,
-                  height: 164,
-                  borderRadius: 82,
+                  width: 284,
+                  height: 284,
+                  borderRadius: 142,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundImage: `linear-gradient(135deg, #E08A4A, ${avatarColor})`,
-                  fontSize: 60,
+                  fontSize: 104,
                   fontFamily: "Fraunces",
                   fontWeight: 700,
                   color: "#FFFFFF",
@@ -237,6 +251,18 @@ export async function GET(_request: Request, { params }: { params: { id: string 
             </div>
           )}
 
+          {hasRating && (
+            <div style={{ display: "flex", alignItems: "center", marginTop: 14 }}>
+              <span style={{ display: "flex", fontSize: 20, color: GOLD, marginRight: 8 }}>★</span>
+              <span style={{ display: "flex", fontSize: 19, fontWeight: 600, color: CREAM }}>
+                {stats.rating.average!.toFixed(1)}
+              </span>
+              <span style={{ display: "flex", fontSize: 15, color: GOLD_MUTED, marginLeft: 8 }}>
+                ({stats.rating.count} rating{stats.rating.count === 1 ? "" : "s"})
+              </span>
+            </div>
+          )}
+
           {bio && (
             <div
               style={{
@@ -255,59 +281,63 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 
           <div style={{ display: "flex", flexGrow: 1 }} />
 
-          {/* Top story */}
-          {topStory && storyTitle && (
-            <div
-              style={{
-                display: "flex",
-                width: "100%",
-                alignItems: "center",
-                border: `1px solid ${GOLD_DIM}`,
-                borderRadius: 20,
-                padding: 24,
-                backgroundColor: "rgba(233,201,163,0.05)",
-              }}
-            >
-              {topStory.coverImageRef && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt=""
-                  src={storyCoverCardUrl(topStory.coverImageRef)}
-                  width={82}
-                  height={108}
-                  style={{ display: "flex", borderRadius: 10, objectFit: "cover", flexShrink: 0 }}
-                />
-              )}
+          {/* Featured stories — top story, plus a second distinct one if the
+              writer has published more than one. Cover sits close to the
+              box's own left edge; title + hookline sit to its right. */}
+          <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+            {cardStories.map(({ story, label, title, hook }, i) => (
               <div
+                key={story.id}
                 style={{
                   display: "flex",
-                  flexDirection: "column",
-                  marginLeft: topStory.coverImageRef ? 22 : 0,
+                  width: "100%",
+                  alignItems: "center",
+                  border: `1px solid ${GOLD_DIM}`,
+                  borderRadius: 18,
+                  padding: "16px 20px 16px 12px",
+                  backgroundColor: "rgba(233,201,163,0.05)",
+                  marginTop: i === 0 ? 0 : 14,
                 }}
               >
-                <span style={{ display: "flex", fontSize: 12, letterSpacing: 3, color: GOLD, marginBottom: 8 }}>
-                  {topStory.mostPopular ? "TOP STORY" : "FEATURED STORY"}
-                </span>
-                <span
+                {story.coverImageRef && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    alt=""
+                    src={storyCoverCardUrl(story.coverImageRef)}
+                    width={64}
+                    height={84}
+                    style={{ display: "flex", borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                  />
+                )}
+                <div
                   style={{
                     display: "flex",
-                    fontSize: 27,
-                    fontFamily: "Fraunces",
-                    fontWeight: 700,
-                    color: CREAM,
-                    lineHeight: 1.2,
+                    flexDirection: "column",
+                    marginLeft: story.coverImageRef ? 18 : 0,
                   }}
                 >
-                  {storyTitle}
-                </span>
-                {storyHook && (
-                  <span style={{ display: "flex", marginTop: 8, fontSize: 16, fontStyle: "italic", color: WARM_GRAY }}>
-                    {storyHook}
+                  <span style={{ display: "flex", fontSize: 11, letterSpacing: 3, color: GOLD, marginBottom: 6 }}>
+                    {label}
                   </span>
-                )}
+                  <span
+                    style={{
+                      display: "flex",
+                      fontSize: 22,
+                      fontFamily: "Fraunces",
+                      fontWeight: 700,
+                      color: CREAM,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {title}
+                  </span>
+                  <span style={{ display: "flex", marginTop: 6, fontSize: 14, fontStyle: "italic", color: WARM_GRAY }}>
+                    {hook}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
 
           {/* Stats */}
           <div style={{ display: "flex", alignItems: "center", marginTop: 26 }}>
