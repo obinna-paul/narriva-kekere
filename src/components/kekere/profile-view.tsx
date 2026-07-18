@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, Settings, BookOpen, Eye, ChevronRight } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -545,7 +545,6 @@ export function ProfileView(props: ProfileViewProps) {
                   }
                 />
                 <ListRow href="/kekere/invite" icon={<Gift size={15} />} tone="accent" label="Invite friends, earn cowries" />
-                <ListRow href="/kekere/settings" icon={<Settings size={15} />} tone="neutral" label="Settings" />
               </ListCard>
             </div>
           </section>
