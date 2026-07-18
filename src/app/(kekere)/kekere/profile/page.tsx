@@ -4,6 +4,7 @@ import { ProfileView } from "@/components/kekere/profile-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
+import { getStreakStats } from "@/lib/data/kekere-streaks";
 import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
 export const dynamic = "force-dynamic";
@@ -14,18 +15,20 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, bankDetails] = userId
+  const [profile, writerStats, readerStats, bankDetails, streakStats] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
         getReaderStats(userId),
         getWriterBankDetails(userId),
+        getStreakStats(userId),
       ])
     : [
         null,
         { publishedCount: 0, totalReads: 0, hasAuthoredAnyStory: false },
         { storiesRead: 0, storiesCompleted: 0, savedCount: 0 },
         null,
+        { currentStreak: 0, longestStreak: 0, hasAnyActivity: false, activeToday: false },
       ];
 
   return (
@@ -44,6 +47,7 @@ export default async function KekereProfilePage() {
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
           readingStats={readerStats}
+          streakStats={streakStats}
         />
       </div>
     </KekereTheme>
