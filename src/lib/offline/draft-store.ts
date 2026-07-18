@@ -31,13 +31,17 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+/** Returns whether the write actually landed — most callers treat IndexedDB
+ *  as a best-effort enhancement and ignore this, but a caller relying on it
+ *  as the primary (or only) persistence layer needs to know if it silently
+ *  failed instead of assuming success. */
 export async function saveDraft(
   storyId: string,
   content: object,
   title: string,
   hookLine: string,
   timestamp: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const db = await openDB();
     const record: DraftRecord = { storyId, content, title, hookLine, timestamp };
@@ -48,8 +52,10 @@ export async function saveDraft(
       tx.onerror = () => reject(tx.error);
     });
     db.close();
+    return true;
   } catch {
     // Silently fail — IndexedDB is an enhancement, never blocks the editor
+    return false;
   }
 }
 
