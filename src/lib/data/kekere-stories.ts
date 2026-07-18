@@ -35,12 +35,12 @@ function defaultCowrieCostForTier(tier: StoryTier): number {
 }
 
 const authorInclude = {
-  author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } },
   tags: { include: { tag: true } },
 } as const;
 
 export type StoryWithAuthor = Story & {
-  author: { id: string; name: string; slug: string | null; avatarColor: string | null };
+  author: { id: string; name: string; slug: string | null; avatarColor: string | null; avatar: string | null };
   tags: Array<{ tag: Tag }>;
 };
 

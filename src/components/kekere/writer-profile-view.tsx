@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { MapPin, Star } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary";
+import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
+import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import type { PublicWriterProfile, WriterProfileStats, WriterProfileStory } from "@/lib/data/kekere-writer-profile";
 
 function formatCount(n: number): string {
@@ -80,9 +81,21 @@ export interface WriterProfileViewProps {
   profile: PublicWriterProfile;
   stats: WriterProfileStats;
   stories: WriterProfileStory[];
+  followerCount: number;
+  viewerIsLoggedIn: boolean;
+  viewerIsFollowing: boolean;
+  isOwnProfile: boolean;
 }
 
-export function WriterProfileView({ profile, stats, stories }: WriterProfileViewProps) {
+export function WriterProfileView({
+  profile,
+  stats,
+  stories,
+  followerCount,
+  viewerIsLoggedIn,
+  viewerIsFollowing,
+  isOwnProfile,
+}: WriterProfileViewProps) {
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
   const avatarUrl = profile.avatar ? userAvatarUrl(profile.avatar) : null;
   const avatarColor = profile.avatarColor ?? "#C75D2C";
@@ -139,6 +152,14 @@ export function WriterProfileView({ profile, stats, stories }: WriterProfileView
         <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)]">
           Member since {formatMemberSince(profile.memberSince)}
         </p>
+
+        <WriterFollowHeader
+          writerId={profile.id}
+          isLoggedIn={viewerIsLoggedIn}
+          initialFollowing={viewerIsFollowing}
+          initialFollowerCount={followerCount}
+          isOwnProfile={isOwnProfile}
+        />
       </section>
 
       <section className="px-[22px]">

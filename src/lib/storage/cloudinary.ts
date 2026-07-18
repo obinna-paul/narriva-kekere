@@ -6,7 +6,9 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME ?? "";
+// Re-exported so existing server-side importers of this file don't need to
+// change — see cloudinary-urls.ts for why these live in their own module.
+export { storyCoverUrl, storyCoverOgImageUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 
 /**
  * Uploads a story cover image. The public_id is deterministic so re-uploading
@@ -28,7 +30,7 @@ export async function uploadStoryCover(
         resource_type: "image",
         format: contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg",
       },
-      (error, result) => {
+      (error) => {
         if (error) reject(error);
         else resolve();
       },
@@ -37,19 +39,6 @@ export async function uploadStoryCover(
   });
 
   return publicId;
-}
-
-/** Constructs the optimised Cloudinary CDN URL for a story cover.
- *  Auto format + quality, cropped to 3:4 portrait at 2× resolution. */
-export function storyCoverUrl(publicId: string): string {
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_280,h_373,c_fill/${publicId}`;
-}
-
-/** Same cover image, cropped to the 1200×630 landscape shape social
- *  platforms expect for og:image/Twitter card previews — the 3:4 portrait
- *  crop above reads as a tiny sliver when embedded in a share card. */
-export function storyCoverOgImageUrl(publicId: string): string {
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_1200,h_630,c_fill/${publicId}`;
 }
 
 /**
@@ -88,9 +77,4 @@ export async function uploadUserAvatar(
   });
 
   return `v${result.version}/${publicId}`;
-}
-
-/** Constructs the optimised Cloudinary CDN URL for a user's avatar. */
-export function userAvatarUrl(ref: string): string {
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_200,h_200,c_fill/${ref}`;
 }

@@ -9,6 +9,8 @@ import {
   getWriterProfileStats,
   getWriterPublishedStories,
 } from "@/lib/data/kekere-writer-profile";
+import { getFollowerCount, isFollowing } from "@/lib/data/kekere-follows";
+import { getCurrentSession } from "@/lib/auth/middleware";
 
 export const dynamic = "force-dynamic";
 
@@ -61,16 +63,29 @@ export default async function KekereWriterProfilePage({ params }: { params: { id
   }
 
   const { profile } = result;
-  const [stats, stories] = await Promise.all([
+  const session = await getCurrentSession();
+  const viewerId = session?.user?.id;
+
+  const [stats, stories, followerCount, viewerIsFollowing] = await Promise.all([
     getWriterProfileStats(params.id),
     getWriterPublishedStories(params.id),
+    getFollowerCount(params.id),
+    viewerId ? isFollowing(viewerId, params.id) : Promise.resolve(false),
   ]);
 
   return (
     <KekereTheme>
       <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
         <KekereNavWrapper />
-        <WriterProfileView profile={profile} stats={stats} stories={stories} />
+        <WriterProfileView
+          profile={profile}
+          stats={stats}
+          stories={stories}
+          followerCount={followerCount}
+          viewerIsLoggedIn={!!viewerId}
+          viewerIsFollowing={viewerIsFollowing}
+          isOwnProfile={viewerId === profile.id}
+        />
       </div>
     </KekereTheme>
   );

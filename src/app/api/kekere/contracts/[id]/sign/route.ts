@@ -10,6 +10,7 @@ import { getPortalFileDownloadUrl, uploadPortalFile } from "@/lib/storage/r2";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
 import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 
 const signSchema = z.object({
   signedName: z.string().min(1, "Signed name is required."),
@@ -146,6 +147,7 @@ export const POST = withAuth(async (request, session, { params }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { status: "PUBLISHED" as any, isDraft: false, publishedAt: signedAt },
     });
+    notifyFollowersOfPublish(linkedStoryId).catch(console.error);
   }
 
   const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;

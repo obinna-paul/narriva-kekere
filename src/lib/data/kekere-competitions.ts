@@ -40,7 +40,7 @@ export async function getCompetitionById(id: string): Promise<Competition | null
 
 const winnerInclude = {
   story: {
-    include: { author: { select: { id: true, name: true, slug: true, avatarColor: true } } },
+    include: { author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } } },
   },
 } as const;
 
@@ -71,7 +71,7 @@ export interface AllWinnerEntry {
 }
 
 const storyWithAuthorInclude = {
-  author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } },
   tags: { include: { tag: true } },
 } as const;
 

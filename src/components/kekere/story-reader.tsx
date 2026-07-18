@@ -14,6 +14,8 @@ import { useParagraphComments } from "@/components/kekere/use-paragraph-comments
 import { useParagraphReactions } from "@/components/kekere/use-paragraph-reactions";
 import { EmojiFloat } from "@/components/kekere/EmojiFloat";
 import { FloatingEmojiPicker } from "@/components/kekere/FloatingEmojiPicker";
+import { AuthorChip } from "@/components/kekere/author-chip";
+import { FollowButton } from "@/components/kekere/follow-button";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 /**
@@ -96,6 +98,10 @@ export interface StoryReaderProps {
    * one free first read available — lets this specific story open free
    * regardless of cowrie balance. */
   firstReadFree?: boolean;
+  /** Whether the current reader already follows this story's author —
+   * omitted entirely (no Follow button shown) when they ARE the author. */
+  initialFollowing?: boolean;
+  isOwnStory?: boolean;
 }
 
 export function StoryReader({
@@ -106,6 +112,8 @@ export function StoryReader({
   initialSaved,
   initialRating = 0,
   firstReadFree = false,
+  initialFollowing = false,
+  isOwnStory = false,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -670,13 +678,26 @@ export function StoryReader({
           <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)] transition-colors duration-300">
             {story.title}
           </h1>
-          <p className="mt-[10px] text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
-            by{" "}
-            <Link href={`/kekere/writer/${story.authorId}`} className="underline decoration-transparent transition-colors hover:decoration-current">
-              {story.authorName}
-            </Link>{" "}
-            · {story.readingTimeMinutes} min read
-          </p>
+          <div className="mt-[10px] flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <AuthorChip
+              authorId={story.authorId}
+              authorName={story.authorName}
+              avatarColor={story.authorAvatarColor}
+              avatarUrl={story.authorAvatarUrl}
+              size="md"
+            />
+            <span className="text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
+              · {story.readingTimeMinutes} min read
+            </span>
+            {!isOwnStory && (
+              <FollowButton
+                writerId={story.authorId}
+                isLoggedIn={isLoggedIn}
+                initialFollowing={initialFollowing}
+                variant="compact"
+              />
+            )}
+          </div>
         </div>
 
         <div
