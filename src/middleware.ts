@@ -31,6 +31,14 @@ const NARRIVA_PROTECTED_PREFIXES = ["/read", "/account"];
 // redirected to /login would break installability. Neither is in any
 // protected-prefix list above, so both already pass through untouched.
 
+// A plain `pathname.startsWith(prefix)` matches on raw characters, not path
+// segments — "/kekere/write" would also match "/kekere/writer/abc123",
+// silently gating an unrelated public route. Require the prefix to either be
+// the whole path or be followed by a "/".
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
@@ -51,10 +59,10 @@ export async function middleware(request: NextRequest) {
   // src/lib/auth/middleware.ts for the route-handler equivalent used inside
   // API routes and Server Components.
   const isProtected =
-    effectivePathname.startsWith("/admin") ||
-    effectivePathname.startsWith("/portal") ||
-    KEKERE_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix)) ||
-    NARRIVA_PROTECTED_PREFIXES.some((prefix) => effectivePathname.startsWith(prefix));
+    matchesPrefix(effectivePathname, "/admin") ||
+    matchesPrefix(effectivePathname, "/portal") ||
+    KEKERE_PROTECTED_PREFIXES.some((prefix) => matchesPrefix(effectivePathname, prefix)) ||
+    NARRIVA_PROTECTED_PREFIXES.some((prefix) => matchesPrefix(effectivePathname, prefix));
 
   if (isProtected) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });

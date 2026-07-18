@@ -33,6 +33,9 @@ model User {
   role     UserRole @default(READER)
   avatar   String?
   bio      String?
+  // Free text (e.g. "Lagos, Nigeria") — shown on the visitable Kekere writer
+  // profile ("Writer from Lagos, Nigeria"). Self-reported, optional.
+  country  String?
 
   // Author-facing profile fields, used when this user is a published Narriva
   // author (role WRITER) and shown on /authors/[slug] — see Phase 3/7.

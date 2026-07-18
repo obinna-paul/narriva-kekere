@@ -40,6 +40,7 @@ export default async function KekereProfilePage() {
           name={profile?.name ?? ""}
           email={profile?.email ?? ""}
           bio={profile?.bio ?? ""}
+          country={profile?.country ?? null}
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
           avatarUrl={profile?.avatar ? userAvatarUrl(profile.avatar) : null}
           socialLinks={profile?.socialLinks ?? []}

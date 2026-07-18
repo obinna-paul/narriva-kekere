@@ -53,6 +53,7 @@ export interface ProfileViewProps {
   name: string;
   email: string;
   bio: string;
+  country: string | null;
   avatarColor: string;
   avatarUrl: string | null;
   socialLinks: readonly { label: string; href: string }[];
@@ -66,11 +67,13 @@ export interface ProfileViewProps {
 export function ProfileView(props: ProfileViewProps) {
   const [name, setName] = useState(props.name);
   const [bio, setBio] = useState(props.bio);
+  const [country, setCountry] = useState(props.country ?? "");
   const [socialLinks, setSocialLinks] = useState(props.socialLinks);
   const [avatarUrl, setAvatarUrl] = useState(props.avatarUrl);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [draftBio, setDraftBio] = useState(bio);
+  const [draftCountry, setDraftCountry] = useState(country);
   const [draftSocialLinksText, setDraftSocialLinksText] = useState(
     socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"),
   );
@@ -83,6 +86,7 @@ export function ProfileView(props: ProfileViewProps) {
   function openEdit() {
     setDraftName(name);
     setDraftBio(bio);
+    setDraftCountry(country);
     setDraftSocialLinksText(socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"));
     setEditing(true);
   }
@@ -104,6 +108,7 @@ export function ProfileView(props: ProfileViewProps) {
         body: JSON.stringify({
           name: draftName,
           bio: draftBio,
+          country: draftCountry.trim() || null,
           socialLinks: parsedSocialLinks,
         }),
       });
@@ -113,6 +118,7 @@ export function ProfileView(props: ProfileViewProps) {
 
     setName(draftName);
     setBio(draftBio);
+    setCountry(draftCountry.trim());
     setSocialLinks(parsedSocialLinks);
     setSaving(false);
     setEditing(false);
@@ -269,6 +275,26 @@ export function ProfileView(props: ProfileViewProps) {
             </div>
             <div>
               <label
+                htmlFor="profile-country"
+                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+              >
+                Country
+              </label>
+              <input
+                id="profile-country"
+                value={draftCountry}
+                onChange={(e) => setDraftCountry(e.target.value)}
+                placeholder="e.g. Lagos, Nigeria"
+                maxLength={80}
+                className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                style={{ fontFamily: "inherit" }}
+              />
+              <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
+                Shown on your public writer profile, if you have one.
+              </div>
+            </div>
+            <div>
+              <label
                 htmlFor="profile-social-links"
                 className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
               >
@@ -364,6 +390,14 @@ export function ProfileView(props: ProfileViewProps) {
                     accent="orange"
                   />
                 </div>
+                {props.writingStats.publishedCount > 0 && (
+                  <Link
+                    href={`/kekere/writer/${props.userId}`}
+                    className="mb-6 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
+                  >
+                    View your public profile &rarr;
+                  </Link>
+                )}
               </>
             )}
 

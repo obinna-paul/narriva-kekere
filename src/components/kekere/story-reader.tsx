@@ -671,7 +671,11 @@ export function StoryReader({
             {story.title}
           </h1>
           <p className="mt-[10px] text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
-            by {story.authorName} · {story.readingTimeMinutes} min read
+            by{" "}
+            <Link href={`/kekere/writer/${story.authorId}`} className="underline decoration-transparent transition-colors hover:decoration-current">
+              {story.authorName}
+            </Link>{" "}
+            · {story.readingTimeMinutes} min read
           </p>
         </div>
 

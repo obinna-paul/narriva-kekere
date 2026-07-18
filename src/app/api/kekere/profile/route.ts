@@ -6,13 +6,16 @@ import { updateKekereProfile } from "@/lib/data/kekere-profile-stats";
 
 export const PATCH = withAuth(async (request, session) => {
   const body = await request.json().catch(() => ({}));
-  const { name, bio, socialLinks } = body;
+  const { name, bio, socialLinks, country } = body;
 
   if (typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
   if (typeof bio !== "string") {
     return NextResponse.json({ error: "Bio must be a string" }, { status: 400 });
+  }
+  if (country !== undefined && country !== null && typeof country !== "string") {
+    return NextResponse.json({ error: "Country must be a string" }, { status: 400 });
   }
 
   let parsedSocialLinks: { label: string; href: string }[] | undefined;
@@ -32,6 +35,7 @@ export const PATCH = withAuth(async (request, session) => {
     name: name.trim(),
     bio: bio.slice(0, 160),
     socialLinks: parsedSocialLinks,
+    country: typeof country === "string" ? country.trim().slice(0, 80) || null : undefined,
   });
 
   return NextResponse.json(profile);
