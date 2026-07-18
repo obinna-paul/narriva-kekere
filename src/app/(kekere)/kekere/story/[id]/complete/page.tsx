@@ -6,6 +6,7 @@ import { getStoryForReader } from "@/lib/data/kekere-stories";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 import { isFollowing } from "@/lib/data/kekere-follows";
+import { getNoteEligibilityForStory } from "@/lib/data/kekere-notes";
 import { userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { prisma } from "@/lib/db/prisma";
 
@@ -18,11 +19,12 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
   const story = await getStoryForReader(params.id, session.user.id);
   if (!story) notFound();
 
-  const [wallet, code, tipCount, following] = await Promise.all([
+  const [wallet, code, tipCount, following, noteEligibility] = await Promise.all([
     getWalletForUser(session.user.id),
     getOrCreateReferralCodeForUser(session.user.id),
     prisma.tip.count({ where: { readerId: session.user.id, storyId: params.id } }),
     isFollowing(session.user.id, story.author.id),
+    getNoteEligibilityForStory(session.user.id, params.id),
   ]);
 
   return (
@@ -41,6 +43,7 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
           referralCode={code}
           initialFollowing={following}
           isOwnStory={session.user.id === story.author.id}
+          noteEligible={noteEligibility.eligible}
         />
       </div>
     </KekereTheme>

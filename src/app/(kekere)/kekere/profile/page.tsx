@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/lib/auth/middleware";
 import { getKekereUserProfile, getReaderStats, getWriterStats } from "@/lib/data/kekere-profile-stats";
 import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 import { getStreakStats } from "@/lib/data/kekere-streaks";
+import { getUnreadNoteCount } from "@/lib/data/kekere-notes";
 import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +16,14 @@ export default async function KekereProfilePage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
-  const [profile, writerStats, readerStats, bankDetails, streakStats] = userId
+  const [profile, writerStats, readerStats, bankDetails, streakStats, unreadNoteCount] = userId
     ? await Promise.all([
         getKekereUserProfile(userId),
         getWriterStats(userId),
         getReaderStats(userId),
         getWriterBankDetails(userId),
         getStreakStats(userId),
+        getUnreadNoteCount(userId),
       ])
     : [
         null,
@@ -29,6 +31,7 @@ export default async function KekereProfilePage() {
         { storiesRead: 0, storiesCompleted: 0, savedCount: 0 },
         null,
         { currentStreak: 0, longestStreak: 0, hasAnyActivity: false, activeToday: false },
+        0,
       ];
 
   return (
@@ -49,6 +52,7 @@ export default async function KekereProfilePage() {
           writingStats={writerStats}
           readingStats={readerStats}
           streakStats={streakStats}
+          unreadNoteCount={unreadNoteCount}
         />
       </div>
     </KekereTheme>

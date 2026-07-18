@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift } from "lucide-react";
+import { LogOut, Link2, Gift, Mail } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -62,6 +62,7 @@ export interface ProfileViewProps {
   writingStats: { publishedCount: number; totalReads: number };
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   streakStats: StreakCardProps;
+  unreadNoteCount: number;
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -427,6 +428,20 @@ export function ProfileView(props: ProfileViewProps) {
               className="mb-3 flex items-center justify-center rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
             >
               Go to my library &rarr;
+            </Link>
+
+            <Link
+              href="/kekere/notes"
+              className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-[rgba(199,93,44,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-primary)]"
+            >
+              <Mail size={16} />
+              Notes
+              {props.unreadNoteCount > 0 && (
+                <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                  {props.unreadNoteCount}
+                </span>
+              )}
+              &rarr;
             </Link>
 
             <Link

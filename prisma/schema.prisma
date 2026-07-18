@@ -70,6 +70,10 @@ model User {
   // First-story-free benefit: each new user gets their first unlock at no cost.
   freeReadUsed Boolean @default(false)
 
+  // Per-writer kill switch for the notes feature — off hides them from every
+  // reader's "send a note" prompt entirely, not just from the writer's own view.
+  notesEnabled Boolean @default(true)
+
   // Pre-launch onboarding: admins create placeholder WRITER accounts and
   // author stories into them; the writer later claims via a tokenised link.
   accountStatus       AccountStatus @default(CLAIMED)
@@ -115,6 +119,10 @@ model User {
   paragraphReactions   ParagraphReaction[]
   following            Follow[]              @relation("Following")
   followers            Follow[]              @relation("Followers")
+  notesSent            Note[]                @relation("NotesSent")
+  notesReceived        Note[]                @relation("NotesReceived")
+  noteBlocksMade       NoteBlock[]           @relation("NoteBlocksMade")
+  noteBlocksReceived   NoteBlock[]           @relation("NoteBlocksReceived")
 }
 
 // A reader subscribing to a writer — not messaging or a social graph, a
@@ -133,6 +141,54 @@ model Follow {
   @@index([followerId])
 }
 
+// A reader's note to a writer, gated on having finished one of their
+// stories — never a general messaging surface. The unique constraint below
+// is what actually enforces "one note per story," not just the UI: a
+// reader who finishes another of the same writer's stories gets a fresh
+// slot (a different storyId), so this never blocks a second, legitimate note.
+model Note {
+  id         String    @id @default(cuid())
+  fromUserId String
+  fromUser   User      @relation("NotesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toWriterId String
+  toWriter   User      @relation("NotesReceived", fields: [toWriterId], references: [id], onDelete: Cascade)
+  storyId    String
+  story      Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  body       String
+  createdAt  DateTime  @default(now())
+
+  // A writer may reply exactly once — enforced at the application layer by
+  // only ever allowing this transition from null to non-null.
+  replyBody  String?
+  repliedAt  DateTime?
+
+  // Unread indicator in the writer's inbox — distinct from having replied,
+  // since a writer can read a note and choose not to reply.
+  read       Boolean   @default(false)
+
+  reported   Boolean   @default(false)
+  reportedAt DateTime?
+
+  @@unique([fromUserId, storyId])
+  @@index([toWriterId, read])
+  @@index([fromUserId])
+}
+
+// A writer shutting down notes from one specific reader (after a report, or
+// just unilaterally) — separate from the global notesEnabled switch, which
+// shuts off notes from everyone at once.
+model NoteBlock {
+  id            String   @id @default(cuid())
+  writerId      String
+  writer        User     @relation("NoteBlocksMade", fields: [writerId], references: [id], onDelete: Cascade)
+  blockedUserId String
+  blockedUser   User     @relation("NoteBlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([writerId, blockedUserId])
+  @@index([blockedUserId])
+}
+
 enum NotificationType {
   STORY_SUBMITTED
   STORY_APPROVED
@@ -148,6 +204,8 @@ enum NotificationType {
   STREAK_MILESTONE_REACHED
   NEW_FOLLOWER
   WRITER_PUBLISHED
+  NOTE_RECEIVED
+  NOTE_REPLIED
 }
 
 model Notification {
@@ -393,6 +451,7 @@ model Story {
   paragraphReactions ParagraphReaction[]
   tags               StoryTag[]
   kekereContracts    KekereContract[]
+  notes              Note[]
 
   @@index([authorId])
 }
