@@ -45,7 +45,7 @@ export type StoryWithAuthor = Story & {
 };
 
 export interface ListStoriesParams {
-  tier?: StoryTier;
+  tier?: StoryTier | StoryTier[];
   /** Defaults to PUBLISHED — callers must explicitly pass a different status
    * (e.g. an author viewing their own drafts), the public feed never should. */
   status?: StoryStatus;
@@ -74,7 +74,9 @@ export async function listStories(params: ListStoriesParams = {}): Promise<ListS
 
   const where: Prisma.StoryWhereInput = {
     status,
-    ...(params.tier ? { tier: params.tier } : {}),
+    ...(params.tier
+      ? { tier: Array.isArray(params.tier) ? { in: params.tier } : params.tier }
+      : {}),
     ...(params.genre ? { genre: params.genre } : {}),
 ...(params.search
       ? {

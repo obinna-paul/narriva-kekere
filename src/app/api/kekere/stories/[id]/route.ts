@@ -133,9 +133,10 @@ export const PUT = withAuth(
 
     const { body: rawBody, expectedLastSavedAt, ...rest } = parsed.data;
 
-    // Tier is an editorial/curatorial decision — Featured drives the daily
-    // "Featured Today" rotation and Champion drives Winner's Circle placement,
-    // so writers can't set it themselves at all, only an admin can.
+    // Tier is an editorial/curatorial decision — Featured and Champion both
+    // drive the daily "Editor's Pick" rotation, and Champion additionally
+    // drives Winner's Circle placement, so writers can't set it themselves
+    // at all, only an admin can.
     if (rest.tier !== undefined && session.user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Only an admin can set a story's tier." },

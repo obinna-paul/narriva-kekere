@@ -312,7 +312,7 @@ export function FeedContent({
         </section>
       )}
 
-      {/* 2. Featured Story */}
+      {/* 2. Editor's Pick */}
       {featuredStory && (
         <section className="px-5 py-[18px]">
           <Link
@@ -323,7 +323,7 @@ export function FeedContent({
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(42,26,18,0.9)] to-[rgba(42,26,18,0.1)_60%]" />
             <div className="absolute bottom-5 left-5 right-5">
               <span className="text-[10px] font-semibold tracking-[0.08em] text-[var(--color-sand-accent)]">
-                FEATURED TODAY
+                EDITOR&apos;S PICK
               </span>
               <h3 className="mt-2 font-[family-name:var(--font-display)] text-[25px] font-semibold leading-[1.12] text-white">
                 {featuredStory.title}

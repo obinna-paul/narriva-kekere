@@ -46,10 +46,10 @@ export default async function KekereFeedPage() {
   const userId = session?.user?.id;
 
   // Fetch all sections in parallel
-  const [trendingData, featuredTierData, winners, wallet, inProgress, recommended, tagOrder, signatureRowMeta, firstReadFree] =
+  const [trendingData, editorsPickTierData, winners, wallet, inProgress, recommended, tagOrder, signatureRowMeta, firstReadFree] =
     await Promise.all([
       listStories({ sort: "trending", pageSize: 12 }),
-      listStories({ tier: "FEATURED", pageSize: 50 }),
+      listStories({ tier: ["FEATURED", "CHAMPION"], pageSize: 50 }),
       getAllWinners(),
       userId ? getWalletForUser(userId) : Promise.resolve(null),
       userId ? getInProgressStories(userId) : Promise.resolve([]),
@@ -73,13 +73,13 @@ export default async function KekereFeedPage() {
 
   const trending = trendingData.stories.map((s) => toFeedStoryData(s, true));
 
-  // Featured Today: pick deterministically (rotates once a day) from stories
-  // an admin has explicitly marked FEATURED tier — not from trending. With
-  // zero FEATURED stories, the section simply doesn't render.
-  const featuredPool = featuredTierData.stories.map((s) => toFeedStoryData(s, true));
+  // Editor's Pick: pick deterministically (rotates once a day) from stories
+  // an admin has marked FEATURED or CHAMPION tier — never STANDARD, and not
+  // from trending. With zero eligible stories, the section simply doesn't render.
+  const editorsPickPool = editorsPickTierData.stories.map((s) => toFeedStoryData(s, true));
   const todaySeed = Math.floor(Date.now() / 86400000); // changes once per day
-  const featuredStory = featuredPool.length > 0
-    ? featuredPool[todaySeed % featuredPool.length]
+  const featuredStory = editorsPickPool.length > 0
+    ? editorsPickPool[todaySeed % editorsPickPool.length]
     : null;
 
   const winnerStories: WinnerStory[] = winners.map((w) => ({

@@ -54,8 +54,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TIER_HINTS: Record<string, string> = {
   STANDARD: "Regular feed placement — no special treatment.",
-  FEATURED: "Also enters the daily rotation for the \"Featured Today\" spot on the feed.",
-  CHAMPION: "Marks this as a competition winner or finalist — appears in the Winners' Circle.",
+  FEATURED: "Also enters the daily rotation for the \"Editor's Pick\" spot on the feed.",
+  CHAMPION: "Appears in the Winners' Circle, and also enters the daily rotation for the \"Editor's Pick\" spot on the feed.",
 };
 
 interface EditDraft {
