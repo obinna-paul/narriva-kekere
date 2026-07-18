@@ -26,8 +26,15 @@ export function ShareProfileSheet({ writerId, writerName, onClose }: ShareProfil
     };
   }, []);
 
+  // A fresh cache-buster per mount (i.e. every time this sheet is opened —
+  // it's conditionally rendered in profile-view.tsx, so each open is a real
+  // mount) makes the URL itself unique. Belt-and-suspenders alongside the
+  // route's own Cache-Control: no-store — this way a stale card can't
+  // survive even if some layer between here and the server (a proxy, an
+  // over-eager browser image cache) doesn't fully honor those headers.
+  const [cacheBuster] = useState(() => Date.now());
   const profileUrl = `${window.location.origin}/kekere/writer/${writerId}`;
-  const cardUrl = `/api/kekere/writers/${writerId}/card`;
+  const cardUrl = `/api/kekere/writers/${writerId}/card?v=${cacheBuster}`;
 
   function handleCopyLink() {
     navigator.clipboard
@@ -43,7 +50,7 @@ export function ShareProfileSheet({ writerId, writerName, onClose }: ShareProfil
     setDownloading(true);
     setDownloadError(null);
     try {
-      const res = await fetch(cardUrl);
+      const res = await fetch(cardUrl, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to generate card");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
