@@ -1,4 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { createNotification } from "@/lib/notifications/create";
+import { milestoneAt, type StreakMilestone } from "@/lib/streak-milestones";
 
 function toUtcDateOnly(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
@@ -14,14 +17,88 @@ function addDays(d: Date, days: number): Date {
   return copy;
 }
 
-/** Marks today (UTC) as a reading-activity day for this user. Idempotent —
- * safe to call on every reading-progress save without extra guarding. */
+async function computeCurrentStreakTx(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  today: Date,
+): Promise<number> {
+  const rows = await tx.readingActivity.findMany({
+    where: { userId },
+    select: { date: true },
+  });
+  const activeDates = new Set(rows.map((r) => isoDate(r.date)));
+
+  // today is guaranteed active here — the caller only reaches this after
+  // inserting (or confirming) today's row — so no "step back a day" branch
+  // is needed the way getStreakStats needs one.
+  let currentStreak = 0;
+  let cursor = today;
+  while (activeDates.has(isoDate(cursor))) {
+    currentStreak++;
+    cursor = addDays(cursor, -1);
+  }
+  return currentStreak;
+}
+
+/**
+ * Marks today (UTC) as a reading-activity day for this user, and — if that
+ * newly-completed day lands exactly on a streak milestone — credits the
+ * cowrie reward and notifies them. Idempotent (a second call the same day
+ * is a no-op) and never throws: this is a best-effort bonus layered on top
+ * of reading-progress saves, not part of that save's critical path, so a
+ * failure here must never break the caller.
+ */
 export async function recordReadingActivity(userId: string): Promise<void> {
-  const today = toUtcDateOnly(new Date());
-  await prisma.readingActivity.upsert({
-    where: { userId_date: { userId, date: today } },
-    create: { userId, date: today },
-    update: {},
+  try {
+    const today = toUtcDateOnly(new Date());
+
+    const rewarded = await prisma.$transaction(async (tx) => {
+      const existing = await tx.readingActivity.findUnique({
+        where: { userId_date: { userId, date: today } },
+      });
+      if (existing) return null; // already recorded today — no new day, no new milestone possible
+
+      await tx.readingActivity.create({ data: { userId, date: today } });
+
+      const streak = await computeCurrentStreakTx(tx, userId, today);
+      const milestone = milestoneAt(streak);
+      if (!milestone) return null;
+
+      const wallet = await tx.wallet.upsert({
+        where: { userId },
+        create: { userId, spendingBalance: milestone.reward },
+        update: { spendingBalance: { increment: milestone.reward } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "READ_REWARD",
+          amountCowries: milestone.reward,
+          walletField: "SPENDING",
+          description: `${milestone.days}-day reading streak reward`,
+          status: "COMPLETED",
+        },
+      });
+
+      return milestone;
+    });
+
+    if (rewarded) {
+      await notifyStreakReward(userId, rewarded);
+    }
+  } catch (error) {
+    console.error("[kekere-streaks] recordReadingActivity failed:", error);
+  }
+}
+
+async function notifyStreakReward(userId: string, milestone: StreakMilestone): Promise<void> {
+  await createNotification({
+    userId,
+    type: "STREAK_MILESTONE_REACHED",
+    title: `${milestone.days}-day streak!`,
+    body: `You've read ${milestone.days} days in a row. ${milestone.reward} cowries have been added to your wallet.`,
+    link: "/kekere/wallet",
   });
 }
 

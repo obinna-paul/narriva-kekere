@@ -1,22 +1,5 @@
 import { Flame } from "lucide-react";
-
-// Milestones drive the progress bar and caption — deliberately not a
-// calendar/heatmap: a reader cares "how close am I to the next thing,"
-// not a 12-week grid of past days that eats the whole profile screen.
-const MILESTONES = [3, 7, 14, 30, 60, 100, 180, 365];
-
-function nextMilestoneAfter(streak: number): number | null {
-  return MILESTONES.find((m) => m > streak) ?? null;
-}
-
-function prevMilestoneAtOrBelow(streak: number): number {
-  let prev = 0;
-  for (const m of MILESTONES) {
-    if (m > streak) break;
-    prev = m;
-  }
-  return prev;
-}
+import { milestoneAt, streakMilestoneProgress } from "@/lib/streak-milestones";
 
 export interface StreakCardProps {
   currentStreak: number;
@@ -26,21 +9,22 @@ export interface StreakCardProps {
 }
 
 export function StreakCard({ currentStreak, longestStreak, hasAnyActivity, activeToday }: StreakCardProps) {
-  const next = nextMilestoneAfter(currentStreak);
-  const prev = prevMilestoneAtOrBelow(currentStreak);
-  const progress = next ? Math.max(0, Math.min(1, (currentStreak - prev) / (next - prev))) : 1;
+  const { next, fraction } = streakMilestoneProgress(currentStreak);
   const lit = currentStreak > 0;
+  const justEarned = activeToday ? milestoneAt(currentStreak) : null;
 
   let caption: string;
+  let captionIsCelebration = false;
   if (currentStreak === 0) {
     caption = hasAnyActivity ? "Read today to start a new streak" : "Finish a story to start your streak";
   } else if (!activeToday) {
     caption = "Read today to keep it alive";
-  } else if (next) {
-    const remaining = next - currentStreak;
-    caption = `${remaining} day${remaining === 1 ? "" : "s"} to a ${next}-day streak`;
+  } else if (justEarned) {
+    caption = `You just earned ${justEarned.reward} cowrie${justEarned.reward === 1 ? "" : "s"}! 🎉`;
+    captionIsCelebration = true;
   } else {
-    caption = "Legendary streak";
+    const remaining = next.days - currentStreak;
+    caption = `${remaining} day${remaining === 1 ? "" : "s"} to earn ${next.reward} cowries`;
   }
 
   return (
@@ -52,7 +36,6 @@ export function StreakCard({ currentStreak, longestStreak, hasAnyActivity, activ
         <div className="flex items-center gap-2.5">
           <Flame
             size={26}
-            className="text-[var(--color-primary)]"
             style={{ color: lit ? "var(--color-primary)" : "var(--color-ink-muted-3)", opacity: lit && !activeToday ? 0.55 : 1 }}
             fill={lit && activeToday ? "currentColor" : "none"}
             strokeWidth={lit ? 2 : 1.75}
@@ -76,11 +59,16 @@ export function StreakCard({ currentStreak, longestStreak, hasAnyActivity, activ
       <div className="mt-3 h-[6px] w-full overflow-hidden rounded-full bg-[var(--color-border)]">
         <div
           className="h-full rounded-full bg-[var(--color-primary)] transition-[width] duration-500"
-          style={{ width: `${progress * 100}%` }}
+          style={{ width: `${fraction * 100}%` }}
         />
       </div>
 
-      <p className="mt-2 text-[12px] text-[var(--color-ink-muted-2)]">{caption}</p>
+      <p
+        className="mt-2 text-[12px]"
+        style={{ color: captionIsCelebration ? "var(--color-success)" : "var(--color-ink-muted-2)", fontWeight: captionIsCelebration ? 600 : 400 }}
+      >
+        {caption}
+      </p>
     </div>
   );
 }
