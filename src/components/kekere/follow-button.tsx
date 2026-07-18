@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { UserPlus, Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -28,13 +28,19 @@ export function FollowButton({
   const pathname = usePathname();
   const [following, setFollowing] = useState(initialFollowing);
   const [busy, setBusy] = useState(false);
+  // A ref, not just the busy state, because state updates aren't visible
+  // synchronously — a mobile double-tap can land its second click before
+  // React re-renders with disabled={busy}, sending two requests for the
+  // same toggle.
+  const inFlight = useRef(false);
 
   async function toggle() {
     if (!isLoggedIn) {
       router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (busy) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
 
     // Optimistic — a follow/unfollow toggle should feel instant.
@@ -52,6 +58,7 @@ export function FollowButton({
     } catch {
       setFollowing(!next);
     }
+    inFlight.current = false;
     setBusy(false);
   }
 

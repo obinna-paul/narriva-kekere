@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
 
@@ -9,17 +10,30 @@ export type FollowResult =
 /** Idempotent — following someone you already follow just returns the
  * current state rather than erroring, so a double-tap or a stale client
  * can't throw. Notifies the writer only on the call that actually creates
- * the row. */
+ * the row.
+ *
+ * Attempts the insert directly rather than checking-then-creating: a
+ * find-then-create isn't atomic, so two near-simultaneous requests for the
+ * same follow (a genuine mobile double-tap, or a retried request) could
+ * both pass the existence check and then race on the same
+ * @@unique([followerId, writerId]) constraint — the loser would throw an
+ * unhandled error and the client's optimistic "Following" would silently
+ * revert. Catching that specific race and treating it as "already
+ * following" makes this safe under real double-taps, not just scripted
+ * single clicks. */
 export async function followWriter(followerId: string, writerId: string): Promise<FollowResult> {
   if (followerId === writerId) return { error: "cannot_follow_self" };
 
-  const existing = await prisma.follow.findUnique({
-    where: { followerId_writerId: { followerId, writerId } },
-  });
-
-  if (!existing) {
+  let created = false;
+  try {
     await prisma.follow.create({ data: { followerId, writerId } });
+    created = true;
+  } catch (error) {
+    const isDuplicate = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+    if (!isDuplicate) throw error;
+  }
 
+  if (created) {
     const follower = await prisma.user.findUnique({ where: { id: followerId }, select: { name: true } });
     await createNotification({
       userId: writerId,
@@ -31,7 +45,7 @@ export async function followWriter(followerId: string, writerId: string): Promis
   }
 
   const followerCount = await prisma.follow.count({ where: { writerId } });
-  return existing ? { already_following: true, followerCount } : { success: true, followerCount };
+  return created ? { success: true, followerCount } : { already_following: true, followerCount };
 }
 
 export async function unfollowWriter(followerId: string, writerId: string): Promise<{ followerCount: number }> {
