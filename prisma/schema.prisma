@@ -113,6 +113,24 @@ model User {
   notifications        Notification[]
   paragraphComments    ParagraphComment[]
   paragraphReactions   ParagraphReaction[]
+  following            Follow[]              @relation("Following")
+  followers            Follow[]              @relation("Followers")
+}
+
+// A reader subscribing to a writer — not messaging or a social graph, a
+// one-way subscription: follow a writer to hear when they publish. Self-
+// follow is rejected at the application layer, not the schema.
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  follower   User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  writerId   String
+  writer     User     @relation("Followers", fields: [writerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, writerId])
+  @@index([writerId])
+  @@index([followerId])
 }
 
 enum NotificationType {
@@ -128,6 +146,8 @@ enum NotificationType {
   WITHDRAWAL_REJECTED
   VERSION_RESTORED
   STREAK_MILESTONE_REACHED
+  NEW_FOLLOWER
+  WRITER_PUBLISHED
 }
 
 model Notification {

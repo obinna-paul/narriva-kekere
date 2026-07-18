@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { AuthorChip } from "@/components/kekere/author-chip";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 const DEBOUNCE_MS = 220;
@@ -177,9 +178,17 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13.5px] font-semibold text-[var(--color-ink)]">{story.title}</p>
-                  <p className="truncate text-[11.5px] text-[var(--color-ink-muted-2)]">
-                    {story.authorName} · {story.readingTimeMinutes} min
-                  </p>
+                  <div className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-[var(--color-ink-muted-2)]">
+                    <AuthorChip
+                      authorId={story.authorId}
+                      authorName={story.authorName}
+                      avatarColor={story.authorAvatarColor}
+                      avatarUrl={story.authorAvatarUrl}
+                      size="sm"
+                      linked={false}
+                    />
+                    <span>· {story.readingTimeMinutes} min</span>
+                  </div>
                 </div>
               </button>
             ))

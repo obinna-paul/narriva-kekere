@@ -1,12 +1,13 @@
 import { prisma } from "@/lib/db/prisma";
 import { StoryIllegalStateError, StoryNotFoundError } from "@/lib/data/kekere-stories";
 import { createNotification } from "@/lib/notifications/create";
+import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { generateStoryAudio } from "@/lib/audio/generate";
 import type { Story, StoryTier } from "@prisma/client";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 const authorInclude = {
-  author: { select: { id: true, name: true, slug: true, avatarColor: true } },
+  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } },
   tags: { include: { tag: true } },
 } as const;
 
@@ -85,6 +86,7 @@ export async function decideStoryModeration(
       // (multiple TTS calls for longer stories) and must not block the
       // publish response.
       generateStoryAudio(updated.id).catch(console.error);
+      notifyFollowersOfPublish(updated.id).catch(console.error);
       return updated;
     }
 

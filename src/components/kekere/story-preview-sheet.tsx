@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Bookmark, BookmarkCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { AuthorChip } from "@/components/kekere/author-chip";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 interface StoryPreviewSheetProps {
@@ -215,7 +216,15 @@ export function StoryPreviewSheet({
             <h3 className="font-[family-name:var(--font-display)] text-[20px] font-semibold leading-[1.2] text-[var(--color-ink)]">
               {story.title}
             </h3>
-            <p className="mt-1 text-[13px] text-[var(--color-ink-muted-2)]">by {story.authorName}</p>
+            <div className="mt-1.5">
+              <AuthorChip
+                authorId={story.authorId}
+                authorName={story.authorName}
+                avatarColor={story.authorAvatarColor}
+                avatarUrl={story.authorAvatarUrl}
+                size="sm"
+              />
+            </div>
 
             <div className="mt-6 rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-5 shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
               {firstReadFree ? (

@@ -5,7 +5,7 @@
  */
 import type { StoryWithAuthor, StoryForReader } from "@/lib/data/kekere-stories";
 import type { MockStory } from "@/content/mock/kekere-stories";
-import { storyCoverUrl } from "@/lib/storage/cloudinary";
+import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 
 const NEW_WINDOW_DAYS = 14;
 
@@ -32,6 +32,8 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
     hookLine: story.hookLine,
     authorName: story.author.name,
     authorId: story.author.id,
+    authorAvatarColor: story.author.avatarColor,
+    authorAvatarUrl: story.author.avatar ? userAvatarUrl(story.author.avatar) : null,
     genre: story.genre,
     tier: story.tier.toLowerCase() as MockStory["tier"],
     isFree: false,

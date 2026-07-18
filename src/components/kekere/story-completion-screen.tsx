@@ -4,18 +4,39 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, Star, Send, Copy, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { AuthorChip } from "@/components/kekere/author-chip";
+import { FollowButton } from "@/components/kekere/follow-button";
 
 interface CompletionProps {
   storyId: string;
   storyTitle: string;
+  authorId: string;
   authorName: string;
+  authorAvatarColor: string | null;
+  /** Already a full CDN URL — see toFeedStoryData / kekere-writer-profile.ts. */
+  authorAvatarUrl: string | null;
   spendingBalance: number;
   tipCount: number;
   rating: number;
   referralCode: string | null;
+  initialFollowing: boolean;
+  isOwnStory: boolean;
 }
 
-export function StoryCompletionScreen({ storyId, storyTitle, authorName, spendingBalance: initialBalance, tipCount: initialTipCount, rating, referralCode }: CompletionProps) {
+export function StoryCompletionScreen({
+  storyId,
+  storyTitle,
+  authorId,
+  authorName,
+  authorAvatarColor,
+  authorAvatarUrl,
+  spendingBalance: initialBalance,
+  tipCount: initialTipCount,
+  rating,
+  referralCode,
+  initialFollowing,
+  isOwnStory,
+}: CompletionProps) {
   const [tipping, setTipping] = useState(false);
   const [tipCount, setTipCount] = useState(initialTipCount);
   const [balance, setBalance] = useState(initialBalance);
@@ -83,7 +104,12 @@ export function StoryCompletionScreen({ storyId, storyTitle, authorName, spendin
       <div className="text-center">
         <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#C75D2C]">You finished it</p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-[26px] font-semibold text-[#2A1A12] leading-[1.15]">{storyTitle}</h1>
-        <p className="mt-1.5 text-[14px] text-[#8A7565]">by {authorName}</p>
+        <div className="mt-2.5 flex items-center justify-center gap-2">
+          <AuthorChip authorId={authorId} authorName={authorName} avatarColor={authorAvatarColor} avatarUrl={authorAvatarUrl} size="sm" />
+          {!isOwnStory && (
+            <FollowButton writerId={authorId} isLoggedIn initialFollowing={initialFollowing} variant="compact" />
+          )}
+        </div>
       </div>
 
       {/* Completion bonus */}

@@ -5,6 +5,7 @@ import { generateSignedContractDocx } from "@/lib/contracts/docx";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
+import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { uploadPortalFile } from "@/lib/storage/r2";
 import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { Prisma } from "@prisma/client";
@@ -155,6 +156,10 @@ export async function signContractAndPublishStory(
       });
     }
   });
+
+  if (linkedStoryId) {
+    notifyFollowersOfPublish(linkedStoryId).catch(console.error);
+  }
 
   let storyTitle = "your story";
   if (linkedStoryId) {

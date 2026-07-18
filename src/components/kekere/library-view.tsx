@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+import { AuthorChip } from "@/components/kekere/author-chip";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export interface HistoryStory extends MockStory {
@@ -78,9 +79,17 @@ function LibraryCard({
         <h3 className="font-[family-name:var(--font-display)] text-[17px] font-semibold leading-[1.18] text-[var(--color-ink)]">
           {story.title}
         </h3>
-        <p className="mt-[3px] text-[12.5px] text-[var(--color-ink-muted-2)]">
-          {story.authorName}
-        </p>
+        <div className="mt-[3px]">
+          <AuthorChip
+            authorId={story.authorId}
+            authorName={story.authorName}
+            avatarColor={story.authorAvatarColor}
+            avatarUrl={story.authorAvatarUrl}
+            size="sm"
+            linked={false}
+            className="text-[12.5px]"
+          />
+        </div>
 
         {variant === "history" && scrollFraction !== undefined && scrollFraction < 1 && (
           <div className="mt-[9px] h-1 overflow-hidden rounded-[2px] bg-[rgba(42,26,18,0.1)]">
