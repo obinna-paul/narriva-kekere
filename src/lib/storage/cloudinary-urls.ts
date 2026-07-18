@@ -27,3 +27,17 @@ export function storyCoverOgImageUrl(publicId: string): string {
 export function userAvatarUrl(ref: string): string {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_200,h_200,c_fill/${ref}`;
 }
+
+/** Larger avatar, forced to PNG rather than f_auto — used by the
+ *  server-rendered profile share card (src/app/api/kekere/writers/[id]/card),
+ *  where satori/resvg's raster decoder needs a guaranteed-safe format
+ *  instead of a browser-negotiated one. */
+export function userAvatarCardUrl(ref: string): string {
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_png,q_auto,w_400,h_400,c_fill/${ref}`;
+}
+
+/** Story cover for the same server-rendered profile share card — see
+ *  userAvatarCardUrl above for why this forces PNG instead of f_auto. */
+export function storyCoverCardUrl(publicId: string): string {
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_png,q_auto,w_320,h_420,c_fill/${publicId}`;
+}

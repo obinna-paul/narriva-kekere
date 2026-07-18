@@ -33,7 +33,7 @@ export const PATCH = withAuth(async (request, session) => {
 
   const profile = await updateKekereProfile(session.user.id, {
     name: name.trim(),
-    bio: bio.slice(0, 160),
+    bio: bio.slice(0, 280),
     socialLinks: parsedSocialLinks,
     country: typeof country === "string" ? country.trim().slice(0, 80) || null : undefined,
   });
