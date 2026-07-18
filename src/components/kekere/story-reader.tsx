@@ -102,6 +102,13 @@ export interface StoryReaderProps {
    * omitted entirely (no Follow button shown) when they ARE the author. */
   initialFollowing?: boolean;
   isOwnStory?: boolean;
+  /** Server-computed: finished the story, writer accepts notes, no note
+   * already sent for this story, and the writer hasn't blocked this reader —
+   * see getNoteEligibilityForStory. Safe to compute at page load even though
+   * the reader hasn't finished yet: the note prompt only ever renders inside
+   * the `finished` overlay below, by which point handleFinish() has already
+   * fired. */
+  noteEligible?: boolean;
 }
 
 export function StoryReader({
@@ -114,6 +121,7 @@ export function StoryReader({
   firstReadFree = false,
   initialFollowing = false,
   isOwnStory = false,
+  noteEligible = false,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -135,6 +143,12 @@ export function StoryReader({
   const [tipped, setTipped] = useState(false);
   const [tipError, setTipError] = useState<string | null>(null);
   const [showNoCowryModal, setShowNoCowryModal] = useState(false);
+
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false);
+  const [noteBody, setNoteBody] = useState("");
+  const [noteSending, setNoteSending] = useState(false);
+  const [noteSent, setNoteSent] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -413,6 +427,34 @@ export function StoryReader({
     setTipped(true);
   }
 
+  async function handleSendNote() {
+    setNoteSending(true);
+    setNoteError(null);
+    try {
+      const res = await fetch("/api/kekere/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storyId: story.id, body: noteBody }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const messages: Record<string, string> = {
+          profanity: "Please remove inappropriate language and try again.",
+          too_long: "That's a bit long — keep it under 500 characters.",
+          empty: "Write something before sending.",
+          already_sent: "You've already sent a note for this story.",
+        };
+        setNoteError(messages[data.error] ?? "Couldn't send your note — try again.");
+        return;
+      }
+      setNoteSent(true);
+    } catch {
+      setNoteError("Couldn't send your note — try again.");
+    } finally {
+      setNoteSending(false);
+    }
+  }
+
   if (finished) {
     return (
       <>
@@ -442,6 +484,48 @@ export function StoryReader({
             </button>
           ))}
         </div>
+
+        {noteEligible && (
+          <div className="mt-7 w-full max-w-[280px]">
+            {noteSent ? (
+              <p className="text-sm text-[var(--color-success)]">Note sent to {story.authorName}.</p>
+            ) : noteComposerOpen ? (
+              <div className="flex flex-col items-stretch gap-2.5 text-left">
+                <textarea
+                  value={noteBody}
+                  onChange={(e) => setNoteBody(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  autoFocus
+                  placeholder={`Tell ${story.authorName} what stuck with you…`}
+                  disabled={noteSending}
+                  className="w-full resize-none rounded-[10px] border px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
+                  style={{ backgroundColor: "transparent", borderColor: theme.border }}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-[var(--color-ink-muted-3)]">{noteBody.length} / 500</span>
+                  <button
+                    type="button"
+                    onClick={handleSendNote}
+                    disabled={noteSending || !noteBody.trim()}
+                    className="flex-none cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    {noteSending ? "Sending…" : "Send note"}
+                  </button>
+                </div>
+                {noteError && <p className="text-[12px] text-[#E9A56B]">{noteError}</p>}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setNoteComposerOpen(true)}
+                className="w-full cursor-pointer rounded-[10px] border border-[var(--color-primary)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-muted)]"
+              >
+                Send a note to {story.authorName}
+              </button>
+            )}
+          </div>
+        )}
 
         {isLoggedIn && (
           <div className="mt-7 flex w-full max-w-[280px] flex-col items-center gap-3">
