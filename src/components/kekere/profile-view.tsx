@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, Settings } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -446,10 +446,18 @@ export function ProfileView(props: ProfileViewProps) {
 
             <Link
               href="/kekere/invite"
-              className="mb-6 flex items-center justify-center gap-2 rounded-xl bg-[rgba(31,75,75,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-accent)]"
+              className="mb-3 flex items-center justify-center gap-2 rounded-xl bg-[rgba(31,75,75,0.08)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-accent)]"
             >
               <Gift size={16} />
               Invite friends, earn cowries &rarr;
+            </Link>
+
+            <Link
+              href="/kekere/settings"
+              className="mb-6 flex items-center justify-center gap-2 rounded-xl border border-[rgba(42,26,18,0.12)] px-4 py-[14px] text-center text-sm font-semibold text-[var(--color-ink-muted)]"
+            >
+              <Settings size={16} />
+              Settings &rarr;
             </Link>
           </section>
 
