@@ -16,8 +16,8 @@ export interface StreakMilestone {
 }
 
 const FIXED_MILESTONES: readonly StreakMilestone[] = [
-  { days: 7, reward: 2 },
-  { days: 30, reward: 5 },
+  { days: 7, reward: 1 },
+  { days: 30, reward: 3 },
   { days: 60, reward: 10 },
 ];
 
