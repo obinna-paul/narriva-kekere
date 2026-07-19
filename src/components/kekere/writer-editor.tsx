@@ -537,7 +537,7 @@ export function WriterEditor({
   }
 
   return (
-    <div ref={containerRef} className="kekere-write-page">
+    <div ref={containerRef} className="kekere-write-page overflow-x-hidden">
       <style>{`
         .kekere-focus-mode [data-writer-chrome] { display: none !important; }
         .kekere-focus-mode [data-writer-sidebar] { display: none !important; }
@@ -600,9 +600,13 @@ export function WriterEditor({
               )}
             </div>
           )}
-          <div className="ml-auto flex flex-none items-center gap-2" data-writer-header-actions>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2" data-writer-header-actions>
+            {/* Icon cluster stays together as one flex item — if it and
+                Submit don't both fit on one line, Submit wraps to its own
+                line below instead of being pushed off-screen. Nothing here
+                ever needs horizontal scrolling to reach. */}
             {isEditable && (
-              <>
+              <div className="flex flex-wrap items-center gap-2">
                 {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
                 {mode === "scroll" && storyId && (
                   <button
@@ -669,7 +673,7 @@ export function WriterEditor({
                     <Download size={15} />
                   </button>
                 )}
-              </>
+              </div>
             )}
             {isEditable && (
               <button
