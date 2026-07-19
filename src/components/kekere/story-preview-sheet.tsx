@@ -120,7 +120,7 @@ export function StoryPreviewSheet({
         {step === "preview" ? (
           <>
             {/* Cover */}
-            <div className="relative mx-4 mt-2 overflow-hidden rounded-[18px]" style={{ aspectRatio: "16/9" }}>
+            <div className="relative mx-4 mt-2 overflow-hidden rounded-[12px]" style={{ aspectRatio: "16/9" }}>
               <div
                 className="absolute inset-0"
                 style={{

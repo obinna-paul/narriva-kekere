@@ -43,7 +43,7 @@ function RowCard({
       style={{ scrollSnapAlign: "start" }}
     >
       <div
-        className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92] active:brightness-[0.85]"
+        className="relative aspect-[3/4] overflow-hidden rounded-[10px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92] active:brightness-[0.85]"
         style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
       >
         {story.coverImageUrl && (
@@ -265,7 +265,7 @@ export function FeedContent({
                 style={{ scrollSnapAlign: "start" }}
               >
                 <div
-                  className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
+                  className="relative aspect-[3/4] overflow-hidden rounded-[10px] shadow-[0_8px_20px_-10px_rgba(42,26,18,0.4)] transition-[filter] hover:brightness-[0.92]"
                   style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
                 >
                   {story.coverImageUrl && (

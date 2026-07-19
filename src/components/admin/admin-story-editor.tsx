@@ -692,7 +692,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
           </label>
 
           {coverPreviewUrl ? (
-            <div className="relative overflow-hidden rounded-[10px] border border-[rgba(20,22,26,0.1)] bg-[#F8F9FB]">
+            <div className="relative overflow-hidden rounded-[8px] border border-[rgba(20,22,26,0.1)] bg-[#F8F9FB]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverPreviewUrl}
@@ -722,7 +722,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
               onDrop={handleDrop}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
-              className={`relative rounded-[10px] border-2 border-dashed p-8 text-center transition-colors ${
+              className={`relative rounded-[8px] border-2 border-dashed p-8 text-center transition-colors ${
                 dragOver
                   ? "border-[#C75D2C] bg-[#FFF8F2]"
                   : "border-[rgba(20,22,26,0.15)] bg-[#F8F9FB] hover:border-[rgba(20,22,26,0.25)]"
