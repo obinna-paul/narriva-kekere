@@ -477,16 +477,18 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
             <span className="text-[17px] font-semibold leading-none underline underline-offset-[3px]">U</span>
           </ToolbarButton>
 
-          <div className="flex-1" />
-
-          {/* B7.3 — live word count + reading time */}
-          <div className="flex flex-none items-baseline gap-2 whitespace-nowrap text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
-            <span>
-              <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b>{" "}
-              words
-            </span>
-            <span className="inline-block h-[11px] w-px bg-[rgba(42,26,18,.2)]" />
-            <span>{readingTimeLabel}</span>
+          {/* B7.3 — live word count + reading time. min-w-0 + truncate lets
+              this shrink (with an ellipsis) rather than pushing the toggle
+              button below off the edge of the screen — a real bug on a
+              360px-wide phone with a long story ("1,728 words · ~7 min
+              read" is right at the edge of that budget once B/I/U and the
+              toggle have taken their fixed share). */}
+          <div
+            className="min-w-0 flex-1 truncate text-right text-[12.5px] font-medium text-[rgba(42,26,18,.55)]"
+            title={`${localWordCount.toLocaleString()} words · ${readingTimeLabel}`}
+          >
+            <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b> words{" "}
+            <span className="text-[rgba(42,26,18,.35)]">·</span> {readingTimeLabel}
           </div>
 
           <ToolbarButton
