@@ -542,7 +542,6 @@ export function WriterEditor({
         .kekere-focus-mode [data-writer-chrome] { display: none !important; }
         .kekere-focus-mode [data-writer-sidebar] { display: none !important; }
         .kekere-focus-mode [data-writer-header-actions] { display: none !important; }
-        .kekere-focus-mode [data-writer-footer] { display: none !important; }
       `}</style>
 
       {/* Header chrome */}
@@ -689,7 +688,7 @@ export function WriterEditor({
         </div>
       </div>
 
-      <main className="mx-auto max-w-[680px] px-[22px] pb-[120px] pt-[26px]">
+      <main className="mx-auto max-w-[680px] px-[22px] pb-[80px] pt-[26px]">
         {status === "REVISIONS_REQUESTED" && moderationNotes && (
           <div className="mb-6 rounded-lg border-l-4 border-[var(--color-primary)] bg-[var(--color-primary-muted)] px-4 py-3" data-writer-chrome>
             <p className="text-sm font-semibold text-[var(--color-ink)]">Feedback from the editorial team</p>
@@ -956,12 +955,6 @@ export function WriterEditor({
         </div>
       )}
 
-      {/* Footer bar */}
-      <div className="fixed inset-x-0 bottom-0 z-[15] border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]/95 py-[13px] text-center backdrop-blur-md" data-writer-footer>
-        <span className="text-[13px] text-[var(--color-ink-muted-2)]">
-          {wordCount.toLocaleString()} words · ~{readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
-        </span>
-      </div>
 
       {/* Confirm before an uploaded document replaces an already-started draft */}
       <Dialog open={importConfirmOpen} onOpenChange={(open) => { if (!open) cancelImport(); }}>
