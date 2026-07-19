@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
@@ -114,6 +114,11 @@ export interface StoryReaderProps {
    * reason than "can't note this writer at all" — this one still shows a
    * "Note sent" confirmation instead of just showing nothing). */
   noteAlreadySent?: boolean;
+  /** The reader's own referral code — the finish overlay's share links carry
+   * it (`/kekere/invite/{code}`) so a brand-new signup through the link earns
+   * the referrer. Null when logged out (no code, share falls back to the
+   * plain story URL). */
+  referralCode?: string | null;
 }
 
 export function StoryReader({
@@ -128,6 +133,7 @@ export function StoryReader({
   isOwnStory = false,
   noteEligible = false,
   noteAlreadySent = false,
+  referralCode = null,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -378,10 +384,18 @@ export function StoryReader({
     if (!res.ok) setSaved(!nextSaved);
   }
 
+  // Prefer the reader's referral invite link so a brand-new signup through
+  // the share earns them the referral reward; fall back to the plain story
+  // URL when there's no code (logged-out reader).
+  const shareUrl = referralCode
+    ? `https://narriva.pro/kekere/invite/${referralCode}`
+    : `https://narriva.pro/kekere/story/${story.id}`;
+  const shareText = `I just read "${story.title}" on Kekere Stories. Check it out: ${shareUrl}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
   async function handleShare() {
-    const url = typeof window !== "undefined" ? window.location.href : "";
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareText);
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
     } catch {
@@ -465,9 +479,13 @@ export function StoryReader({
     return (
       <>
       <div
-        className="fixed inset-0 z-60 flex flex-col items-center justify-center px-7 py-10 text-center transition-colors duration-300 [&_h2]:transition-colors [&_h2]:duration-300 [&_p]:transition-colors [&_p]:duration-300"
+        className="fixed inset-0 z-60 overflow-y-auto transition-colors duration-300 [&_h2]:transition-colors [&_h2]:duration-300 [&_p]:transition-colors [&_p]:duration-300"
         style={{ ...themeVars, backgroundColor: theme.bg, zIndex: 60 }}
       >
+      {/* Inner wrapper centres the content when it's short but lets it scroll
+          when it's tall (min-h-full + auto centring) — without this the
+          overlay clipped its own bottom (Share/Back) on shorter screens. */}
+      <div className="flex min-h-full flex-col items-center justify-center px-7 py-10 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
           You finished
         </p>
@@ -491,41 +509,63 @@ export function StoryReader({
           ))}
         </div>
 
-        {/* Author card — photo, name, bio, and a Follow/Following button so
-            a reader who just finished the story can follow the writer
-            without having to leave and go find their profile. */}
-        <Link
-          href={`/kekere/writer/${story.authorId}`}
-          className="mt-7 flex w-full max-w-[280px] flex-col items-center gap-2"
-        >
+        {/* Meet the writer — a self-contained card (photo, name, bio, Follow,
+            View profile) so the person behind the story reads as a distinct
+            profile rather than loose text floating under the stars. Themed via
+            the reader's border/ink vars so it works on white/cream/dark. */}
+        <div className="mt-8 w-full max-w-[300px]">
+          <h3 className="mb-2.5 text-left text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
+            Meet the writer
+          </h3>
           <div
-            className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[20px] font-semibold text-white"
-            style={{ background: `linear-gradient(135deg, #E08A4A, ${story.authorAvatarColor ?? "#C75D2C"})` }}
+            className="rounded-[16px] border p-[18px]"
+            style={{ borderColor: theme.border }}
           >
-            {story.authorAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={story.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              story.authorName.trim().charAt(0).toUpperCase() || "?"
-            )}
+            <Link href={`/kekere/writer/${story.authorId}`} className="flex flex-col items-center gap-2">
+              <div
+                className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[22px] font-semibold text-white"
+                style={{ background: `linear-gradient(135deg, #E08A4A, ${story.authorAvatarColor ?? "#C75D2C"})` }}
+              >
+                {story.authorAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={story.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  story.authorName.trim().charAt(0).toUpperCase() || "?"
+                )}
+              </div>
+              <p className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-ink)]">
+                {story.authorName}
+              </p>
+              {story.authorBio && (
+                <p className="line-clamp-3 text-center text-[13px] leading-[1.5] text-[var(--color-ink-muted-2)]">
+                  {story.authorBio}
+                </p>
+              )}
+            </Link>
+
+            <div className="mt-4 flex items-center justify-center gap-2.5">
+              {!isOwnStory && (
+                <FollowButton
+                  writerId={story.authorId}
+                  isLoggedIn={isLoggedIn}
+                  initialFollowing={initialFollowing}
+                  variant="full"
+                  className="flex-1"
+                />
+              )}
+              <Link
+                href={`/kekere/writer/${story.authorId}`}
+                className={cn(
+                  "flex items-center justify-center gap-1 rounded-full border px-5 py-[10px] text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
+                  isOwnStory && "flex-1",
+                )}
+                style={{ borderColor: theme.border }}
+              >
+                View profile <ArrowUpRight size={15} className="flex-none" />
+              </Link>
+            </div>
           </div>
-          <p className="text-[15px] font-semibold text-[var(--color-ink)]">{story.authorName}</p>
-          {story.authorBio && (
-            <p className="line-clamp-2 text-center text-[12.5px] leading-[1.4] text-[var(--color-ink-muted-2)]">
-              {story.authorBio}
-            </p>
-          )}
-        </Link>
-        {!isOwnStory && (
-          <div className="mt-2.5">
-            <FollowButton
-              writerId={story.authorId}
-              isLoggedIn={isLoggedIn}
-              initialFollowing={initialFollowing}
-              variant="compact"
-            />
-          </div>
-        )}
+        </div>
 
         {(noteEligible || noteAlreadySent) && (
           <div className="mt-7 w-full max-w-[280px]">
@@ -606,21 +646,43 @@ export function StoryReader({
           </div>
         )}
 
-        <div className="mt-9 flex w-full max-w-[280px] flex-col gap-3">
-          <Link
-            href="/kekere/feed"
-            className="block rounded-[10px] bg-[var(--color-primary)] px-4 py-[15px] text-center text-[15px] font-semibold text-white"
-          >
-            Back to feed
-          </Link>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-transparent px-4 py-[15px] text-[15px] font-semibold text-[var(--color-ink)]"
-          >
+        {/* Share this story */}
+        <div className="mt-8 w-full max-w-[300px]">
+          <h3 className="mb-2.5 text-left text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
             Share this story
-          </button>
+          </h3>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border px-4 py-3 text-[14px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]"
+              style={{ borderColor: theme.border }}
+            >
+              {shareCopied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy link</>}
+            </button>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-[#25D366] px-4 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <MessageCircle size={16} /> WhatsApp
+            </a>
+          </div>
+          {isLoggedIn && referralCode && (
+            <p className="mt-2 text-[11px] leading-[1.45] text-[var(--color-ink-muted-3)]">
+              Your invite link is attached — earn 3 cowries when someone new to Kekere joins through it and buys their first cowries.
+            </p>
+          )}
         </div>
+
+        <Link
+          href="/kekere/feed"
+          className="mt-8 block w-full max-w-[300px] rounded-[12px] bg-[var(--color-primary)] px-4 py-[15px] text-center text-[15px] font-semibold text-white"
+        >
+          Back to feed
+        </Link>
+      </div>
       </div>
 
       {showNoCowryModal && (
