@@ -15,11 +15,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { generateJSON } from "@tiptap/core";
 import { cn } from "@/lib/utils/cn";
 import { READING_WPM } from "@/content/decisions";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
-import { plainTextToDoc, countWords as countWordsInDoc, docToPlainText, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { createEditorExtensions } from "@/lib/tiptap/editor-config";
+import {
+  plainTextToDoc,
+  countWords as countWordsInDoc,
+  docToPlainText,
+  ensureParagraphIds,
+  type TiptapDoc,
+} from "@/lib/tiptap/doc-utils";
 import { formatRelativeTime, type SaveStatus } from "@/lib/tiptap/save-status";
 
 const HOOK_LINE_SOFT = 100;
@@ -342,6 +350,79 @@ export function WriterEditor({
     }
   }
 
+  // Upload a Word doc straight into the editor, formatting intact — for
+  // writers who already have a draft on their computer instead of starting
+  // from a blank page.
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [importConfirmOpen, setImportConfirmOpen] = useState(false);
+
+  function handleUploadClick() {
+    setImportError(null);
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be re-selected later
+    if (!file) return;
+    if (wordCount > 0) {
+      // Non-empty draft already in progress — confirm before replacing it,
+      // since an import overwrites the whole body.
+      setPendingImportFile(file);
+      setImportConfirmOpen(true);
+    } else {
+      void performImport(file);
+    }
+  }
+
+  async function performImport(file: File) {
+    if (!storyId) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/kekere/stories/${storyId}/import-docx`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportError(data.error ?? "Couldn't import that document.");
+        return;
+      }
+      // generateJSON parses against the exact same extension set the live
+      // editor uses, so <strong>/<em>/<u>/<s> land as the matching marks —
+      // then ensureParagraphIds assigns paragraph ids the same way normal
+      // typing does (generateJSON's one-shot parse doesn't run UniqueID's
+      // transaction-based id assignment).
+      const rawDoc = generateJSON(data.html, createEditorExtensions()) as TiptapDoc;
+      const doc = ensureParagraphIds(rawDoc);
+      editorHandle.current?.setContent(doc);
+      // setContent doesn't emit an update on its own — flush explicitly so
+      // the import is actually persisted, not just visible until reload.
+      await editorHandle.current?.flush("Uploaded document").catch(() => {});
+    } catch {
+      setImportError("Network error while importing your document.");
+    } finally {
+      setImporting(false);
+      setPendingImportFile(null);
+      setImportConfirmOpen(false);
+    }
+  }
+
+  function confirmImport() {
+    if (pendingImportFile) void performImport(pendingImportFile);
+  }
+
+  function cancelImport() {
+    setPendingImportFile(null);
+    setImportConfirmOpen(false);
+  }
+
   async function confirmSubmit() {
     if (!storyId) return;
 
@@ -551,6 +632,31 @@ export function WriterEditor({
                 >
                   <ScanEye size={15} />
                 </button>
+                {/* Upload button — pull an existing Word doc straight into
+                    the editor, formatting intact. Same editable window as
+                    Save (DRAFT / REVISIONS_REQUESTED — matches the import
+                    route's own server-side gate), scroll mode only since
+                    there's no rich-text body to import into in chapters mode. */}
+                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && mode === "scroll" && storyId && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={handleFileChosen}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUploadClick}
+                      disabled={importing}
+                      className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:opacity-50"
+                      title="Upload a Word document (.doc or .docx)"
+                    >
+                      <FileText size={15} />
+                    </button>
+                  </>
+                )}
                 {/* Export button — only before a draft has ever been submitted */}
                 {status === "DRAFT" && storyId && (
                   <button
@@ -591,6 +697,27 @@ export function WriterEditor({
           <div className="mb-6 rounded-lg border-l-4 border-[#A13A3A] bg-[rgba(193,58,58,0.08)] px-4 py-3" data-writer-chrome>
             <p className="text-sm font-semibold text-[#A13A3A]">Why this wasn&apos;t accepted</p>
             <p className="mt-1 text-sm text-[var(--color-ink)]/80">{moderationNotes}</p>
+          </div>
+        )}
+
+        {importError && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border-l-4 border-[#A13A3A] bg-[rgba(193,58,58,0.08)] px-4 py-3" data-writer-chrome>
+            <p className="text-sm text-[#A13A3A]">{importError}</p>
+            <button
+              type="button"
+              onClick={() => setImportError(null)}
+              className="flex-none text-[#A13A3A]/70 hover:text-[#A13A3A]"
+              aria-label="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {importing && (
+          <div className="mb-6 flex items-center gap-2 rounded-lg border border-[rgba(42,26,18,.14)] bg-white px-4 py-3 text-sm text-[#2A1A12]" data-writer-chrome>
+            <span className="h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
+            Reading your document…
           </div>
         )}
 
@@ -831,6 +958,36 @@ export function WriterEditor({
           {wordCount.toLocaleString()} words · ~{readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
         </span>
       </div>
+
+      {/* Confirm before an uploaded document replaces an already-started draft */}
+      <Dialog open={importConfirmOpen} onOpenChange={(open) => { if (!open) cancelImport(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replace what you&rsquo;ve written so far?</DialogTitle>
+            <DialogDescription>
+              Uploading {pendingImportFile?.name} will replace the current body of this draft with the
+              document&rsquo;s content. This can&rsquo;t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={cancelImport}
+              className="rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-4 py-2 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmImport}
+              disabled={importing}
+              className="rounded-[8px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[var(--color-primary-light)] disabled:opacity-50"
+            >
+              {importing ? "Uploading…" : "Replace with document"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Settings sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
