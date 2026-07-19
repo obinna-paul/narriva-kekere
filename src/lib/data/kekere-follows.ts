@@ -105,6 +105,32 @@ export async function getFollowingWriters(followerId: string): Promise<FollowedW
   }));
 }
 
+/** The most recent published story from anyone this reader follows, within
+ *  the recency window — powers the "new from a writer you follow" feed
+ *  greeting. Queried directly against Story rather than the notification
+ *  fan-out table, so it stays correct even if a notification was dismissed
+ *  or never generated (e.g. a follow created after the story went live). */
+export async function getLatestFollowedWriterStory(
+  userId: string,
+  withinDays = 14
+): Promise<{ writerName: string; storyTitle: string } | null> {
+  const following = await prisma.follow.findMany({ where: { followerId: userId }, select: { writerId: true } });
+  if (following.length === 0) return null;
+
+  const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000);
+  const story = await prisma.story.findFirst({
+    where: {
+      authorId: { in: following.map((f) => f.writerId) },
+      status: "PUBLISHED",
+      publishedAt: { gte: since },
+    },
+    orderBy: { publishedAt: "desc" },
+    select: { title: true, author: { select: { name: true } } },
+  });
+
+  return story ? { writerName: story.author.name, storyTitle: story.title } : null;
+}
+
 /**
  * Notifies every follower that this writer just published a new story.
  * Fire-and-forget from the caller's perspective (never throws) — a

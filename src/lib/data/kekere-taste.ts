@@ -83,6 +83,33 @@ export async function getPersonalizedTagOrder<T extends string>(
     .map((entry) => entry.slug);
 }
 
+/** The reader's single most-completed genre (Story.genre — a free-text
+ *  field, unrelated to the tag/category system the rest of this file works
+ *  from) — null for anyone with no completions yet, so callers can treat
+ *  that as "no personalization available" rather than a fake default. */
+export async function getTopGenre(userId: string): Promise<string | null> {
+  const completions = await prisma.storyCompletion.findMany({
+    where: { userId },
+    select: { story: { select: { genre: true } } },
+  });
+  if (completions.length === 0) return null;
+
+  const counts = new Map<string, number>();
+  for (const c of completions) {
+    counts.set(c.story.genre, (counts.get(c.story.genre) ?? 0) + 1);
+  }
+
+  let topGenre: string | null = null;
+  let topCount = 0;
+  counts.forEach((count, genre) => {
+    if (count > topCount) {
+      topGenre = genre;
+      topCount = count;
+    }
+  });
+  return topGenre;
+}
+
 export interface SignatureRow {
   slug: string;
   title: string;

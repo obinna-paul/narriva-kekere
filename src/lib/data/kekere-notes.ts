@@ -181,6 +181,21 @@ export async function getReaderNotes(readerId: string): Promise<SentNote[]> {
   }));
 }
 
+/** Most recent reply a writer sent this reader, within the recency window —
+ *  powers the "you've got a reply waiting" feed greeting. There's no
+ *  reader-facing "seen" flag on Note (its `read` field is the writer's own
+ *  inbox state), so recency is used as the "still worth surfacing" proxy
+ *  instead of true unseen-state. */
+export async function getRecentNoteReply(readerId: string, withinDays = 14): Promise<{ writerName: string } | null> {
+  const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000);
+  const note = await prisma.note.findFirst({
+    where: { fromUserId: readerId, replyBody: { not: null }, repliedAt: { gte: since } },
+    orderBy: { repliedAt: "desc" },
+    select: { toWriter: { select: { name: true } } },
+  });
+  return note ? { writerName: note.toWriter.name } : null;
+}
+
 export interface InboxNote {
   id: string;
   storyId: string;
