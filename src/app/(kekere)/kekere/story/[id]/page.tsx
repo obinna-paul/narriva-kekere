@@ -8,6 +8,7 @@ import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getStoryRating } from "@/lib/data/kekere-ratings";
 import { isFollowing } from "@/lib/data/kekere-follows";
 import { getNoteEligibilityForStory } from "@/lib/data/kekere-notes";
+import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 import { toReaderStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { storyCoverOgImageUrl } from "@/lib/storage/cloudinary";
@@ -54,12 +55,13 @@ export default async function KekereStoryPage({ params }: { params: { id: string
   const dbStory = await getStoryForReader(params.id, userId);
   if (!dbStory) notFound();
 
-  const [saved, wallet, rating, following, noteEligibility] = await Promise.all([
+  const [saved, wallet, rating, following, noteEligibility, referralCode] = await Promise.all([
     userId ? isStorySaved(userId, params.id) : Promise.resolve(false),
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getStoryRating(userId, params.id) : Promise.resolve(null),
     userId ? isFollowing(userId, dbStory.author.id) : Promise.resolve(false),
     userId ? getNoteEligibilityForStory(userId, params.id) : Promise.resolve({ eligible: false, alreadySent: false }),
+    userId ? getOrCreateReferralCodeForUser(userId) : Promise.resolve(null),
   ]);
 
   return (
@@ -93,6 +95,7 @@ export default async function KekereStoryPage({ params }: { params: { id: string
         isOwnStory={userId === dbStory.author.id}
         noteEligible={noteEligibility.eligible}
         noteAlreadySent={noteEligibility.alreadySent}
+        referralCode={referralCode}
       />
     </KekereTheme>
   );
