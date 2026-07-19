@@ -19,12 +19,15 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
   const story = await getStoryForReader(params.id, session.user.id);
   if (!story) notFound();
 
-  const [wallet, code, tipCount, following, noteEligibility] = await Promise.all([
+  const [wallet, code, tipCount, following, noteEligibility, authorExtra] = await Promise.all([
     getWalletForUser(session.user.id),
     getOrCreateReferralCodeForUser(session.user.id),
     prisma.tip.count({ where: { readerId: session.user.id, storyId: params.id } }),
     isFollowing(session.user.id, story.author.id),
     getNoteEligibilityForStory(session.user.id, params.id),
+    // Country isn't part of the shared story author-include; grab it here so
+    // the "Meet the writer" card can read like a real profile snippet.
+    prisma.user.findUnique({ where: { id: story.author.id }, select: { country: true } }),
   ]);
 
   return (
@@ -37,6 +40,8 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
           authorName={story.author.name ?? "Unknown"}
           authorAvatarColor={story.author.avatarColor}
           authorAvatarUrl={story.author.avatar ? userAvatarUrl(story.author.avatar) : null}
+          authorBio={story.author.bio}
+          authorCountry={authorExtra?.country ?? null}
           spendingBalance={wallet?.spendingBalance ?? 0}
           tipCount={tipCount}
           rating={0}
