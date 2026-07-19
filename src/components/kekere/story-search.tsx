@@ -129,9 +129,17 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
     );
   }
 
+  // Absolutely positioned edge-to-edge over the whole row (its own px-5
+  // reproduces the row's normal inset), not inline `flex-1` — inline
+  // growth meant the input's actual share of the row was whatever was left
+  // after the tag dropdown and, now, the wallet balance chip, which on a
+  // narrow phone collapsed to 0px and made typing impossible. Taking over
+  // the row while open — the tag button and wallet chip sit underneath,
+  // covered by this opaque background — guarantees full width to type in
+  // regardless of what else lives in this row.
   return (
-    <div ref={containerRef} className="relative min-w-0 flex-1">
-      <div className="flex items-center gap-2 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px]">
+    <div ref={containerRef} className="absolute inset-y-0 left-0 right-0 z-10 flex items-center bg-[var(--color-bg)] px-5">
+      <div className="flex w-full items-center gap-2 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px]">
         <Search size={15} className="flex-none text-[var(--color-ink-muted-2)]" />
         <input
           ref={inputRef}

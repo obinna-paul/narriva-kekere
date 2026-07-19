@@ -199,13 +199,53 @@ export function FeedContent({
     <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
       {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
-        <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="px-5 pb-3 pt-4">
           <span
-            className="min-w-0 flex-1 line-clamp-2 text-[13.5px] font-medium leading-[1.35] text-[var(--color-primary)]"
+            className="line-clamp-2 text-[13.5px] font-medium leading-[1.35] text-[var(--color-primary)]"
             title={greeting}
           >
             {greeting}
           </span>
+        </div>
+
+        {/* Browse by tag dropdown, search, and the cowrie balance all share
+            this row now — moving the balance chip down here (it used to sit
+            top-right, next to the greeting) frees the whole row above for
+            the greeting text instead of splitting it with a fixed-width
+            chip. */}
+        <div className="relative flex items-center justify-between gap-2 px-5 pb-[14px] pt-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <div ref={dropdownRef} className="relative flex-none">
+              <button
+                type="button"
+                onClick={() => setTagOpen(!tagOpen)}
+                className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
+              >
+                Browse by tag ▾
+              </button>
+              {tagOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
+                  {STORY_TAGS.map((tag) => (
+                    <button
+                      key={tag.slug}
+                      type="button"
+                      onClick={() => {
+                        setTagOpen(false);
+                        router.push(`/kekere/tag/${tag.slug}`);
+                      }}
+                      className="block w-full rounded-xl px-3 py-[9px] text-left text-[13px] font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[rgba(42,26,18,0.04)] hover:text-[var(--color-ink)]"
+                    >
+                      {tag.label}
+                      <span className="ml-2 text-[11px] text-[var(--color-ink-muted-2)]">
+                        — {tag.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <StorySearch onPreview={setPreviewStory} />
+          </div>
           <Link
             href="/kekere/wallet"
             className="flex flex-none items-center gap-[7px] rounded-[30px] border border-[rgba(42,26,18,0.1)] bg-white px-[14px] py-[7px]"
@@ -216,40 +256,6 @@ export function FeedContent({
             </svg>
             <span className="text-[13px] font-semibold text-[var(--color-ink)]">{balance}</span>
           </Link>
-        </div>
-
-        {/* Browse by tag dropdown */}
-        <div className="flex items-center gap-2 px-5 pb-[14px] pt-1">
-          <div ref={dropdownRef} className="relative flex-none">
-            <button
-              type="button"
-              onClick={() => setTagOpen(!tagOpen)}
-              className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
-            >
-              Browse by tag ▾
-            </button>
-            {tagOpen && (
-              <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
-                {STORY_TAGS.map((tag) => (
-                  <button
-                    key={tag.slug}
-                    type="button"
-                    onClick={() => {
-                      setTagOpen(false);
-                      router.push(`/kekere/tag/${tag.slug}`);
-                    }}
-                    className="block w-full rounded-xl px-3 py-[9px] text-left text-[13px] font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[rgba(42,26,18,0.04)] hover:text-[var(--color-ink)]"
-                  >
-                    {tag.label}
-                    <span className="ml-2 text-[11px] text-[var(--color-ink-muted-2)]">
-                      — {tag.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <StorySearch onPreview={setPreviewStory} />
         </div>
       </div>
 
