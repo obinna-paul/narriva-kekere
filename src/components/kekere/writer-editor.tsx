@@ -137,7 +137,6 @@ export function WriterEditor({
   // Feature 1 — distraction-free mode
   const focusModeRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
   const [showEscHint, setShowEscHint] = useState(false);
 
   // Feature 2 — preview mode
@@ -182,21 +181,6 @@ export function WriterEditor({
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
-
-  // Track the sticky header's height so the formatting toolbar can stick
-  // directly beneath it (the header height changes with viewport width).
-  useEffect(() => {
-    const header = headerRef.current;
-    const container = containerRef.current;
-    if (!header || !container) return;
-    const setVar = () => {
-      container.style.setProperty("--writer-header-h", `${header.offsetHeight}px`);
-    };
-    setVar();
-    const observer = new ResizeObserver(setVar);
-    observer.observe(header);
-    return () => observer.disconnect();
-  }, [loading]);
 
   // Load an existing draft, or create empty one.
   useEffect(() => {
@@ -539,13 +523,12 @@ export function WriterEditor({
   return (
     // overflow-x-clip, not overflow-x-hidden — `hidden` on one axis forces
     // the other axis's computed overflow to `auto` per the CSS spec, which
-    // silently turns this div into the containing block every `position:
-    // sticky` descendant sticks relative to (the header, the formatting
-    // toolbar). This div itself never actually scrolls — the real
-    // scrolling happens on the document — so sticky positioning computed
-    // against it never engages, and the toolbar/header just scroll away
-    // like ordinary content. `clip` prevents the same horizontal bleed
-    // without that side effect.
+    // silently turns this div into the containing block the formatting
+    // toolbar's `position: sticky` sticks relative to. This div itself
+    // never actually scrolls — the real scrolling happens on the document
+    // — so sticky positioning computed against it never engages, and the
+    // toolbar just scrolls away like ordinary content. `clip` prevents the
+    // same horizontal bleed without that side effect.
     <div ref={containerRef} className="kekere-write-page overflow-x-clip">
       <style>{`
         .kekere-focus-mode [data-writer-chrome] { display: none !important; }
@@ -553,8 +536,11 @@ export function WriterEditor({
         .kekere-focus-mode [data-writer-header-actions] { display: none !important; }
       `}</style>
 
-      {/* Header chrome */}
-      <div ref={headerRef} className="sticky top-0 z-20 border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]" data-writer-chrome>
+      {/* Header chrome — deliberately NOT sticky. Only the formatting
+          toolbar below (B/I/U + word count, inside StoryEditor) stays
+          pinned while scrolling; this back-link/status/actions block
+          scrolls away with the rest of the page like ordinary content. */}
+      <div className="border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]" data-writer-chrome>
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] py-2.5">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Link

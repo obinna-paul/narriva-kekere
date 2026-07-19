@@ -548,13 +548,16 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
       )}
 
-      {/* B1 — Formatting toolbar + live word count. Sticky below the writer
-          header so formatting controls are always reachable while scrolling.
-          Kept deliberately short — B/I/U, word count, reading time, and a
-          toggle — so it always fits on one line with nothing needing a
-          horizontal slide to reach. Less-used controls (alignment, find &
-          replace) live in the row the toggle reveals below instead of being
-          crammed in here. */}
+      {/* B1 — Formatting toolbar + live word count. This is the only part of
+          the writer page that stays pinned while scrolling (the header above
+          — back link, save status, Submit — scrolls away normally); --writer-
+          header-h lets embedding admin screens offset it below their own
+          separate top bar, and defaults to 0px (stick to the very top) in
+          the normal writer flow. Kept deliberately short — B/I/U, word
+          count, reading time, and a toggle — so it always fits on one line
+          with nothing needing a horizontal slide to reach. Less-used
+          controls (alignment, find & replace) live in the row the toggle
+          reveals below instead of being crammed in here. */}
       <div
         ref={toolbarWrapperRef}
         className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)]"
