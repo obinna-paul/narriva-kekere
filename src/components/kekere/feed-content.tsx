@@ -160,6 +160,9 @@ export interface FeedContentProps {
   isLoggedIn?: boolean;
   firstReadFree?: boolean;
   readingProgress?: Record<string, number>;
+  /** Server-picked (see getFeedGreeting) — replaces the static "Kekere"
+   * wordmark with something that changes on every page load. */
+  greeting: string;
 }
 
 export function FeedContent({
@@ -174,6 +177,7 @@ export function FeedContent({
   isLoggedIn = false,
   firstReadFree = false,
   readingProgress,
+  greeting,
 }: FeedContentProps) {
   const [tagOpen, setTagOpen] = useState(false);
   const [previewStory, setPreviewStory] = useState<MockStory | null>(null);
@@ -195,13 +199,16 @@ export function FeedContent({
     <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
       {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
-        <div className="flex items-center justify-between px-5 pb-3 pt-4">
-          <span className="font-[family-name:var(--font-display)] text-[21px] font-semibold text-[var(--color-primary)]">
-            Kekere
+        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
+          <span
+            className="min-w-0 flex-1 truncate text-[16px] font-semibold text-[var(--color-primary)]"
+            title={greeting}
+          >
+            {greeting}
           </span>
           <Link
             href="/kekere/wallet"
-            className="flex items-center gap-[7px] rounded-[30px] border border-[rgba(42,26,18,0.1)] bg-white px-[14px] py-[7px]"
+            className="flex flex-none items-center gap-[7px] rounded-[30px] border border-[rgba(42,26,18,0.1)] bg-white px-[14px] py-[7px]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
               <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
