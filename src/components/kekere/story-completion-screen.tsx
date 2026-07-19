@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check, Star, Send, Copy, MessageCircle, PenLine } from "lucide-react";
+import { Check, Star, Send, Copy, MessageCircle, PenLine, MapPin, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
@@ -15,6 +15,8 @@ interface CompletionProps {
   authorAvatarColor: string | null;
   /** Already a full CDN URL — see toFeedStoryData / kekere-writer-profile.ts. */
   authorAvatarUrl: string | null;
+  authorBio: string | null;
+  authorCountry: string | null;
   spendingBalance: number;
   tipCount: number;
   rating: number;
@@ -33,6 +35,8 @@ export function StoryCompletionScreen({
   authorName,
   authorAvatarColor,
   authorAvatarUrl,
+  authorBio,
+  authorCountry,
   spendingBalance: initialBalance,
   tipCount: initialTipCount,
   rating,
@@ -53,6 +57,9 @@ export function StoryCompletionScreen({
   const [noteSending, setNoteSending] = useState(false);
   const [noteSent, setNoteSent] = useState(false);
   const [noteError, setNoteError] = useState<string | null>(null);
+
+  const authorInitial = authorName.trim().charAt(0).toUpperCase() || "?";
+  const authorColor = authorAvatarColor ?? "#C75D2C";
 
   const shareUrl = referralCode
     ? `https://narriva.pro/kekere/invite/${referralCode}`
@@ -140,11 +147,13 @@ export function StoryCompletionScreen({
       <div className="text-center">
         <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#C75D2C]">You finished it</p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-[26px] font-semibold text-[#2A1A12] leading-[1.15]">{storyTitle}</h1>
-        <div className="mt-2.5 flex items-center justify-center gap-2">
+        {/* Just a light byline here — the full follow/profile treatment lives
+            in the "Meet the writer" card below, so the header stays a clean
+            celebration of what they just finished rather than a cramped
+            avatar-name-button cluster. */}
+        <div className="mt-2 flex items-center justify-center gap-1.5 text-[13px] text-[#A08C7C]">
+          <span>by</span>
           <AuthorChip authorId={authorId} authorName={authorName} avatarColor={authorAvatarColor} avatarUrl={authorAvatarUrl} size="sm" />
-          {!isOwnStory && (
-            <FollowButton writerId={authorId} isLoggedIn initialFollowing={initialFollowing} variant="compact" />
-          )}
         </div>
       </div>
 
@@ -168,6 +177,69 @@ export function StoryCompletionScreen({
               <Star size={28} className={cn("transition-colors", (hoverRating || submittedRating) >= s ? "fill-[#E9A56B] text-[#E9A56B]" : "text-[rgba(42,26,18,0.12)]")} />
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Meet the writer — a self-contained profile snippet so the person
+          behind the story reads as a person, not just another byline. Ringed
+          avatar matches the real writer-profile page; the whole header taps
+          through, and the action row gives Follow real prominence. */}
+      <div className="mt-7">
+        <h2 className="mb-2.5 px-0.5 text-[13px] font-semibold text-[#2A1A12]">Meet the writer</h2>
+        <div className="rounded-[18px] border border-[rgba(42,26,18,0.08)] bg-white p-[18px] shadow-[0_12px_32px_-22px_rgba(42,26,18,0.55)]">
+          <Link href={`/kekere/writer/${authorId}`} className="group flex items-center gap-3.5">
+            <div
+              className="flex h-[58px] w-[58px] flex-none items-center justify-center overflow-hidden rounded-full p-[3px]"
+              style={{ background: authorColor }}
+            >
+              <div
+                className="flex h-full w-full items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[22px] font-semibold text-white"
+                style={{ background: `linear-gradient(135deg, #E08A4A, ${authorColor})` }}
+              >
+                {authorAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  authorInitial
+                )}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block truncate font-[family-name:var(--font-display)] text-[19px] font-semibold leading-tight text-[#2A1A12] transition-colors group-hover:text-[#C75D2C]">
+                {authorName}
+              </span>
+              {authorCountry && (
+                <span className="mt-1 flex items-center gap-1 text-[12.5px] text-[#A08C7C]">
+                  <MapPin size={12} className="flex-none" /> Writer from {authorCountry}
+                </span>
+              )}
+            </div>
+          </Link>
+
+          {authorBio && (
+            <p className="mt-3.5 text-[13.5px] leading-[1.55] text-[#6B5744]">{authorBio}</p>
+          )}
+
+          <div className="mt-4 flex items-center gap-2.5">
+            {!isOwnStory && (
+              <FollowButton
+                writerId={authorId}
+                isLoggedIn
+                initialFollowing={initialFollowing}
+                variant="full"
+                className="flex-1"
+              />
+            )}
+            <Link
+              href={`/kekere/writer/${authorId}`}
+              className={cn(
+                "flex items-center justify-center gap-1 rounded-full border border-[rgba(42,26,18,0.16)] px-5 py-[10px] text-sm font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/40 hover:text-[#C75D2C]",
+                isOwnStory && "flex-1",
+              )}
+            >
+              View profile <ArrowUpRight size={15} className="flex-none" />
+            </Link>
+          </div>
         </div>
       </div>
 
