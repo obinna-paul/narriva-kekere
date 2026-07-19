@@ -199,9 +199,9 @@ export function FeedContent({
     <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
       {/* Sticky header */}
       <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
-        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
           <span
-            className="min-w-0 flex-1 truncate text-[16px] font-semibold text-[var(--color-primary)]"
+            className="min-w-0 flex-1 line-clamp-2 text-[13.5px] font-medium leading-[1.35] text-[var(--color-primary)]"
             title={greeting}
           >
             {greeting}
