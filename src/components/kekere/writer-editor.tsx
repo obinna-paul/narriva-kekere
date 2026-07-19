@@ -537,7 +537,16 @@ export function WriterEditor({
   }
 
   return (
-    <div ref={containerRef} className="kekere-write-page overflow-x-hidden">
+    // overflow-x-clip, not overflow-x-hidden — `hidden` on one axis forces
+    // the other axis's computed overflow to `auto` per the CSS spec, which
+    // silently turns this div into the containing block every `position:
+    // sticky` descendant sticks relative to (the header, the formatting
+    // toolbar). This div itself never actually scrolls — the real
+    // scrolling happens on the document — so sticky positioning computed
+    // against it never engages, and the toolbar/header just scroll away
+    // like ordinary content. `clip` prevents the same horizontal bleed
+    // without that side effect.
+    <div ref={containerRef} className="kekere-write-page overflow-x-clip">
       <style>{`
         .kekere-focus-mode [data-writer-chrome] { display: none !important; }
         .kekere-focus-mode [data-writer-sidebar] { display: none !important; }
