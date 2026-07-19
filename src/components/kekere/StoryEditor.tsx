@@ -73,11 +73,12 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   // without needing horizontal scrolling to reach anything in it.
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
 
-  // Select all / cut — dragging selection handles across a long, scrolled
-  // story on mobile is impractical, so these give a reliable one-tap way to
-  // do both instead of relying on the OS's own (often hard-to-reach) text
-  // selection toolbar.
+  // Select all / cut — surfaced as a small floating toolbar that appears
+  // next to the user's own text selection (see selectionToolbarPos below),
+  // the same way the OS's native selection menu does, rather than as
+  // permanent buttons docked in the formatting toolbar.
   const [cutError, setCutError] = useState<string | null>(null);
+  const [, forceSelectionToolbarRecompute] = useState(0);
 
   // Find & replace
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
@@ -86,6 +87,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   const [searchCount, setSearchCount] = useState(0);
   const [searchIndex, setSearchIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const toolbarWrapperRef = useRef<HTMLDivElement>(null);
 
   const isDirtyRef = useRef(false);
   const conflictedRef = useRef(false);
@@ -173,6 +175,19 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     const minutes = count === 0 ? 0 : Math.max(1, Math.round(count / READING_WPM));
     setLocalWordCount(count);
     setLocalReadingTime(minutes);
+  }, [editor]);
+
+  // The floating selection toolbar's position (below) is computed from
+  // viewport coordinates on every selection-changing transaction, but
+  // scrolling the page doesn't fire a transaction — without this it would
+  // stay pinned to its old spot on screen while the text scrolls underneath.
+  useEffect(() => {
+    if (!editor) return;
+    const onScroll = () => {
+      if (!editor.state.selection.empty) forceSelectionToolbarRecompute((n) => n + 1);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", onScroll, true);
   }, [editor]);
 
   // Recovery check: IndexedDB first, localStorage fallback.
@@ -450,6 +465,38 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       ? "< 1 min read"
       : `~${localReadingTime} min read`;
 
+  // Select all / Cut only show up attached to an actual selection — same
+  // spirit as the OS's own selection menu — rather than as permanent
+  // toolbar buttons. Position is derived straight from the selection's
+  // on-screen coordinates, which are already fresh here because ProseMirror
+  // updates its DOM outside of React before this component re-renders.
+  let selectionToolbarPos: { top: number; left: number } | null = null;
+  if (editor.isFocused && !editor.state.selection.empty) {
+    try {
+      const { from, to } = editor.state.selection;
+      const startCoords = editor.view.coordsAtPos(from);
+      const endCoords = editor.view.coordsAtPos(to);
+      const top = Math.min(startCoords.top, endCoords.top);
+      const bottom = Math.max(startCoords.bottom, endCoords.bottom);
+      const left = (Math.min(startCoords.left, endCoords.left) + Math.max(startCoords.right, endCoords.right)) / 2;
+      const TOOLBAR_HEIGHT = 40;
+      const GAP = 10;
+      // Measure the actual sticky formatting toolbar's bottom edge rather
+      // than guessing a fixed clearance — if placing the floating toolbar
+      // above the selection would land it on top of (or under) that sticky
+      // chrome, place it below the selection instead.
+      const stickyBottom = toolbarWrapperRef.current?.getBoundingClientRect().bottom ?? 0;
+      const placeBelow = top - TOOLBAR_HEIGHT - GAP < stickyBottom + GAP;
+      const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 400;
+      selectionToolbarPos = {
+        top: placeBelow ? bottom + GAP : top - TOOLBAR_HEIGHT - GAP,
+        left: Math.min(Math.max(left, 90), viewportWidth - 90),
+      };
+    } catch {
+      selectionToolbarPos = null;
+    }
+  }
+
   return (
     <div className="flex flex-col">
       {/* B2.2 — Local draft recovery banner */}
@@ -508,7 +555,10 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           horizontal slide to reach. Less-used controls (alignment, find &
           replace) live in the row the toggle reveals below instead of being
           crammed in here. */}
-      <div className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)]">
+      <div
+        ref={toolbarWrapperRef}
+        className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)]"
+      >
         <div className="flex items-center gap-1.5 px-[22px] py-2">
           <ToolbarButton
             label="Bold (Ctrl+B)"
@@ -556,14 +606,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
 
         {toolbarExpanded && (
-          // flex-wrap, not overflow-x-auto — with alignment + find + Select
-          // all + Cut all together, this row is wider than it looks on a
-          // narrow phone (measured ~412px of content), and a scrolling row
-          // means some of those buttons are reachable only by sliding
-          // sideways — exactly what kept coming up as a problem with the
-          // header actions and the old single-row toolbar. Wrapping onto a
-          // second line keeps everything reachable with a tap instead.
-          <div className="flex flex-wrap items-center gap-1.5 border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
             <ToolbarButton
               label="Align left"
               active={editor.isActive({ textAlign: "left" })}
@@ -602,36 +645,6 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
             >
               <Search size={16} />
             </ToolbarButton>
-
-            <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
-
-            {/* Select all / Cut — text-labeled rather than icon buttons
-                (clearer for actions this consequential), and using the same
-                onMouseDown+preventDefault trick as ToolbarButton so clicking
-                doesn't blur the editor first and collapse whatever's
-                selected right before the action needs it. */}
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelectAll();
-              }}
-              className="flex-none rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
-            >
-              Select all
-            </button>
-            <button
-              type="button"
-              disabled={editor.state.selection.empty}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                void handleCut();
-              }}
-              className="flex-none rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
-              title={editor.state.selection.empty ? "Select some text first" : "Cut selection"}
-            >
-              Cut
-            </button>
           </div>
         )}
       </div>
@@ -756,6 +769,35 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           "[&_.ProseMirror_p:not([style*='left']):not([style*='center']):not([style*='right'])]:text-justify"
         )}
       />
+
+      {selectionToolbarPos && (
+        <div
+          className="fixed z-[60] flex -translate-x-1/2 items-center gap-0.5 rounded-[10px] bg-[#2A1A12] p-1 text-white shadow-[0_4px_14px_rgba(0,0,0,.28)]"
+          style={{ top: selectionToolbarPos.top, left: selectionToolbarPos.left }}
+        >
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleSelectAll();
+            }}
+            className="whitespace-nowrap rounded-[7px] px-2.5 py-1.5 text-[12.5px] font-semibold hover:bg-white/10"
+          >
+            Select all
+          </button>
+          <span className="h-4 w-px flex-none bg-white/20" />
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              void handleCut();
+            }}
+            className="whitespace-nowrap rounded-[7px] px-2.5 py-1.5 text-[12.5px] font-semibold hover:bg-white/10"
+          >
+            Cut
+          </button>
+        </div>
+      )}
     </div>
   );
 });
