@@ -135,3 +135,56 @@ export async function getWriterProfileStats(userId: string): Promise<WriterProfi
 
   return { publishedCount, totalReads, rating };
 }
+
+export interface WriterFollowStats {
+  publishedCount: number;
+  rating: RatingSummary;
+}
+
+/**
+ * Published-story count + rating for many writers at once — three queries
+ * total regardless of list size, rather than an N+1 per writer. Powers the
+ * "Following" list on the self-profile page.
+ *
+ * `storyRating` can't be grouped by `story.authorId` directly (relation
+ * fields aren't groupable in Prisma), so this reconstructs each writer's
+ * aggregate from their per-story summaries instead of a fourth query:
+ * average * count reproduces that story's rating total exactly.
+ */
+export async function getWriterStatsBatch(writerIds: string[]): Promise<Map<string, WriterFollowStats>> {
+  if (writerIds.length === 0) return new Map();
+
+  const [countGroups, stories] = await Promise.all([
+    prisma.story.groupBy({
+      by: ["authorId"],
+      where: { authorId: { in: writerIds }, status: "PUBLISHED" },
+      _count: { authorId: true },
+    }),
+    prisma.story.findMany({
+      where: { authorId: { in: writerIds }, status: "PUBLISHED" },
+      select: { id: true, authorId: true },
+    }),
+  ]);
+
+  const ratingByStory = await getRatingSummaryByStory(stories.map((s) => s.id));
+  const countByWriter = new Map(countGroups.map((g) => [g.authorId, g._count.authorId]));
+
+  const sumByWriter = new Map<string, { total: number; count: number }>();
+  for (const story of stories) {
+    const r = ratingByStory.get(story.id);
+    if (!r || r.average === null || r.count === 0) continue;
+    const entry = sumByWriter.get(story.authorId) ?? { total: 0, count: 0 };
+    entry.total += r.average * r.count;
+    entry.count += r.count;
+    sumByWriter.set(story.authorId, entry);
+  }
+
+  return new Map(
+    writerIds.map((id) => {
+      const sum = sumByWriter.get(id);
+      const rating: RatingSummary =
+        sum && sum.count > 0 ? { average: sum.total / sum.count, count: sum.count } : { average: null, count: 0 };
+      return [id, { publishedCount: countByWriter.get(id) ?? 0, rating }];
+    }),
+  );
+}

@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
+import { getWriterStatsBatch } from "@/lib/data/kekere-writer-profile";
+import type { RatingSummary } from "@/lib/data/kekere-ratings";
 
 export type FollowResult =
   | { success: true; followerCount: number }
@@ -72,10 +74,14 @@ export interface FollowedWriter {
   avatarColor: string | null;
   avatar: string | null;
   followedAt: Date;
+  publishedCount: number;
+  rating: RatingSummary;
 }
 
 /** Writers this reader follows, most recently followed first — powers the
- * self-profile "Following" list. */
+ * self-profile "Following" list. Each writer's published-story count and
+ * rating come from one batched query (getWriterStatsBatch) rather than a
+ * query per followed writer. */
 export async function getFollowingWriters(followerId: string): Promise<FollowedWriter[]> {
   const rows = await prisma.follow.findMany({
     where: { followerId },
@@ -86,12 +92,16 @@ export async function getFollowingWriters(followerId: string): Promise<FollowedW
     },
   });
 
+  const stats = await getWriterStatsBatch(rows.map((r) => r.writer.id));
+
   return rows.map((r) => ({
     id: r.writer.id,
     name: r.writer.name,
     avatarColor: r.writer.avatarColor,
     avatar: r.writer.avatar,
     followedAt: r.createdAt,
+    publishedCount: stats.get(r.writer.id)?.publishedCount ?? 0,
+    rating: stats.get(r.writer.id)?.rating ?? { average: null, count: 0 },
   }));
 }
 

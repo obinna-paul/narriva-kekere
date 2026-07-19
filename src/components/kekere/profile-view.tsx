@@ -3,15 +3,14 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2 } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2, Star } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
-import { AuthorChip } from "@/components/kekere/author-chip";
-import { FollowButton } from "@/components/kekere/follow-button";
 import { ShareProfileSheet } from "@/components/kekere/share-profile-sheet";
+import type { RatingSummary } from "@/lib/data/kekere-ratings";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -142,6 +141,54 @@ function StatBlock({ value, label, accent }: { value: string; label: string; acc
   );
 }
 
+/** One card in the "Following" grid — avatar, name, then stats below in
+ *  place of a follower count (which means nothing to a reader browsing who
+ *  *they* follow): published story count, plus a star rating once the
+ *  writer has any. Whole card links to the writer's profile, where
+ *  unfollowing already lives (via FollowButton on writer-follow-header). */
+function FollowingCard({
+  writer,
+}: {
+  writer: {
+    id: string;
+    name: string;
+    avatarColor: string | null;
+    avatarUrl: string | null;
+    publishedCount: number;
+    rating: RatingSummary;
+  };
+}) {
+  const initial = writer.name.trim().charAt(0).toUpperCase() || "?";
+  const storyLabel = `${writer.publishedCount} ${writer.publishedCount === 1 ? "story" : "stories"}`;
+
+  return (
+    <Link href={`/kekere/writer/${writer.id}`} className="flex flex-col items-center gap-1.5 text-center">
+      <div
+        className="flex h-[58px] w-[58px] flex-none items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[19px] font-semibold text-white"
+        style={{ background: `linear-gradient(135deg, #E08A4A, ${writer.avatarColor ?? "#C75D2C"})` }}
+      >
+        {writer.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={writer.avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial
+        )}
+      </div>
+      <span className="w-full truncate text-[12.5px] font-semibold text-[var(--color-ink)]">{writer.name}</span>
+      <span className="flex items-center gap-1 text-[11px] text-[var(--color-ink-muted-2)]">
+        {storyLabel}
+        {writer.rating.count > 0 && writer.rating.average !== null && (
+          <>
+            <span aria-hidden>·</span>
+            <Star size={10} className="fill-current text-[var(--color-primary)]" />
+            {writer.rating.average.toFixed(1)}
+          </>
+        )}
+      </span>
+    </Link>
+  );
+}
+
 export interface ProfileViewProps {
   userId: string;
   name: string;
@@ -157,7 +204,14 @@ export interface ProfileViewProps {
   readingStats: { storiesRead: number; storiesCompleted: number; savedCount: number };
   streakStats: StreakCardProps;
   unreadNoteCount: number;
-  followingWriters: readonly { id: string; name: string; avatarColor: string | null; avatarUrl: string | null }[];
+  followingWriters: readonly {
+    id: string;
+    name: string;
+    avatarColor: string | null;
+    avatarUrl: string | null;
+    publishedCount: number;
+    rating: RatingSummary;
+  }[];
 }
 
 export function ProfileView(props: ProfileViewProps) {
@@ -177,7 +231,6 @@ export function ProfileView(props: ProfileViewProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [followingWriters, setFollowingWriters] = useState(props.followingWriters);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -503,38 +556,16 @@ export function ProfileView(props: ProfileViewProps) {
               </Card>
             </div>
 
-            {followingWriters.length > 0 && (
+            {props.followingWriters.length > 0 && (
               <div>
-                <SectionLabel>Following ({followingWriters.length})</SectionLabel>
-                <ListCard>
-                  {followingWriters.map((writer) => (
-                    <div
-                      key={writer.id}
-                      className="flex items-center justify-between gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[11px] last:border-b-0"
-                    >
-                      <AuthorChip
-                        authorId={writer.id}
-                        authorName={writer.name}
-                        avatarColor={writer.avatarColor}
-                        avatarUrl={writer.avatarUrl}
-                        size="md"
-                      />
-                      <FollowButton
-                        writerId={writer.id}
-                        isLoggedIn
-                        initialFollowing
-                        variant="compact"
-                        // This card only ever starts as "Following," so the only
-                        // toggle possible here is unfollowing — drop the row once
-                        // that succeeds rather than leaving a stale "Follow" card.
-                        onFollowerCountChange={() =>
-                          setFollowingWriters((prev) => prev.filter((w) => w.id !== writer.id))
-                        }
-                        className="flex-none"
-                      />
-                    </div>
-                  ))}
-                </ListCard>
+                <SectionLabel>Following ({props.followingWriters.length})</SectionLabel>
+                <Card className="p-4">
+                  <div className="grid grid-cols-3 gap-x-2 gap-y-5">
+                    {props.followingWriters.map((writer) => (
+                      <FollowingCard key={writer.id} writer={writer} />
+                    ))}
+                  </div>
+                </Card>
               </div>
             )}
 
