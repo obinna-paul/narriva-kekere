@@ -62,9 +62,11 @@ export default async function KekereFeedPage() {
       userId ? getKekereUserProfile(userId) : Promise.resolve(null),
     ]);
 
-  // A fresh pick every time this force-dynamic page renders — same
-  // per-load-rotation pattern as the login page's quotes.
-  const greeting = getFeedGreeting(profile?.name ?? null);
+  // The feed is a protected route (see middleware.ts), so userId and
+  // profile.name are always real here — the fallback only exists to satisfy
+  // the type checker's optional-session shape, not because either is
+  // actually expected to be missing.
+  const greeting = userId && profile?.name ? getFeedGreeting(userId, profile.name) : "Welcome.";
 
   // Tag rows and the signature row both depend on the (possibly
   // personalized) tag order resolved above, so they run as a second stage.
