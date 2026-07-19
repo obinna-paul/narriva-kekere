@@ -61,6 +61,8 @@ export default async function KekereProfilePage() {
             name: w.name,
             avatarColor: w.avatarColor,
             avatarUrl: w.avatar ? userAvatarUrl(w.avatar) : null,
+            publishedCount: w.publishedCount,
+            rating: w.rating,
           }))}
         />
       </div>
