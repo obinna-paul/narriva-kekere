@@ -2,8 +2,9 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
+import { AlignLeft, AlignCenter, AlignRight, AlignJustify, Search, ChevronUp, ChevronDown, X } from "lucide-react";
 import { createEditorExtensions } from "@/lib/tiptap/editor-config";
+import { searchAndReplacePluginKey } from "@/lib/tiptap/search-and-replace";
 import { cn } from "@/lib/utils/cn";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import {
@@ -67,6 +68,14 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   const [localWordCount, setLocalWordCount] = useState(0);
   const [localReadingTime, setLocalReadingTime] = useState(0);
 
+  // Find & replace
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [searchTerm, setSearchTermState] = useState("");
+  const [replaceTerm, setReplaceTerm] = useState("");
+  const [searchCount, setSearchCount] = useState(0);
+  const [searchIndex, setSearchIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const isDirtyRef = useRef(false);
   const conflictedRef = useRef(false);
   const lastKnownLastSavedAtRef = useRef<string | null>(initialLastSavedAt);
@@ -128,6 +137,12 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         void saveToServer(json, count);
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, SAVE_DEBOUNCE_MS);
+    },
+    onTransaction: ({ editor }) => {
+      const pluginState = searchAndReplacePluginKey.getState(editor.state);
+      if (!pluginState) return;
+      setSearchCount(pluginState.results.length);
+      setSearchIndex(pluginState.currentIndex);
     },
   });
 
@@ -286,14 +301,90 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const isSaveShortcut = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s";
-      if (!isSaveShortcut) return;
-      e.preventDefault();
-      void manualSave();
+      if (isSaveShortcut) {
+        e.preventDefault();
+        void manualSave();
+        return;
+      }
+
+      const isFindShortcut = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f";
+      if (isFindShortcut) {
+        e.preventDefault();
+        openFindReplace();
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manualSave]);
+
+  function openFindReplace() {
+    setFindReplaceOpen(true);
+    // Let the panel actually mount before trying to focus it.
+    setTimeout(() => searchInputRef.current?.focus(), 0);
+  }
+
+  function closeFindReplace() {
+    setFindReplaceOpen(false);
+    setSearchTermState("");
+    editor?.commands.setSearchTerm("");
+    editor?.commands.focus();
+  }
+
+  // ProseMirror's own tr.scrollIntoView() doesn't know about the sticky
+  // toolbar sitting on top of the editor, so it can leave the current match
+  // scrolled to right underneath it. The decoration's DOM class carries a
+  // scroll-margin-top (see EditorContent's className below), and the native
+  // scrollIntoView respects that — so once the decoration has actually
+  // re-rendered (next frame), reach for it directly instead.
+  function scrollCurrentMatchIntoView() {
+    requestAnimationFrame(() => {
+      document.querySelector(".kekere-search-match-current")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function handleSearchChange(term: string) {
+    setSearchTermState(term);
+    editor?.commands.setSearchTerm(term);
+    if (term) scrollCurrentMatchIntoView();
+  }
+
+  function findNext() {
+    editor?.commands.goToSearchResult(searchIndex + 1);
+    scrollCurrentMatchIntoView();
+  }
+
+  function findPrevious() {
+    editor?.commands.goToSearchResult(searchIndex - 1);
+    scrollCurrentMatchIntoView();
+  }
+
+  function handleReplace() {
+    if (searchIndex < 0) return;
+    // Focus moves into the editor at the replaced spot afterward — not just
+    // cosmetic: Ctrl+Z only reaches ProseMirror's own undo history when the
+    // editor itself has DOM focus, and leaving focus stuck on this button
+    // would silently break "undo my last replace" right after clicking it.
+    editor?.chain().replaceSearchResult(searchIndex, replaceTerm).focus().run();
+    scrollCurrentMatchIntoView();
+  }
+
+  function handleReplaceAll() {
+    if (searchCount === 0) return;
+    editor?.chain().replaceAllSearchResults(replaceTerm).focus().run();
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (e.shiftKey) findPrevious();
+      else findNext();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closeFindReplace();
+    }
+  }
 
   function handleRestoreLocal() {
     if (!editor || !recovery) return;
@@ -406,6 +497,16 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           <AlignJustify size={16} />
         </ToolbarButton>
 
+        <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+
+        <ToolbarButton
+          label="Find & replace (Ctrl+F)"
+          active={findReplaceOpen}
+          onClick={() => (findReplaceOpen ? closeFindReplace() : openFindReplace())}
+        >
+          <Search size={16} />
+        </ToolbarButton>
+
         <div className="flex-1" />
 
         {/* B7.3 — live word count + reading time */}
@@ -418,6 +519,102 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           <span>{readingTimeLabel}</span>
         </div>
       </div>
+
+      {/* Find & replace panel — two fixed rows (find, then replace) rather
+          than one row of flex-wrap items. A single wrapping row let the two
+          text inputs (both flex-1) shrink to fit instead of wrapping, which
+          on a narrow phone squeezed them down to a couple of visible
+          characters — explicit rows sidestep that entirely, and each row
+          still wraps internally as a safety net if it's ever too narrow to
+          read even on its own. */}
+      {findReplaceOpen && (
+        <div className="-mx-[22px] mb-3 flex flex-col gap-2 border-b border-[rgba(42,26,18,.10)] bg-[rgba(199,93,44,0.04)] px-[22px] py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-[160px] flex-1 items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-1.5">
+              <Search size={14} className="flex-none text-[rgba(42,26,18,.45)]" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Find in story…"
+                className="w-full min-w-0 bg-transparent text-[13.5px] text-[#2A1A12] outline-none placeholder:text-[rgba(42,26,18,.4)]"
+              />
+              {searchTerm && (
+                <span
+                  data-testid="search-match-counter"
+                  className="flex-none whitespace-nowrap text-[12px] text-[rgba(42,26,18,.5)]"
+                >
+                  {searchCount > 0 ? `${searchIndex + 1}/${searchCount}` : "0/0"}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-none items-center gap-1">
+              <button
+                type="button"
+                onClick={findPrevious}
+                disabled={searchCount === 0}
+                aria-label="Previous match"
+                title="Previous match (Shift+Enter)"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronUp size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={findNext}
+                disabled={searchCount === 0}
+                aria-label="Next match"
+                title="Next match (Enter)"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronDown size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={closeFindReplace}
+                aria-label="Close find & replace"
+                className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] text-[rgba(42,26,18,.5)] hover:bg-[rgba(42,26,18,.06)] hover:text-[#2A1A12]"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={replaceTerm}
+              onChange={(e) => setReplaceTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") closeFindReplace();
+              }}
+              placeholder="Replace with…"
+              className="min-w-[160px] flex-1 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[13.5px] text-[#2A1A12] outline-none placeholder:text-[rgba(42,26,18,.4)]"
+            />
+            <div className="flex flex-none items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleReplace}
+                disabled={searchCount === 0}
+                className="rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={handleReplaceAll}
+                disabled={searchCount === 0}
+                className="rounded-[8px] bg-[#C75D2C] px-2.5 py-[7px] text-[12.5px] font-semibold text-white hover:bg-[#B0531E] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Replace all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EditorContent
         editor={editor}
@@ -432,6 +629,8 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           "[&_.ProseMirror_u]:underline",
           "[&_.ProseMirror_p[style*='center']]:text-center",
           "[&_.ProseMirror_p[style*='right']]:text-right",
+          "[&_.kekere-search-match]:rounded-[2px] [&_.kekere-search-match]:bg-[rgba(233,201,163,.55)]",
+          "[&_.kekere-search-match-current]:bg-[#E9C963] [&_.kekere-search-match-current]:scroll-mt-[140px]",
           // TextAlign only writes an inline style when a paragraph's
           // alignment differs from defaultAlignment ("justify", set in
           // editor-config.ts) — so a paragraph at the default has no style

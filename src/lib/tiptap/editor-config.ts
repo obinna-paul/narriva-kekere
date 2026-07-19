@@ -7,6 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import type { AnyExtension } from "@tiptap/react";
 import { generateUUID } from "@/lib/utils/uuid";
+import { SearchAndReplace } from "@/lib/tiptap/search-and-replace";
 
 /**
  * UniqueID (below) generates and assigns `attrs.id` on every paragraph —
@@ -68,6 +69,7 @@ export function createEditorExtensions(): AnyExtension[] {
     ParagraphIdAttribute,
     CharacterCount.configure({ limit: null }),
     Placeholder.configure({ placeholder: "Start writing your story here..." }),
+    SearchAndReplace,
   ];
 }
 
