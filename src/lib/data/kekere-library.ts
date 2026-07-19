@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 const authorInclude = {
-  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } },
+  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true, bio: true } },
   tags: { include: { tag: true } },
 } as const;
 

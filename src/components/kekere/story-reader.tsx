@@ -485,6 +485,42 @@ export function StoryReader({
           ))}
         </div>
 
+        {/* Author card — photo, name, bio, and a Follow/Following button so
+            a reader who just finished the story can follow the writer
+            without having to leave and go find their profile. */}
+        <Link
+          href={`/kekere/writer/${story.authorId}`}
+          className="mt-7 flex w-full max-w-[280px] flex-col items-center gap-2"
+        >
+          <div
+            className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[20px] font-semibold text-white"
+            style={{ background: `linear-gradient(135deg, #E08A4A, ${story.authorAvatarColor ?? "#C75D2C"})` }}
+          >
+            {story.authorAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={story.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              story.authorName.trim().charAt(0).toUpperCase() || "?"
+            )}
+          </div>
+          <p className="text-[15px] font-semibold text-[var(--color-ink)]">{story.authorName}</p>
+          {story.authorBio && (
+            <p className="line-clamp-2 text-center text-[12.5px] leading-[1.4] text-[var(--color-ink-muted-2)]">
+              {story.authorBio}
+            </p>
+          )}
+        </Link>
+        {!isOwnStory && (
+          <div className="mt-2.5">
+            <FollowButton
+              writerId={story.authorId}
+              isLoggedIn={isLoggedIn}
+              initialFollowing={initialFollowing}
+              variant="compact"
+            />
+          </div>
+        )}
+
         {noteEligible && (
           <div className="mt-7 w-full max-w-[280px]">
             {noteSent ? (

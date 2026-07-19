@@ -31,6 +31,7 @@ export interface MockStory {
   authorAvatarColor?: string | null;
   /** Already a full CDN URL — see toFeedStoryData. */
   authorAvatarUrl?: string | null;
+  authorBio?: string | null;
   /** KekereGenre for the mock catalog; real Story.genre is free text. */
   genre: KekereGenre | string;
   tier: StoryTier;
