@@ -363,7 +363,7 @@ export default async function KekereLandingPage() {
               >
                 <Link href={`/kekere/story/${story.id}`}>
                   <div
-                    className="relative aspect-[3/4] overflow-hidden rounded-[14px] shadow-[var(--shadow-card)]"
+                    className="relative aspect-[3/4] overflow-hidden rounded-[10px] shadow-[var(--shadow-card)]"
                     style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
                   >
                     {story.coverImageUrl && (
@@ -409,7 +409,7 @@ export default async function KekereLandingPage() {
 
             <div className="w-[140px] flex-none opacity-50 blur-[3px]">
               <div
-                className="aspect-[3/4] rounded-[14px]"
+                className="aspect-[3/4] rounded-[10px]"
                 style={{
                   background: "linear-gradient(135deg,#C75D2C,#1F4B4B)",
                 }}

@@ -63,7 +63,7 @@ function LibraryCard({
       className="flex gap-[14px] rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white p-3 transition-colors hover:border-[var(--color-primary)]"
     >
       <div
-        className="relative h-[84px] w-[84px] flex-none overflow-hidden rounded-xl"
+        className="relative h-[84px] w-[84px] flex-none overflow-hidden rounded-[8px]"
         style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
       >
         {story.coverImageUrl && (
