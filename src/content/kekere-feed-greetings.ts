@@ -1,232 +1,289 @@
 /**
  * Rotating greetings for the feed's top-left header — replaces the static
  * "Kekere" wordmark. The feed is a protected route (see middleware.ts), so
- * every visitor here is a logged-in reader with a name on file; there's no
- * logged-out case to design for.
+ * every visitor here is a logged-in reader; there's no logged-out case to
+ * design for.
  *
  * These are deliberately NOT brand copy — no mention of Kekere, cowries, or
- * any feature. The whole point is that this spot in the header stops being
- * about the app and starts being about the person looking at their phone
- * right now: a greeting, a joke, a pun, something kind. Puns are welcome.
- * Taglines are not.
+ * any feature (the "personalized" pools below are the one exception: they
+ * reference the reader's own activity, not the app itself). The whole point
+ * of this spot is that it stops being about the app and starts being about
+ * the person looking at their phone right now.
  *
- * Picked deterministically (see getFeedGreeting) from a userId + local date
- * + time-of-day seed, not Math.random() — the same reader sees the same
- * line for the next few hours (until the time-of-day bucket below rolls
- * over), then gets a new one, rather than it changing on every reload.
+ * Rotation: `getFeedGreeting` picks deterministically from a userId + local
+ * date + time-of-day seed, so the server-rendered initial paint is stable
+ * (and hydration-safe). `feed-content.tsx` then upgrades this client-side —
+ * on every mount it re-rolls at random via `pickRandomGreeting`, never
+ * immediately repeating the last one shown (tracked in localStorage).
+ *
+ * Name usage is intentionally NOT 1:1 — using {name} on every line gets
+ * uncanny fast, so roughly a third of the lines below use it and the rest
+ * don't. A reader with no name on file simply never sees a {name} line
+ * (filtered out in buildGreetingPool).
  */
 
 export type GreetingTimeOfDay = "morning" | "afternoon" | "evening" | "night";
 
 interface GreetingTemplate {
-  /** May contain "{name}" — replaced with the reader's first name. */
+  /** May contain "{name}" — substituted with the reader's first name. */
   text: string;
-  /** Omitted = fits any time of day. */
-  timeOfDay?: readonly GreetingTimeOfDay[];
 }
 
-const GREETINGS: readonly GreetingTemplate[] = [
-  // ---------------------------------------------------------------------
-  // Morning — 5am to 11:59am
-  // ---------------------------------------------------------------------
-  { text: "Morning, {name}.", timeOfDay: ["morning"] },
-  { text: "Rise and read, {name}.", timeOfDay: ["morning"] },
-  { text: "Good morning, {name}.", timeOfDay: ["morning"] },
-  { text: "Coffee first, story after.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. New chapter, new you.", timeOfDay: ["morning"] },
-  { text: "Up early? Bold move.", timeOfDay: ["morning"] },
-  { text: "First light, first page.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. What's the plan?", timeOfDay: ["morning"] },
-  { text: "Slow start, good story.", timeOfDay: ["morning"] },
-  { text: "Sun's up. So is your excuse to read.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. Let's ease into it.", timeOfDay: ["morning"] },
-  { text: "Eyes open, world waiting, {name}.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. One page, then reality.", timeOfDay: ["morning"] },
-  { text: "The kettle's not the only thing warming up.", timeOfDay: ["morning"] },
-  { text: "Morning already, {name}? Respect the hustle.", timeOfDay: ["morning"] },
-  { text: "Good morning. Your commute just got interesting.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. Beat the traffic, not the plot.", timeOfDay: ["morning"] },
-  { text: "Fresh day, {name}. Slightly used sleep schedule.", timeOfDay: ["morning"] },
-  { text: "Morning. Somewhere a rooster agrees with you.", timeOfDay: ["morning"] },
-  { text: "Good morning, {name}. Let's not overthink today.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. Breakfast's optional. This isn't.", timeOfDay: ["morning"] },
-  { text: "Rise, shine, and mildly panic about the day.", timeOfDay: ["morning"] },
-  { text: "Good morning. You survived the alarm. Barely.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. Generator's off, mood isn't.", timeOfDay: ["morning"] },
-  { text: "First cup, first line, {name}.", timeOfDay: ["morning"] },
-  { text: "{name}, up before your alarm again? Show-off.", timeOfDay: ["morning"] },
-  { text: "Morning. Today hasn't disappointed you yet.", timeOfDay: ["morning"] },
-  { text: "{name}, the day owes you a good first hour.", timeOfDay: ["morning"] },
-  { text: "Good morning. Bar for the day: low. Achievable.", timeOfDay: ["morning"] },
-  { text: "Morning, {name}. Let's pretend we have a plan.", timeOfDay: ["morning"] },
+export interface GreetingPersonalization {
+  name: string;
+  /** Show lifecycle.firstTime lines until they've completed a first story. */
+  isFirstTime?: boolean;
+  /** Show lifecycle.longAbsence lines after a stretch of inactivity. */
+  isLongAbsence?: boolean;
+  continueReadingTitle?: string | null;
+  followedWriterName?: string | null;
+  topGenre?: string | null;
+  storiesReadCount?: number;
+  currentStreak?: number;
+  savedCount?: number;
+  newStoriesCount?: number;
+  replyWriterName?: string | null;
+  anniversaryYears?: number;
+}
 
-  // ---------------------------------------------------------------------
-  // Afternoon — 12pm to 4:59pm
-  // ---------------------------------------------------------------------
-  { text: "Afternoon, {name}.", timeOfDay: ["afternoon"] },
-  { text: "Taking five, {name}?", timeOfDay: ["afternoon"] },
-  { text: "Good afternoon.", timeOfDay: ["afternoon"] },
-  { text: "Lunch break reading?", timeOfDay: ["afternoon"] },
-  { text: "Afternoon slump? We've got a cure.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. That meeting could've been an email.", timeOfDay: ["afternoon"] },
-  { text: "Halfway through the day, {name}.", timeOfDay: ["afternoon"] },
-  { text: "Someone needs a plot twist.", timeOfDay: ["afternoon"] },
-  { text: "Five minutes, one good sentence.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. What's the mood?", timeOfDay: ["afternoon"] },
-  { text: "The bus isn't here yet, is it, {name}?", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Deep breath, quick read.", timeOfDay: ["afternoon"] },
-  { text: "3pm and already tired? Same.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Officially past the hard part.", timeOfDay: ["afternoon"] },
-  { text: "Good afternoon. Everyone's pretending to work.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. NEPA took the light, not the plot.", timeOfDay: ["afternoon"] },
-  { text: "Lunch is done. The suspense isn't.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Halfway to freedom.", timeOfDay: ["afternoon"] },
-  { text: "Good afternoon. You've earned a small escape.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Stretch, then read.", timeOfDay: ["afternoon"] },
-  { text: "The email can wait five more minutes, {name}.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Second wind, or first nap?", timeOfDay: ["afternoon"] },
-  { text: "Good afternoon. Somewhere, a kettle just clicked off.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. This is your intermission.", timeOfDay: ["afternoon"] },
-  { text: "Two more hours, {name}. You've got this.", timeOfDay: ["afternoon"] },
-  { text: "{name}, the afternoon is testing your patience.", timeOfDay: ["afternoon"] },
-  { text: "Afternoon. Somehow it's still today.", timeOfDay: ["afternoon"] },
-  { text: "{name}, the productive part of the day is over.", timeOfDay: ["afternoon"] },
-  { text: "Good afternoon. Coffee number two, {name}?", timeOfDay: ["afternoon"] },
-  { text: "Afternoon, {name}. Hold on, we're almost there.", timeOfDay: ["afternoon"] },
+const TIME_OF_DAY: Record<GreetingTimeOfDay, readonly string[]> = {
+  morning: [
+    "Good morning, {name}.",
+    "Morning, {name}. The stories are already awake.",
+    "Rise and read, {name}.",
+    "New day, new story.",
+    "Coffee and a quick tale, {name}?",
+    "Somewhere, a story is waiting.",
+    "Early bird gets the best plot.",
+    "Morning fuel: caffeine and fiction.",
+    "Fresh page, {name}. Fresh start.",
+    "Start the day in someone else's world.",
+    "Good morning, reader. Let's begin.",
+    "One story before the day begins?",
+  ],
+  afternoon: [
+    "Afternoon, {name}. Escape for a bit.",
+    "Afternoon slump? A story fixes that.",
+    "Midday break, {name}?",
+    "Steal ten quiet minutes.",
+    "Good afternoon. Pause the noise.",
+    "Lunch is over. The stories aren't.",
+    "Long day? Short story.",
+    "Halfway through the day, {name}.",
+    "A little fiction to break things up.",
+  ],
+  evening: [
+    "Evening, {name}. Wind down with a tale.",
+    "The day's clocking out. The stories aren't.",
+    "Something short and sweet tonight?",
+    "Golden hour reads hit different.",
+    "Evening, reader. Cozy up.",
+    "Ease into the evening, {name}.",
+    "Slow down. Pick a story.",
+    "Good evening, {name}.",
+  ],
+  night: [
+    "Night owl, {name}?",
+    "Still up, {name}? One more won't hurt.",
+    "The best stories come alive at night.",
+    "Can't sleep? We won't tell.",
+    "Midnight reader. Respect.",
+    "The world's asleep. The stories aren't.",
+    "Just one more, {name}? Famous last words.",
+    "Perfect night for a ghost story.",
+    "Quiet hours. Loud stories.",
+    "The moon's up and so are you.",
+    "3am thoughts? Make them fiction.",
+    "Burning the midnight page, {name}?",
+  ],
+};
 
-  // ---------------------------------------------------------------------
-  // Evening — 5pm to 8:59pm
-  // ---------------------------------------------------------------------
-  { text: "Evening, {name}.", timeOfDay: ["evening"] },
-  { text: "Day's done. Story's waiting.", timeOfDay: ["evening"] },
-  { text: "Good evening, {name}.", timeOfDay: ["evening"] },
-  { text: "Wind down with something short.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. One before bed?", timeOfDay: ["evening"] },
-  { text: "Lights low, feed open.", timeOfDay: ["evening"] },
-  { text: "What did today deserve, {name}?", timeOfDay: ["evening"] },
-  { text: "Good evening. You earned this.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. End the day well.", timeOfDay: ["evening"] },
-  { text: "Quiet house, loud story.", timeOfDay: ["evening"] },
-  { text: "Dinner's cooking. So is a plot.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. Best part of the day.", timeOfDay: ["evening"] },
-  { text: "Good evening. Shoes off, guard down.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. Today's over. Mostly good, right?", timeOfDay: ["evening"] },
-  { text: "The generator hums, the story waits.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. You made it. That counts.", timeOfDay: ["evening"] },
-  { text: "Good evening. Slippers on, drama begins.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. Traffic's gone, tension isn't.", timeOfDay: ["evening"] },
-  { text: "Somewhere between dinner and bed, {name}.", timeOfDay: ["evening"] },
-  { text: "Good evening. This is the good part of the day.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. Phone down, book up.", timeOfDay: ["evening"] },
-  { text: "The day's over. Let something else begin.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. You've done enough today.", timeOfDay: ["evening"] },
-  { text: "Good evening. Time to be someone else for a bit.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. Rest first, world later.", timeOfDay: ["evening"] },
-  { text: "{name}, the day's winding down. So can you.", timeOfDay: ["evening"] },
-  { text: "Evening. Whatever today was, it's nearly over.", timeOfDay: ["evening"] },
-  { text: "{name}, you get to choose the next hour now.", timeOfDay: ["evening"] },
-  { text: "Good evening. Nobody's asking anything of you here.", timeOfDay: ["evening"] },
-  { text: "Evening, {name}. The good kind of tired begins now.", timeOfDay: ["evening"] },
+const ANYTIME_CASUAL: readonly string[] = [
+  "Hey, {name}.",
+  "There you are, {name}.",
+  "Welcome back, {name}.",
+  "Good to see you, {name}.",
+  "Look who it is. Hi, {name}.",
+  "{name}. Good timing.",
+  "Missed you, {name}.",
+  "Back again, {name}? We like that.",
+  "Where to today, {name}?",
+  "Right this way, {name}.",
+  "You again? Great.",
+  "We were just thinking about you.",
+];
 
-  // ---------------------------------------------------------------------
-  // Night — 9pm to 4:59am
-  // ---------------------------------------------------------------------
-  { text: "Night owl, {name}?", timeOfDay: ["night"] },
-  { text: "Still up? Us too.", timeOfDay: ["night"] },
-  { text: "It's late. We won't tell.", timeOfDay: ["night"] },
-  { text: "Midnight reader spotted.", timeOfDay: ["night"] },
-  { text: "Night owl mode: on.", timeOfDay: ["night"] },
-  { text: "{name}, it's late. Respect.", timeOfDay: ["night"] },
-  { text: "Can't sleep? Neither can we.", timeOfDay: ["night"] },
-  { text: "The city's asleep. You're not.", timeOfDay: ["night"] },
-  { text: "Late night, {name}. Dangerous stories only.", timeOfDay: ["night"] },
-  { text: "3am thoughts need a good story.", timeOfDay: ["night"] },
-  { text: "Still awake, {name}? Same.", timeOfDay: ["night"] },
-  { text: "One more page won't kill you.", timeOfDay: ["night"] },
-  { text: "Sleep is for people without a good story going.", timeOfDay: ["night"] },
-  { text: "{name}, the neighbours are asleep. You're winning.", timeOfDay: ["night"] },
-  { text: "Late night. No judgment here.", timeOfDay: ["night"] },
-  { text: "Insomnia's better with company.", timeOfDay: ["night"] },
-  { text: "{name}, tomorrow-you is going to be tired. Worth it?", timeOfDay: ["night"] },
-  { text: "The moon's up. So are you. Fair enough.", timeOfDay: ["night"] },
-  { text: "Night owl, {name}. We don't ask why.", timeOfDay: ["night"] },
-  { text: "It's dark outside. Bright idea, staying up.", timeOfDay: ["night"] },
-  { text: "Somewhere it's morning. Here, it's this.", timeOfDay: ["night"] },
-  { text: "{name}, one story won't cost you tomorrow. Two might.", timeOfDay: ["night"] },
-  { text: "The house is quiet. You clearly aren't tired.", timeOfDay: ["night"] },
-  { text: "Late night reading hits different, {name}.", timeOfDay: ["night"] },
-  { text: "Still here at this hour? Bold. Respect it.", timeOfDay: ["night"] },
-  { text: "{name}, this is technically tomorrow already.", timeOfDay: ["night"] },
-  { text: "Everyone else gave up on today. Not you.", timeOfDay: ["night"] },
-  { text: "{name}, at this point, might as well finish it.", timeOfDay: ["night"] },
-  { text: "The quiet hours are the best ones, {name}.", timeOfDay: ["night"] },
-  { text: "Night owl confirmed, {name}. Again.", timeOfDay: ["night"] },
+const ANYTIME_READING: readonly string[] = [
+  "Small stories. Big worlds.",
+  "Short stories, big feelings.",
+  "One story leads to another.",
+  "Come for one. Stay for five.",
+  "Two minutes, one whole world.",
+  "The bookmark missed you.",
+  "Your next favorite story doesn't know it yet.",
+  "Some stories are short. The feelings aren't.",
+  "A short read is still a whole world.",
+  "Pick a story, any story.",
+  "Reading is a soft place to land.",
+  "Long day? Short story.",
+];
 
-  // ---------------------------------------------------------------------
-  // Any time — puns, warmth, dry humor, nothing product-related
-  // ---------------------------------------------------------------------
-  { text: "Hi, {name}." },
-  { text: "Welcome back, {name}." },
-  { text: "Good to see you, {name}." },
-  { text: "{name}! Just the reader we hoped for." },
-  { text: "Ready when you are, {name}." },
-  { text: "We missed you, {name}." },
-  { text: "Plot twist: you're here again." },
-  { text: "Story mode: on." },
-  { text: "Fiction: gossip that didn't happen." },
-  { text: "What are you in the mood for, {name}?" },
-  { text: "Hello, {name}. Let's find you a story." },
-  { text: "Short on time, {name}? Same." },
-  { text: "{name}, no small talk. Straight to the plot." },
-  { text: "Well, well, well. Look who's back." },
-  { text: "{name}, right on schedule. Suspiciously." },
-  { text: "Reading's cheaper than therapy, honestly." },
-  { text: "{name}, you and I both know why you're here." },
-  { text: "Blink and you'll miss the good part." },
-  { text: "{name}, the suspense missed you specifically." },
-  { text: "One page in and already invested. Classic." },
-  { text: "{name}, procrastination has never looked this good." },
-  { text: "Somewhere, a character's about to make a bad call." },
-  { text: "{name}, the drama starts whenever you're ready." },
-  { text: "You again? We like that." },
-  { text: "{name}, low commitment, high payoff." },
-  { text: "{name}, your attention span called. It's fine, actually." },
-  { text: "Whatever you're avoiding, this is a better use of time." },
-  { text: "{name}, a stranger wrote this for this exact moment." },
-  { text: "This is the productive kind of distraction, {name}." },
-  { text: "Somebody's about to make questionable choices. Not you." },
-  { text: "{name}, five minutes. That's the whole ask." },
-  { text: "Consider this your permission slip, {name}." },
-  { text: "New page, new problems, {name}." },
-  { text: "{name}, you clicked. Commitment issues: none today." },
-  { text: "Somewhere a writer is nervous about this exact moment." },
-  { text: "{name}, whatever's stressing you out can wait a bit." },
-  { text: "Not all heroes wear capes. Some just finish chapters." },
-  { text: "{name}, the cliffhanger from last time is still waiting." },
-  { text: "Your to-do list will keep. This won't take long." },
-  { text: "{name}, we kept the good stuff for you." },
-  { text: "A secret just got out somewhere. Want in, {name}?" },
-  { text: "{name}, low effort, high reward. Can't complain." },
-  { text: "Might not fix today. Five minutes will help." },
-  { text: "{name}, a little escapism never hurt anyone. Mostly." },
-  { text: "You made time. That's rarer than people think, {name}." },
-  { text: "{name}, let's see what today's got." },
-  { text: "Two minutes in, you'll forget everything else." },
-  { text: "{name}, back for more? Bold and correct." },
-  { text: "Somewhere, a plot is unraveling on schedule." },
-  { text: "{name}, the door's open. Bad time choices await." },
-  { text: "You blinked and ended up here again. Fate, probably." },
-  { text: "{name}, we won't ask what you're supposed to be doing." },
-  { text: "A little chaos, a little comfort — pick one, {name}." },
-  { text: "{name}, nobody's watching. Read whatever you want." },
-  { text: "This is your five minutes. Guard them, {name}." },
-  { text: "{name}, the algorithm knows nothing. We're guessing too." },
-  { text: "Someone's about to mess up. Not you, {name}." },
-  { text: "{name}, let's find out what happens next." },
-  { text: "You came back. That's the whole plot twist, {name}." },
-  { text: "{name}, a story is a very small, very good decision." },
-  { text: "Everyone deserves a good sentence today, {name}." },
-] as const;
+const ANYTIME_PUN: readonly string[] = [
+  "Well-red, {name}.",
+  "Shelf-care time.",
+  "Novel idea: read something today.",
+  "Booked and busy, {name}?",
+  'You had me at "once upon a time."',
+  "Plot twist: you're back.",
+  "The suspense was killing us, {name}.",
+  "Take it one page at a time.",
+  "This is your sign to start that story.",
+  "A story a day keeps the boredom away.",
+];
+
+const ANYTIME_WARM: readonly string[] = [
+  "Glad you're here.",
+  "You made time to read today. That counts.",
+  "Take a breath. Then take a story.",
+  "Whatever kind of day it's been, there's a story for it.",
+  "This little corner is yours, {name}.",
+  "No rush. The stories will wait.",
+  "Be gentle with yourself today, {name}.",
+  "You showed up. That's something.",
+  "Welcome back to the quiet, {name}.",
+];
+
+const ANYTIME_CURIOSITY: readonly string[] = [
+  "What are you reading today, {name}?",
+  "What are you in the mood for, {name}?",
+  "Feeling brave? Try a horror.",
+  "In the mood to cry a little?",
+  "Romance or mystery tonight, {name}?",
+  "Surprise yourself. Read a new genre.",
+  "Something short? Something strange? You choose.",
+  "What kind of world today, {name}?",
+];
+
+const ANYTIME_RETURNING: readonly string[] = [
+  "Back for more, {name}? Love that.",
+  "Right on time, {name}.",
+  "Your streak's alive, {name}.",
+  "Consistency looks good on you, {name}.",
+  "Same time tomorrow, {name}?",
+];
+
+const ANYTIME_WEEKEND: readonly string[] = [
+  "Weekend, {name}. No plans, just plot.",
+  "Saturdays were made for stories.",
+  "Slow Sunday? Perfect for reading.",
+  "The stories cleared their schedule for you.",
+];
+
+const LIFECYCLE_FIRST_TIME: readonly string[] = [
+  "Welcome to Kekere, {name}.",
+  "Welcome to Kekere. Let's find your first story.",
+  "New here? Every great reader starts somewhere.",
+  "First story's the hardest to pick. We'll help.",
+  "Small stories, big worlds. Welcome in.",
+  "Hi, {name}. Pull up a chair and a story.",
+  "Fresh start. Endless stories.",
+  "One tap and you're somewhere new. Welcome.",
+  "Glad you found us, {name}.",
+  "Your reading life starts now, {name}.",
+];
+
+const LIFECYCLE_LONG_ABSENCE: readonly string[] = [
+  "It's been a while, {name}. Missed you.",
+  "Look who's back. Welcome home, {name}.",
+  "The stories kept your seat warm, {name}.",
+  "Long time, {name}. Let's pick up where you left off.",
+  "We saved your spot, {name}.",
+  "Welcome back, stranger.",
+  "It's been too quiet without you, {name}.",
+  "New stories piled up while you were gone.",
+  "Right where you left it, {name}.",
+  "The library barely aged. Welcome back.",
+];
+
+const PERSONALIZED_CONTINUE_READING: readonly string[] = [
+  "Still thinking about {story}, {name}?",
+  "{story} is right where you left it.",
+  "Ready to finish {story}?",
+  "You left {story} on a cliff, {name}.",
+  "{story} has an ending. Go get it.",
+  "One more sitting and {story} is done.",
+];
+
+const PERSONALIZED_FOLLOWED_WRITER: readonly string[] = [
+  "{writer} just published, {name}.",
+  "New from {writer}.",
+  "{writer} has something new for you.",
+  "Fresh ink from {writer}, {name}.",
+  "{name}, {writer} dropped a new story.",
+];
+
+const PERSONALIZED_TOP_GENRE: readonly string[] = [
+  "In the mood for {genre} again, {name}?",
+  "More {genre}? We know you.",
+  "Your kind of night: {genre}.",
+  "New {genre} just landed, {name}.",
+  "{genre} called. It wants you back.",
+];
+
+const PERSONALIZED_MILESTONES: readonly string[] = [
+  "{count} stories and counting, {name}.",
+  "That's {streak} days straight, {name}. Wow.",
+  "Day {streak}, {name}. Don't break the chain.",
+  "You've read {count} stories. Legend.",
+  "{count} down. Infinite to go.",
+];
+
+const PERSONALIZED_LIBRARY: readonly string[] = [
+  "{saved} stories waiting in your library, {name}.",
+  "Your library's calling — {saved} unread.",
+  "{new} new stories since you left, {name}.",
+  "{new} fresh reads waiting for you.",
+];
+
+const PERSONALIZED_REPLIES: readonly string[] = [
+  "A writer wrote back, {name}.",
+  "You've got a reply waiting, {name}.",
+  "{writer} replied to your note.",
+];
+
+const PERSONALIZED_ANNIVERSARY: readonly string[] = [
+  "Happy Kekere-versary, {name}!",
+  "{years} year(s) of reading with us, {name}. Thank you.",
+  "You joined a year ago today, {name}. Still glad you're here.",
+];
+
+function firstNameOf(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] || "";
+}
+
+function isWeekend(date: Date): boolean {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+/** Milestone lines mix {count}-only and {streak}-only templates — keep each
+ *  line out of the pool unless the specific value it needs is actually
+ *  available, rather than gating the whole category on either being set. */
+function buildMilestoneLines(count?: number, streak?: number): string[] {
+  return PERSONALIZED_MILESTONES.flatMap((t) => {
+    if (t.includes("{count}")) return count ? [t.replace(/\{count\}/g, String(count))] : [];
+    if (t.includes("{streak}")) return streak ? [t.replace(/\{streak\}/g, String(streak))] : [];
+    return [t];
+  });
+}
+
+function buildLibraryLines(saved?: number, freshCount?: number): string[] {
+  return PERSONALIZED_LIBRARY.flatMap((t) => {
+    if (t.includes("{saved}")) return saved ? [t.replace(/\{saved\}/g, String(saved))] : [];
+    if (t.includes("{new}")) return freshCount ? [t.replace(/\{new\}/g, String(freshCount))] : [];
+    return [t];
+  });
+}
 
 export function getGreetingTimeOfDay(date: Date = new Date()): GreetingTimeOfDay {
   const hour = date.getHours();
@@ -236,9 +293,49 @@ export function getGreetingTimeOfDay(date: Date = new Date()): GreetingTimeOfDay
   return "night";
 }
 
+/** Merges the current time-of-day pool with the always-on "anytime" pools,
+ *  plus whichever lifecycle/personalized pools have real data behind them —
+ *  then drops any {name} line if the reader has no name on file. */
+export function buildGreetingPool(data: GreetingPersonalization, date: Date = new Date()): GreetingTemplate[] {
+  const firstName = firstNameOf(data.name);
+
+  const lines: string[] = [
+    ...TIME_OF_DAY[getGreetingTimeOfDay(date)],
+    ...ANYTIME_CASUAL,
+    ...ANYTIME_READING,
+    ...ANYTIME_PUN,
+    ...ANYTIME_WARM,
+    ...ANYTIME_CURIOSITY,
+    ...ANYTIME_RETURNING,
+    ...(isWeekend(date) ? ANYTIME_WEEKEND : []),
+    ...(data.isFirstTime ? LIFECYCLE_FIRST_TIME : []),
+    ...(data.isLongAbsence ? LIFECYCLE_LONG_ABSENCE : []),
+    ...(data.continueReadingTitle
+      ? PERSONALIZED_CONTINUE_READING.map((t) => t.replace(/\{story\}/g, data.continueReadingTitle!))
+      : []),
+    ...(data.followedWriterName
+      ? PERSONALIZED_FOLLOWED_WRITER.map((t) => t.replace(/\{writer\}/g, data.followedWriterName!))
+      : []),
+    ...(data.topGenre ? PERSONALIZED_TOP_GENRE.map((t) => t.replace(/\{genre\}/g, data.topGenre!)) : []),
+    ...buildMilestoneLines(data.storiesReadCount, data.currentStreak),
+    ...buildLibraryLines(data.savedCount, data.newStoriesCount),
+    ...(data.replyWriterName ? PERSONALIZED_REPLIES.map((t) => t.replace(/\{writer\}/g, data.replyWriterName!)) : []),
+    ...(data.anniversaryYears
+      ? PERSONALIZED_ANNIVERSARY.map((t) => t.replace(/\{years\}/g, String(data.anniversaryYears)))
+      : []),
+  ];
+
+  return lines.filter((text) => firstName || !text.includes("{name}")).map((text) => ({ text }));
+}
+
+export function renderGreeting(template: GreetingTemplate, data: GreetingPersonalization): string {
+  const firstName = firstNameOf(data.name);
+  return firstName ? template.text.replace(/\{name\}/g, firstName) : template.text;
+}
+
 /** Deliberately unfussy — this only needs to be deterministic, not
- * cryptographically sound, so the same (userId, day, time-of-day) always
- * lands on the same index without persisting anything. */
+ *  cryptographically sound, so the same (userId, day, time-of-day) always
+ *  lands on the same index without persisting anything. */
 function hashString(input: string): number {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
@@ -251,22 +348,29 @@ function localDateKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-/**
- * Deterministic, not random: the same reader gets the same greeting for as
- * long as the local time-of-day bucket holds (a few hours), then a new one
- * once it rolls over — rather than a fresh pick on every reload.
- */
-export function getFeedGreeting(userId: string, fullName: string, date: Date = new Date()): string {
-  const firstName = fullName.trim().split(/\s+/)[0] || "";
-  const timeOfDay = getGreetingTimeOfDay(date);
+/** Deterministic pick — used for the server-rendered initial paint, so the
+ *  client's first hydration pass matches exactly (no flash/mismatch). The
+ *  client then upgrades to a random pick post-mount (see pickRandomGreeting
+ *  and feed-content.tsx's useEffect). */
+export function pickDeterministicGreeting(pool: readonly GreetingTemplate[], seed: string): GreetingTemplate {
+  return pool[hashString(seed) % pool.length];
+}
 
-  const pool = GREETINGS.filter((g) => {
-    const fitsTime = !g.timeOfDay || g.timeOfDay.includes(timeOfDay);
-    const hasNameIfNeeded = firstName || !g.text.includes("{name}");
-    return fitsTime && hasNameIfNeeded;
-  });
+/** Random pick that avoids immediately repeating `avoidText` (best effort —
+ *  gives up after a few tries so a tiny pool can't loop forever). */
+export function pickRandomGreeting(pool: readonly GreetingTemplate[], avoidText?: string | null): GreetingTemplate {
+  if (pool.length <= 1) return pool[0];
+  let candidate = pool[Math.floor(Math.random() * pool.length)];
+  for (let i = 0; i < 10 && candidate.text === avoidText; i++) {
+    candidate = pool[Math.floor(Math.random() * pool.length)];
+  }
+  return candidate;
+}
 
-  const seed = hashString(`${userId}|${localDateKey(date)}|${timeOfDay}`);
-  const chosen = pool[seed % pool.length];
-  return firstName ? chosen.text.replace("{name}", firstName) : chosen.text;
+/** Server-side entry point — deterministic, for the initial SSR paint. */
+export function getFeedGreeting(userId: string, data: GreetingPersonalization, date: Date = new Date()): string {
+  const pool = buildGreetingPool(data, date);
+  const seed = `${userId}|${localDateKey(date)}|${getGreetingTimeOfDay(date)}`;
+  const chosen = pickDeterministicGreeting(pool, seed);
+  return renderGreeting(chosen, data);
 }

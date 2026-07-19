@@ -9,6 +9,12 @@ import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
 import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
+import {
+  buildGreetingPool,
+  pickRandomGreeting,
+  renderGreeting,
+  type GreetingPersonalization,
+} from "@/content/kekere-feed-greetings";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -160,9 +166,19 @@ export interface FeedContentProps {
   isLoggedIn?: boolean;
   firstReadFree?: boolean;
   readingProgress?: Record<string, number>;
-  /** Server-picked (see getFeedGreeting) — replaces the static "Kekere"
-   * wordmark with something that changes on every page load. */
+  /** Server-picked (see getFeedGreeting) — the deterministic initial paint,
+   * used as-is for the very first render so hydration matches exactly. On
+   * mount, a client-side effect re-rolls it at random (see the greeting
+   * useEffect below) — replaces the static "Kekere" wordmark. */
   greeting: string;
+  /** Needed to scope the "last shown greeting" localStorage key per reader
+   * (a shared device shouldn't carry one account's greeting history into
+   * another's session). Null when logged out (shouldn't happen — the feed
+   * is a protected route — but keeps the type honest). */
+  greetingUserId: string | null;
+  /** Raw personalization tokens — the actual pool build + random pick
+   * happens client-side in the greeting useEffect, not here. */
+  greetingPersonalization: GreetingPersonalization;
 }
 
 export function FeedContent({
@@ -177,10 +193,13 @@ export function FeedContent({
   isLoggedIn = false,
   firstReadFree = false,
   readingProgress,
-  greeting,
+  greeting: initialGreeting,
+  greetingUserId,
+  greetingPersonalization,
 }: FeedContentProps) {
   const [tagOpen, setTagOpen] = useState(false);
   const [previewStory, setPreviewStory] = useState<MockStory | null>(null);
+  const [greeting, setGreeting] = useState(initialGreeting);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -194,6 +213,38 @@ export function FeedContent({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [tagOpen]);
+
+  // Re-rolls the greeting on every mount (fresh page load / nav back into
+  // the feed), picking at random and never immediately repeating whatever
+  // was shown last — tracked in localStorage so it survives across reloads,
+  // not just re-renders. Runs client-only (after the server-rendered
+  // deterministic `initialGreeting` has already painted) so this can safely
+  // touch localStorage and Math.random() without a hydration mismatch.
+  useEffect(() => {
+    if (!greetingUserId) return;
+    const storageKey = `kekere:lastGreeting:${greetingUserId}`;
+    let lastShown: string | null = null;
+    try {
+      lastShown = window.localStorage.getItem(storageKey);
+    } catch {
+      // Storage unavailable (private mode, blocked cookies, etc.) — fall
+      // back to no "avoid repeat" memory rather than breaking the greeting.
+    }
+
+    const pool = buildGreetingPool(greetingPersonalization);
+    const chosen = pickRandomGreeting(pool, lastShown);
+    const text = renderGreeting(chosen, greetingPersonalization);
+
+    setGreeting(text);
+    try {
+      window.localStorage.setItem(storageKey, text);
+    } catch {
+      // Ignore — same non-fatal storage-unavailable case as above.
+    }
+    // Intentionally mount-only: a fresh roll belongs to a fresh page load,
+    // not to every re-render this component happens to go through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">

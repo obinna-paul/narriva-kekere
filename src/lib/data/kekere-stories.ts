@@ -238,6 +238,12 @@ export interface StoryForReader extends Omit<StoryWithAuthor, "body"> {
   body: TiptapDoc;
 }
 
+/** How many stories have gone live since `since` — powers the "N new
+ *  stories since you left" feed greeting. */
+export async function countPublishedStoriesSince(since: Date): Promise<number> {
+  return prisma.story.count({ where: { status: "PUBLISHED", publishedAt: { gte: since } } });
+}
+
 export async function hasFreeReadAvailable(userId?: string): Promise<boolean> {
   if (!userId) return false;
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { freeReadUsed: true } });

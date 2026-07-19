@@ -19,6 +19,8 @@ export async function getKekereUserProfile(userId: string) {
       avatar: true,
       socialLinks: true,
       country: true,
+      createdAt: true,
+      lastLoginAt: true,
     },
   });
   if (!user) return null;
