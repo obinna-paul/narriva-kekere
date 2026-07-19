@@ -73,6 +73,12 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   // without needing horizontal scrolling to reach anything in it.
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
 
+  // Select all / cut — dragging selection handles across a long, scrolled
+  // story on mobile is impractical, so these give a reliable one-tap way to
+  // do both instead of relying on the OS's own (often hard-to-reach) text
+  // selection toolbar.
+  const [cutError, setCutError] = useState<string | null>(null);
+
   // Find & replace
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   const [searchTerm, setSearchTermState] = useState("");
@@ -95,6 +101,15 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     content: initialContent ?? EMPTY_DOC,
     editable,
     immediatelyRender: false,
+    // Tiptap 3 doesn't force a re-render on every transaction by default —
+    // only content-changing ones happen to trigger one here as a side
+    // effect of onUpdate's own setState calls below. A selection-only
+    // change (e.g. Select All, or just clicking to move the caret) doesn't
+    // touch the document, so nothing re-rendered and every editor.isActive()/
+    // editor.state.selection read in this component's JSX (bold/italic/
+    // underline/alignment "active" pills, the Cut button's disabled state)
+    // went stale until some unrelated re-render happened to catch it up.
+    shouldRerenderOnTransaction: true,
     onUpdate: ({ editor, transaction }) => {
       const json = editor.getJSON() as TiptapDoc;
       const count = editor.storage.characterCount.words();
@@ -380,6 +395,32 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     editor?.chain().replaceAllSearchResults(replaceTerm).focus().run();
   }
 
+  function handleSelectAll() {
+    editor?.chain().focus().selectAll().run();
+  }
+
+  async function handleCut() {
+    if (!editor || editor.state.selection.empty) return;
+    setCutError(null);
+
+    // document.execCommand("cut") works directly off the live DOM selection
+    // (which ProseMirror keeps in sync with its own), and is far more
+    // broadly supported across mobile browsers/webviews than the async
+    // Clipboard API — it's the same mechanism a native Ctrl+X already uses
+    // here. Only fall back to Clipboard API if the browser refuses it.
+    const cutHandled = document.execCommand("cut");
+    if (cutHandled) return;
+
+    try {
+      const { from, to } = editor.state.selection;
+      const text = editor.state.doc.textBetween(from, to, "\n\n");
+      await navigator.clipboard.writeText(text);
+      editor.chain().focus().deleteSelection().run();
+    } catch {
+      setCutError("Couldn't cut — your browser blocked clipboard access. Try copying manually instead.");
+    }
+  }
+
   function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -446,6 +487,20 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
       )}
 
+      {cutError && (
+        <div className="mb-5 flex items-start justify-between gap-3 rounded-[12px] border border-red-200 bg-red-50 p-[13px_14px] text-[13px] text-red-700">
+          <p>{cutError}</p>
+          <button
+            type="button"
+            onClick={() => setCutError(null)}
+            className="flex-none text-red-700/70 hover:text-red-700"
+            aria-label="Dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* B1 — Formatting toolbar + live word count. Sticky below the writer
           header so formatting controls are always reachable while scrolling.
           Kept deliberately short — B/I/U, word count, reading time, and a
@@ -501,7 +556,14 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
 
         {toolbarExpanded && (
-          <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
+          // flex-wrap, not overflow-x-auto — with alignment + find + Select
+          // all + Cut all together, this row is wider than it looks on a
+          // narrow phone (measured ~412px of content), and a scrolling row
+          // means some of those buttons are reachable only by sliding
+          // sideways — exactly what kept coming up as a problem with the
+          // header actions and the old single-row toolbar. Wrapping onto a
+          // second line keeps everything reachable with a tap instead.
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
             <ToolbarButton
               label="Align left"
               active={editor.isActive({ textAlign: "left" })}
@@ -540,6 +602,36 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
             >
               <Search size={16} />
             </ToolbarButton>
+
+            <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+
+            {/* Select all / Cut — text-labeled rather than icon buttons
+                (clearer for actions this consequential), and using the same
+                onMouseDown+preventDefault trick as ToolbarButton so clicking
+                doesn't blur the editor first and collapse whatever's
+                selected right before the action needs it. */}
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectAll();
+              }}
+              className="flex-none rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              disabled={editor.state.selection.empty}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                void handleCut();
+              }}
+              className="flex-none rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+              title={editor.state.selection.empty ? "Select some text first" : "Cut selection"}
+            >
+              Cut
+            </button>
           </div>
         )}
       </div>
