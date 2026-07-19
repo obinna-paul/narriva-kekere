@@ -157,21 +157,12 @@ export function StoryCompletionScreen({
         </div>
       </div>
 
-      {/* Completion bonus */}
-      <div className="mt-6 rounded-[16px] bg-[#1F8A5B]/10 px-4 py-4 flex items-center gap-3">
-        <div className="flex h-[36px] w-[36px] flex-none items-center justify-center rounded-full bg-[#1F8A5B]/20">
-          <span className="text-[18px]">+1</span>
-        </div>
-        <div>
-          <div className="text-[14px] font-semibold text-[#176E48]">Completion bonus</div>
-          <div className="text-[12px] text-[#1F8A5B]/70">You earned 1 cowrie for finishing</div>
-        </div>
-      </div>
-
       {/* Rating */}
-      <div className="mt-5 rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
-        <p className="text-[13px] font-medium text-[#2A1A12] mb-3">Rate this story</p>
-        <div className="flex gap-1.5">
+      <div className="mt-6 rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 text-center">
+        <p className="mb-3 text-[13px] font-medium text-[#2A1A12]">
+          {submittedRating > 0 ? "Thanks for rating" : "Rate this story"}
+        </p>
+        <div className="flex justify-center gap-1.5">
           {[1, 2, 3, 4, 5].map((s) => (
             <button key={s} type="button" disabled={submittedRating > 0} onClick={() => handleRate(s)} onMouseEnter={() => !submittedRating && setHoverRating(s)} onMouseLeave={() => setHoverRating(0)}>
               <Star size={28} className={cn("transition-colors", (hoverRating || submittedRating) >= s ? "fill-[#E9A56B] text-[#E9A56B]" : "text-[rgba(42,26,18,0.12)]")} />
@@ -282,21 +273,21 @@ export function StoryCompletionScreen({
       )}
 
       {/* Tip section */}
-      <div className="mt-[14px] rounded-[16px] bg-[#2A1A12] px-4 py-4">
+      <div className="mt-[14px] rounded-[16px] bg-[#2A1A12] px-4 py-4 text-center">
         <p className="text-[13px] font-medium text-white/80">Tip {authorName}</p>
         <div className="mt-1 text-[12px] text-[#A08C7C]">Balance: {balance} cowries</div>
         {tipCount > 0 && (
-          <div className="mt-2 flex items-center gap-1.5 text-[#1F8A5B]">
+          <div className="mt-2 flex items-center justify-center gap-1.5 text-[#1F8A5B]">
             <Check size={14} /> <span className="text-[12px] font-medium">Tipped {tipCount} time{tipCount === 1 ? "" : "s"}</span>
           </div>
         )}
         {tipError && <p className="mt-2 text-[12px] text-[#E9A56B]">{tipError}</p>}
         {balance === 0 ? (
-          <Link href="/kekere/wallet" className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium text-[#E9A56B] hover:underline">Top up to tip <span className="text-[#A08C7C]">—</span></Link>
+          <Link href="/kekere/wallet" className="mt-3 inline-flex items-center justify-center gap-2 text-[13px] font-medium text-[#E9A56B] hover:underline">Top up to tip <span className="text-[#A08C7C]">—</span></Link>
         ) : confirmingRetip ? (
           <div className="mt-3">
             <p className="text-[13px] text-white/90">Tip {authorName} again for 1 cowrie?</p>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmingRetip(false)}
@@ -316,22 +307,29 @@ export function StoryCompletionScreen({
             </div>
           </div>
         ) : (
-          <button type="button" disabled={tipping} onClick={handleTipClick} className="mt-3 flex items-center gap-2 rounded-[10px] bg-[#C75D2C] px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+          <button type="button" disabled={tipping} onClick={handleTipClick} className="mx-auto mt-3 flex items-center gap-2 rounded-[10px] bg-[#C75D2C] px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
             <Send size={14} /> {tipCount === 0 ? "Send tip · 1 cowrie" : "Tip again · 1 cowrie"}
           </button>
         )}
       </div>
 
       {/* Share */}
-      <div className="mt-[14px] flex gap-3">
-        <button type="button" onClick={handleCopy} className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white py-3 text-[13px] font-medium text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30">
-          {shareCopied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy link</>}
-        </button>
-        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#25D366] py-3 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
-          <MessageCircle size={15} /> WhatsApp
-        </a>
+      <div className="mt-7">
+        <h2 className="mb-2.5 px-0.5 text-[13px] font-semibold text-[#2A1A12]">Share this story</h2>
+        <div className="flex gap-3">
+          <button type="button" onClick={handleCopy} className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white py-3 text-[13px] font-medium text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30">
+            {shareCopied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy link</>}
+          </button>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#25D366] py-3 text-[13px] font-medium text-white transition-opacity hover:opacity-90">
+            <MessageCircle size={15} /> WhatsApp
+          </a>
+        </div>
+        {referralCode && (
+          <p className="mt-2 text-center text-[11px] text-[#A08C7C]">
+            Your invite link is attached — earn 3 cowries when someone new to Kekere joins through it and buys their first cowries.
+          </p>
+        )}
       </div>
-      <p className="mt-2 text-center text-[11px] text-[#A08C7C]">Links carry your referral code — earn 3 cowries when they unlock their first story</p>
 
       <Link href="/kekere/feed" className="mt-6 flex w-full items-center justify-center rounded-[13px] bg-[#C75D2C] py-3.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90">
         Back to feed

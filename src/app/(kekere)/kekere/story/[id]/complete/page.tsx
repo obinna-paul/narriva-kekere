@@ -7,6 +7,7 @@ import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 import { isFollowing } from "@/lib/data/kekere-follows";
 import { getNoteEligibilityForStory } from "@/lib/data/kekere-notes";
+import { getStoryRating } from "@/lib/data/kekere-ratings";
 import { userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { prisma } from "@/lib/db/prisma";
 
@@ -19,7 +20,7 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
   const story = await getStoryForReader(params.id, session.user.id);
   if (!story) notFound();
 
-  const [wallet, code, tipCount, following, noteEligibility, authorExtra] = await Promise.all([
+  const [wallet, code, tipCount, following, noteEligibility, authorExtra, existingRating] = await Promise.all([
     getWalletForUser(session.user.id),
     getOrCreateReferralCodeForUser(session.user.id),
     prisma.tip.count({ where: { readerId: session.user.id, storyId: params.id } }),
@@ -28,6 +29,9 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
     // Country isn't part of the shared story author-include; grab it here so
     // the "Meet the writer" card can read like a real profile snippet.
     prisma.user.findUnique({ where: { id: story.author.id }, select: { country: true } }),
+    // Their existing rating for this story (if any) — so returning to this
+    // screen shows the stars they already gave rather than resetting to empty.
+    getStoryRating(session.user.id, params.id),
   ]);
 
   return (
@@ -44,7 +48,7 @@ export default async function KekereStoryCompletePage({ params }: { params: { id
           authorCountry={authorExtra?.country ?? null}
           spendingBalance={wallet?.spendingBalance ?? 0}
           tipCount={tipCount}
-          rating={0}
+          rating={existingRating ?? 0}
           referralCode={code}
           initialFollowing={following}
           isOwnStory={session.user.id === story.author.id}
