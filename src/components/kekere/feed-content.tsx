@@ -13,6 +13,7 @@ import {
   buildGreetingPool,
   pickRandomGreeting,
   renderGreeting,
+  getGreetingTimeOfDay,
   type GreetingPersonalization,
 } from "@/content/kekere-feed-greetings";
 
@@ -214,35 +215,64 @@ export function FeedContent({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [tagOpen]);
 
-  // Re-rolls the greeting on every mount (fresh page load / nav back into
-  // the feed), picking at random and never immediately repeating whatever
-  // was shown last — tracked in localStorage so it survives across reloads,
-  // not just re-renders. Runs client-only (after the server-rendered
+  // The greeting should hold steady for a good stretch — reloading the
+  // feed, or navigating away and back, must NOT change it. It only moves on
+  // once the time-of-day bucket itself has moved on (morning → afternoon →
+  // evening → night, each spanning several hours — see getGreetingTimeOfDay)
+  // since the line was last picked, which is what actually gives "a
+  // frequent user notices it change 2-3 times a day, a casual user maybe
+  // once." Tracked in localStorage (per reader) so it survives reloads, not
+  // just re-renders. Runs client-only (after the server-rendered
   // deterministic `initialGreeting` has already painted) so this can safely
   // touch localStorage and Math.random() without a hydration mismatch.
   useEffect(() => {
     if (!greetingUserId) return;
     const storageKey = `kekere:lastGreeting:${greetingUserId}`;
-    let lastShown: string | null = null;
+    const currentTimeOfDay = getGreetingTimeOfDay();
+
+    let stored: { text: string; timeOfDay: string } | null = null;
     try {
-      lastShown = window.localStorage.getItem(storageKey);
+      const raw = window.localStorage.getItem(storageKey);
+      stored = raw ? JSON.parse(raw) : null;
     } catch {
-      // Storage unavailable (private mode, blocked cookies, etc.) — fall
-      // back to no "avoid repeat" memory rather than breaking the greeting.
+      // Storage unavailable (private mode, blocked cookies, etc.) — treat
+      // as "nothing stored" rather than breaking the greeting.
     }
 
+    if (stored && stored.timeOfDay === currentTimeOfDay && stored.text) {
+      // Still the same time-of-day window as last time it was rolled —
+      // keep showing exactly what was shown then, no matter how many times
+      // this mounts in the meantime.
+      setGreeting(stored.text);
+      return;
+    }
+
+    if (!stored) {
+      // First time ever on this device — adopt the server-rendered greeting
+      // as the baseline rather than immediately rerolling over it, so there
+      // is no visible flash on a brand-new session.
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify({ text: initialGreeting, timeOfDay: currentTimeOfDay }));
+      } catch {
+        // Non-fatal — greeting still displays via the initialGreeting state.
+      }
+      return;
+    }
+
+    // The time-of-day bucket has moved on since the last roll — time for a
+    // fresh pick, at random, never immediately repeating the last one shown.
     const pool = buildGreetingPool(greetingPersonalization);
-    const chosen = pickRandomGreeting(pool, lastShown);
+    const chosen = pickRandomGreeting(pool, stored.text);
     const text = renderGreeting(chosen, greetingPersonalization);
 
     setGreeting(text);
     try {
-      window.localStorage.setItem(storageKey, text);
+      window.localStorage.setItem(storageKey, JSON.stringify({ text, timeOfDay: currentTimeOfDay }));
     } catch {
       // Ignore — same non-fatal storage-unavailable case as above.
     }
-    // Intentionally mount-only: a fresh roll belongs to a fresh page load,
-    // not to every re-render this component happens to go through.
+    // Intentionally mount-only: this check belongs on a fresh page load,
+    // not on every re-render this component happens to go through.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
