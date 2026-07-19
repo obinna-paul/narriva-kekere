@@ -68,6 +68,11 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   const [localWordCount, setLocalWordCount] = useState(0);
   const [localReadingTime, setLocalReadingTime] = useState(0);
 
+  // Secondary toolbar row (alignment + find) — collapsed by default so the
+  // main row (B/I/U, word count, reading time) always fits on one line
+  // without needing horizontal scrolling to reach anything in it.
+  const [toolbarExpanded, setToolbarExpanded] = useState(false);
+
   // Find & replace
   const [findReplaceOpen, setFindReplaceOpen] = useState(false);
   const [searchTerm, setSearchTermState] = useState("");
@@ -442,82 +447,99 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       )}
 
       {/* B1 — Formatting toolbar + live word count. Sticky below the writer
-          header so formatting controls are always reachable while scrolling. */}
-      <div className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex items-center gap-1.5 overflow-x-auto border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)] px-[22px] py-2">
-        <ToolbarButton
-          label="Bold (Ctrl+B)"
-          active={editor.isActive("bold")}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <span className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-none">B</span>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Italic (Ctrl+I)"
-          active={editor.isActive("italic")}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold italic leading-none">I</span>
-        </ToolbarButton>
-        <ToolbarButton
-          label="Underline (Ctrl+U)"
-          active={editor.isActive("underline")}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-        >
-          <span className="text-[17px] font-semibold leading-none underline underline-offset-[3px]">U</span>
-        </ToolbarButton>
+          header so formatting controls are always reachable while scrolling.
+          Kept deliberately short — B/I/U, word count, reading time, and a
+          toggle — so it always fits on one line with nothing needing a
+          horizontal slide to reach. Less-used controls (alignment, find &
+          replace) live in the row the toggle reveals below instead of being
+          crammed in here. */}
+      <div className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)]">
+        <div className="flex items-center gap-1.5 px-[22px] py-2">
+          <ToolbarButton
+            label="Bold (Ctrl+B)"
+            active={editor.isActive("bold")}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <span className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-none">B</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Italic (Ctrl+I)"
+            active={editor.isActive("italic")}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold italic leading-none">I</span>
+          </ToolbarButton>
+          <ToolbarButton
+            label="Underline (Ctrl+U)"
+            active={editor.isActive("underline")}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
+            <span className="text-[17px] font-semibold leading-none underline underline-offset-[3px]">U</span>
+          </ToolbarButton>
 
-        <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+          <div className="flex-1" />
 
-        <ToolbarButton
-          label="Align left"
-          active={editor.isActive({ textAlign: "left" })}
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        >
-          <AlignLeft size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label="Align center"
-          active={editor.isActive({ textAlign: "center" })}
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        >
-          <AlignCenter size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label="Align right"
-          active={editor.isActive({ textAlign: "right" })}
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        >
-          <AlignRight size={16} />
-        </ToolbarButton>
-        <ToolbarButton
-          label="Justify"
-          active={editor.isActive({ textAlign: "justify" })}
-          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-        >
-          <AlignJustify size={16} />
-        </ToolbarButton>
+          {/* B7.3 — live word count + reading time */}
+          <div className="flex flex-none items-baseline gap-2 whitespace-nowrap text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
+            <span>
+              <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b>{" "}
+              words
+            </span>
+            <span className="inline-block h-[11px] w-px bg-[rgba(42,26,18,.2)]" />
+            <span>{readingTimeLabel}</span>
+          </div>
 
-        <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
-
-        <ToolbarButton
-          label="Find & replace (Ctrl+F)"
-          active={findReplaceOpen}
-          onClick={() => (findReplaceOpen ? closeFindReplace() : openFindReplace())}
-        >
-          <Search size={16} />
-        </ToolbarButton>
-
-        <div className="flex-1" />
-
-        {/* B7.3 — live word count + reading time */}
-        <div className="flex flex-none items-baseline gap-2.5 whitespace-nowrap text-[12.5px] font-medium text-[rgba(42,26,18,.55)]">
-          <span>
-            <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b>{" "}
-            words
-          </span>
-          <span className="inline-block h-[11px] w-px bg-[rgba(42,26,18,.2)]" />
-          <span>{readingTimeLabel}</span>
+          <ToolbarButton
+            label={toolbarExpanded ? "Fewer formatting options" : "More formatting options"}
+            active={toolbarExpanded}
+            onClick={() => setToolbarExpanded((v) => !v)}
+          >
+            {toolbarExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </ToolbarButton>
         </div>
+
+        {toolbarExpanded && (
+          <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
+            <ToolbarButton
+              label="Align left"
+              active={editor.isActive({ textAlign: "left" })}
+              onClick={() => editor.chain().focus().setTextAlign("left").run()}
+            >
+              <AlignLeft size={16} />
+            </ToolbarButton>
+            <ToolbarButton
+              label="Align center"
+              active={editor.isActive({ textAlign: "center" })}
+              onClick={() => editor.chain().focus().setTextAlign("center").run()}
+            >
+              <AlignCenter size={16} />
+            </ToolbarButton>
+            <ToolbarButton
+              label="Align right"
+              active={editor.isActive({ textAlign: "right" })}
+              onClick={() => editor.chain().focus().setTextAlign("right").run()}
+            >
+              <AlignRight size={16} />
+            </ToolbarButton>
+            <ToolbarButton
+              label="Justify"
+              active={editor.isActive({ textAlign: "justify" })}
+              onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+            >
+              <AlignJustify size={16} />
+            </ToolbarButton>
+
+            <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+
+            <ToolbarButton
+              label="Find & replace (Ctrl+F)"
+              active={findReplaceOpen}
+              onClick={() => (findReplaceOpen ? closeFindReplace() : openFindReplace())}
+            >
+              <Search size={16} />
+            </ToolbarButton>
+          </div>
+        )}
       </div>
 
       {/* Find & replace panel — two fixed rows (find, then replace) rather
