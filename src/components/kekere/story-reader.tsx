@@ -109,6 +109,11 @@ export interface StoryReaderProps {
    * the `finished` overlay below, by which point handleFinish() has already
    * fired. */
   noteEligible?: boolean;
+  /** True when this reader already sent a note for this story on an earlier
+   * visit (noteEligible is false in that case too, but for a different
+   * reason than "can't note this writer at all" — this one still shows a
+   * "Note sent" confirmation instead of just showing nothing). */
+  noteAlreadySent?: boolean;
 }
 
 export function StoryReader({
@@ -122,6 +127,7 @@ export function StoryReader({
   initialFollowing = false,
   isOwnStory = false,
   noteEligible = false,
+  noteAlreadySent = false,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -521,10 +527,16 @@ export function StoryReader({
           </div>
         )}
 
-        {noteEligible && (
+        {(noteEligible || noteAlreadySent) && (
           <div className="mt-7 w-full max-w-[280px]">
-            {noteSent ? (
-              <p className="text-sm text-[var(--color-success)]">Note sent to {story.authorName}.</p>
+            {noteSent || noteAlreadySent ? (
+              <button
+                type="button"
+                disabled
+                className="flex w-full cursor-default items-center justify-center gap-1.5 rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-ink-muted-2)]"
+              >
+                <Check size={16} /> Note sent
+              </button>
             ) : noteComposerOpen ? (
               <div className="flex flex-col items-stretch gap-2.5 text-left">
                 <textarea

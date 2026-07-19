@@ -92,6 +92,7 @@ export default async function KekereStoryPage({ params }: { params: { id: string
         initialFollowing={following}
         isOwnStory={userId === dbStory.author.id}
         noteEligible={noteEligibility.eligible}
+        noteAlreadySent={noteEligibility.alreadySent}
       />
     </KekereTheme>
   );
