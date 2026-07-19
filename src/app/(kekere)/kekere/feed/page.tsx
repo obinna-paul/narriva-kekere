@@ -15,9 +15,11 @@ import { getPersonalizedTagOrder, getSignatureRow } from "@/lib/data/kekere-tast
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getAllWinners } from "@/lib/data/kekere-competitions";
 import { getReadingProgressBatch } from "@/lib/data/kekere-progress";
+import { getKekereUserProfile } from "@/lib/data/kekere-profile-stats";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { FEED_TAG_ORDER, resolveCategoryBySlug, type StoryTagSlug } from "@/content/story-tags";
+import { getFeedGreeting } from "@/content/kekere-feed-greetings";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +48,7 @@ export default async function KekereFeedPage() {
   const userId = session?.user?.id;
 
   // Fetch all sections in parallel
-  const [trendingData, editorsPickTierData, winners, wallet, inProgress, recommended, tagOrder, signatureRowMeta, firstReadFree] =
+  const [trendingData, editorsPickTierData, winners, wallet, inProgress, recommended, tagOrder, signatureRowMeta, firstReadFree, profile] =
     await Promise.all([
       listStories({ sort: "trending", pageSize: 12 }),
       listStories({ tier: ["FEATURED", "CHAMPION"], pageSize: 50 }),
@@ -57,7 +59,12 @@ export default async function KekereFeedPage() {
       userId ? getPersonalizedTagOrder(userId, FEED_TAG_ORDER) : Promise.resolve<StoryTagSlug[]>([...FEED_TAG_ORDER]),
       userId ? getSignatureRow(userId, 8) : Promise.resolve(null),
       hasFreeReadAvailable(userId),
+      userId ? getKekereUserProfile(userId) : Promise.resolve(null),
     ]);
+
+  // A fresh pick every time this force-dynamic page renders — same
+  // per-load-rotation pattern as the login page's quotes.
+  const greeting = getFeedGreeting(profile?.name ?? null);
 
   // Tag rows and the signature row both depend on the (possibly
   // personalized) tag order resolved above, so they run as a second stage.
@@ -128,6 +135,7 @@ export default async function KekereFeedPage() {
         isLoggedIn={!!userId}
         firstReadFree={firstReadFree}
         readingProgress={readingProgress}
+        greeting={greeting}
       />
       <FirstStoryFreeModal />
     </KekereTheme>
