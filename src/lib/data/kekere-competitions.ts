@@ -71,7 +71,7 @@ export interface AllWinnerEntry {
 }
 
 const storyWithAuthorInclude = {
-  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true } },
+  author: { select: { id: true, name: true, slug: true, avatarColor: true, avatar: true, bio: true } },
   tags: { include: { tag: true } },
 } as const;
 

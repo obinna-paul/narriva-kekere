@@ -34,6 +34,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
     authorId: story.author.id,
     authorAvatarColor: story.author.avatarColor,
     authorAvatarUrl: story.author.avatar ? userAvatarUrl(story.author.avatar) : null,
+    authorBio: story.author.bio,
     genre: story.genre,
     tier: story.tier.toLowerCase() as MockStory["tier"],
     isFree: false,
