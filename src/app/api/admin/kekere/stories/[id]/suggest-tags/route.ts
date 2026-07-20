@@ -72,10 +72,13 @@ Your task:
 
 5. If you strongly believe the story calls for a tag that does not exist in the list, you may suggest ONE new tag (provide: slug in kebab-case, label, a catchy one-sentence feedHeading for the feed row, and a short description). Only do this if the story really needs it — most stories are covered by the existing list.
 
+6. SEPARATELY, decide "isAdult": a blunt safety check, independent of the tags above — should this story sit behind an 18+ age gate? true if the story contains explicit sexual content, graphic violence or gore, or genuinely disturbing/traumatic material (torture, self-harm, extreme abuse) described in detail rather than implied. false for everything else, including stories that are dark, sad, scary, or carry a tag like "erotic" for mild/implied romantic content — the bar is graphic, on-the-page depiction, not subject matter alone. When genuinely unsure, prefer false; this is a first pass for a human admin to confirm, not a final call.
+
 Respond ONLY with valid JSON in this exact shape:
 {
   "existingTagSlugs": ["slug-a", "slug-b"],
-  "newTag": null
+  "newTag": null,
+  "isAdult": false
 }
 
 Or if a new tag is warranted:
@@ -86,7 +89,8 @@ Or if a new tag is warranted:
     "label": "New Label",
     "feedHeading": "Catchy heading for the feed row",
     "description": "Short one-line description"
-  }
+  },
+  "isAdult": false
 }
 
 No markdown fences. No commentary. JSON only.`;
@@ -100,7 +104,7 @@ No markdown fences. No commentary. JSON only.`;
       body: JSON.stringify({
         model: "llama-3.3-70b-versatile",
         temperature: 0.2,
-        max_tokens: 256,
+        max_tokens: 280,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -120,6 +124,7 @@ No markdown fences. No commentary. JSON only.`;
     let parsed: {
       existingTagSlugs?: string[];
       newTag?: { slug: string; label: string; feedHeading: string; description: string } | null;
+      isAdult?: boolean;
     };
 
     try {
@@ -153,6 +158,7 @@ No markdown fences. No commentary. JSON only.`;
     return NextResponse.json({
       suggestions,
       newTag: parsed.newTag ?? null,
+      isAdult: typeof parsed.isAdult === "boolean" ? parsed.isAdult : null,
     });
   },
   { roles: ["ADMIN"] },

@@ -65,6 +65,7 @@ export interface WriterProfileStory {
   reads: number;
   rating: RatingSummary;
   mostPopular: boolean;
+  isAdult: boolean;
 }
 
 /** This writer's published stories, most recent first — a "most popular"
@@ -83,6 +84,7 @@ export async function getWriterPublishedStories(userId: string): Promise<WriterP
       tier: true,
       publishedAt: true,
       createdAt: true,
+      isAdult: true,
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
   });
@@ -117,6 +119,7 @@ export async function getWriterPublishedStories(userId: string): Promise<WriterP
     reads: readsByStory.get(s.id) ?? 0,
     rating: ratingByStory.get(s.id) ?? { average: null, count: 0 },
     mostPopular: mostPopularReads > 0 && s.id === mostPopularId,
+    isAdult: s.isAdult,
   }));
 }
 

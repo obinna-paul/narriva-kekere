@@ -48,6 +48,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
       ? storyCoverUrl(story.coverImageRef)
       : undefined,
     publishedAt: publishedAt.toISOString(),
+    isAdult: story.isAdult,
     paragraphs: [],
     bodyDoc: null,
     tags: story.tags.map((st) => st.tag.slug),

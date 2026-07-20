@@ -22,6 +22,9 @@ const publishSchema = z.object({
   /** If admin edited the body — plain text, blank-line separated paragraphs */
   bodyOverride: z.string().optional(),
   expiresInDays: z.number().int().min(3).max(60).default(14),
+  /** Gates the reader behind an 18+ interstitial and shows the mature-content
+   * badge everywhere the story is listed. Omitted means "leave as-is." */
+  isAdult: z.boolean().optional(),
 });
 
 export const PUT = withAuth(
@@ -44,7 +47,7 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { cowrieCost, tier, tagIds, coverImageRef, hookLineOverride, bodyOverride, expiresInDays } = parsed.data;
+    const { cowrieCost, tier, tagIds, coverImageRef, hookLineOverride, bodyOverride, expiresInDays, isAdult } = parsed.data;
 
     // Resolve contract template
     const template = await prisma.kekereContractTemplate.findFirst({
@@ -92,6 +95,7 @@ export const PUT = withAuth(
           ...(hookLineOverride ? { hookLine: hookLineOverride } : {}),
           ...(bodyOverride ? { body: bodyDoc as never, wordCount, readingTime } : {}),
           ...(coverImageRef ? { coverImageRef } : {}),
+          ...(isAdult !== undefined ? { isAdult } : {}),
           status: "PENDING_CONTRACT",
         },
       });

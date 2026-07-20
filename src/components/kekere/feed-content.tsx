@@ -9,6 +9,7 @@ import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
 import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import {
   buildGreetingPool,
   pickRandomGreeting,
@@ -65,6 +66,7 @@ function RowCard({
         <span className="absolute right-[9px] top-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
           {story.readingTimeMinutes}m
         </span>
+        {story.isAdult && <MatureBadge className="absolute left-[9px] top-[9px]" />}
         {badge && (
           <span className="absolute bottom-[9px] left-[9px] rounded-[20px] bg-[rgba(199,93,44,0.88)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
             {badge}
@@ -374,6 +376,7 @@ export function FeedContent({
                   <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
                     {story.genre.toUpperCase()}
                   </span>
+                  {story.isAdult && <MatureBadge className="absolute right-[9px] top-[9px]" />}
                   <span
                     className="absolute bottom-[9px] left-[9px] flex items-center gap-1 rounded-[20px] px-[7px] py-[3px] text-[9.5px] font-semibold text-white"
                     style={{
@@ -415,6 +418,7 @@ export function FeedContent({
             style={{ background: "radial-gradient(circle at 70% 20%,#E2A565,#C75D2C 45%,#5A2410)" }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(42,26,18,0.9)] to-[rgba(42,26,18,0.1)_60%]" />
+            {featuredStory.isAdult && <MatureBadge className="absolute right-4 top-4" />}
             <div className="absolute bottom-5 left-5 right-5">
               <span className="text-[10px] font-semibold tracking-[0.08em] text-[var(--color-sand-accent)]">
                 EDITOR&apos;S PICK

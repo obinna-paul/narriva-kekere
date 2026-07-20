@@ -56,6 +56,7 @@ export const GET = withAuth(
       completionRate: story.completionRate,
       moderationNotes: story.moderationNotes,
       plagiarismFlagged: story.plagiarismFlagged,
+      isAdult: story.isAdult,
       isSerialized: story.isSerialized,
       submittedAt: story.submittedAt?.toISOString() ?? null,
       publishedAt: story.publishedAt?.toISOString() ?? null,

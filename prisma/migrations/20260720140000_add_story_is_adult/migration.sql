@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Story" ADD COLUMN "isAdult" BOOLEAN NOT NULL DEFAULT false;

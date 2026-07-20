@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Bookmark, BookmarkCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { AuthorChip } from "@/components/kekere/author-chip";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 interface StoryPreviewSheetProps {
@@ -139,6 +140,7 @@ export function StoryPreviewSheet({
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.88)] via-[rgba(0,0,0,0.25)] to-transparent" />
+              {story.isAdult && <MatureBadge className="absolute left-3 top-3" />}
               <button
                 onClick={onClose}
                 aria-label="Close"

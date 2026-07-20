@@ -426,6 +426,11 @@ model Story {
   moderationNotes   String?
   plagiarismFlagged Boolean @default(false)
   featured          Boolean @default(false)
+  // Set by an admin (Story Review or the onboarded-writers/All Stories
+  // editors) or suggested by Nari — gates the reader behind an 18+
+  // interstitial (see story-reader.tsx) and shows a mature-content badge
+  // on the cover everywhere the story is listed.
+  isAdult           Boolean @default(false)
 
   sourceType        StorySource @default(STANDARD)
   authoredByAdminId String?

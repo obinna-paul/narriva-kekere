@@ -1,5 +1,6 @@
 import { Lock, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export interface StoryCardProps {
@@ -30,6 +31,7 @@ export function StoryCard({ story, className, readProgress, onPreview }: StoryCa
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />
         {locked && <div className="absolute inset-0 bg-black/55 backdrop-grayscale" />}
 
+        {story.isAdult && <MatureBadge className="absolute right-3 top-3" />}
         <div className="absolute left-3 top-3 flex gap-1.5">
           {story.isNew && (
             <span className="rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--color-ink)] shadow-sm">
