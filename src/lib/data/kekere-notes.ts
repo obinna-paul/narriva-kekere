@@ -3,7 +3,7 @@ import { createNotification } from "@/lib/notifications/create";
 import { getEmailRecipient } from "@/lib/notifications/email-preferences";
 import { containsProfanity } from "@/lib/moderation/profanity";
 import { sendEmail } from "@/lib/email/send";
-import { renderNoteReplyEmail } from "@/lib/email/templates";
+import { renderNoteReplyEmail, renderNoteReceivedEmail } from "@/lib/email/templates";
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -108,7 +108,7 @@ export async function sendNote(fromUserId: string, storyId: string, body: string
 
   const story = await prisma.story.findUnique({
     where: { id: storyId },
-    select: { authorId: true, author: { select: { notesEnabled: true } } },
+    select: { authorId: true, title: true, author: { select: { notesEnabled: true } } },
   });
   if (!story) return { error: "not_completed" };
   if (story.authorId === fromUserId) return { error: "cannot_note_self" };
@@ -129,13 +129,32 @@ export async function sendNote(fromUserId: string, storyId: string, body: string
     });
 
     const fromUser = await prisma.user.findUnique({ where: { id: fromUserId }, select: { name: true } });
+    const readerName = fromUser?.name ?? "A reader";
     await createNotification({
       userId: story.authorId,
       type: "NOTE_RECEIVED",
       title: "You have a new note",
-      body: `${fromUser?.name ?? "A reader"} sent you a note about one of your stories.`,
+      body: `${readerName} sent you a note about one of your stories.`,
       link: "/kekere/notes",
     });
+
+    // Event-triggered email to the writer, if they haven't opted out — best
+    // effort, never blocks the note from being saved.
+    const recipient = await getEmailRecipient(story.authorId);
+    if (recipient) {
+      const html = await renderNoteReceivedEmail({
+        writerName: recipient.name,
+        readerName,
+        storyTitle: story.title,
+        unsubscribeUrl: recipient.unsubscribeUrl,
+      });
+      await sendEmail({
+        to: recipient.email,
+        subject: `${readerName} sent you a note on Kekere Stories`,
+        body: `${readerName} left you a note about "${story.title}." Read it and reply in your Kekere Stories notes inbox.`,
+        html,
+      }).catch((error) => console.error("[kekere-notes] note-received email failed:", error));
+    }
 
     return { success: true, noteId: note.id };
   } catch {
