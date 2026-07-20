@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap, Mail } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap, Mail, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
 import { HistoryExportModal } from "@/components/kekere/history-export-modal";
@@ -176,6 +176,23 @@ export function WalletView({
       </div>
 
       {/* Quick actions */}
+      {isWriter && (
+        <div className="mt-[14px]">
+          <Link href="/kekere/analytics" className="flex items-center justify-between rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 transition-colors hover:border-[#1F8A5B]/40">
+            <div className="flex items-center gap-3">
+              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[#1F8A5B]/10 text-[#1F8A5B]">
+                <BarChart3 size={16} />
+              </div>
+              <div>
+                <div className="text-[14px] font-medium text-[#2A1A12]">Analytics &amp; earnings</div>
+                <div className="text-[12px] text-[#8A7565]">Reads, completion, ratings &amp; your earnings ledger</div>
+              </div>
+            </div>
+            <ArrowRight size={16} className="text-[#8A7565]" />
+          </Link>
+        </div>
+      )}
+
       {referralCode && (
         <div className="mt-[14px]">
           <Link href="/kekere/invite" className="flex items-center justify-between rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 transition-colors hover:border-[#C75D2C]/30">
