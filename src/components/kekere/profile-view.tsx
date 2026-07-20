@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2, Star } from "lucide-react";
+import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2, Star, BarChart3 } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -574,6 +574,12 @@ export function ProfileView(props: ProfileViewProps) {
               <ListCard>
                 {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
                   <>
+                    <ListRow
+                      href="/kekere/analytics"
+                      icon={<BarChart3 size={15} />}
+                      tone="primary"
+                      label="Analytics & earnings"
+                    />
                     <ListRow
                       href={`/kekere/writer/${props.userId}`}
                       icon={<Eye size={15} />}
