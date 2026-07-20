@@ -20,7 +20,7 @@ import { getToken } from "next-auth/jwt";
 // just the unlock action itself (the literal ask was "the unlock flow must
 // be authenticated," but a logged-out visitor looking at someone's wallet
 // or library page makes no sense either, so these are gated the same way).
-const KEKERE_PROTECTED_PREFIXES = ["/kekere/feed", "/kekere/wallet", "/kekere/library", "/kekere/profile", "/kekere/write", "/kekere/notes", "/kekere/settings"];
+const KEKERE_PROTECTED_PREFIXES = ["/kekere/feed", "/kekere/wallet", "/kekere/library", "/kekere/profile", "/kekere/write", "/kekere/notes", "/kekere/settings", "/kekere/analytics"];
 
 // Narriva's equivalents: the ebook reader and purchased-book library need a
 // real identity (purchases and reading progress are per-user).
