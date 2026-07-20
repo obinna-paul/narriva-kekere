@@ -38,6 +38,28 @@ export interface StoryEditorProps {
    * normal writer flow is completely unchanged.
    */
   autosave?: boolean;
+  /**
+   * Where debounced body saves and manual (Ctrl+S) saves are PUT. Defaults to
+   * the writer's own story route. The admin review-queue editor points this at
+   * its editorial-working-copy route instead, which writes the edited* columns
+   * rather than the live body. The endpoint must accept the same
+   * { body, wordCount, expectedLastSavedAt } payload and return
+   * { story: { lastSavedAt } }.
+   */
+  saveEndpoint?: string;
+  /**
+   * Where a manual-save version snapshot is POSTed. Null disables snapshotting
+   * entirely — used by the admin review editor, whose working copy isn't part
+   * of the writer's own version history. Defaults to the writer versions route.
+   */
+  versionsEndpoint?: string | null;
+  /**
+   * Namespaces the localStorage/IndexedDB recovery keys. Defaults to storyId.
+   * The admin review editor overrides it so an admin's in-progress edits to a
+   * story never collide with that same browser's recovery of the writer's own
+   * draft of the same storyId.
+   */
+  storageKey?: string;
 }
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
@@ -62,7 +84,17 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
   onStatusChange,
   editable = true,
   autosave = true,
+  saveEndpoint,
+  versionsEndpoint,
+  storageKey,
 }, ref) {
+  // Default the configurable endpoints/keys to the writer flow so nothing in
+  // the normal path changes. versionsEndpoint is intentionally allowed to be
+  // an explicit null (snapshots off), so only substitute the default when it's
+  // undefined.
+  const saveUrl = saveEndpoint ?? `/api/kekere/stories/${storyId}`;
+  const versionsUrl = versionsEndpoint === undefined ? `/api/kekere/stories/${storyId}/versions` : versionsEndpoint;
+  const persistKey = storageKey ?? storyId;
   const [status, setStatus] = useState<SaveStatus>({ kind: "idle" });
   const [recovery, setRecovery] = useState<RecoveryState | null>(null);
   const [localWordCount, setLocalWordCount] = useState(0);
@@ -147,12 +179,12 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
 
       try {
         const savedAt = new Date().toISOString();
-        localStorage.setItem(draftStorageKey(storyId), JSON.stringify(json));
-        localStorage.setItem(draftSavedAtStorageKey(storyId), savedAt);
+        localStorage.setItem(draftStorageKey(persistKey), JSON.stringify(json));
+        localStorage.setItem(draftSavedAtStorageKey(persistKey), savedAt);
       } catch {
         // Storage full/unavailable — non-fatal.
       }
-      void saveDraftIDB(storyId, json, "", "", new Date().toISOString());
+      void saveDraftIDB(persistKey, json, "", "", new Date().toISOString());
 
       clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
@@ -197,7 +229,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     let cancelled = false;
 
     async function checkRecovery() {
-      const idbDraft = await getDraftIDB(storyId);
+      const idbDraft = await getDraftIDB(persistKey);
       if (idbDraft && !cancelled) {
         const serverTime = initialLastSavedAt ? new Date(initialLastSavedAt).getTime() : 0;
         const idbTime = new Date(idbDraft.timestamp).getTime();
@@ -205,15 +237,15 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           setRecovery({ content: idbDraft.content as TiptapDoc, savedAt: idbDraft.timestamp });
           return;
         } else {
-          void clearDraftIDB(storyId);
+          void clearDraftIDB(persistKey);
         }
       }
 
       let localRaw: string | null = null;
       let localSavedAt: string | null = null;
       try {
-        localRaw = localStorage.getItem(draftStorageKey(storyId));
-        localSavedAt = localStorage.getItem(draftSavedAtStorageKey(storyId));
+        localRaw = localStorage.getItem(draftStorageKey(persistKey));
+        localSavedAt = localStorage.getItem(draftSavedAtStorageKey(persistKey));
       } catch {
         return;
       }
@@ -236,16 +268,16 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
     void checkRecovery();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storyId]);
+  }, [persistKey]);
 
   function clearLocalBackup() {
     try {
-      localStorage.removeItem(draftStorageKey(storyId));
-      localStorage.removeItem(draftSavedAtStorageKey(storyId));
+      localStorage.removeItem(draftStorageKey(persistKey));
+      localStorage.removeItem(draftSavedAtStorageKey(persistKey));
     } catch {
       // ignore
     }
-    void clearDraftIDB(storyId);
+    void clearDraftIDB(persistKey);
   }
 
   const saveToServer = useCallback(
@@ -254,7 +286,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       setStatus({ kind: "saving" });
 
       try {
-        const res = await fetch(`/api/kekere/stories/${storyId}`, {
+        const res = await fetch(saveUrl, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -281,7 +313,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [storyId]
+    [saveUrl]
   );
 
   useEffect(() => {
@@ -305,19 +337,21 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       const count = editor.storage.characterCount.words();
       await saveToServer(doc, count);
       if (conflictedRef.current) return;
-      try {
-        await fetch(`/api/kekere/stories/${storyId}/versions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ label }),
-        });
-      } catch {
-        // Failed version snapshot doesn't negate a successful save.
+      if (versionsUrl) {
+        try {
+          await fetch(versionsUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label }),
+          });
+        } catch {
+          // Failed version snapshot doesn't negate a successful save.
+        }
       }
       clearLocalBackup();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [editor, saveToServer, storyId, autosave]
+    [editor, saveToServer, versionsUrl, autosave]
   );
 
   const getContent = useCallback(() => {

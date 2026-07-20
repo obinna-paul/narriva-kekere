@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { ImageIcon, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
+import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
+import { docToHtml, isValidTiptapDoc, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import type { SaveStatus } from "@/lib/tiptap/save-status";
 
 interface QueueStory {
   id: string;
@@ -37,19 +40,6 @@ function relativeTime(iso: string) {
   if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
   return `${Math.round(diff / 86400)}d ago`;
-}
-
-function bodyToText(body: string | object | null): string {
-  if (!body) return "";
-  if (typeof body === "string") return body;
-  try {
-    const doc = body as { content?: Array<{ content?: Array<{ text?: string }> }> };
-    return (doc.content ?? [])
-      .flatMap((node) => (node.content ?? []).map((c) => c.text ?? "").join(""))
-      .join("\n\n");
-  } catch {
-    return JSON.stringify(body);
-  }
 }
 
 // ─── Decision Panel ───────────────────────────────────────────────────────────
@@ -416,30 +406,37 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   );
 }
 
-// ─── Draft persistence helpers ────────────────────────────────────────────────
+// ─── Editorial working copy ───────────────────────────────────────────────────
 
-interface StoryDraft {
-  hookLine: string;
-  body: string;
-  coverImageRef: string | null;
-  coverPreview: string | null;
+// The admin's in-progress edits to a submitted story, loaded from and saved to
+// /api/admin/kekere/stories/[id]/review-edit. Unlike the old plain-textarea
+// draft (localStorage only), the body is a real Tiptap doc autosaved to the
+// server, so edits survive a closed tab, another device, or a handoff — and
+// the writer's original body/hookLine stay untouched here.
+interface ReviewEdit {
+  originalHookLine: string;
+  originalBody: TiptapDoc;
+  editedHookLine: string | null;
+  editedBody: TiptapDoc | null;
+  editedWordCount: number | null;
+  editLastSavedAt: string | null;
+  hasEdits: boolean;
 }
 
-function draftKey(storyId: string) { return `kekere-story-draft-${storyId}`; }
+const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
-function loadDraft(storyId: string): StoryDraft | null {
-  try {
-    const raw = localStorage.getItem(draftKey(storyId));
-    return raw ? (JSON.parse(raw) as StoryDraft) : null;
-  } catch { return null; }
-}
+// Matches AdminTopBar's fixed height so StoryEditor's sticky toolbar clears the
+// admin header (same variable the author-on-behalf screen sets).
+const ADMIN_TOP_BAR_HEIGHT = "62px";
 
-function saveDraft(storyId: string, draft: StoryDraft) {
-  try { localStorage.setItem(draftKey(storyId), JSON.stringify(draft)); } catch {}
-}
-
-function clearDraft(storyId: string) {
-  try { localStorage.removeItem(draftKey(storyId)); } catch {}
+function saveStatusLabel(status: SaveStatus): { text: string; tone: "muted" | "ok" | "warn" } | null {
+  switch (status.kind) {
+    case "saving": return { text: "Saving…", tone: "muted" };
+    case "saved": return { text: "Saved", tone: "ok" };
+    case "offline": return { text: "Offline — will retry", tone: "warn" };
+    case "conflict": return { text: "Edited elsewhere — reload", tone: "warn" };
+    default: return null;
+  }
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -457,39 +454,58 @@ export function StoryReviewQueue() {
   // Admin editing state — reset when a new story is selected
   const [editingContent, setEditingContent] = useState(false);
   const [draftHookLine, setDraftHookLine] = useState("");
-  const [draftBody, setDraftBody] = useState("");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
-  // Original writer-submitted values — used for version history / revert
-  const [originalHookLine, setOriginalHookLine] = useState("");
-  const [originalBody, setOriginalBody] = useState("");
+  // The editorial working copy (rich body + hook line), autosaved server-side.
+  const [editData, setEditData] = useState<ReviewEdit | null>(null);
+  const [hasEdits, setHasEdits] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>({ kind: "idle" });
 
-  const [draftSaved, setDraftSaved] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorRef = useRef<StoryEditorHandle>(null);
+  const hookSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The hook-line value currently persisted server-side — so the debounced
+  // save only fires on a real change and can update itself on success.
+  const lastSavedHookRef = useRef<string>("");
 
-  const hasEdits = draftHookLine !== originalHookLine || draftBody !== originalBody;
+  const reviewEditUrl = selectedId ? `/api/admin/kekere/stories/${selectedId}/review-edit` : null;
 
-  function revertToOriginal() {
-    setDraftHookLine(originalHookLine);
-    setDraftBody(originalBody);
+  // Debounced hook-line autosave (the body has its own autosave inside
+  // StoryEditor; the hook line is a plain input, so it needs its own channel).
+  useEffect(() => {
+    if (!selectedId || !reviewEditUrl || !editData) return;
+    if (draftHookLine === lastSavedHookRef.current) return;
+    if (hookSaveTimer.current) clearTimeout(hookSaveTimer.current);
+    hookSaveTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(reviewEditUrl, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hookLine: draftHookLine }),
+        });
+        if (res.ok) {
+          lastSavedHookRef.current = draftHookLine;
+          setHasEdits(true);
+        }
+      } catch {
+        // Non-fatal — the next keystroke reschedules the save.
+      }
+    }, 800);
+    return () => { if (hookSaveTimer.current) clearTimeout(hookSaveTimer.current); };
+  }, [draftHookLine, selectedId, reviewEditUrl, editData]);
+
+  async function revertToOriginal() {
+    if (!selectedId || !reviewEditUrl) return;
+    if (!window.confirm("Discard all editorial changes and restore the writer's original submission? This can't be undone.")) return;
+    try {
+      await fetch(reviewEditUrl, { method: "DELETE" });
+    } catch {
+      // Even if the request failed, reloading below re-syncs with the server.
+    }
     setCoverImageRef(null);
     setCoverPreview(null);
-    if (selectedId) clearDraft(selectedId);
+    await selectStory(selectedId);
   }
-
-  // Auto-save draft to localStorage whenever edits change
-  useEffect(() => {
-    if (!selectedId) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    setDraftSaved(false);
-    saveTimer.current = setTimeout(() => {
-      saveDraft(selectedId, { hookLine: draftHookLine, body: draftBody, coverImageRef, coverPreview });
-      setDraftSaved(true);
-      setTimeout(() => setDraftSaved(false), 2000);
-    }, 800);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [draftHookLine, draftBody, coverImageRef, coverPreview, selectedId]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -512,49 +528,92 @@ export function StoryReviewQueue() {
     setSelectedId(id);
     setDetailLoading(true);
     setEditingContent(false);
+    setSaveStatus({ kind: "idle" });
     try {
-      const res = await fetch(`/api/admin/kekere/stories/${id}/review`);
-      if (!res.ok) throw new Error(`${res.status}`);
-      const detail: StoryDetail = await res.json();
+      const [reviewRes, editRes] = await Promise.all([
+        fetch(`/api/admin/kekere/stories/${id}/review`),
+        fetch(`/api/admin/kekere/stories/${id}/review-edit`),
+      ]);
+      if (!reviewRes.ok) throw new Error(`${reviewRes.status}`);
+      const detail: StoryDetail = await reviewRes.json();
       setSelected(detail);
 
-      // Always store the original writer-submitted values for version history
-      const dbHookLine = detail.hookLine ?? "";
-      const dbBody = bodyToText(detail.body);
-      setOriginalHookLine(dbHookLine);
-      setOriginalBody(dbBody);
-
-      // Restore saved draft if one exists, otherwise use story data
-      const saved = loadDraft(id);
-      if (saved) {
-        setDraftHookLine(saved.hookLine);
-        setDraftBody(saved.body);
-        setCoverImageRef(saved.coverImageRef);
-        setCoverPreview(saved.coverPreview);
+      const edit = editRes.ok ? await editRes.json() : null;
+      if (edit) {
+        const data: ReviewEdit = {
+          originalHookLine: edit.originalHookLine ?? "",
+          originalBody: isValidTiptapDoc(edit.originalBody) ? edit.originalBody : EMPTY_DOC,
+          editedHookLine: edit.editedHookLine ?? null,
+          editedBody: isValidTiptapDoc(edit.editedBody) ? edit.editedBody : null,
+          editedWordCount: edit.editedWordCount ?? null,
+          editLastSavedAt: edit.editLastSavedAt ?? null,
+          hasEdits: !!edit.hasEdits,
+        };
+        setEditData(data);
+        const effectiveHook = data.editedHookLine ?? data.originalHookLine;
+        setDraftHookLine(effectiveHook);
+        lastSavedHookRef.current = effectiveHook;
+        setHasEdits(data.hasEdits);
       } else {
-        setDraftHookLine(dbHookLine);
-        setDraftBody(dbBody);
-        setCoverImageRef(null);
-        setCoverPreview(null);
+        setEditData(null);
+        const dbHook = detail.hookLine ?? "";
+        setDraftHookLine(dbHook);
+        lastSavedHookRef.current = dbHook;
+        setHasEdits(false);
       }
+      setCoverImageRef(null);
+      setCoverPreview(null);
     } catch {
       setSelected(null);
+      setEditData(null);
     } finally {
       setDetailLoading(false);
     }
   }
 
+  // Turning editing off: flush the last keystrokes to the server and capture
+  // the editor's content into editData so the read-only view shows the latest
+  // immediately, without waiting on a re-fetch.
+  async function toggleEditing() {
+    if (editingContent) {
+      await editorRef.current?.flush().catch(() => {});
+      const content = editorRef.current?.getContent();
+      if (content) {
+        setEditData((d) => (d ? { ...d, editedBody: content } : d));
+        setHasEdits(true);
+      }
+      setEditingContent(false);
+    } else {
+      setEditingContent(true);
+    }
+  }
+
   async function handleAction(action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) {
     if (!selectedId || !selected) return;
+
+    // Ensure the last few keystrokes are persisted before we promote the
+    // editorial working copy to the live story on publish — the body/hook line
+    // are read server-side from the edited* columns, not sent in this request.
+    if (action === "publish") {
+      if (editingContent) await editorRef.current?.flush().catch(() => {});
+      if (hookSaveTimer.current) {
+        clearTimeout(hookSaveTimer.current);
+        if (draftHookLine !== lastSavedHookRef.current && reviewEditUrl) {
+          await fetch(reviewEditUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ hookLine: draftHookLine }),
+          }).catch(() => {});
+        }
+      }
+    }
+
     setActing(true);
 
     const endpoint =
       action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
       : `/api/admin/kekere/stories/${selectedId}/request-revisions`;
-
-    const originalHookLine = selected.hookLine ?? "";
-    const originalBody = bodyToText(selected.body);
 
     const body =
       action === "publish"
@@ -564,8 +623,6 @@ export function StoryReviewQueue() {
             tagIds,
             isAdult,
             ...(coverImageRef ? { coverImageRef } : {}),
-            ...(draftHookLine !== originalHookLine ? { hookLineOverride: draftHookLine } : {}),
-            ...(draftBody !== originalBody ? { bodyOverride: draftBody } : {}),
           }
         : action === "reject"
         ? { moderationNotes: note, internalReason: note, plagiarismFlagged: selected.plagiarismFlagged }
@@ -585,11 +642,11 @@ export function StoryReviewQueue() {
         successMsg = `Contract sent to ${data.writerName ?? selected.authorName}.`;
       }
 
-      clearDraft(selectedId);
       setToast({ type: "ok", msg: successMsg });
       setQueue((q) => q.filter((s) => s.id !== selectedId));
       setSelected(null);
       setSelectedId(null);
+      setEditData(null);
       setCoverImageRef(null);
       setCoverPreview(null);
     } catch {
@@ -703,9 +760,25 @@ export function StoryReviewQueue() {
 
               {/* Row 2 — action toolbar */}
               <div className="mt-3 flex items-center gap-2">
-                {draftSaved && (
-                  <span className="text-[10px] font-medium text-[#1F8A5B]">Draft saved</span>
+                {hasEdits && (
+                  <span className="rounded-full bg-[rgba(199,93,44,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#C75D2C]">
+                    Edited
+                  </span>
                 )}
+                {(() => {
+                  const label = saveStatusLabel(saveStatus);
+                  if (!label) return null;
+                  return (
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium",
+                        label.tone === "ok" ? "text-[#1F8A5B]" : label.tone === "warn" ? "text-[#C0392B]" : "text-[#9AA0A8]",
+                      )}
+                    >
+                      {label.text}
+                    </span>
+                  );
+                })()}
                 <div className="flex-1" />
                 {hasEdits && (
                   <button
@@ -719,7 +792,7 @@ export function StoryReviewQueue() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setEditingContent((v) => !v)}
+                  onClick={toggleEditing}
                   className={cn(
                     "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
                     editingContent
@@ -753,7 +826,7 @@ export function StoryReviewQueue() {
               </div>
 
               <div className="mt-3 flex gap-4 text-[12px] text-[#9AA0A8]">
-                <span>{selected.wordCount.toLocaleString()} words</span>
+                <span>{(editData?.editedWordCount ?? selected.wordCount).toLocaleString()} words</span>
                 <span>·</span>
                 <span>{selected.readingTime} min read</span>
                 <span>·</span>
@@ -761,25 +834,38 @@ export function StoryReviewQueue() {
               </div>
             </div>
 
-            {/* Body — editable or read-only */}
+            {/* Body — the real rich editor (server-autosaved to the editorial
+                working copy) when editing, a formatted read-only render
+                otherwise. The plain textarea is gone: edits now keep their
+                bold/italic and survive a closed tab or a handoff. */}
             {editingContent ? (
-              <div>
+              <div style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}>
                 <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Story body</label>
-                <textarea
-                  value={draftBody}
-                  onChange={(e) => setDraftBody(e.target.value)}
-                  rows={30}
-                  placeholder="Story content…"
-                  className="w-full resize-y rounded-[8px] border border-[rgba(20,22,26,0.18)] bg-[#F7F8FA] px-4 py-3 text-[15px] leading-[1.75] text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/20"
+                <StoryEditor
+                  key={selected.id}
+                  ref={editorRef}
+                  storyId={selected.id}
+                  initialContent={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC}
+                  initialLastSavedAt={editData?.editLastSavedAt ?? null}
+                  saveEndpoint={`/api/admin/kekere/stories/${selected.id}/review-edit`}
+                  versionsEndpoint={null}
+                  storageKey={`admin-review-${selected.id}`}
+                  onStatusChange={(status) => {
+                    setSaveStatus(status);
+                    if (status.kind === "saved") setHasEdits(true);
+                  }}
                 />
-                <p className="mt-1.5 text-[10px] text-[#9AA0A8]">Separate paragraphs with a blank line. Edits auto-save and survive page refreshes.</p>
+                <p className="mt-1.5 text-[10px] text-[#9AA0A8]">
+                  Edits auto-save to the server as you type — they survive a refresh, a closed tab, or picking this story back up on another device.
+                </p>
               </div>
             ) : (
-              <div className="prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20]">
-                {draftBody.split("\n\n").map((para, i) => (
-                  <p key={i} className="mb-[1.25em]">{para}</p>
-                ))}
-              </div>
+              <div
+                className="story-reader-prose prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20] [&_em]:italic [&_strong]:font-bold [&_u]:underline [&_p]:mb-[1.25em]"
+                dangerouslySetInnerHTML={{
+                  __html: docToHtml(editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC),
+                }}
+              />
             )}
 
             {selected.moderationNotes && (
