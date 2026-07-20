@@ -448,6 +448,26 @@ model Story {
   sourceType        StorySource @default(STANDARD)
   authoredByAdminId String?
 
+  // ─── Editorial review working copy ──────────────────────────────────────
+  // When an admin edits a submitted story in the review queue, their changes
+  // accumulate here as a separate working copy — the writer's original
+  // `body`/`hookLine` stay untouched until the edits are promoted to the live
+  // story (today: when the publishing contract is sent; a later phase gates
+  // that promotion behind the writer's explicit approval of these edits).
+  // All null when the admin hasn't edited the story. Unlike the old
+  // localStorage-only draft, these persist server-side on every autosave, so
+  // an admin's edits survive a closed tab, a different device, or a handoff
+  // to another admin — the "edits get lost" failure the plain-textarea flow
+  // had. editedBody is a full Tiptap doc (same shape/contract as `body`).
+  editedBody        Json?
+  editedHookLine    String?
+  editedWordCount   Int?
+  editedReadingTime Int?
+  // Optimistic-concurrency watermark for editedBody autosaves — mirrors
+  // lastSavedAt for the writer's own body saves. Null until the first admin
+  // body edit.
+  editLastSavedAt   DateTime?
+
   // Set on the DRAFT/REVISIONS_REQUESTED → SUBMITTED transition — used to
   // order the admin moderation queue oldest-first by actual submission time,
   // not draft-creation time (createdAt) or last-edit time (updatedAt, which

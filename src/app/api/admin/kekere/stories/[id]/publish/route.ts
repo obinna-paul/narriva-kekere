@@ -9,7 +9,7 @@ import { renderStoryAcceptedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
-import { plainTextToDoc, countWords } from "@/lib/tiptap/doc-utils";
+import { Prisma } from "@prisma/client";
 
 const publishSchema = z.object({
   cowrieCost: z.number().int().min(1).max(10),
@@ -17,10 +17,6 @@ const publishSchema = z.object({
   tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
   /** Versioned Cloudinary ref — if omitted the existing coverImageRef is kept */
   coverImageRef: z.string().optional(),
-  /** If admin edited the hook line before publishing */
-  hookLineOverride: z.string().optional(),
-  /** If admin edited the body — plain text, blank-line separated paragraphs */
-  bodyOverride: z.string().optional(),
   expiresInDays: z.number().int().min(3).max(60).default(14),
   /** Gates the reader behind an 18+ interstitial and shows the mature-content
    * badge everywhere the story is listed. Omitted means "leave as-is." */
@@ -47,7 +43,7 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { cowrieCost, tier, tagIds, coverImageRef, hookLineOverride, bodyOverride, expiresInDays, isAdult } = parsed.data;
+    const { cowrieCost, tier, tagIds, coverImageRef, expiresInDays, isAdult } = parsed.data;
 
     // Resolve contract template
     const template = await prisma.kekereContractTemplate.findFirst({
@@ -73,30 +69,61 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "contract_template_missing_vars", missing: rendered.missing }, { status: 500 });
     }
 
-    // Resolve body overrides
-    const bodyDoc = bodyOverride
-      ? plainTextToDoc(bodyOverride)
-      : story.body;
-    const wordCount = bodyOverride
-      ? countWords(plainTextToDoc(bodyOverride))
-      : (story.wordCount ?? 0);
-    const readingTime = Math.max(1, Math.round(wordCount / 200));
+    // Promote the editorial working copy (if the admin edited it in the review
+    // queue) to the live story. The working copy lived in the edited* columns,
+    // leaving the writer's original body/hookLine untouched until this moment
+    // — so promoting it here means the story goes to contract with the edits
+    // baked in, and the original is preserved as a version snapshot below.
+    const hasEditedBody = story.editedBody != null;
+    const promotedHookLine = story.editedHookLine ?? story.hookLine;
+    const promotedWordCount = hasEditedBody ? (story.editedWordCount ?? story.wordCount ?? 0) : (story.wordCount ?? 0);
+    const promotedReadingTime = hasEditedBody
+      ? (story.editedReadingTime ?? Math.max(1, Math.round(promotedWordCount / 200)))
+      : story.readingTime;
 
     const expiresAt = new Date(now.getTime() + expiresInDays * 86400000);
 
     const { contract } = await prisma.$transaction(async (tx) => {
-      // Save admin edits + set story to PENDING_CONTRACT
+      // Preserve the writer's original submission as a permanent version
+      // snapshot before the admin's edits overwrite the live body. Labeled
+      // "Submitted …" so the version-retention cap never prunes it.
+      if (hasEditedBody) {
+        const last = await tx.storyVersion.findFirst({
+          where: { storyId: id },
+          orderBy: { versionNumber: "desc" },
+          select: { versionNumber: true },
+        });
+        await tx.storyVersion.create({
+          data: {
+            storyId: id,
+            versionNumber: (last?.versionNumber ?? 0) + 1,
+            content: story.body as object,
+            wordCount: story.wordCount ?? 0,
+            label: "Submitted — writer's original",
+          },
+        });
+      }
+
+      // Save the promoted content + set story to PENDING_CONTRACT, and clear
+      // the working copy now that it has been promoted.
       await tx.story.update({
         where: { id },
         data: {
           cowrieCost,
           tier,
           isDraft: false,
-          ...(hookLineOverride ? { hookLine: hookLineOverride } : {}),
-          ...(bodyOverride ? { body: bodyDoc as never, wordCount, readingTime } : {}),
+          hookLine: promotedHookLine,
+          ...(hasEditedBody
+            ? { body: story.editedBody as Prisma.InputJsonValue, wordCount: promotedWordCount, readingTime: promotedReadingTime }
+            : {}),
           ...(coverImageRef ? { coverImageRef } : {}),
           ...(isAdult !== undefined ? { isAdult } : {}),
           status: "PENDING_CONTRACT",
+          editedBody: Prisma.DbNull,
+          editedHookLine: null,
+          editedWordCount: null,
+          editedReadingTime: null,
+          editLastSavedAt: null,
         },
       });
 
