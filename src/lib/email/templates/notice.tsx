@@ -9,6 +9,8 @@ interface NoticeEmailProps {
   /** Optional highlighted info card — an amount, a reason, a reference. */
   highlight?: { label: string; rows: string[]; tone?: "neutral" | "positive" };
   cta?: { label: string; url: string };
+  /** Passed through to BaseEmail — only set on opt-in retention emails. */
+  unsubscribeUrl?: string;
 }
 
 /**
@@ -18,7 +20,7 @@ interface NoticeEmailProps {
  * ones (BaseEmail card, styles.h1/p, the tinted info-box convention from
  * story-accepted.tsx / story-rejected.tsx), just parameterized.
  */
-export function NoticeEmail({ preview, heading, lines, highlight, cta }: NoticeEmailProps) {
+export function NoticeEmail({ preview, heading, lines, highlight, cta, unsubscribeUrl }: NoticeEmailProps) {
   const positive = highlight?.tone === "positive";
   const boxBg = positive ? "#F6FBF8" : "#FDF8F3";
   const boxBorder = positive ? "rgba(31,138,91,0.18)" : "rgba(42,26,18,0.12)";
@@ -26,7 +28,7 @@ export function NoticeEmail({ preview, heading, lines, highlight, cta }: NoticeE
   const accent = positive ? "#1F8A5B" : "#C75D2C";
 
   return (
-    <BaseEmail preview={preview}>
+    <BaseEmail preview={preview} unsubscribeUrl={unsubscribeUrl}>
       <Text style={styles.h1}>{heading}</Text>
 
       {lines.map((line, i) => (

@@ -10,6 +10,7 @@ import { ResetPasswordEmail } from "./reset-password";
 import { PublishingAgreementEmail } from "./publishing-agreement";
 import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 import { NoticeEmail } from "./notice";
+import { WeeklyDigestEmail, type DigestItem } from "./weekly-digest";
 import { SITE_URL } from "@/content/decisions";
 
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
@@ -245,6 +246,85 @@ export async function renderWithdrawalFailedEmail(props: {
         `Your withdrawal of ${cowries} cowries could not be processed. Your balance has been restored — please try again, or contact us if it keeps happening.`,
       ],
       cta: { label: "View your wallet", url: `${SITE_URL}/kekere/wallet` },
+    }),
+  );
+}
+
+export async function renderWriterPublishedEmail(props: {
+  followerName: string;
+  writerName: string;
+  storyTitle: string;
+  storyId: string;
+  unsubscribeUrl: string;
+}) {
+  const { followerName, writerName, storyTitle, storyId, unsubscribeUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `${writerName} just published "${storyTitle}"`,
+      heading: `New from ${writerName}`,
+      lines: [
+        `Hi ${followerName},`,
+        `${writerName}, a writer you follow, just published "${storyTitle}" on Kekere Stories.`,
+      ],
+      cta: { label: "Read it now →", url: `${SITE_URL}/kekere/story/${storyId}` },
+      unsubscribeUrl,
+    }),
+  );
+}
+
+export async function renderNoteReplyEmail(props: {
+  readerName: string;
+  writerName: string;
+  storyTitle: string;
+  unsubscribeUrl: string;
+}) {
+  const { readerName, writerName, storyTitle, unsubscribeUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `${writerName} replied to your note`,
+      heading: "You got a reply",
+      lines: [
+        `Hi ${readerName},`,
+        `${writerName} replied to the note you sent about "${storyTitle}."`,
+      ],
+      cta: { label: "Read the reply →", url: `${SITE_URL}/kekere/notes` },
+      unsubscribeUrl,
+    }),
+  );
+}
+
+export async function renderStreakReminderEmail(props: {
+  name: string;
+  currentStreak: number;
+  unsubscribeUrl: string;
+}) {
+  const { name, currentStreak, unsubscribeUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `Your ${currentStreak}-day streak breaks at midnight`,
+      heading: "Your streak is about to break",
+      lines: [
+        `Hi ${name},`,
+        `You're on a ${currentStreak}-day reading streak, but you haven't read anything today yet. Finish one story before the day ends to keep it alive.`,
+      ],
+      cta: { label: "Keep the streak alive →", url: `${SITE_URL}/kekere/feed` },
+      unsubscribeUrl,
+    }),
+  );
+}
+
+export async function renderWeeklyDigestEmail(props: {
+  name: string;
+  items: DigestItem[];
+  unsubscribeUrl: string;
+}) {
+  const { name, items, unsubscribeUrl } = props;
+  return render(
+    createElement(WeeklyDigestEmail, {
+      name,
+      items,
+      feedUrl: `${SITE_URL}/kekere/feed`,
+      unsubscribeUrl,
     }),
   );
 }
