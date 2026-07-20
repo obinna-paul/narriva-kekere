@@ -10,11 +10,15 @@
  * of this spot is that it stops being about the app and starts being about
  * the person looking at their phone right now.
  *
- * Rotation: `getFeedGreeting` picks deterministically from a userId + local
- * date + time-of-day seed, so the server-rendered initial paint is stable
- * (and hydration-safe). `feed-content.tsx` then upgrades this client-side —
- * on every mount it re-rolls at random via `pickRandomGreeting`, never
- * immediately repeating the last one shown (tracked in localStorage).
+ * Rotation: a greeting holds steady for GREETING_ROTATION_MS (see below),
+ * then the next visit rolls a fresh one. `getFeedGreeting` picks
+ * deterministically from a userId + local date + time-of-day + rotation-slot
+ * seed, so the server-rendered initial paint is stable within a window (and
+ * hydration-safe) yet still varies through the day even without JS.
+ * `feed-content.tsx` then upgrades this client-side: on mount it keeps the
+ * stored line if the window hasn't elapsed (so a reload or an away-and-back
+ * never flickers it), otherwise it rolls a fresh random one — never
+ * immediately repeating the last shown (all tracked in localStorage).
  *
  * Name usage is intentionally NOT 1:1 — using {name} on every line gets
  * uncanny fast, so roughly a third of the lines below use it and the rest
@@ -23,6 +27,25 @@
  */
 
 export type GreetingTimeOfDay = "morning" | "afternoon" | "evening" | "night";
+
+/**
+ * How long a single greeting stays put before the next visit rerolls it.
+ * Short enough that a reader who checks in through the day sees it change
+ * several times; long enough that reloading the feed, or navigating away
+ * and straight back, never changes it (that reload-churn was the original
+ * complaint). Governs both the client rotation window (feed-content.tsx)
+ * and the server's deterministic rotation slot (getFeedGreeting), so one
+ * number controls the whole cadence.
+ */
+export const GREETING_ROTATION_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Which rotation window a given moment falls in — an epoch-based slot,
+ *  used only to seed the deterministic SSR pick so the no-JS first paint
+ *  itself rotates through the day rather than being frozen per time-of-day
+ *  bucket. */
+export function getRotationSlot(date: Date = new Date()): number {
+  return Math.floor(date.getTime() / GREETING_ROTATION_MS);
+}
 
 interface GreetingTemplate {
   /** May contain "{name}" — substituted with the reader's first name. */
@@ -370,7 +393,7 @@ export function pickRandomGreeting(pool: readonly GreetingTemplate[], avoidText?
 /** Server-side entry point — deterministic, for the initial SSR paint. */
 export function getFeedGreeting(userId: string, data: GreetingPersonalization, date: Date = new Date()): string {
   const pool = buildGreetingPool(data, date);
-  const seed = `${userId}|${localDateKey(date)}|${getGreetingTimeOfDay(date)}`;
+  const seed = `${userId}|${localDateKey(date)}|${getGreetingTimeOfDay(date)}|${getRotationSlot(date)}`;
   const chosen = pickDeterministicGreeting(pool, seed);
   return renderGreeting(chosen, data);
 }
