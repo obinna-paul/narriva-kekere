@@ -569,6 +569,9 @@ export function StoryReader({
                 <p className="mt-3.5 text-[13.5px] leading-[1.55] text-[#6B5744]">{story.authorBio}</p>
               )}
 
+              {/* Equal-width, non-wrapping pills — both flex-1 and
+                  whitespace-nowrap so the wider "Following" state can't
+                  squeeze "View profile" into a two-line wrap. */}
               <div className="mt-4 flex items-center gap-2.5">
                 {!isOwnStory && (
                   <FollowButton
@@ -576,15 +579,12 @@ export function StoryReader({
                     isLoggedIn={isLoggedIn}
                     initialFollowing={initialFollowing}
                     variant="full"
-                    className="flex-1"
+                    className="h-11 flex-1 whitespace-nowrap px-3"
                   />
                 )}
                 <Link
                   href={`/kekere/writer/${story.authorId}`}
-                  className={cn(
-                    "flex items-center justify-center gap-1 rounded-full border border-[rgba(42,26,18,0.16)] px-5 py-[10px] text-sm font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/40 hover:text-[#C75D2C]",
-                    isOwnStory && "flex-1",
-                  )}
+                  className="flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[rgba(42,26,18,0.16)] px-3 text-sm font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/50 hover:text-[#C75D2C]"
                 >
                   View profile <ArrowUpRight size={15} className="flex-none" />
                 </Link>
