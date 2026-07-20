@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
@@ -119,6 +119,10 @@ export interface StoryReaderProps {
    * the referrer. Null when logged out (no code, share falls back to the
    * plain story URL). */
   referralCode?: string | null;
+  /** The writer's self-reported country ("Lagos, Nigeria") — shown on the
+   * finish overlay's "Meet the writer" card. Not part of the shared story
+   * author-include, so it's fetched separately and passed in. */
+  authorCountry?: string | null;
 }
 
 export function StoryReader({
@@ -134,6 +138,7 @@ export function StoryReader({
   noteEligible = false,
   noteAlreadySent = false,
   referralCode = null,
+  authorCountry = null,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -149,6 +154,7 @@ export function StoryReader({
 
   const [finished, setFinished] = useState(false);
   const [rating, setRating] = useState(initialRating);
+  const [hoverRating, setHoverRating] = useState(0);
   const [chromeVisible, setChromeVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [tipping, setTipping] = useState(false);
@@ -156,7 +162,6 @@ export function StoryReader({
   const [tipError, setTipError] = useState<string | null>(null);
   const [showNoCowryModal, setShowNoCowryModal] = useState(false);
 
-  const [noteComposerOpen, setNoteComposerOpen] = useState(false);
   const [noteBody, setNoteBody] = useState("");
   const [noteSending, setNoteSending] = useState(false);
   const [noteSent, setNoteSent] = useState(false);
@@ -478,211 +483,212 @@ export function StoryReader({
   if (finished) {
     return (
       <>
-      <div
-        className="fixed inset-0 z-60 overflow-y-auto transition-colors duration-300 [&_h2]:transition-colors [&_h2]:duration-300 [&_p]:transition-colors [&_p]:duration-300"
-        style={{ ...themeVars, backgroundColor: theme.bg, zIndex: 60 }}
-      >
-      {/* Inner wrapper centres the content when it's short but lets it scroll
-          when it's tall (min-h-full + auto centring) — without this the
-          overlay clipped its own bottom (Share/Back) on shorter screens. */}
-      <div className="flex min-h-full flex-col items-center justify-center px-7 py-10 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-primary)]">
-          You finished
-        </p>
-        <h2 className="mt-4 max-w-[320px] font-[family-name:var(--font-display)] text-[30px] font-semibold leading-[1.16] text-[var(--color-ink)]">
-          {story.title}
-        </h2>
-        <p className="mt-[18px] text-sm text-[var(--color-ink-muted-2)]">How was it?</p>
+      {/* The finish screen has its own fixed warm-cream identity (white cards
+          on cream, one dark tip card) rather than inheriting the reader's
+          white/cream/dark reading theme — it's a distinct celebratory moment,
+          not part of the reading surface. Scrolls when tall. */}
+      <div className="fixed inset-0 z-60 overflow-y-auto bg-[#F5EBDD]">
+        <button
+          type="button"
+          onClick={() => setFinished(false)}
+          aria-label="Back to story"
+          className="absolute left-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full text-[#2A1A12] transition-colors hover:bg-[rgba(42,26,18,0.06)]"
+        >
+          <X size={22} />
+        </button>
 
-        <div className="mt-[14px] flex gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
-              onClick={() => handleRate(n)}
-              className="cursor-pointer bg-none text-[34px] leading-none"
-              style={{ color: n <= rating ? "#C75D2C" : "rgba(42,26,18,0.18)" }}
-            >
-              ★
-            </button>
-          ))}
-        </div>
-
-        {/* Meet the writer — a self-contained card (photo, name, bio, Follow,
-            View profile) so the person behind the story reads as a distinct
-            profile rather than loose text floating under the stars. Themed via
-            the reader's border/ink vars so it works on white/cream/dark. */}
-        <div className="mt-8 w-full max-w-[300px]">
-          <h3 className="mb-2.5 text-left text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
-            Meet the writer
-          </h3>
-          <div
-            className="rounded-[16px] border p-[18px]"
-            style={{ borderColor: theme.border }}
-          >
-            <Link href={`/kekere/writer/${story.authorId}`} className="flex flex-col items-center gap-2">
-              <div
-                className="flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[22px] font-semibold text-white"
-                style={{ background: `linear-gradient(135deg, #E08A4A, ${story.authorAvatarColor ?? "#C75D2C"})` }}
-              >
-                {story.authorAvatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={story.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  story.authorName.trim().charAt(0).toUpperCase() || "?"
-                )}
-              </div>
-              <p className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-ink)]">
-                {story.authorName}
-              </p>
-              {story.authorBio && (
-                <p className="line-clamp-3 text-center text-[13px] leading-[1.5] text-[var(--color-ink-muted-2)]">
-                  {story.authorBio}
-                </p>
-              )}
-            </Link>
-
-            <div className="mt-4 flex items-center justify-center gap-2.5">
-              {!isOwnStory && (
-                <FollowButton
-                  writerId={story.authorId}
-                  isLoggedIn={isLoggedIn}
-                  initialFollowing={initialFollowing}
-                  variant="full"
-                  className="flex-1"
-                />
-              )}
-              <Link
-                href={`/kekere/writer/${story.authorId}`}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-full border px-5 py-[10px] text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]",
-                  isOwnStory && "flex-1",
-                )}
-                style={{ borderColor: theme.border }}
-              >
-                View profile <ArrowUpRight size={15} className="flex-none" />
-              </Link>
+        <div className="mx-auto max-w-[402px] px-[22px] pb-[70px] pt-[52px]">
+          {/* Header */}
+          <div className="text-center">
+            <p className="text-[12px] font-medium uppercase tracking-[0.12em] text-[#C75D2C]">You finished it</p>
+            <h1 className="mt-2 font-[family-name:var(--font-display)] text-[26px] font-semibold leading-[1.15] text-[#2A1A12]">
+              {story.title}
+            </h1>
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-[13px] text-[#A08C7C]">
+              <span>by</span>
+              <AuthorChip authorId={story.authorId} authorName={story.authorName} avatarColor={story.authorAvatarColor} avatarUrl={story.authorAvatarUrl} size="sm" />
             </div>
           </div>
-        </div>
 
-        {(noteEligible || noteAlreadySent) && (
-          <div className="mt-7 w-full max-w-[280px]">
-            {noteSent || noteAlreadySent ? (
-              <button
-                type="button"
-                disabled
-                className="flex w-full cursor-default items-center justify-center gap-1.5 rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-ink-muted-2)]"
-              >
-                <Check size={16} /> Note sent
-              </button>
-            ) : noteComposerOpen ? (
-              <div className="flex flex-col items-stretch gap-2.5 text-left">
-                <textarea
-                  value={noteBody}
-                  onChange={(e) => setNoteBody(e.target.value)}
-                  maxLength={500}
-                  rows={3}
-                  autoFocus
-                  placeholder={`Tell ${story.authorName} what stuck with you…`}
-                  disabled={noteSending}
-                  className="w-full resize-none rounded-[10px] border px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
-                  style={{ backgroundColor: "transparent", borderColor: theme.border }}
-                />
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] text-[var(--color-ink-muted-3)]">{noteBody.length} / 500</span>
+          {/* Rating */}
+          <div className="mt-6 rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 text-center">
+            <p className="mb-3 text-[13px] font-medium text-[#2A1A12]">
+              {rating > 0 ? "Thanks for rating" : "How was it?"}
+            </p>
+            <div className="flex justify-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  aria-label={`Rate ${s} star${s > 1 ? "s" : ""}`}
+                  disabled={rating > 0}
+                  onClick={() => handleRate(s)}
+                  onMouseEnter={() => !rating && setHoverRating(s)}
+                  onMouseLeave={() => setHoverRating(0)}
+                >
+                  <Star size={28} className={cn("transition-colors", (hoverRating || rating) >= s ? "fill-[#E9A56B] text-[#E9A56B]" : "text-[rgba(42,26,18,0.12)]")} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Meet the writer */}
+          <div className="mt-7">
+            <h2 className="mb-2.5 px-0.5 text-[13px] font-semibold text-[#2A1A12]">Meet the writer</h2>
+            <div className="rounded-[18px] border border-[rgba(42,26,18,0.08)] bg-white p-[18px] shadow-[0_12px_32px_-22px_rgba(42,26,18,0.55)]">
+              <Link href={`/kekere/writer/${story.authorId}`} className="group flex items-center gap-3.5">
+                <div
+                  className="flex h-[58px] w-[58px] flex-none items-center justify-center overflow-hidden rounded-full p-[3px]"
+                  style={{ background: story.authorAvatarColor ?? "#C75D2C" }}
+                >
+                  <div
+                    className="flex h-full w-full items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[22px] font-semibold text-white"
+                    style={{ background: `linear-gradient(135deg, #E08A4A, ${story.authorAvatarColor ?? "#C75D2C"})` }}
+                  >
+                    {story.authorAvatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={story.authorAvatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      story.authorName.trim().charAt(0).toUpperCase() || "?"
+                    )}
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate font-[family-name:var(--font-display)] text-[19px] font-semibold leading-tight text-[#2A1A12] transition-colors group-hover:text-[#C75D2C]">
+                    {story.authorName}
+                  </span>
+                  {authorCountry && (
+                    <span className="mt-1 flex items-center gap-1 text-[12.5px] text-[#A08C7C]">
+                      <MapPin size={12} className="flex-none" /> Writer from {authorCountry}
+                    </span>
+                  )}
+                </div>
+              </Link>
+
+              {story.authorBio && (
+                <p className="mt-3.5 text-[13.5px] leading-[1.55] text-[#6B5744]">{story.authorBio}</p>
+              )}
+
+              <div className="mt-4 flex items-center gap-2.5">
+                {!isOwnStory && (
+                  <FollowButton
+                    writerId={story.authorId}
+                    isLoggedIn={isLoggedIn}
+                    initialFollowing={initialFollowing}
+                    variant="full"
+                    className="flex-1"
+                  />
+                )}
+                <Link
+                  href={`/kekere/writer/${story.authorId}`}
+                  className={cn(
+                    "flex items-center justify-center gap-1 rounded-full border border-[rgba(42,26,18,0.16)] px-5 py-[10px] text-sm font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/40 hover:text-[#C75D2C]",
+                    isOwnStory && "flex-1",
+                  )}
+                >
+                  View profile <ArrowUpRight size={15} className="flex-none" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Note to writer */}
+          {(noteEligible || noteAlreadySent) && (
+            <div className="mt-[14px] rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
+              <p className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-[#2A1A12]">
+                <PenLine size={14} className="text-[#C75D2C]" /> Send a note to {story.authorName}
+              </p>
+              {noteSent || noteAlreadySent ? (
+                <p className="flex items-center gap-1.5 text-[13px] text-[#1F8A5B]">
+                  <Check size={14} /> Sent — {story.authorName} will see it next time they check Kekere.
+                </p>
+              ) : (
+                <>
+                  <textarea
+                    value={noteBody}
+                    onChange={(e) => setNoteBody(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder={`Tell ${story.authorName} what stuck with you…`}
+                    disabled={noteSending}
+                    className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2.5 text-[13.5px] text-[#2A1A12] transition-colors focus:border-[#C75D2C] focus:outline-none disabled:opacity-60"
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[11px] text-[#A08C7C]">{noteBody.length} / 500</span>
+                    <button
+                      type="button"
+                      onClick={handleSendNote}
+                      disabled={noteSending || !noteBody.trim()}
+                      className="flex items-center gap-1.5 rounded-[10px] bg-[#C75D2C] px-3.5 py-2 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      <Send size={13} /> {noteSending ? "Sending…" : "Send note"}
+                    </button>
+                  </div>
+                  {noteError && <p className="mt-2 text-[12px] text-[#A13A3A]">{noteError}</p>}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Tip section */}
+          {isLoggedIn && (
+            <div className="mt-[14px] rounded-[16px] bg-[#2A1A12] px-4 py-4 text-center">
+              <p className="text-[13px] font-medium text-white/80">Tip {story.authorName}</p>
+              <div className="mt-1 text-[12px] text-[#A08C7C]">Balance: {balance} cowries</div>
+              {tipped ? (
+                <div className="mt-2 flex items-center justify-center gap-1.5 text-[#5FD39A]">
+                  <Check size={14} /> <span className="text-[12px] font-medium">Tipped 1 cowry. Thank you!</span>
+                </div>
+              ) : (
+                <>
+                  {tipError && <p className="mt-2 text-[12px] text-[#E9A56B]">{tipError}</p>}
                   <button
                     type="button"
-                    onClick={handleSendNote}
-                    disabled={noteSending || !noteBody.trim()}
-                    className="flex-none cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-2 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    disabled={tipping}
+                    onClick={balance >= 1 ? handleTip : () => setShowNoCowryModal(true)}
+                    className="mx-auto mt-3 flex items-center gap-2 rounded-[10px] bg-[#C75D2C] px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
                   >
-                    {noteSending ? "Sending…" : "Send note"}
+                    <Send size={14} /> {tipping ? "Sending…" : "Send tip · 1 cowrie"}
                   </button>
-                </div>
-                {noteError && <p className="text-[12px] text-[#E9A56B]">{noteError}</p>}
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setNoteComposerOpen(true)}
-                className="w-full cursor-pointer rounded-[10px] border border-[var(--color-primary)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-muted)]"
-              >
-                Send a note to {story.authorName}
-              </button>
-            )}
-          </div>
-        )}
-
-        {isLoggedIn && (
-          <div className="mt-7 flex w-full max-w-[280px] flex-col items-center gap-3">
-            {tipped ? (
-              <p className="text-sm text-[var(--color-success)]">Tipped 1 cowry. Thank you!</p>
-            ) : balance >= 1 ? (
-              <button
-                type="button"
-                disabled={tipping}
-                onClick={handleTip}
-                className="w-full cursor-pointer rounded-[10px] border border-[var(--color-primary)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary-muted)] disabled:opacity-50"
-              >
-                {tipping ? "Tipping…" : "Tip 1 cowry"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowNoCowryModal(true)}
-                className="w-full cursor-pointer rounded-[10px] border border-dashed border-[rgba(42,26,18,0.2)] bg-transparent px-4 py-[13px] text-[15px] font-semibold text-[var(--color-ink-muted-2)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-              >
-                Tip 1 cowry
-              </button>
-            )}
-            <p className="text-[11px] text-[var(--color-ink-muted-3)]">
-              All tips go straight to the writer
-            </p>
-            {tipError && (
-              <p className="text-sm text-[#A13A3A]">{tipError}</p>
-            )}
-          </div>
-        )}
-
-        {/* Share this story */}
-        <div className="mt-8 w-full max-w-[300px]">
-          <h3 className="mb-2.5 text-left text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ink-muted-2)]">
-            Share this story
-          </h3>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={handleShare}
-              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] border px-4 py-3 text-[14px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]"
-              style={{ borderColor: theme.border }}
-            >
-              {shareCopied ? <><Check size={16} /> Copied</> : <><Copy size={16} /> Copy link</>}
-            </button>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 rounded-[12px] bg-[#25D366] px-4 py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              <MessageCircle size={16} /> WhatsApp
-            </a>
-          </div>
-          {isLoggedIn && referralCode && (
-            <p className="mt-2 text-[11px] leading-[1.45] text-[var(--color-ink-muted-3)]">
-              Your invite link is attached — earn 3 cowries when someone new to Kekere joins through it and buys their first cowries.
-            </p>
+                </>
+              )}
+            </div>
           )}
-        </div>
 
-        <Link
-          href="/kekere/feed"
-          className="mt-8 block w-full max-w-[300px] rounded-[12px] bg-[var(--color-primary)] px-4 py-[15px] text-center text-[15px] font-semibold text-white"
-        >
-          Back to feed
-        </Link>
-      </div>
+          {/* Share this story */}
+          <div className="mt-7">
+            <h2 className="mb-2.5 px-0.5 text-[13px] font-semibold text-[#2A1A12]">Share this story</h2>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white py-3 text-[13px] font-medium text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30"
+              >
+                {shareCopied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy link</>}
+              </button>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#25D366] py-3 text-[13px] font-medium text-white transition-opacity hover:opacity-90"
+              >
+                <MessageCircle size={15} /> WhatsApp
+              </a>
+            </div>
+            {isLoggedIn && referralCode && (
+              <p className="mt-2 text-center text-[11px] leading-[1.45] text-[#A08C7C]">
+                Your invite link is attached — earn 3 cowries when someone new to Kekere joins through it and buys their first cowries.
+              </p>
+            )}
+          </div>
+
+          <Link
+            href="/kekere/feed"
+            className="mt-6 flex w-full items-center justify-center rounded-[13px] bg-[#C75D2C] py-3.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Back to feed
+          </Link>
+        </div>
       </div>
 
       {showNoCowryModal && (

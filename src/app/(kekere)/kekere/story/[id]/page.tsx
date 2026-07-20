@@ -14,6 +14,7 @@ import { getCurrentSession } from "@/lib/auth/middleware";
 import { storyCoverOgImageUrl } from "@/lib/storage/cloudinary";
 import { JsonLd } from "@/components/seo/json-ld";
 import { creativeWorkSchema, breadcrumbSchema } from "@/lib/seo/schema";
+import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -55,13 +56,16 @@ export default async function KekereStoryPage({ params }: { params: { id: string
   const dbStory = await getStoryForReader(params.id, userId);
   if (!dbStory) notFound();
 
-  const [saved, wallet, rating, following, noteEligibility, referralCode] = await Promise.all([
+  const [saved, wallet, rating, following, noteEligibility, referralCode, authorExtra] = await Promise.all([
     userId ? isStorySaved(userId, params.id) : Promise.resolve(false),
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getStoryRating(userId, params.id) : Promise.resolve(null),
     userId ? isFollowing(userId, dbStory.author.id) : Promise.resolve(false),
     userId ? getNoteEligibilityForStory(userId, params.id) : Promise.resolve({ eligible: false, alreadySent: false }),
     userId ? getOrCreateReferralCodeForUser(userId) : Promise.resolve(null),
+    // Country isn't part of the shared story author-include; grab it here so
+    // the finish overlay's "Meet the writer" card reads like a real profile.
+    prisma.user.findUnique({ where: { id: dbStory.author.id }, select: { country: true } }),
   ]);
 
   return (
@@ -96,6 +100,7 @@ export default async function KekereStoryPage({ params }: { params: { id: string
         noteEligible={noteEligibility.eligible}
         noteAlreadySent={noteEligibility.alreadySent}
         referralCode={referralCode}
+        authorCountry={authorExtra?.country ?? null}
       />
     </KekereTheme>
   );
