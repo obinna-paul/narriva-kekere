@@ -45,8 +45,11 @@ async function computeCurrentStreakTx(
  * newly-completed day lands exactly on a streak milestone — credits the
  * cowrie reward and notifies them. Idempotent (a second call the same day
  * is a no-op) and never throws: this is a best-effort bonus layered on top
- * of reading-progress saves, not part of that save's critical path, so a
- * failure here must never break the caller.
+ * of a story completion, not part of that completion's critical path, so a
+ * failure here must never break the caller. Called only from the story
+ * "complete" route, and only for a first-ever completion of a given story —
+ * so the streak reflects finishing unique stories, not scrolling or
+ * re-reading (see that route for the gating).
  */
 export async function recordReadingActivity(userId: string): Promise<void> {
   try {
