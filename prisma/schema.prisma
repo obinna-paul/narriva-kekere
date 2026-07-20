@@ -488,6 +488,7 @@ model Story {
   versions           StoryVersion[]
   paragraphComments  ParagraphComment[]
   paragraphReactions ParagraphReaction[]
+  editorialComments  EditorialComment[]
   tags               StoryTag[]
   kekereContracts    KekereContract[]
   notes              Note[]
@@ -535,6 +536,35 @@ model ParagraphComment {
 
   @@index([storyId, paragraphId])
   @@index([storyId, createdAt])
+}
+
+enum EditorialCommentStatus {
+  OPEN
+  RESOLVED
+}
+
+// A private admin↔writer editorial note anchored to a specific paragraph of a
+// story under review — the reviewer's "look at this line" markers. Distinct
+// from ParagraphComment (the public reader-facing margin notes): different
+// audience, different lifecycle (these are resolved once addressed and never
+// shown to readers). Anchors the same way — a paragraph attrs.id from the
+// story's Tiptap doc (the editorial working copy, editedBody ?? body) — but
+// is its own table so the reader feature stays clean.
+model EditorialComment {
+  id            String                 @id @default(cuid())
+  storyId       String
+  story         Story                  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  paragraphId   String
+  // No relation — the author is an admin; stored for audit only, same
+  // convention as Story.authoredByAdminId / Report.resolvedByAdminId.
+  authorAdminId String
+  body          String
+  status        EditorialCommentStatus @default(OPEN)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  @@index([storyId, paragraphId])
+  @@index([storyId, status])
 }
 
 model ParagraphReaction {

@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
-import { docToHtml, isValidTiptapDoc, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { isValidTiptapDoc, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { SaveStatus } from "@/lib/tiptap/save-status";
+import { ReviewEditorialComments } from "@/components/admin/views/review-editorial-comments";
 
 interface QueueStory {
   id: string;
@@ -461,6 +462,7 @@ export function StoryReviewQueue() {
   const [editData, setEditData] = useState<ReviewEdit | null>(null);
   const [hasEdits, setHasEdits] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>({ kind: "idle" });
+  const [commentCount, setCommentCount] = useState(0);
 
   const editorRef = useRef<StoryEditorHandle>(null);
   const hookSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -529,6 +531,7 @@ export function StoryReviewQueue() {
     setDetailLoading(true);
     setEditingContent(false);
     setSaveStatus({ kind: "idle" });
+    setCommentCount(0);
     try {
       const [reviewRes, editRes] = await Promise.all([
         fetch(`/api/admin/kekere/stories/${id}/review`),
@@ -765,6 +768,11 @@ export function StoryReviewQueue() {
                     Edited
                   </span>
                 )}
+                {commentCount > 0 && (
+                  <span className="rounded-full bg-[rgba(31,138,91,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#1F8A5B]">
+                    {commentCount} note{commentCount === 1 ? "" : "s"} for writer
+                  </span>
+                )}
                 {(() => {
                   const label = saveStatusLabel(saveStatus);
                   if (!label) return null;
@@ -860,11 +868,11 @@ export function StoryReviewQueue() {
                 </p>
               </div>
             ) : (
-              <div
-                className="story-reader-prose prose prose-sm max-w-none text-[15px] leading-[1.75] text-[#1A1C20] [&_em]:italic [&_strong]:font-bold [&_u]:underline [&_p]:mb-[1.25em]"
-                dangerouslySetInnerHTML={{
-                  __html: docToHtml(editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC),
-                }}
+              <ReviewEditorialComments
+                key={selected.id}
+                storyId={selected.id}
+                doc={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC}
+                onCountChange={setCommentCount}
               />
             )}
 

@@ -151,6 +151,25 @@ export function docToHtml(doc: TiptapDoc): string {
     .join("\n");
 }
 
+export interface ParagraphHtml {
+  /** attrs.id, or "" if the paragraph has none (can't be commented on). */
+  id: string;
+  /** Inner HTML with bold/italic/underline/strike marks preserved. */
+  html: string;
+  textAlign?: "left" | "center" | "right";
+}
+
+/** Per-paragraph inner HTML (marks preserved) plus the paragraph id — lets a
+ * React consumer render each paragraph as its own element (e.g. to hang an
+ * inline editorial-comment pin off it) instead of one opaque HTML blob. */
+export function docParagraphsToHtml(doc: TiptapDoc): ParagraphHtml[] {
+  return (doc?.content ?? []).map((node) => ({
+    id: node.attrs?.id ?? "",
+    html: (node.content ?? []).map(textNodeToHtml).join(""),
+    textAlign: node.attrs?.textAlign,
+  }));
+}
+
 /**
  * Truncates a doc to roughly the first `fraction` of its plain-text length,
  * cutting at a word boundary and appending an ellipsis — the JSON-doc
