@@ -15,6 +15,7 @@ import {
   pickRandomGreeting,
   renderGreeting,
   getGreetingTimeOfDay,
+  GREETING_ROTATION_MS,
   type GreetingPersonalization,
 } from "@/content/kekere-feed-greetings";
 
@@ -217,22 +218,24 @@ export function FeedContent({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [tagOpen]);
 
-  // The greeting should hold steady for a good stretch — reloading the
-  // feed, or navigating away and back, must NOT change it. It only moves on
-  // once the time-of-day bucket itself has moved on (morning → afternoon →
-  // evening → night, each spanning several hours — see getGreetingTimeOfDay)
-  // since the line was last picked, which is what actually gives "a
-  // frequent user notices it change 2-3 times a day, a casual user maybe
-  // once." Tracked in localStorage (per reader) so it survives reloads, not
-  // just re-renders. Runs client-only (after the server-rendered
-  // deterministic `initialGreeting` has already painted) so this can safely
-  // touch localStorage and Math.random() without a hydration mismatch.
+  // The greeting holds steady for GREETING_ROTATION_MS (30 min) — reloading
+  // the feed, or navigating away and straight back, must NOT change it
+  // inside that window. Past the window (or once the time-of-day bucket has
+  // flipped, e.g. afternoon → evening), the next visit rolls a fresh line.
+  // That's what gives "changes several times a day for an engaged reader,
+  // stays put within a session" without the reload-churn the fixed-slot
+  // version avoided by going too static. Tracked in localStorage (per
+  // reader) so it survives reloads, not just re-renders. Runs client-only
+  // (after the server-rendered deterministic `initialGreeting` has already
+  // painted) so this can safely touch localStorage and Math.random() without
+  // a hydration mismatch.
   useEffect(() => {
     if (!greetingUserId) return;
     const storageKey = `kekere:lastGreeting:${greetingUserId}`;
+    const now = Date.now();
     const currentTimeOfDay = getGreetingTimeOfDay();
 
-    let stored: { text: string; timeOfDay: string } | null = null;
+    let stored: { text: string; timeOfDay: string; ts?: number } | null = null;
     try {
       const raw = window.localStorage.getItem(storageKey);
       stored = raw ? JSON.parse(raw) : null;
@@ -241,10 +244,23 @@ export function FeedContent({
       // as "nothing stored" rather than breaking the greeting.
     }
 
-    if (stored && stored.timeOfDay === currentTimeOfDay && stored.text) {
-      // Still the same time-of-day window as last time it was rolled —
-      // keep showing exactly what was shown then, no matter how many times
-      // this mounts in the meantime.
+    const persist = (text: string) => {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify({ text, timeOfDay: currentTimeOfDay, ts: now }));
+      } catch {
+        // Non-fatal — greeting still displays via component state.
+      }
+    };
+
+    if (
+      stored?.text &&
+      typeof stored.ts === "number" &&
+      now - stored.ts < GREETING_ROTATION_MS &&
+      stored.timeOfDay === currentTimeOfDay
+    ) {
+      // Still inside the rotation window and the same time-of-day — keep
+      // showing exactly what was shown, no matter how many times this
+      // mounts in the meantime.
       setGreeting(stored.text);
       return;
     }
@@ -252,27 +268,21 @@ export function FeedContent({
     if (!stored) {
       // First time ever on this device — adopt the server-rendered greeting
       // as the baseline rather than immediately rerolling over it, so there
-      // is no visible flash on a brand-new session.
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify({ text: initialGreeting, timeOfDay: currentTimeOfDay }));
-      } catch {
-        // Non-fatal — greeting still displays via the initialGreeting state.
-      }
+      // is no visible flash on a brand-new session. Its rotation clock
+      // starts now.
+      persist(initialGreeting);
       return;
     }
 
-    // The time-of-day bucket has moved on since the last roll — time for a
-    // fresh pick, at random, never immediately repeating the last one shown.
+    // The rotation window has elapsed (or the time-of-day bucket flipped, or
+    // this is an older stored entry with no timestamp) — fresh pick, at
+    // random, never immediately repeating the last one shown.
     const pool = buildGreetingPool(greetingPersonalization);
     const chosen = pickRandomGreeting(pool, stored.text);
     const text = renderGreeting(chosen, greetingPersonalization);
 
     setGreeting(text);
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify({ text, timeOfDay: currentTimeOfDay }));
-    } catch {
-      // Ignore — same non-fatal storage-unavailable case as above.
-    }
+    persist(text);
     // Intentionally mount-only: this check belongs on a fresh page load,
     // not on every re-render this component happens to go through.
     // eslint-disable-next-line react-hooks/exhaustive-deps
