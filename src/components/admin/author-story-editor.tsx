@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, X, Upload, ImageIcon, Check, RefreshCw } from "lucide-react";
+import { ShieldAlert, Sparkles, X, Upload, ImageIcon, Check, RefreshCw } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { categoryForTag } from "@/content/story-tags";
 import { formatRelativeTime } from "@/lib/tiptap/save-status";
@@ -39,6 +39,7 @@ interface AdminDraft {
   hookLine: string;
   tier: string;
   cowrieCost: number;
+  isAdult: boolean;
   coverImageRef: string | null;
   coverPreviewUrl: string | null;
   tagIds: string[];
@@ -87,6 +88,7 @@ async function loadDraft(writerId: string): Promise<AdminDraft | null> {
       hookLine: idb.hookLine,
       tier: "STANDARD",
       cowrieCost: 5,
+      isAdult: false,
       coverImageRef: null,
       coverPreviewUrl: null,
       tagIds: [],
@@ -155,6 +157,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const [hookLine, setHookLine] = useState("");
   const [tier, setTier] = useState<string>("STANDARD");
   const [cowrieCost, setCowrieCost] = useState(5);
+  const [isAdult, setIsAdult] = useState(false);
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
@@ -168,6 +171,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
   const [suggestion, setSuggestion] = useState<{
     tags: { slug: string; label: string; feedHeading: string }[];
     hookLine: string;
+    isAdult: boolean | null;
   } | null>(null);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const suggestionHistoryRef = useRef<{ tagSlugs: string[]; hookLine: string }[]>([]);
@@ -209,6 +213,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         setHookLine(draft.hookLine);
         setTier(draft.tier);
         setCowrieCost(draft.cowrieCost);
+        setIsAdult(draft.isAdult ?? false);
         setCoverImageRef(draft.coverImageRef);
         setCoverPreviewUrl(draft.coverPreviewUrl);
         setTagIds(draft.tagIds);
@@ -248,6 +253,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         hookLine,
         tier,
         cowrieCost,
+        isAdult,
         coverImageRef,
         coverPreviewUrl,
         tagIds,
@@ -258,7 +264,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, 1200);
-  }, [draftChecked, writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
+  }, [draftChecked, writerId, title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
 
   // Covers every field except the editor body (which has no onChange of its
   // own to hook — see onWordCountChange on <StoryEditor> below).
@@ -273,7 +279,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       clearTimeout(saveTimerRef.current);
       const body = editorRef.current?.getContent();
       if (!body) return;
-      void saveDraft(writerId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
+      void saveDraft(writerId, { title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds, body });
     }
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") flush();
@@ -285,7 +291,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [writerId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds]);
+  }, [writerId, title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds]);
 
   function discardDraft() {
     if (!window.confirm("Discard this draft and start over? This can't be undone.")) return;
@@ -294,6 +300,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
     setHookLine("");
     setTier("STANDARD");
     setCowrieCost(5);
+    setIsAdult(false);
     setCoverImageRef(null);
     setCoverPreviewUrl(null);
     setTagIds([]);
@@ -375,6 +382,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         setSuggestion({
           tags: data.suggestedTags ?? [],
           hookLine: data.suggestedHookLine ?? "",
+          isAdult: typeof data.suggestedIsAdult === "boolean" ? data.suggestedIsAdult : null,
         });
       } else {
         setSuggestionError("No useful suggestions returned");
@@ -399,6 +407,10 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
         .filter((id): id is string => !!id)
         .slice(0, 2);
       if (matchedIds.length > 0) setTagIds(matchedIds);
+    }
+
+    if (suggestion.isAdult !== null) {
+      setIsAdult(suggestion.isAdult);
     }
 
     setSuggestion(null);
@@ -487,6 +499,7 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
           body: bodyContent,
           tier,
           cowrieCost,
+          isAdult,
           genre: derivedGenre,
           coverColor: "#C75D2C",
           coverImageRef: coverImageRef ?? undefined,
@@ -648,6 +661,24 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               </div>
             )}
 
+            {suggestion.isAdult !== null && (
+              <div className="mb-3">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[rgba(31,75,75,0.55)]">
+                  Suggested content rating
+                </span>
+                <div className="mt-1 flex items-center gap-1.5">
+                  {suggestion.isAdult ? (
+                    <ShieldAlert size={13} className="text-[#A13A3A]" />
+                  ) : (
+                    <Check size={13} className="text-[#1F8A5B]" />
+                  )}
+                  <span className="text-[13px] font-medium text-[#2A1A12]">
+                    {suggestion.isAdult ? "18+ mature content" : "Safe for all readers"}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -731,6 +762,36 @@ export function AuthorStoryEditor({ writerId, writerName }: AuthorStoryEditorPro
               <span className="w-6 text-center text-[15px] font-bold text-[#15171C]">{cowrieCost}</span>
             </div>
           </div>
+        </div>
+
+        {/* Mature content toggle */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setIsAdult((v) => !v)}
+            className={`flex w-full items-center justify-between rounded-[9px] border px-3.5 py-3 transition-colors ${
+              isAdult ? "border-[#A13A3A]/30 bg-[rgba(161,58,58,0.06)]" : "border-[rgba(20,22,26,0.12)] bg-white"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-[13px] font-semibold text-[#15171C]">
+              <ShieldAlert size={15} className={isAdult ? "text-[#A13A3A]" : "text-[#9AA0A8]"} />
+              18+ mature content
+            </span>
+            <span
+              className={`relative h-5 w-9 flex-none rounded-full transition-colors ${
+                isAdult ? "bg-[#A13A3A]" : "bg-[rgba(20,22,26,0.18)]"
+              }`}
+            >
+              <span
+                className={`absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
+                  isAdult ? "translate-x-[18px]" : "translate-x-[2px]"
+                }`}
+              />
+            </span>
+          </button>
+          <p className="mt-1 text-[11px] text-[#9AA0A8]">
+            Readers see an 18+ warning before opening this story, and a mature badge on its cover.
+          </p>
         </div>
 
         {/* Cover upload */}

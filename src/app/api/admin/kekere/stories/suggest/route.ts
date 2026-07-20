@@ -82,9 +82,12 @@ ${TAG_CATALOG}
    - Match the story's own tone exactly. A horror story earns an unsettling hook, never a witty one. A comedy earns a genuinely funny line, not a flat description of what happens. A grief or heartbreak story earns quiet, precise devastation — not melodrama, not a joke.
    - No quotation marks in your answer (the app adds those). No em-dash cliché ("not just X — it's Y"). No generic superlatives like "unforgettable," "gripping," or "powerful," and no synopsis openers like "In a world where...", "This is the story of...", or "Follow [name] as..." — those are what a hook fails to be, not what it says.
 
+3. RATING — a separate, blunt safety check, independent of the tags above: should this story sit behind an 18+ age gate? Answer MATURE if the story contains explicit sexual content, graphic violence or gore, or genuinely disturbing/traumatic material (torture, self-harm, extreme abuse) described in detail rather than implied. Answer SAFE for everything else, including stories that are dark, sad, scary, or contain a tag like "erotic" for mild/implied romantic content — the bar is graphic, on-the-page depiction, not subject matter alone. When genuinely unsure, prefer SAFE; this is a first pass for a human admin to confirm, not a final call.
+
 Reply in this exact format (each on its own line):
 TAGS: <slug>[, <slug>]
-HOOK: <hookline>`;
+HOOK: <hookline>
+RATING: SAFE or MATURE`;
 
 export const POST = withAuth(async (request) => {
   const body = await request.json().catch(() => null);
@@ -128,7 +131,7 @@ export const POST = withAuth(async (request) => {
         ],
         // Nudge more variety on a regenerate request than the first pass.
         temperature: avoidSection ? 0.95 : 0.75,
-        max_tokens: 220,
+        max_tokens: 240,
       }),
       signal: AbortSignal.timeout(15000),
     });
@@ -145,6 +148,7 @@ export const POST = withAuth(async (request) => {
 
     const tagMatch = raw.match(/TAGS?:\s*(.+)/i);
     const hookMatch = raw.match(/HOOK:\s*(.+)/i);
+    const ratingMatch = raw.match(/RATING:\s*(SAFE|MATURE)/i);
 
     const suggestedSlugs = (tagMatch?.[1] ?? "")
       .split(",")
@@ -173,6 +177,10 @@ export const POST = withAuth(async (request) => {
 
     if (suggestedHook && suggestedHook.length <= 150) {
       result.suggestedHookLine = suggestedHook.replace(/^["']|["']$/g, "");
+    }
+
+    if (ratingMatch) {
+      result.suggestedIsAdult = ratingMatch[1].toUpperCase() === "MATURE";
     }
 
     if (Object.keys(result).length === 0) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ImageIcon, Pencil, Sparkles, X } from "lucide-react";
+import { ImageIcon, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -23,6 +23,7 @@ interface StoryDetail extends QueueStory {
   hookLine: string;
   body: string | object;
   readingTime: number;
+  isAdult: boolean;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -68,8 +69,8 @@ interface NewTagSuggestion {
 }
 
 interface DecisionPanelProps {
-  story: QueueStory;
-  onAction: (action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[]) => void;
+  story: StoryDetail;
+  onAction: (action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) => void;
   acting: boolean;
   coverImageRef: string | null;
   coverPreview: string | null;
@@ -82,6 +83,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [isAdult, setIsAdult] = useState(story.isAdult);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const tagError = tab === "publish" && (tagIds.length < 1 || tagIds.length > 2);
@@ -91,12 +93,14 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<TagSuggestion[] | null>(null);
   const [newTagSuggestion, setNewTagSuggestion] = useState<NewTagSuggestion | null>(null);
+  const [suggestedIsAdult, setSuggestedIsAdult] = useState<boolean | null>(null);
   const [suggestError, setSuggestError] = useState<string | null>(null);
 
   async function handleSuggestTags() {
     setSuggesting(true);
     setSuggestions(null);
     setNewTagSuggestion(null);
+    setSuggestedIsAdult(null);
     setSuggestError(null);
     try {
       const res = await fetch(`/api/admin/kekere/stories/${story.id}/suggest-tags`, { method: "POST" });
@@ -104,6 +108,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
       const data = await res.json();
       setSuggestions(data.suggestions ?? []);
       setNewTagSuggestion(data.newTag ?? null);
+      setSuggestedIsAdult(typeof data.isAdult === "boolean" ? data.isAdult : null);
     } catch {
       setSuggestError("Nari couldn't read the story right now. Try again.");
     } finally {
@@ -114,6 +119,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   function applySuggestions() {
     if (!suggestions || suggestions.length === 0) return;
     setTagIds(suggestions.slice(0, 2).map((s) => s.id));
+    if (suggestedIsAdult !== null) setIsAdult(suggestedIsAdult);
     setSuggestions(null);
     setNewTagSuggestion(null);
   }
@@ -228,6 +234,41 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
             </div>
           </div>
 
+          {/* Mature content toggle */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setIsAdult((v) => !v)}
+              className={cn(
+                "flex w-full items-center justify-between rounded-[8px] border px-3 py-2.5 transition-colors",
+                isAdult ? "border-[#A13A3A]/30 bg-[rgba(161,58,58,0.06)]" : "border-[rgba(20,22,26,0.14)] bg-[#F4F5F7]"
+              )}
+            >
+              <span className="flex items-center gap-2 text-[12px] font-semibold text-[#1A1C20]">
+                <ShieldAlert size={14} className={isAdult ? "text-[#A13A3A]" : "text-[#9AA0A8]"} />
+                18+ mature content
+              </span>
+              <span
+                className={cn(
+                  "relative h-5 w-9 flex-none rounded-full transition-colors",
+                  isAdult ? "bg-[#A13A3A]" : "bg-[rgba(20,22,26,0.18)]"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform",
+                    isAdult ? "translate-x-[18px]" : "translate-x-[2px]"
+                  )}
+                />
+              </span>
+            </button>
+            {isAdult && (
+              <p className="mt-1.5 text-[10px] text-[#8B919A]">
+                Readers see an 18+ warning before opening this story, and a mature badge on its cover.
+              </p>
+            )}
+          </div>
+
           {/* Tags */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
@@ -264,6 +305,29 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                 >
                   Use these tags
                 </button>
+              </div>
+            )}
+
+            {/* Nari's content-rating suggestion */}
+            {suggestedIsAdult !== null && (
+              <div className="mb-2 flex items-center justify-between rounded-[8px] border border-[rgba(107,33,168,0.18)] bg-[rgba(107,33,168,0.04)] px-3 py-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#1A1C20]">
+                  {suggestedIsAdult ? (
+                    <ShieldAlert size={12} className="text-[#A13A3A]" />
+                  ) : (
+                    <ShieldAlert size={12} className="text-[#9AA0A8]" />
+                  )}
+                  Nari suggests: {suggestedIsAdult ? "18+ mature content" : "Safe for all readers"}
+                </span>
+                {suggestedIsAdult !== isAdult && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAdult(suggestedIsAdult)}
+                    className="rounded-[6px] bg-[#6B21A8] px-2 py-1 text-[10px] font-semibold text-white hover:bg-[#5a1a8f]"
+                  >
+                    Apply
+                  </button>
+                )}
               </div>
             )}
 
@@ -334,7 +398,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
       <button
         type="button"
         disabled={acting || (tab !== "publish" && !note.trim()) || (tab === "publish" && (tagIds.length === 0 || coverError))}
-        onClick={() => onAction(tab, note, cowrieCost, tagIds)}
+        onClick={() => onAction(tab, note, cowrieCost, tagIds, isAdult)}
         className={cn(
           "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
           tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
@@ -480,7 +544,7 @@ export function StoryReviewQueue() {
     }
   }
 
-  async function handleAction(action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[]) {
+  async function handleAction(action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) {
     if (!selectedId || !selected) return;
     setActing(true);
 
@@ -498,6 +562,7 @@ export function StoryReviewQueue() {
             cowrieCost,
             tier: selected.tier,
             tagIds,
+            isAdult,
             ...(coverImageRef ? { coverImageRef } : {}),
             ...(draftHookLine !== originalHookLine ? { hookLineOverride: draftHookLine } : {}),
             ...(draftBody !== originalBody ? { bodyOverride: draftBody } : {}),

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { ReportModal, type ReportTargetType } from "@/components/kekere/ReportModal";
@@ -28,6 +28,10 @@ import type { MockStory } from "@/content/mock/kekere-stories";
 type ReaderTheme = "white" | "cream" | "dark";
 
 const READER_THEME_STORAGE_KEY = "kekere-reader-theme";
+// Once set, a reader isn't re-prompted on this device for any other 18+
+// story either — a single "yes I'm 18+" is treated as standing, matching
+// how most mature-content sites gate once per device rather than per title.
+const AGE_CONFIRMED_STORAGE_KEY = "kekere-age-18-confirmed";
 
 const READER_THEMES: Record<
   ReaderTheme,
@@ -214,6 +218,35 @@ export function StoryReader({
       // ignore unavailable storage
     }
   }, []);
+
+  // Age gate: starts gated on the server (and on the client's first render,
+  // matching it exactly) whenever the story is marked 18+ — this is the
+  // *safe* default, since localStorage can't be read until after mount and
+  // the reader must never flash mature content before confirmation. Once
+  // mounted, a returning reader who already confirmed once on this device
+  // is un-gated immediately; a first-time reader stays gated until they
+  // click through.
+  const [ageGated, setAgeGated] = useState(story.isAdult && !isOwnStory);
+  useEffect(() => {
+    if (!story.isAdult || isOwnStory) return;
+    try {
+      if (localStorage.getItem(AGE_CONFIRMED_STORAGE_KEY) === "true") {
+        setAgeGated(false);
+      }
+    } catch {
+      // ignore unavailable storage — stays gated, which is the safe default
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function confirmAge() {
+    try {
+      localStorage.setItem(AGE_CONFIRMED_STORAGE_KEY, "true");
+    } catch {
+      // ignore unavailable storage — the gate will just reappear next visit
+    }
+    setAgeGated(false);
+  }
 
   useEffect(() => {
     try {
@@ -488,6 +521,37 @@ export function StoryReader({
     } finally {
       setNoteSending(false);
     }
+  }
+
+  if (ageGated) {
+    return (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#F5EBDD] px-7 text-center">
+        <div className="w-full max-w-[340px]">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#A13A3A]/10">
+            <ShieldAlert size={26} className="text-[#A13A3A]" />
+          </div>
+          <h1 className="mt-5 font-[family-name:var(--font-display)] text-[22px] font-semibold leading-[1.2] text-[#2A1A12]">
+            This story contains mature content
+          </h1>
+          <p className="mt-3 text-[14px] leading-[1.55] text-[#6B5744]">
+            &ldquo;{story.title}&rdquo; is intended for readers 18 and older. By continuing, you confirm that you are at least 18 years old.
+          </p>
+          <button
+            type="button"
+            onClick={confirmAge}
+            className="mt-6 flex w-full items-center justify-center rounded-[13px] bg-[#C75D2C] py-3.5 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Yes, I&apos;m 18 or older
+          </button>
+          <Link
+            href="/kekere/feed"
+            className="mt-3 flex w-full items-center justify-center rounded-[13px] border border-[rgba(42,26,18,0.16)] py-3.5 text-[15px] font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/40"
+          >
+            No, take me back
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (finished) {

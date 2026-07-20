@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { AuthorChip } from "@/components/kekere/author-chip";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 export interface HistoryStory extends MockStory {
@@ -73,6 +74,7 @@ function LibraryCard({
         <span className="absolute right-[6px] top-[6px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[6px] py-[2px] text-[8px] font-bold text-white">
           {story.readingTimeMinutes}m
         </span>
+        {story.isAdult && <MatureBadge className="absolute left-[6px] top-[6px] px-[4px] py-[1px] text-[7.5px]" />}
       </div>
 
       <div className="min-w-0 flex-1">

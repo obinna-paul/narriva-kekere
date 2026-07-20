@@ -3,6 +3,7 @@ import { MapPin, Star } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { PublicWriterProfile, WriterProfileStats, WriterProfileStory } from "@/lib/data/kekere-writer-profile";
 
 function formatCount(n: number): string {
@@ -47,13 +48,14 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
       className="flex gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 transition-colors hover:border-[var(--color-primary)]/40"
     >
       <div
-        className="h-[86px] w-[64px] flex-none overflow-hidden rounded-lg"
+        className="relative h-[86px] w-[64px] flex-none overflow-hidden rounded-lg"
         style={{ backgroundColor: story.coverColor }}
       >
         {story.coverImageRef && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={storyCoverUrl(story.coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" />
         )}
+        {story.isAdult && <MatureBadge className="absolute right-[4px] top-[4px] px-[4px] py-[1px] text-[7.5px]" />}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5">

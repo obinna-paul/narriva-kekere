@@ -17,6 +17,7 @@ const schema = z.object({
   coverColor: z.string().default("#C75D2C"),
   coverImageRef: z.string().optional(),
   tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
+  isAdult: z.boolean().default(false),
 });
 
 // Saves an admin-authored story under a writer's account and creates the
@@ -38,7 +39,7 @@ export const POST = withAuth(async (request, session, { params }) => {
     );
   }
 
-  const { title, hookLine, body: tiptapDoc, tier, cowrieCost, genre, coverColor, coverImageRef, tagIds } = parsed.data;
+  const { title, hookLine, body: tiptapDoc, tier, cowrieCost, genre, coverColor, coverImageRef, tagIds, isAdult } = parsed.data;
 
   const writer = await prisma.user.findUnique({
     where: { id: writerId },
@@ -73,6 +74,7 @@ export const POST = withAuth(async (request, session, { params }) => {
           coverImageRef: coverImageRef ?? null,
           tier,
           cowrieCost,
+          isAdult,
           status: "PENDING_CONTRACT",
           isDraft: false,
           sourceType: "ADMIN_AUTHORED",

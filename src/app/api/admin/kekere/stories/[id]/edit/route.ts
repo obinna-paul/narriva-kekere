@@ -25,6 +25,7 @@ export const GET = withAuth(
         body: true,
         tier: true,
         cowrieCost: true,
+        isAdult: true,
         coverImageRef: true,
         status: true,
         genre: true,
@@ -46,6 +47,7 @@ export const GET = withAuth(
       body: story.body,
       tier: story.tier,
       cowrieCost: story.cowrieCost,
+      isAdult: story.isAdult,
       coverImageRef: story.coverImageRef,
       status: story.status,
       genre: story.genre,
@@ -67,6 +69,7 @@ const editSchema = z.object({
   tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
   // Omitted entirely = keep the existing cover; present = replace it.
   coverImageRef: z.string().optional(),
+  isAdult: z.boolean().optional(),
 });
 
 export const PUT = withAuth(
@@ -84,7 +87,7 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
-    const { title, hookLine, body: tiptapDoc, tier, cowrieCost, tagIds, coverImageRef } = parsed.data;
+    const { title, hookLine, body: tiptapDoc, tier, cowrieCost, tagIds, coverImageRef, isAdult } = parsed.data;
 
     if (!isValidTiptapDoc(tiptapDoc)) {
       return NextResponse.json({ error: "Invalid story content format" }, { status: 400 });
@@ -107,6 +110,7 @@ export const PUT = withAuth(
           cowrieCost,
           lastSavedAt: new Date(),
           ...(coverImageRef ? { coverImageRef } : {}),
+          ...(isAdult !== undefined ? { isAdult } : {}),
         },
       });
 

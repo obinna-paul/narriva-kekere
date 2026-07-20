@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, type CSSProperties } from "react";
 import Link from "next/link";
-import { Sparkles, X, Upload, ImageIcon, Check, RefreshCw } from "lucide-react";
+import { ShieldAlert, Sparkles, X, Upload, ImageIcon, Check, RefreshCw } from "lucide-react";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { categoryForTag } from "@/content/story-tags";
 import { formatRelativeTime } from "@/lib/tiptap/save-status";
@@ -20,6 +20,7 @@ interface AdminStoryEditorInitial {
   body: TiptapDoc;
   tier: string;
   cowrieCost: number;
+  isAdult: boolean;
   coverImageRef: string | null;
   coverPreviewUrl: string | null;
   tagIds: string[];
@@ -63,6 +64,7 @@ interface EditDraft {
   hookLine: string;
   tier: string;
   cowrieCost: number;
+  isAdult: boolean;
   coverImageRef: string | null;
   coverPreviewUrl: string | null;
   tagIds: string[];
@@ -128,6 +130,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
   const [hookLine, setHookLine] = useState(initial.hookLine);
   const [tier, setTier] = useState<string>(initial.tier);
   const [cowrieCost, setCowrieCost] = useState(initial.cowrieCost);
+  const [isAdult, setIsAdult] = useState(initial.isAdult);
   const [coverImageRef, setCoverImageRef] = useState<string | null>(initial.coverImageRef);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(initial.coverPreviewUrl);
   const [tagIds, setTagIds] = useState<string[]>(initial.tagIds);
@@ -172,6 +175,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
       setHookLine(draft.hookLine);
       setTier(draft.tier);
       setCowrieCost(draft.cowrieCost);
+      setIsAdult(draft.isAdult ?? initial.isAdult);
       setCoverImageRef(draft.coverImageRef);
       setCoverPreviewUrl(draft.coverPreviewUrl);
       setTagIds(draft.tagIds);
@@ -212,6 +216,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
         hookLine !== initial.hookLine ||
         tier !== initial.tier ||
         cowrieCost !== initial.cowrieCost ||
+        isAdult !== initial.isAdult ||
         coverImageRef !== initial.coverImageRef ||
         JSON.stringify(tagIds) !== JSON.stringify(initial.tagIds) ||
         extractPlainText(body).trim() !== extractPlainText(initialBody).trim();
@@ -221,6 +226,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
         hookLine,
         tier,
         cowrieCost,
+        isAdult,
         coverImageRef,
         coverPreviewUrl,
         tagIds,
@@ -230,7 +236,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
     }, 1200);
     // initial.* is a stable prop (set once at mount) — safe to omit from deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftChecked, storyId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
+  }, [draftChecked, storyId, title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds, initialBody]);
 
   useEffect(() => {
     scheduleDraftSave();
@@ -241,7 +247,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
       clearTimeout(saveTimerRef.current);
       const body = editorRef.current?.getContent();
       if (!body) return;
-      saveDraftToStorage(storyId, { title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds, body });
+      saveDraftToStorage(storyId, { title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds, body });
     }
     function handleVisibilityChange() {
       if (document.visibilityState === "hidden") flush();
@@ -253,7 +259,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storyId, title, hookLine, tier, cowrieCost, coverImageRef, coverPreviewUrl, tagIds]);
+  }, [storyId, title, hookLine, tier, cowrieCost, isAdult, coverImageRef, coverPreviewUrl, tagIds]);
 
   function discardDraft() {
     if (!window.confirm("Discard this unsaved draft and go back to the last saved version? This can't be undone.")) return;
@@ -262,6 +268,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
     setHookLine(initial.hookLine);
     setTier(initial.tier);
     setCowrieCost(initial.cowrieCost);
+    setIsAdult(initial.isAdult);
     setCoverImageRef(initial.coverImageRef);
     setCoverPreviewUrl(initial.coverPreviewUrl);
     setTagIds(initial.tagIds);
@@ -442,6 +449,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
           body: bodyContent,
           tier,
           cowrieCost,
+          isAdult,
           tagIds,
           ...(coverImageRef ? { coverImageRef } : {}),
         }),
@@ -683,6 +691,36 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
               <span className="w-6 text-center text-[15px] font-bold text-[#15171C]">{cowrieCost}</span>
             </div>
           </div>
+        </div>
+
+        {/* Mature content toggle */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setIsAdult((v) => !v)}
+            className={`flex w-full items-center justify-between rounded-[9px] border px-3.5 py-3 transition-colors ${
+              isAdult ? "border-[#A13A3A]/30 bg-[rgba(161,58,58,0.06)]" : "border-[rgba(20,22,26,0.12)] bg-white"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-[13px] font-semibold text-[#15171C]">
+              <ShieldAlert size={15} className={isAdult ? "text-[#A13A3A]" : "text-[#9AA0A8]"} />
+              18+ mature content
+            </span>
+            <span
+              className={`relative h-5 w-9 flex-none rounded-full transition-colors ${
+                isAdult ? "bg-[#A13A3A]" : "bg-[rgba(20,22,26,0.18)]"
+              }`}
+            >
+              <span
+                className={`absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
+                  isAdult ? "translate-x-[18px]" : "translate-x-[2px]"
+                }`}
+              />
+            </span>
+          </button>
+          <p className="mt-1 text-[11px] text-[#9AA0A8]">
+            Readers see an 18+ warning before opening this story, and a mature badge on its cover.
+          </p>
         </div>
 
         {/* Cover upload / replace */}
