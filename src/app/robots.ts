@@ -19,7 +19,6 @@ export default function robots(): MetadataRoute.Robots {
         "/kekere/invite",
         "/kekere/earn",
         "/kekere/contracts",
-        "/kekere/story/*/complete",
         "/login",
         "/signup",
         "/forgot-password",
