@@ -119,3 +119,24 @@ body {
   hyphens: auto !important;
   -webkit-hyphens: auto !important;
 }
+
+/*
+  Drop cap — the first letter of the first paragraph is enlarged to span two
+  lines, the way a novel opens a chapter, while the rest of the first word
+  stays normal (::first-letter only ever touches the single leading glyph).
+  Kept in the body serif and ink colour for an authentic literary feel
+  rather than a decorative accent. Uses :first-of-type so it lands on the
+  first real paragraph even if the body happens to open with a heading, and
+  the float lets the following lines wrap snugly around it.
+*/
+.story-reader-prose .ProseMirror > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.3em;
+  line-height: 0.82;
+  padding-top: 0.02em;
+  padding-right: 0.07em;
+  font-weight: 600;
+  /* Never justify-stretch or hyphenate around the cap itself. */
+  -webkit-hyphens: manual;
+  hyphens: manual;
+}

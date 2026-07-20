@@ -201,7 +201,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
             <div>
               <p className="text-[13.5px] font-semibold text-[var(--color-ink)]">Email notifications</p>
               <p className="text-[11.5px] text-[var(--color-ink-muted-2)]">
-                New from writers you follow, note replies, streak reminders, and your weekly digest
+                New followers, notes and replies, and new stories from writers you follow
               </p>
             </div>
           </div>

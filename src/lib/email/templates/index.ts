@@ -10,7 +10,6 @@ import { ResetPasswordEmail } from "./reset-password";
 import { PublishingAgreementEmail } from "./publishing-agreement";
 import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 import { NoticeEmail } from "./notice";
-import { WeeklyDigestEmail, type DigestItem } from "./weekly-digest";
 import { SITE_URL } from "@/content/decisions";
 
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
@@ -293,37 +292,43 @@ export async function renderNoteReplyEmail(props: {
   );
 }
 
-export async function renderStreakReminderEmail(props: {
-  name: string;
-  currentStreak: number;
+export async function renderNewFollowerEmail(props: {
+  writerName: string;
+  followerName: string;
+  followerId: string;
   unsubscribeUrl: string;
 }) {
-  const { name, currentStreak, unsubscribeUrl } = props;
+  const { writerName, followerName, followerId, unsubscribeUrl } = props;
   return render(
     createElement(NoticeEmail, {
-      preview: `Your ${currentStreak}-day streak breaks at midnight`,
-      heading: "Your streak is about to break",
+      preview: `${followerName} started following you`,
+      heading: "You have a new follower",
       lines: [
-        `Hi ${name},`,
-        `You're on a ${currentStreak}-day reading streak, but you haven't read anything today yet. Finish one story before the day ends to keep it alive.`,
+        `Hi ${writerName},`,
+        `${followerName} just started following you on Kekere Stories. They'll be notified whenever you publish something new.`,
       ],
-      cta: { label: "Keep the streak alive →", url: `${SITE_URL}/kekere/feed` },
+      cta: { label: "See who's following you →", url: `${SITE_URL}/kekere/writer/${followerId}` },
       unsubscribeUrl,
     }),
   );
 }
 
-export async function renderWeeklyDigestEmail(props: {
-  name: string;
-  items: DigestItem[];
+export async function renderNoteReceivedEmail(props: {
+  writerName: string;
+  readerName: string;
+  storyTitle: string;
   unsubscribeUrl: string;
 }) {
-  const { name, items, unsubscribeUrl } = props;
+  const { writerName, readerName, storyTitle, unsubscribeUrl } = props;
   return render(
-    createElement(WeeklyDigestEmail, {
-      name,
-      items,
-      feedUrl: `${SITE_URL}/kekere/feed`,
+    createElement(NoticeEmail, {
+      preview: `${readerName} sent you a note`,
+      heading: "You have a new note",
+      lines: [
+        `Hi ${writerName},`,
+        `${readerName} left you a note about "${storyTitle}." You can read it — and reply — in your notes inbox.`,
+      ],
+      cta: { label: "Read the note →", url: `${SITE_URL}/kekere/notes` },
       unsubscribeUrl,
     }),
   );

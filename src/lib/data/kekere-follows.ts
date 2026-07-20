@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
-import { getEmailRecipientsBatch } from "@/lib/notifications/email-preferences";
+import { getEmailRecipient, getEmailRecipientsBatch } from "@/lib/notifications/email-preferences";
 import { getWriterStatsBatch } from "@/lib/data/kekere-writer-profile";
 import { sendEmail } from "@/lib/email/send";
-import { renderWriterPublishedEmail } from "@/lib/email/templates";
+import { renderWriterPublishedEmail, renderNewFollowerEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/content/decisions";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
 
@@ -41,13 +41,32 @@ export async function followWriter(followerId: string, writerId: string): Promis
 
   if (created) {
     const follower = await prisma.user.findUnique({ where: { id: followerId }, select: { name: true } });
+    const followerName = follower?.name ?? "Someone";
     await createNotification({
       userId: writerId,
       type: "NEW_FOLLOWER",
       title: "You have a new follower",
-      body: `${follower?.name ?? "Someone"} started following you on Kekere.`,
+      body: `${followerName} started following you on Kekere.`,
       link: `/kekere/writer/${writerId}`,
     });
+
+    // Event-triggered email to the writer, if they haven't opted out — best
+    // effort, never blocks the follow itself.
+    const recipient = await getEmailRecipient(writerId);
+    if (recipient) {
+      const html = await renderNewFollowerEmail({
+        writerName: recipient.name,
+        followerName,
+        followerId,
+        unsubscribeUrl: recipient.unsubscribeUrl,
+      });
+      await sendEmail({
+        to: recipient.email,
+        subject: `${followerName} started following you on Kekere Stories`,
+        body: `${followerName} just started following you on Kekere Stories. They'll hear from us whenever you publish something new.`,
+        html,
+      }).catch((error) => console.error("[kekere-follows] new-follower email failed:", error));
+    }
   }
 
   const followerCount = await prisma.follow.count({ where: { writerId } });
