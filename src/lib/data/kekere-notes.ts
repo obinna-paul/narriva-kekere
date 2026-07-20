@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
+import { getEmailRecipient } from "@/lib/notifications/email-preferences";
 import { containsProfanity } from "@/lib/moderation/profanity";
+import { sendEmail } from "@/lib/email/send";
+import { renderNoteReplyEmail } from "@/lib/email/templates";
 
 const MAX_NOTE_LENGTH = 500;
 
@@ -283,7 +286,7 @@ export async function replyToNote(noteId: string, writerId: string, replyBody: s
 
   const note = await prisma.note.findUnique({
     where: { id: noteId },
-    select: { toWriterId: true, replyBody: true, fromUserId: true, storyId: true },
+    select: { toWriterId: true, replyBody: true, fromUserId: true, storyId: true, story: { select: { title: true } } },
   });
   if (!note || note.toWriterId !== writerId) return { error: "not_found" };
   if (note.replyBody !== null) return { error: "already_replied" };
@@ -301,6 +304,22 @@ export async function replyToNote(noteId: string, writerId: string, replyBody: s
     body: `${writer?.name ?? "The writer"} replied to your note.`,
     link: "/kekere/notes",
   });
+
+  const recipient = await getEmailRecipient(note.fromUserId);
+  if (recipient) {
+    const html = await renderNoteReplyEmail({
+      readerName: recipient.name,
+      writerName: writer?.name ?? "The writer",
+      storyTitle: note.story.title,
+      unsubscribeUrl: recipient.unsubscribeUrl,
+    });
+    await sendEmail({
+      to: recipient.email,
+      subject: `${writer?.name ?? "The writer"} replied to your note`,
+      body: `${writer?.name ?? "The writer"} replied to the note you sent about "${note.story.title}." Read it in your Kekere Stories notes inbox.`,
+      html,
+    });
+  }
 
   return { success: true };
 }

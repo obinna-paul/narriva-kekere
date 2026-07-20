@@ -74,6 +74,18 @@ model User {
   // reader's "send a note" prompt entirely, not just from the writer's own view.
   notesEnabled Boolean @default(true)
 
+  // Master opt-out for the outbound retention emails (writer-you-follow
+  // published, note reply, streak-at-risk reminder, weekly digest) — does
+  // NOT affect mandatory transactional mail (OTP, password reset, contracts,
+  // withdrawals). unsubscribeToken is minted lazily on first send rather
+  // than backfilled, and powers the one-click unsubscribe link in those
+  // emails' footers. last*SentAt are idempotency guards so a cron re-run
+  // (or clock drift) can't double-send the same day/week.
+  emailNotificationsEnabled Boolean   @default(true)
+  unsubscribeToken          String?   @unique
+  lastStreakReminderSentAt  DateTime?
+  lastDigestSentAt          DateTime?
+
   // Pre-launch onboarding: admins create placeholder WRITER accounts and
   // author stories into them; the writer later claims via a tokenised link.
   accountStatus       AccountStatus @default(CLAIMED)
@@ -207,6 +219,7 @@ enum NotificationType {
   WRITER_PUBLISHED
   NOTE_RECEIVED
   NOTE_REPLIED
+  STREAK_AT_RISK
 }
 
 model Notification {

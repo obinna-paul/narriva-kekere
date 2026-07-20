@@ -15,7 +15,7 @@ export default async function KekereSettingsPage() {
   const user = userId
     ? await prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, email: true, deletionRequestedAt: true },
+        select: { name: true, email: true, deletionRequestedAt: true, emailNotificationsEnabled: true },
       })
     : null;
 
@@ -27,6 +27,7 @@ export default async function KekereSettingsPage() {
           name={user?.name ?? ""}
           email={user?.email ?? ""}
           initialDeletionRequestedAt={user?.deletionRequestedAt?.toISOString() ?? null}
+          initialEmailNotificationsEnabled={user?.emailNotificationsEnabled ?? true}
         />
       </div>
     </KekereTheme>

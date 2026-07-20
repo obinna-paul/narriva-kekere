@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Mail as MailIcon, User as UserIcon, ChevronRight } from "lucide-react";
+import { ChevronLeft, Mail as MailIcon, User as UserIcon, ChevronRight, Bell } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { DeleteAccountSection } from "@/components/shared/delete-account-section";
 
@@ -10,6 +10,7 @@ export interface SettingsViewProps {
   name: string;
   email: string;
   initialDeletionRequestedAt: string | null;
+  initialEmailNotificationsEnabled: boolean;
 }
 
 function QuickLinkRow({ href, label, description }: { href: string; label: string; description: string }) {
@@ -27,13 +28,29 @@ function QuickLinkRow({ href, label, description }: { href: string; label: strin
   );
 }
 
-export function SettingsView({ name, email, initialDeletionRequestedAt }: SettingsViewProps) {
+export function SettingsView({ name, email, initialDeletionRequestedAt, initialEmailNotificationsEnabled }: SettingsViewProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(initialEmailNotificationsEnabled);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
+  async function toggleEmailNotifications() {
+    const next = !emailNotificationsEnabled;
+    setEmailNotificationsEnabled(next); // optimistic — this is a low-stakes preference toggle
+    setSavingNotifications(true);
+    const res = await fetch("/api/kekere/settings/notifications", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    });
+    setSavingNotifications(false);
+    if (!res.ok) setEmailNotificationsEnabled(!next); // revert on failure
+  }
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
@@ -165,6 +182,41 @@ export function SettingsView({ name, email, initialDeletionRequestedAt }: Settin
             {saving ? "Saving…" : "Update password"}
           </button>
         </form>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--color-ink-muted-2)]">
+          Notifications
+        </h2>
+        <button
+          type="button"
+          onClick={toggleEmailNotifications}
+          disabled={savingNotifications}
+          className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 text-left transition-colors disabled:opacity-70"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]">
+              <Bell size={16} />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-semibold text-[var(--color-ink)]">Email notifications</p>
+              <p className="text-[11.5px] text-[var(--color-ink-muted-2)]">
+                New from writers you follow, note replies, streak reminders, and your weekly digest
+              </p>
+            </div>
+          </div>
+          <span
+            className={`relative h-6 w-[42px] flex-none rounded-full transition-colors ${
+              emailNotificationsEnabled ? "bg-[var(--color-primary)]" : "bg-[rgba(42,26,18,0.18)]"
+            }`}
+          >
+            <span
+              className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${
+                emailNotificationsEnabled ? "translate-x-[21px]" : "translate-x-[3px]"
+              }`}
+            />
+          </span>
+        </button>
       </section>
 
       <section className="mb-6 flex flex-col gap-2.5">

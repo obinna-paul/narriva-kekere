@@ -5,6 +5,7 @@ import {
   Hr,
   Html,
   Img,
+  Link,
   Preview,
   Section,
   Text,
@@ -24,9 +25,14 @@ interface BaseEmailProps {
   preview: string;
   children: ReactNode;
   brand?: "kekere" | "narriva";
+  /** Only set on the opt-in retention emails (writer-published, note reply,
+   *  streak reminder, weekly digest) — mandatory transactional mail (OTP,
+   *  password reset, contracts) never passes this, so it never shows an
+   *  unsubscribe link. */
+  unsubscribeUrl?: string;
 }
 
-export function BaseEmail({ preview, children, brand = "kekere" }: BaseEmailProps) {
+export function BaseEmail({ preview, children, brand = "kekere", unsubscribeUrl }: BaseEmailProps) {
   const accentColor = brand === "kekere" ? colors.orange : "#1E3A8A";
   const brandName = brand === "kekere" ? "Kekere Stories" : "Narriva";
 
@@ -67,6 +73,15 @@ export function BaseEmail({ preview, children, brand = "kekere" }: BaseEmailProp
               {brandName}{brand === "kekere" ? ", an imprint of Narriva Publishing" : ""}
               <br />
               You received this because you have an account with us.
+              {unsubscribeUrl && (
+                <>
+                  {" "}
+                  <Link href={unsubscribeUrl} style={{ color: colors.muted, textDecoration: "underline" }}>
+                    Unsubscribe from these emails
+                  </Link>
+                  .
+                </>
+              )}
             </Text>
           </Section>
 

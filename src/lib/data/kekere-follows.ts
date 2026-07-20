@@ -1,7 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
+import { getEmailRecipientsBatch } from "@/lib/notifications/email-preferences";
 import { getWriterStatsBatch } from "@/lib/data/kekere-writer-profile";
+import { sendEmail } from "@/lib/email/send";
+import { renderWriterPublishedEmail } from "@/lib/email/templates";
+import { SITE_URL } from "@/content/decisions";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
 
 export type FollowResult =
@@ -113,7 +117,7 @@ export async function getFollowingWriters(followerId: string): Promise<FollowedW
 export async function getLatestFollowedWriterStory(
   userId: string,
   withinDays = 14
-): Promise<{ writerName: string; storyTitle: string } | null> {
+): Promise<{ storyId: string; writerName: string; storyTitle: string } | null> {
   const following = await prisma.follow.findMany({ where: { followerId: userId }, select: { writerId: true } });
   if (following.length === 0) return null;
 
@@ -125,18 +129,23 @@ export async function getLatestFollowedWriterStory(
       publishedAt: { gte: since },
     },
     orderBy: { publishedAt: "desc" },
-    select: { title: true, author: { select: { name: true } } },
+    select: { id: true, title: true, author: { select: { name: true } } },
   });
 
-  return story ? { writerName: story.author.name, storyTitle: story.title } : null;
+  return story ? { storyId: story.id, writerName: story.author.name, storyTitle: story.title } : null;
 }
 
 /**
- * Notifies every follower that this writer just published a new story.
- * Fire-and-forget from the caller's perspective (never throws) — a
- * newly-published story must go live even if the notification fan-out
- * fails. Uses createMany (one query) rather than one createNotification
- * call per follower, since a popular writer could have many.
+ * Notifies every follower that this writer just published a new story —
+ * both in-app and, for whoever hasn't opted out, by email. Fire-and-forget
+ * from the caller's perspective (never throws) — a newly-published story
+ * must go live even if the notification fan-out fails. The in-app
+ * notifications use createMany (one query) rather than one createNotification
+ * call per follower, since a popular writer could have many; email sends
+ * are still one Resend call per recipient (there's no batch-send API in
+ * sendEmail), but Promise.allSettled means one bad address can't block the
+ * rest, and getEmailRecipientsBatch keeps the opt-out/token lookup to a
+ * single query regardless of follower count.
  */
 export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
   try {
@@ -161,6 +170,25 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
         link: `/kekere/story/${storyId}`,
       })),
     });
+
+    const recipients = await getEmailRecipientsBatch(followers.map((f) => f.followerId));
+    await Promise.allSettled(
+      Array.from(recipients.values()).map(async (recipient) => {
+        const html = await renderWriterPublishedEmail({
+          followerName: recipient.name,
+          writerName: story.author.name,
+          storyTitle: story.title,
+          storyId,
+          unsubscribeUrl: recipient.unsubscribeUrl,
+        });
+        await sendEmail({
+          to: recipient.email,
+          subject: `New from ${story.author.name} on Kekere Stories`,
+          body: `${story.author.name}, a writer you follow, just published "${story.title}." Read it: ${SITE_URL}/kekere/story/${storyId}`,
+          html,
+        });
+      }),
+    );
   } catch (error) {
     console.error("[kekere-follows] notifyFollowersOfPublish failed:", error);
   }
