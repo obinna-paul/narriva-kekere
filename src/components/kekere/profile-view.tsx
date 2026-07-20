@@ -572,14 +572,16 @@ export function ProfileView(props: ProfileViewProps) {
             <div>
               <SectionLabel>Quick actions</SectionLabel>
               <ListCard>
+                {props.hasAuthoredAnyStory && (
+                  <ListRow
+                    href="/kekere/analytics"
+                    icon={<BarChart3 size={15} />}
+                    tone="primary"
+                    label="Analytics & earnings"
+                  />
+                )}
                 {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
                   <>
-                    <ListRow
-                      href="/kekere/analytics"
-                      icon={<BarChart3 size={15} />}
-                      tone="primary"
-                      label="Analytics & earnings"
-                    />
                     <ListRow
                       href={`/kekere/writer/${props.userId}`}
                       icon={<Eye size={15} />}
