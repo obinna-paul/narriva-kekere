@@ -123,6 +123,7 @@ model User {
   notesReceived        Note[]                @relation("NotesReceived")
   noteBlocksMade       NoteBlock[]           @relation("NoteBlocksMade")
   noteBlocksReceived   NoteBlock[]           @relation("NoteBlocksReceived")
+  reportsFiled         Report[]
 }
 
 // A reader subscribing to a writer — not messaging or a social graph, a
@@ -514,6 +515,53 @@ model ParagraphReaction {
 
   @@unique([storyId, paragraphId, userId])
   @@index([storyId, paragraphId])
+}
+
+enum ReportTargetType {
+  STORY
+  PARAGRAPH_COMMENT
+}
+
+enum ReportReason {
+  PLAGIARISM
+  HATE_SPEECH
+  SEXUAL_CONTENT
+  MISTAGGED
+  BROKEN
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// A reader flagging a Story or a ParagraphComment — feeds the admin
+// moderation queue. Deliberately polymorphic (targetType + targetId, no FK
+// to either table) rather than two separate report tables: it lets a single
+// queue triage both content types together, and survives the target being
+// deleted independently (the queue just shows "content removed").
+model Report {
+  id         String           @id @default(cuid())
+  reporterId String
+  reporter   User             @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType ReportTargetType
+  targetId   String
+  reason     ReportReason
+  details    String?
+  status     ReportStatus     @default(OPEN)
+  createdAt  DateTime         @default(now())
+
+  resolvedAt         DateTime?
+  // No relation — same convention as User.createdByAdminId / Story.authoredByAdminId.
+  resolvedByAdminId  String?
+  resolutionNotes    String?
+
+  @@index([targetType, targetId])
+  @@index([status, createdAt])
+  @@index([reporterId])
 }
 
 model StoryVersion {

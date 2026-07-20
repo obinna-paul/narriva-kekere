@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
+import { ReportModal, type ReportTargetType } from "@/components/kekere/ReportModal";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
 import { CommentPanel } from "@/components/kekere/CommentPanel";
@@ -170,6 +171,9 @@ export function StoryReader({
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [contentHidden, setContentHidden] = useState(false);
+
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ targetType: ReportTargetType; targetId: string } | null>(null);
 
   // Lightweight anti-piracy deterrent for unlocked (paid) content, in place of
   // the old visible email watermark: blur the story the moment the tab/window
@@ -338,6 +342,12 @@ export function StoryReader({
 
   function requireLogin() {
     router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+  }
+
+  function openReport(targetType: ReportTargetType, targetId: string) {
+    if (!isLoggedIn) return requireLogin();
+    setMoreMenuOpen(false);
+    setReportTarget({ targetType, targetId });
   }
 
   async function handleUnlock() {
@@ -859,6 +869,55 @@ export function StoryReader({
             >
               <Share2 className="h-4 w-4" />
             </button>
+            <div className="relative flex items-center">
+              <button
+                type="button"
+                aria-label="More options"
+                aria-haspopup="true"
+                aria-expanded={moreMenuOpen}
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                className="bg-none text-[17px] transition-colors hover:text-[var(--color-primary)]"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: moreMenuOpen ? "var(--color-primary)" : "var(--color-ink-muted)",
+                }}
+              >
+                <MoreVertical className="h-[17px] w-[17px]" />
+              </button>
+
+              {moreMenuOpen && (
+                <>
+                  <button
+                    type="button"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    onClick={() => setMoreMenuOpen(false)}
+                    className="fixed inset-0 z-40 cursor-default bg-none"
+                    style={{ background: "none", border: "none" }}
+                  />
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+8px)] z-50 w-[200px] rounded-[12px] border p-1.5 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
+                    style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+                  >
+                    {!isOwnStory && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => openReport("STORY", story.id)}
+                        className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                        style={{ background: "none", border: "none", cursor: "pointer" }}
+                      >
+                        <Flag className="h-[15px] w-[15px] flex-none" />
+                        Report story
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1037,10 +1096,19 @@ export function StoryReader({
           userReaction={selectedReaction}
           onSelectEmoji={(emoji) => reactions.setReaction(comments.selectedParagraphId!, emoji)}
           onRemoveEmoji={() => reactions.removeReaction(comments.selectedParagraphId!)}
+          onReportComment={(commentId) => openReport("PARAGRAPH_COMMENT", commentId)}
         />
       )}
 
       </div>
+
+      {reportTarget && (
+        <ReportModal
+          targetType={reportTarget.targetType}
+          targetId={reportTarget.targetId}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </div>
   );
 }

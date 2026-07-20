@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Send } from "lucide-react";
+import { X, Send, MoreVertical, Flag } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { EmojiPicker } from "@/components/kekere/EmojiPicker";
 import type { CommentDTO } from "@/components/kekere/use-paragraph-comments";
@@ -32,6 +32,7 @@ export interface CommentPanelProps {
   userReaction: string | null;
   onSelectEmoji: (emoji: string) => void;
   onRemoveEmoji: () => void;
+  onReportComment: (commentId: string) => void;
 }
 
 export function CommentPanel({
@@ -48,8 +49,10 @@ export function CommentPanel({
   userReaction,
   onSelectEmoji,
   onRemoveEmoji,
+  onReportComment,
 }: CommentPanelProps) {
   const [draft, setDraft] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -121,14 +124,56 @@ export function CommentPanel({
           {selectedParagraphId && comments && comments.length > 0 && (
             <ul className="flex flex-col gap-4">
               {comments.map((c) => (
-                <li key={c.id} className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold text-[var(--color-ink)]">
-                      {c.userDisplayName}
-                    </span>
-                    <span className="text-[11px] text-[var(--color-ink-muted-3)]">
-                      {formatRelativeTime(c.createdAt)}
-                    </span>
+                <li key={c.id} className="group flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
+                        {c.userDisplayName}
+                      </span>
+                      <span className="flex-none text-[11px] text-[var(--color-ink-muted-3)]">
+                        {formatRelativeTime(c.createdAt)}
+                      </span>
+                    </div>
+                    <div className="relative flex-none">
+                      <button
+                        type="button"
+                        aria-label="Comment options"
+                        onClick={() => setOpenMenuId((id) => (id === c.id ? null : c.id))}
+                        className="text-[var(--color-ink-muted-3)] opacity-0 transition-opacity hover:text-[var(--color-ink)] focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+                      {openMenuId === c.id && (
+                        <>
+                          <button
+                            type="button"
+                            aria-hidden="true"
+                            tabIndex={-1}
+                            onClick={() => setOpenMenuId(null)}
+                            className="fixed inset-0 z-40 cursor-default bg-none"
+                            style={{ background: "none", border: "none" }}
+                          />
+                          <div
+                            role="menu"
+                            className="absolute right-0 top-full z-50 mt-1 w-[150px] rounded-[10px] border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-1 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                onReportComment(c.id);
+                              }}
+                              className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                              style={{ background: "none", border: "none", cursor: "pointer" }}
+                            >
+                              <Flag size={13} className="flex-none" />
+                              Report
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                   <p className="text-[13.5px] leading-snug text-[var(--color-ink)]/85">{c.body}</p>
                 </li>

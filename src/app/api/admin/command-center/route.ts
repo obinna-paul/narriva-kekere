@@ -78,6 +78,7 @@ export const GET = withAuth(
       withdrawalsPending,
       unsignedContracts7Plus,
       nariHighIntentUnread,
+      reportsOpen,
       submissionsActivity,
       storiesSubmittedActivity,
       storiesPublishedActivity,
@@ -145,6 +146,7 @@ export const GET = withAuth(
       prisma.withdrawalRequest.count({ where: { status: "PENDING" } }),
       prisma.kekereContract.count({ where: { status: "PENDING", sentAt: { lt: daysAgo(7) } } }),
       prisma.nariConversationIntel.count({ where: { intentLevel: "HIGH", leadId: null } }),
+      prisma.report.count({ where: { status: "OPEN" } }),
       prisma.narrivaSubmission.findMany({
         where: { submittedAt: { gte: thirtyDaysAgo } },
         orderBy: { submittedAt: "desc" },
@@ -231,6 +233,7 @@ export const GET = withAuth(
     const withdrawalsPendingCount = withdrawalsPending;
     const contractsUnsigned = unsignedContracts7Plus;
     const nariHighIntent = nariHighIntentUnread;
+    const reportsOpenCount = reportsOpen;
 
     const pendingActionsBreakdown = {
       storiesAwaitingReview: storiesAwaiting,
@@ -238,10 +241,11 @@ export const GET = withAuth(
       withdrawalsPending: withdrawalsPendingCount,
       contractsUnsigned7Plus: contractsUnsigned,
       nariHighIntentUnread: nariHighIntent,
+      reportsOpen: reportsOpenCount,
     };
 
     const pendingActionsCount =
-      storiesAwaiting + authorChanges + withdrawalsPendingCount + contractsUnsigned + nariHighIntent;
+      storiesAwaiting + authorChanges + withdrawalsPendingCount + contractsUnsigned + nariHighIntent + reportsOpenCount;
 
     // ---- Revenue chart ----
     const revenueDaily = revenueDailyMap();
