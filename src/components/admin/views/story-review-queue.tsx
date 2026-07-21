@@ -28,6 +28,7 @@ interface StoryDetail extends QueueStory {
   body: string | object;
   readingTime: number;
   isAdult: boolean;
+  editWriterNote?: string | null;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -61,15 +62,19 @@ interface NewTagSuggestion {
 
 interface DecisionPanelProps {
   story: StoryDetail;
-  onAction: (action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) => void;
+  onAction: (action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) => void;
   acting: boolean;
   coverImageRef: string | null;
   coverPreview: string | null;
   onCoverUploaded: (ref: string, previewUrl: string) => void;
   onCoverRemoved: () => void;
+  /** True when the admin has made editorial changes (edited text or inline
+   * notes) the writer must approve — turns the publish action into
+   * "send to writer" instead of the straight-to-contract fast path. */
+  requiresWriterApproval: boolean;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved }: DecisionPanelProps) {
+function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
@@ -386,10 +391,24 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
         </div>
       </div>
 
+      {tab === "publish" && requiresWriterApproval && (
+        <p className="-mt-1 text-[11px] leading-snug text-[#8B919A]">
+          You&rsquo;ve edited or annotated this story, so it goes to the writer to approve your changes before the contract.
+        </p>
+      )}
+
       <button
         type="button"
         disabled={acting || (tab !== "publish" && !note.trim()) || (tab === "publish" && (tagIds.length === 0 || coverError))}
-        onClick={() => onAction(tab, note, cowrieCost, tagIds, isAdult)}
+        onClick={() =>
+          onAction(
+            tab === "publish" ? (requiresWriterApproval ? "send_to_writer" : "publish") : tab,
+            note,
+            cowrieCost,
+            tagIds,
+            isAdult,
+          )
+        }
         className={cn(
           "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
           tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
@@ -398,7 +417,9 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
         {acting
           ? "Processing…"
           : tab === "publish"
-          ? "Send publishing contract"
+          ? requiresWriterApproval
+            ? "Send edits to writer for approval"
+            : "Send publishing contract"
           : tab === "reject"
           ? "Reject story"
           : "Request revisions"}
@@ -591,13 +612,14 @@ export function StoryReviewQueue() {
     }
   }
 
-  async function handleAction(action: "publish" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) {
+  async function handleAction(action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) {
     if (!selectedId || !selected) return;
 
-    // Ensure the last few keystrokes are persisted before we promote the
-    // editorial working copy to the live story on publish — the body/hook line
-    // are read server-side from the edited* columns, not sent in this request.
-    if (action === "publish") {
+    const promotes = action === "publish" || action === "send_to_writer";
+    // Ensure the last few keystrokes are persisted before we act on the
+    // editorial working copy — the body/hook line are read server-side from the
+    // edited* columns, not sent in this request.
+    if (promotes) {
       if (editingContent) await editorRef.current?.flush().catch(() => {});
       if (hookSaveTimer.current) {
         clearTimeout(hookSaveTimer.current);
@@ -615,6 +637,7 @@ export function StoryReviewQueue() {
 
     const endpoint =
       action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
+      : action === "send_to_writer" ? `/api/admin/kekere/stories/${selectedId}/send-to-writer`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
       : `/api/admin/kekere/stories/${selectedId}/request-revisions`;
 
@@ -626,6 +649,15 @@ export function StoryReviewQueue() {
             tagIds,
             isAdult,
             ...(coverImageRef ? { coverImageRef } : {}),
+          }
+        : action === "send_to_writer"
+        ? {
+            cowrieCost,
+            tier: selected.tier,
+            tagIds,
+            isAdult,
+            ...(coverImageRef ? { coverImageRef } : {}),
+            ...(note.trim() ? { summaryNote: note } : {}),
           }
         : action === "reject"
         ? { moderationNotes: note, internalReason: note, plagiarismFlagged: selected.plagiarismFlagged }
@@ -640,9 +672,12 @@ export function StoryReviewQueue() {
       if (!res.ok) throw new Error("Action failed");
 
       let successMsg = action === "reject" ? "Story rejected." : action === "revisions" ? "Revision request sent." : "";
-      if (action === "publish") {
+      if (promotes) {
         const data = await res.json();
-        successMsg = `Contract sent to ${data.writerName ?? selected.authorName}.`;
+        successMsg =
+          action === "send_to_writer"
+            ? `Edits sent to ${data.writerName ?? selected.authorName} for approval.`
+            : `Contract sent to ${data.writerName ?? selected.authorName}.`;
       }
 
       setToast({ type: "ok", msg: successMsg });
@@ -876,8 +911,15 @@ export function StoryReviewQueue() {
               />
             )}
 
+            {selected.editWriterNote && (
+              <div className="mt-8 rounded-[8px] border border-[#C0392B]/25 bg-[rgba(192,57,43,0.05)] px-4 py-3">
+                <p className="text-[12px] font-semibold text-[#C0392B]">Writer requested changes to your edits</p>
+                <p className="mt-1 whitespace-pre-wrap text-[13px] text-[#8B919A]">{selected.editWriterNote}</p>
+              </div>
+            )}
+
             {selected.moderationNotes && (
-              <div className="mt-8 rounded-[8px] border border-[#B7791F]/25 bg-[rgba(183,121,31,0.06)] px-4 py-3">
+              <div className="mt-4 rounded-[8px] border border-[#B7791F]/25 bg-[rgba(183,121,31,0.06)] px-4 py-3">
                 <p className="text-[12px] font-semibold text-[#B7791F]">Previous moderation note</p>
                 <p className="mt-1 text-[13px] text-[#8B919A]">{selected.moderationNotes}</p>
               </div>
@@ -899,6 +941,7 @@ export function StoryReviewQueue() {
             coverPreview={coverPreview}
             onCoverUploaded={(ref, preview) => { setCoverImageRef(ref || null); setCoverPreview(preview || null); }}
             onCoverRemoved={() => { setCoverImageRef(null); setCoverPreview(null); }}
+            requiresWriterApproval={hasEdits || commentCount > 0}
           />
         ) : (
           <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-8 text-center">

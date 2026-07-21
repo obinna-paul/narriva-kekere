@@ -220,6 +220,8 @@ enum NotificationType {
   NOTE_RECEIVED
   NOTE_REPLIED
   STREAK_AT_RISK
+  // The admin has proposed editorial changes the writer needs to review/accept.
+  EDITS_PROPOSED
 }
 
 model Notification {
@@ -346,6 +348,12 @@ enum StoryStatus {
   // Story is fully set up (content, price, tags) but waiting for the author to
   // sign the publishing contract before going live.
   PENDING_CONTRACT
+  // The admin has edited/annotated the story and sent those changes to the
+  // writer, who must accept them before the story advances to the contract.
+  // The editorial working copy (editedBody/editedHookLine) and editorial
+  // comments are what the writer reviews; publishing terms are already set on
+  // the row so acceptance can go straight to the contract.
+  CHANGES_PROPOSED
 }
 
 enum StoryTier {
@@ -467,6 +475,12 @@ model Story {
   // lastSavedAt for the writer's own body saves. Null until the first admin
   // body edit.
   editLastSavedAt   DateTime?
+  // The admin's cover note to the writer, sent alongside the proposed edits
+  // (CHANGES_PROPOSED). Shown on the writer's review screen.
+  editSummaryNote   String?
+  // The writer's message when they reject the proposed edits and send the
+  // story back for another editorial pass. Surfaced to the admin in the queue.
+  editWriterNote    String?
 
   // Set on the DRAFT/REVISIONS_REQUESTED → SUBMITTED transition — used to
   // order the admin moderation queue oldest-first by actual submission time,

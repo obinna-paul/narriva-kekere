@@ -55,6 +55,7 @@ export const GET = withAuth(
       cowrieCost: story.cowrieCost,
       completionRate: story.completionRate,
       moderationNotes: story.moderationNotes,
+      editWriterNote: story.editWriterNote,
       plagiarismFlagged: story.plagiarismFlagged,
       isAdult: story.isAdult,
       isSerialized: story.isSerialized,
