@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 
 export interface ShareProfileSheetProps {
   writerId: string;
+  writerUsername?: string | null;
   writerName: string;
   onClose: () => void;
 }
@@ -14,7 +15,7 @@ function slugify(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "writer";
 }
 
-export function ShareProfileSheet({ writerId, writerName, onClose }: ShareProfileSheetProps) {
+export function ShareProfileSheet({ writerId, writerUsername, writerName, onClose }: ShareProfileSheetProps) {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function ShareProfileSheet({ writerId, writerName, onClose }: ShareProfil
   // survive even if some layer between here and the server (a proxy, an
   // over-eager browser image cache) doesn't fully honor those headers.
   const [cacheBuster] = useState(() => Date.now());
-  const profileUrl = `${window.location.origin}/kekere/writer/${writerId}`;
+  const profileUrl = `${window.location.origin}/kekere/writer/${writerUsername || writerId}`;
   const cardUrl = `/api/kekere/writers/${writerId}/card?v=${cacheBuster}`;
 
   function handleCopyLink() {

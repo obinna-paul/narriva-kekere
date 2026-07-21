@@ -8,8 +8,10 @@ import {
   getPublicWriterProfile,
   getWriterProfileStats,
   getWriterPublishedStories,
+  getSimilarWriters,
 } from "@/lib/data/kekere-writer-profile";
-import { getFollowerCount, isFollowing } from "@/lib/data/kekere-follows";
+import { getFollowerCount, isFollowing, getRecentFollowerAvatars } from "@/lib/data/kekere-follows";
+import { getPraiseWallNotes } from "@/lib/data/kekere-notes";
 import { getCurrentSession } from "@/lib/auth/middleware";
 
 export const dynamic = "force-dynamic";
@@ -19,15 +21,21 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   if (result.kind !== "writer") return {};
 
   const { profile } = result;
+  // Prefer the vanity handle once one's set — that's the URL meant to be
+  // shared, so it's the canonical one search engines and link previews
+  // should see, even though the raw id keeps resolving forever too.
+  const path = `/kekere/writer/${profile.kekereUsername ?? profile.id}`;
+  const description = profile.bio || `Stories by ${profile.name} on Kekere Stories.`;
   return {
     title: profile.name,
-    description: profile.bio || `Stories by ${profile.name} on Kekere Stories.`,
-    alternates: { canonical: `/kekere/writer/${profile.id}` },
+    description,
+    alternates: { canonical: path },
     openGraph: {
       title: profile.name,
-      description: profile.bio || `Stories by ${profile.name} on Kekere Stories.`,
-      url: `/kekere/writer/${profile.id}`,
+      description,
+      url: path,
       type: "profile",
+      images: [{ url: `/api/kekere/writers/${profile.id}/card` }],
     },
   };
 }
@@ -63,15 +71,24 @@ export default async function KekereWriterProfilePage({ params }: { params: { id
   }
 
   const { profile } = result;
+  // Every downstream lookup below needs the real user id — params.id may
+  // actually be a kekereUsername, which getPublicWriterProfile already
+  // resolved for us. Using params.id directly here would silently return
+  // empty results for anyone visiting via their pretty URL.
+  const writerId = profile.id;
   const session = await getCurrentSession();
   const viewerId = session?.user?.id;
 
-  const [stats, stories, followerCount, viewerIsFollowing] = await Promise.all([
-    getWriterProfileStats(params.id),
-    getWriterPublishedStories(params.id),
-    getFollowerCount(params.id),
-    viewerId ? isFollowing(viewerId, params.id) : Promise.resolve(false),
-  ]);
+  const [stats, stories, followerCount, viewerIsFollowing, followerAvatars, praiseWallNotes, similarWriters] =
+    await Promise.all([
+      getWriterProfileStats(writerId),
+      getWriterPublishedStories(writerId),
+      getFollowerCount(writerId),
+      viewerId ? isFollowing(viewerId, writerId) : Promise.resolve(false),
+      getRecentFollowerAvatars(writerId),
+      getPraiseWallNotes(writerId),
+      profile.crossPromotionEnabled ? getSimilarWriters(writerId) : Promise.resolve([]),
+    ]);
 
   return (
     <KekereTheme>
@@ -82,6 +99,9 @@ export default async function KekereWriterProfilePage({ params }: { params: { id
           stats={stats}
           stories={stories}
           followerCount={followerCount}
+          followerAvatars={followerAvatars}
+          praiseWallNotes={praiseWallNotes}
+          similarWriters={similarWriters}
           viewerIsLoggedIn={!!viewerId}
           viewerIsFollowing={viewerIsFollowing}
           isOwnProfile={viewerId === profile.id}

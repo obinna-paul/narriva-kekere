@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderNoteReplyEmail, renderNoteReceivedEmail } from "@/lib/email/templates";
 
 const MAX_NOTE_LENGTH = 500;
+export const MAX_PINNED_NOTES = 6;
 
 export interface NotePrompt {
   storyId: string;
@@ -230,6 +231,7 @@ export interface InboxNote {
   read: boolean;
   replyBody: string | null;
   repliedAt: Date | null;
+  pinned: boolean;
 }
 
 /** Blocking a sender (or a global notes-off toggle, handled by the caller
@@ -250,6 +252,7 @@ export async function getWriterInbox(writerId: string): Promise<InboxNote[]> {
       read: true,
       replyBody: true,
       repliedAt: true,
+      pinnedAt: true,
       story: { select: { title: true } },
       fromUser: { select: { id: true, name: true, avatarColor: true } },
     },
@@ -267,6 +270,7 @@ export async function getWriterInbox(writerId: string): Promise<InboxNote[]> {
     read: n.read,
     replyBody: n.replyBody,
     repliedAt: n.repliedAt,
+    pinned: n.pinnedAt !== null,
   }));
 }
 
@@ -346,8 +350,73 @@ export async function replyToNote(noteId: string, writerId: string, replyBody: s
 export async function reportNote(noteId: string, writerId: string): Promise<boolean> {
   const note = await assertOwnedByWriter(noteId, writerId);
   if (!note) return false;
-  await prisma.note.update({ where: { id: noteId }, data: { reported: true, reportedAt: new Date() } });
+  // A reported note can never keep showing on the public praise wall, so
+  // clear any pin at the same time — no separate cleanup step to forget.
+  await prisma.note.update({
+    where: { id: noteId },
+    data: { reported: true, reportedAt: new Date(), pinnedAt: null },
+  });
   return true;
+}
+
+export type PinNoteResult = { success: true; pinned: boolean } | { error: "not_found" | "limit_reached" };
+
+/** Pinning surfaces a note as a testimonial on the writer's public profile
+ * (see getPraiseWallNotes) — capped at MAX_PINNED_NOTES so the wall stays a
+ * curated highlight reel, not a full inbox dump. Unpinning is always
+ * allowed regardless of the cap. */
+export async function pinNote(noteId: string, writerId: string, pinned: boolean): Promise<PinNoteResult> {
+  const note = await assertOwnedByWriter(noteId, writerId);
+  if (!note) return { error: "not_found" };
+
+  if (pinned) {
+    const pinnedCount = await prisma.note.count({ where: { toWriterId: writerId, pinnedAt: { not: null } } });
+    if (pinnedCount >= MAX_PINNED_NOTES) return { error: "limit_reached" };
+  }
+
+  await prisma.note.update({ where: { id: noteId }, data: { pinnedAt: pinned ? new Date() : null } });
+  return { success: true, pinned };
+}
+
+export interface PraiseWallNote {
+  id: string;
+  body: string;
+  storyId: string;
+  storyTitle: string;
+  storySlug: string | null;
+  fromUserName: string;
+  fromUserAvatarColor: string | null;
+  pinnedAt: Date;
+}
+
+/** Public-facing — only ever returns notes the writer explicitly pinned
+ * (never reported, since reporting clears the pin), most-recently-pinned
+ * first. This is what renders on the public profile's praise wall. */
+export async function getPraiseWallNotes(writerId: string): Promise<PraiseWallNote[]> {
+  const notes = await prisma.note.findMany({
+    where: { toWriterId: writerId, pinnedAt: { not: null }, reported: false },
+    orderBy: { pinnedAt: "desc" },
+    take: MAX_PINNED_NOTES,
+    select: {
+      id: true,
+      body: true,
+      storyId: true,
+      pinnedAt: true,
+      story: { select: { title: true, slug: true } },
+      fromUser: { select: { name: true, avatarColor: true } },
+    },
+  });
+
+  return notes.map((n) => ({
+    id: n.id,
+    body: n.body,
+    storyId: n.storyId,
+    storyTitle: n.story.title,
+    storySlug: n.story.slug,
+    fromUserName: n.fromUser.name,
+    fromUserAvatarColor: n.fromUser.avatarColor,
+    pinnedAt: n.pinnedAt!,
+  }));
 }
 
 export async function blockSender(writerId: string, blockedUserId: string): Promise<void> {

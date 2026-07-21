@@ -11,6 +11,7 @@ import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
 import { ShareProfileSheet } from "@/components/kekere/share-profile-sheet";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
+import { SITE_URL } from "@/content/decisions";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -198,6 +199,9 @@ export interface ProfileViewProps {
   avatarColor: string;
   avatarUrl: string | null;
   socialLinks: readonly { label: string; href: string }[];
+  kekereUsername: string | null;
+  currentlyWriting: string;
+  crossPromotionEnabled: boolean;
   bankDetails: BankDetailsProp | null;
   hasAuthoredAnyStory: boolean;
   writingStats: { publishedCount: number; totalReads: number };
@@ -219,11 +223,18 @@ export function ProfileView(props: ProfileViewProps) {
   const [bio, setBio] = useState(props.bio);
   const [country, setCountry] = useState(props.country ?? "");
   const [socialLinks, setSocialLinks] = useState(props.socialLinks);
+  const [kekereUsername, setKekereUsername] = useState(props.kekereUsername ?? "");
+  const [currentlyWriting, setCurrentlyWriting] = useState(props.currentlyWriting);
+  const [crossPromotionEnabled, setCrossPromotionEnabled] = useState(props.crossPromotionEnabled);
   const [avatarUrl, setAvatarUrl] = useState(props.avatarUrl);
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [draftBio, setDraftBio] = useState(bio);
   const [draftCountry, setDraftCountry] = useState(country);
+  const [draftUsername, setDraftUsername] = useState(kekereUsername);
+  const [draftCurrentlyWriting, setDraftCurrentlyWriting] = useState(currentlyWriting);
+  const [draftCrossPromotionEnabled, setDraftCrossPromotionEnabled] = useState(crossPromotionEnabled);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [draftSocialLinksText, setDraftSocialLinksText] = useState(
     socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"),
   );
@@ -238,6 +249,10 @@ export function ProfileView(props: ProfileViewProps) {
     setDraftName(name);
     setDraftBio(bio);
     setDraftCountry(country);
+    setDraftUsername(kekereUsername);
+    setDraftCurrentlyWriting(currentlyWriting);
+    setDraftCrossPromotionEnabled(crossPromotionEnabled);
+    setUsernameError(null);
     setDraftSocialLinksText(socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"));
     setEditing(true);
   }
@@ -249,11 +264,13 @@ export function ProfileView(props: ProfileViewProps) {
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setUsernameError(null);
 
     const parsedSocialLinks = parseSocialLinks(draftSocialLinksText);
+    const normalizedUsername = draftUsername.trim().toLowerCase();
 
     try {
-      await fetch("/api/kekere/profile", {
+      const res = await fetch("/api/kekere/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -261,8 +278,24 @@ export function ProfileView(props: ProfileViewProps) {
           bio: draftBio,
           country: draftCountry.trim() || null,
           socialLinks: parsedSocialLinks,
+          kekereUsername: normalizedUsername || null,
+          currentlyWriting: draftCurrentlyWriting.trim() || null,
+          crossPromotionEnabled: draftCrossPromotionEnabled,
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.error === "taken") {
+          setUsernameError("That username is taken — try another.");
+          setSaving(false);
+          return;
+        }
+        if (data.error === "invalid_format") {
+          setUsernameError("3-24 characters: lowercase letters, numbers, and single hyphens only.");
+          setSaving(false);
+          return;
+        }
+      }
     } catch {
       // Persisted locally regardless
     }
@@ -271,6 +304,9 @@ export function ProfileView(props: ProfileViewProps) {
     setBio(draftBio);
     setCountry(draftCountry.trim());
     setSocialLinks(parsedSocialLinks);
+    setKekereUsername(normalizedUsername);
+    setCurrentlyWriting(draftCurrentlyWriting.trim());
+    setCrossPromotionEnabled(draftCrossPromotionEnabled);
     setSaving(false);
     setEditing(false);
   }
@@ -465,6 +501,84 @@ export function ProfileView(props: ProfileViewProps) {
                 One per line, as Label|https://url. Up to 5.
               </div>
             </div>
+
+            {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
+              <>
+                <div>
+                  <label
+                    htmlFor="profile-username"
+                    className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                  >
+                    Profile link
+                  </label>
+                  <div className="flex items-center overflow-hidden rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white transition-colors focus-within:border-[var(--color-primary)]">
+                    <span className="flex-none pl-[15px] text-[13.5px] text-[var(--color-ink-muted-2)]">
+                      {SITE_URL.replace("https://", "")}/kekere/writer/
+                    </span>
+                    <input
+                      id="profile-username"
+                      value={draftUsername}
+                      onChange={(e) => setDraftUsername(e.target.value.toLowerCase())}
+                      placeholder="yourname"
+                      maxLength={24}
+                      className="min-w-0 flex-1 bg-transparent py-[13px] pl-1 pr-[15px] text-[15px] text-[var(--color-ink)] focus:outline-none"
+                      style={{ fontFamily: "inherit" }}
+                    />
+                  </div>
+                  <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
+                    A memorable link for your public profile — used on your shareable card too. Leave blank to keep
+                    the default link.
+                  </div>
+                  {usernameError && <p className="mt-[6px] text-xs text-[#A13A3A]">{usernameError}</p>}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="profile-currently-writing"
+                    className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                  >
+                    Currently writing
+                  </label>
+                  <input
+                    id="profile-currently-writing"
+                    value={draftCurrentlyWriting}
+                    onChange={(e) => setDraftCurrentlyWriting(e.target.value)}
+                    placeholder="e.g. A quiet story about Lagos traffic and second chances"
+                    maxLength={140}
+                    className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                    style={{ fontFamily: "inherit" }}
+                  />
+                  <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
+                    A &ldquo;coming soon&rdquo; teaser shown on your public profile. Leave blank to hide it.
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px]">
+                  <div>
+                    <p className="text-[14px] font-semibold text-[var(--color-ink)]">Cross-promotion</p>
+                    <p className="mt-0.5 text-xs text-[var(--color-ink-muted-3)]">
+                      Show similar writers on your profile, and let them recommend you on theirs.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDraftCrossPromotionEnabled((v) => !v)}
+                    className={cn(
+                      "relative h-6 w-11 flex-none rounded-full transition-colors",
+                      draftCrossPromotionEnabled ? "bg-[var(--color-primary)]" : "bg-[rgba(42,26,18,0.15)]",
+                    )}
+                    aria-label={draftCrossPromotionEnabled ? "Turn cross-promotion off" : "Turn cross-promotion on"}
+                  >
+                    <span
+                      className={cn(
+                        "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                        draftCrossPromotionEnabled ? "translate-x-5" : "translate-x-0",
+                      )}
+                    />
+                  </button>
+                </div>
+              </>
+            )}
           </form>
         </div>
       ) : (
@@ -583,7 +697,7 @@ export function ProfileView(props: ProfileViewProps) {
                 {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
                   <>
                     <ListRow
-                      href={`/kekere/writer/${props.userId}`}
+                      href={`/kekere/writer/${kekereUsername || props.userId}`}
                       icon={<Eye size={15} />}
                       tone="primary"
                       label="View your public profile"
@@ -634,6 +748,7 @@ export function ProfileView(props: ProfileViewProps) {
           {shareSheetOpen && (
             <ShareProfileSheet
               writerId={props.userId}
+              writerUsername={kekereUsername || null}
               writerName={name}
               onClose={() => setShareSheetOpen(false)}
             />

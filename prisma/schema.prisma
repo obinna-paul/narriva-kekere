@@ -93,6 +93,20 @@ model User {
   claimTokenExpiresAt DateTime?
   createdByAdminId    String?
 
+  // Kekere writer-showcase fields (public profile at /kekere/writer/[id]).
+  // kekereUsername is a separate vanity handle from `slug` above — that one
+  // is Narriva-only, for /authors/[slug] — set explicitly by the writer,
+  // never auto-generated, so a writer only gets a pretty URL once they
+  // actually choose one.
+  kekereUsername         String?  @unique
+  // Optional "what's next" teaser shown on the public profile — free text,
+  // no publish workflow attached.
+  currentlyWriting       String?
+  // Opt-in: shows a "you might also like" section of similar writers on
+  // this writer's own public profile, and makes them eligible to appear in
+  // that section on other opted-in writers' profiles. Off by default.
+  crossPromotionEnabled  Boolean  @default(false)
+
   // Set on every successful sign-in (see authorize() in auth/options.ts) —
   // the only real signal of account activity. updatedAt moves on any
   // profile/admin edit too, so it isn't a substitute for this.
@@ -183,9 +197,16 @@ model Note {
   reported   Boolean   @default(false)
   reportedAt DateTime?
 
+  // Set by the writer to feature this note as a testimonial on their public
+  // profile's praise wall. Null = not pinned; the timestamp doubles as the
+  // sort key (most-recently-pinned first). Cleared automatically if the
+  // note is later reported — a reported note can never stay publicly shown.
+  pinnedAt   DateTime?
+
   @@unique([fromUserId, storyId])
   @@index([toWriterId, read])
   @@index([fromUserId])
+  @@index([toWriterId, pinnedAt])
 }
 
 // A writer shutting down notes from one specific reader (after a report, or

@@ -91,6 +91,26 @@ export async function getFollowerCount(writerId: string): Promise<number> {
   return prisma.follow.count({ where: { writerId } });
 }
 
+export interface FollowerAvatar {
+  id: string;
+  name: string;
+  avatar: string | null;
+  avatarColor: string | null;
+}
+
+/** Most recently followed first — powers the small stack of follower
+ * avatars next to the count on a public writer profile (social proof at a
+ * glance, not a full follower list). */
+export async function getRecentFollowerAvatars(writerId: string, limit = 6): Promise<FollowerAvatar[]> {
+  const rows = await prisma.follow.findMany({
+    where: { writerId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { follower: { select: { id: true, name: true, avatar: true, avatarColor: true } } },
+  });
+  return rows.map((r) => r.follower);
+}
+
 export interface FollowedWriter {
   id: string;
   name: string;

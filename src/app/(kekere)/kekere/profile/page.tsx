@@ -50,6 +50,9 @@ export default async function KekereProfilePage() {
           avatarColor={profile?.avatarColor ?? "#C75D2C"}
           avatarUrl={profile?.avatar ? userAvatarUrl(profile.avatar) : null}
           socialLinks={profile?.socialLinks ?? []}
+          kekereUsername={profile?.kekereUsername ?? null}
+          currentlyWriting={profile?.currentlyWriting ?? ""}
+          crossPromotionEnabled={profile?.crossPromotionEnabled ?? false}
           bankDetails={bankDetails}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}
           writingStats={writerStats}
