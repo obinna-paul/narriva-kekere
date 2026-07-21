@@ -11,6 +11,7 @@ interface EditorialComment {
   authorAdminId: string;
   body: string;
   status: "OPEN" | "RESOLVED";
+  writerReply: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,6 +165,12 @@ export function ReviewEditorialComments({ storyId, doc, onCountChange }: Props) 
                         )}
                       >
                         <p className="whitespace-pre-wrap no-underline">{c.body}</p>
+                        {c.writerReply && (
+                          <div className="mt-1.5 flex items-start gap-1.5 rounded-[6px] bg-[rgba(20,22,26,0.04)] px-2 py-1.5 text-[12px] text-[#4A372C] no-underline">
+                            <span className="font-semibold text-[#C75D2C]">Writer:</span>
+                            <span className="whitespace-pre-wrap">{c.writerReply}</span>
+                          </div>
+                        )}
                         <div className="mt-1.5 flex items-center gap-2">
                           {c.status === "OPEN" ? (
                             <button

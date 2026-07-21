@@ -28,6 +28,7 @@ export interface EditorialCommentDTO {
   authorAdminId: string;
   body: string;
   status: "OPEN" | "RESOLVED";
+  writerReply: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,7 @@ function toDTO(c: {
   authorAdminId: string;
   body: string;
   status: "OPEN" | "RESOLVED";
+  writerReply: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): EditorialCommentDTO {
@@ -47,6 +49,7 @@ function toDTO(c: {
     authorAdminId: c.authorAdminId,
     body: c.body,
     status: c.status,
+    writerReply: c.writerReply,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   };

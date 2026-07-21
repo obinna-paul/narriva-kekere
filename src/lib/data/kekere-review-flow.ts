@@ -6,7 +6,7 @@ import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM, SUPPORT_EMAIL } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
 import { SITE_URL } from "@/content/decisions";
-import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { countWords, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import { listEditorialComments, type EditorialCommentDTO } from "@/lib/data/kekere-editorial-comments";
 import { WRITER_EARNINGS_RATE } from "@/content/decisions";
 
@@ -295,29 +295,85 @@ export async function getWriterReview(storyId: string, writerId: string): Promis
   };
 }
 
-/** Writer accepts the proposed edits → promote + go to contract. */
-export async function writerAcceptEdits(storyId: string, writerId: string): Promise<FinalizeContractResult> {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    select: { authorId: true, status: true },
-  });
-  if (!story) throw new ReviewFlowError("not_found", "Story not found");
-  if (story.authorId !== writerId) throw new ReviewFlowError("forbidden", "Not your story");
-  if (story.status !== "CHANGES_PROPOSED") {
-    throw new ReviewFlowError("illegal_state", "There are no edits awaiting your approval on this story.");
+/**
+ * Merges the writer's per-paragraph accept/reject decisions into a final doc,
+ * walking the editor's proposed (edited) order so accepted new paragraphs keep
+ * their place. A rejected *change* reverts that paragraph to the writer's
+ * original text; a rejected *new* paragraph is dropped; a rejected *removal*
+ * (the editor deleted a paragraph the writer wants kept) re-inserts the
+ * original paragraph after its nearest surviving predecessor. Decisions
+ * default to "accept" when a paragraph id is absent.
+ */
+export function mergeReviewedBody(
+  original: TiptapDoc,
+  edited: TiptapDoc,
+  decisions: Record<string, "accept" | "reject">,
+): { merged: TiptapDoc; fullyAccepted: boolean } {
+  const origById = new Map((original.content ?? []).filter((n) => n.attrs?.id).map((n) => [n.attrs!.id as string, n]));
+  const editedIds = new Set((edited.content ?? []).filter((n) => n.attrs?.id).map((n) => n.attrs!.id as string));
+  let fullyAccepted = true;
+
+  const content: typeof edited.content = [];
+  for (const node of edited.content ?? []) {
+    const id = node.attrs?.id;
+    const decision = id ? decisions[id] ?? "accept" : "accept";
+    const isNew = !id || !origById.has(id);
+    const isChanged = !isNew && JSON.stringify(origById.get(id!)) !== JSON.stringify(node);
+
+    if (decision === "reject" && (isNew || isChanged)) {
+      fullyAccepted = false;
+      if (isNew) continue; // drop the rejected addition
+      content.push(origById.get(id!)!); // revert to the writer's original text
+    } else {
+      content.push(node);
+    }
   }
 
-  // The editorial notes have served their purpose once the writer accepts.
-  await prisma.editorialComment.updateMany({
-    where: { storyId, status: "OPEN" },
-    data: { status: "RESOLVED" },
-  });
+  // Removed paragraphs (in original, not in edited). Rejecting the removal
+  // re-inserts the original paragraph after its nearest surviving predecessor.
+  const origList = (original.content ?? []).filter((n) => n.attrs?.id);
+  for (let i = 0; i < origList.length; i++) {
+    const node = origList[i];
+    const id = node.attrs!.id as string;
+    if (editedIds.has(id)) continue; // not removed
+    if ((decisions[id] ?? "accept") === "accept") continue; // removal accepted → stays gone
+    fullyAccepted = false;
+    // Find the nearest earlier original paragraph that survived into `content`.
+    let insertAt = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      const prevId = origList[j].attrs!.id as string;
+      const idx = content.findIndex((n) => n.attrs?.id === prevId);
+      if (idx >= 0) { insertAt = idx + 1; break; }
+    }
+    content.splice(insertAt, 0, node);
+  }
 
-  return finalizeContract(storyId);
+  return { merged: { type: "doc", content }, fullyAccepted };
 }
 
-/** Writer rejects the proposed edits → back to the admin queue with a note. */
-export async function writerRequestChanges(storyId: string, writerId: string, note: string): Promise<void> {
+export interface SubmitReviewInput {
+  /** paragraphId → accept | reject. Absent ids default to accept. */
+  decisions: Record<string, "accept" | "reject">;
+  /** commentId → { resolved, reply } */
+  commentDecisions: Record<string, { resolved?: boolean; reply?: string }>;
+  /** Optional overall note to the editor when sending back. */
+  note?: string;
+}
+
+export type SubmitReviewOutcome = { outcome: "contract" } | { outcome: "returned" };
+
+/**
+ * The writer's decision on the proposed edits. Applies their per-comment
+ * resolutions/replies, merges their per-paragraph accept/reject choices, then:
+ *  - if they accepted every change and left no reply → promote + go to contract;
+ *  - otherwise → reconcile the merged working copy and send it back to the
+ *    editor (SUBMITTED) with their replies and note for another pass.
+ */
+export async function submitWriterReview(
+  storyId: string,
+  writerId: string,
+  input: SubmitReviewInput,
+): Promise<SubmitReviewOutcome> {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
     include: { author: { select: { name: true, email: true } } },
@@ -328,16 +384,67 @@ export async function writerRequestChanges(storyId: string, writerId: string, no
     throw new ReviewFlowError("illegal_state", "There are no edits awaiting your approval on this story.");
   }
 
-  // Back to the moderation queue (SUBMITTED) so the admin can revise; the
-  // working copy and editorial comments are kept intact for the next pass.
+  const original = story.body as unknown as TiptapDoc;
+  const edited = (story.editedBody ?? story.body) as unknown as TiptapDoc;
+
+  // Apply the writer's per-comment resolutions and replies.
+  const comments = await prisma.editorialComment.findMany({ where: { storyId } });
+  let hasReply = false;
+  for (const c of comments) {
+    const d = input.commentDecisions[c.id];
+    if (!d) continue;
+    const reply = d.reply?.trim() || null;
+    if (reply) hasReply = true;
+    await prisma.editorialComment.update({
+      where: { id: c.id },
+      data: {
+        writerReply: reply,
+        status: d.resolved ? "RESOLVED" : c.status,
+      },
+    });
+  }
+
+  const { merged, fullyAccepted } = mergeReviewedBody(original, edited, input.decisions);
+
+  // Full acceptance with nothing to discuss → straight to the contract.
+  if (fullyAccepted && !hasReply) {
+    await prisma.editorialComment.updateMany({ where: { storyId, status: "OPEN" }, data: { status: "RESOLVED" } });
+    await finalizeContract(storyId);
+    return { outcome: "contract" };
+  }
+
+  // Otherwise the writer kept some of their own wording or wants a word with
+  // the editor — reconcile the working copy and send it back for another pass.
+  const mergedWordCount = countWords(merged);
+  const changedFromOriginal = JSON.stringify(merged) !== JSON.stringify(original);
   await prisma.story.update({
     where: { id: storyId },
-    data: { status: "SUBMITTED", editWriterNote: note.trim() },
+    data: {
+      status: "SUBMITTED",
+      editWriterNote: input.note?.trim() || null,
+      editSummaryNote: null,
+      ...(changedFromOriginal
+        ? {
+            editedBody: merged as unknown as Prisma.InputJsonValue,
+            editedWordCount: mergedWordCount,
+            editedReadingTime: Math.max(1, Math.round(mergedWordCount / 200)),
+          }
+        : {
+            // The writer rejected everything — no working copy left to show.
+            editedBody: Prisma.DbNull,
+            editedHookLine: null,
+            editedWordCount: null,
+            editedReadingTime: null,
+            editLastSavedAt: null,
+          }),
+    },
   });
 
   await sendEmail({
     to: SUPPORT_EMAIL,
-    subject: `${story.author.name} requested changes to the edits on "${story.title}"`,
-    body: `Writer: ${story.author.name} (${story.author.email})\nStory: ${story.title} (${storyId})\n\nTheir note:\n${note.trim()}\n\nThe story is back in the review queue for another editorial pass.`,
+    subject: `${story.author.name} reviewed your edits on "${story.title}"`,
+    body: `Writer: ${story.author.name} (${story.author.email})\nStory: ${story.title} (${storyId})\n\n${input.note?.trim() ? `Their note:\n${input.note.trim()}\n\n` : ""}They accepted some changes and kept some of their own${hasReply ? ", and replied to your inline comments" : ""}. The story is back in the review queue with their choices merged in — open it to see what stands and reconcile.`,
   });
+
+  return { outcome: "returned" };
 }
