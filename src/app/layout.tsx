@@ -37,6 +37,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "Narriva & Kekere Stories",
   description: "Narriva and Kekere Stories",
+  // Explicit (not the special app/favicon.ico file convention, which Next
+  // always injects globally regardless of any nested override — see the
+  // (kekere) layout's own `icons` for why this had to move here). This is
+  // the shared default for Narriva pages and anything outside both brand
+  // route groups (admin, auth); (kekere)/layout.tsx overrides it for every
+  // Kekere page via normal metadata cascading.
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
