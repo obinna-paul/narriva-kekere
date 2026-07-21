@@ -103,7 +103,9 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
     }
 
     try { localStorage.setItem("kekere_welcome_new_user", "1"); } catch {}
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    const verifyUrl = new URLSearchParams({ email });
+    if (searchParams.get("callbackUrl")) verifyUrl.set("callbackUrl", searchParams.get("callbackUrl")!);
+    router.push(`/verify-email?${verifyUrl.toString()}`);
   }
 
   const brandName = isNarriva ? "Narriva" : "Kekere";
@@ -163,7 +165,11 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
           <button
             type="button"
             className="underline font-medium"
-            onClick={() => router.push(`/verify-email?email=${encodeURIComponent(email)}`)}
+            onClick={() => {
+              const verifyUrl = new URLSearchParams({ email });
+              if (searchParams.get("callbackUrl")) verifyUrl.set("callbackUrl", searchParams.get("callbackUrl")!);
+              router.push(`/verify-email?${verifyUrl.toString()}`);
+            }}
           >
             Verify now
           </button>

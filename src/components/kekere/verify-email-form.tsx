@@ -7,6 +7,7 @@ export function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +64,9 @@ export function VerifyEmailForm() {
       return;
     }
 
-    router.push("/login?verified=1");
+    const loginUrl = new URLSearchParams({ verified: "1" });
+    if (callbackUrl) loginUrl.set("callbackUrl", callbackUrl);
+    router.push(`/login?${loginUrl.toString()}`);
   }
 
   async function handleResend() {
