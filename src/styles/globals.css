@@ -96,6 +96,61 @@ body {
   50% { transform: translateY(-9px); }
 }
 
+/* One-time animated ring around Kekere's "Ask Kemi" CTA
+   (src/components/kekere/kemi-chat.tsx) — a bright arc sweeps once around
+   the pill's border on mount, then fades out, leaving the plain static
+   border already on the button in place. Purely decorative, so reduced
+   motion just skips straight to that resting state. */
+@property --kemi-halo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes kemi-cta-halo-sweep {
+  0% {
+    --kemi-halo-angle: 0deg;
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    --kemi-halo-angle: 360deg;
+    opacity: 0;
+  }
+}
+
+.kemi-cta-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--kemi-halo-angle),
+    transparent 0deg,
+    transparent 300deg,
+    rgba(199, 93, 44, 0.9) 335deg,
+    #ffb37a 350deg,
+    rgba(199, 93, 44, 0.9) 360deg
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  /* "forwards" is required — without it the single iteration ends by
+     snapping back to the pre-animation state (opaque, angle 0) instead of
+     holding the faded-out end frame, popping the bright ring back on
+     instead of leaving the plain static border underneath it. */
+  animation: kemi-cta-halo-sweep 1.6s ease-out 1 forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kemi-cta-halo {
+    display: none;
+  }
+}
+
 /* TipTap Placeholder extension — required global styles.
    The Tailwind arbitrary-variant approach is fragile for ::before pseudo-elements;
    declaring these here guarantees the placeholder always renders. */
