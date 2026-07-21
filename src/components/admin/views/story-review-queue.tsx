@@ -106,7 +106,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
       setNewTagSuggestion(data.newTag ?? null);
       setSuggestedIsAdult(typeof data.isAdult === "boolean" ? data.isAdult : null);
     } catch {
-      setSuggestError("Nari couldn't read the story right now. Try again.");
+      setSuggestError("Kemi couldn't read the story right now. Try again.");
     } finally {
       setSuggesting(false);
     }
@@ -282,14 +282,14 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                 className="flex items-center gap-1 rounded-[6px] bg-[rgba(107,33,168,0.08)] px-2 py-1 text-[10px] font-semibold text-[#6B21A8] transition-colors hover:bg-[rgba(107,33,168,0.14)] disabled:opacity-50"
               >
                 <Sparkles size={10} />
-                {suggesting ? "Nari is reading…" : "Nari suggests"}
+                {suggesting ? "Kemi is reading…" : "Kemi suggests"}
               </button>
             </div>
 
             {/* Nari suggestion results */}
             {suggestions && suggestions.length > 0 && (
               <div className="mb-2 rounded-[8px] border border-[rgba(107,33,168,0.18)] bg-[rgba(107,33,168,0.04)] p-3">
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#6B21A8]">Nari suggests</p>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#6B21A8]">Kemi suggests</p>
                 <div className="flex flex-col gap-1.5">
                   {suggestions.map((s) => (
                     <div key={s.id} className="rounded-[6px] bg-white px-2.5 py-1.5">
@@ -317,7 +317,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                   ) : (
                     <ShieldAlert size={12} className="text-[#9AA0A8]" />
                   )}
-                  Nari suggests: {suggestedIsAdult ? "18+ mature content" : "Safe for all readers"}
+                  Kemi suggests: {suggestedIsAdult ? "18+ mature content" : "Safe for all readers"}
                 </span>
                 {suggestedIsAdult !== isAdult && (
                   <button
@@ -334,7 +334,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
             {/* New tag suggestion from Nari */}
             {newTagSuggestion && (
               <div className="mb-2 rounded-[8px] border border-[rgba(183,121,31,0.25)] bg-[rgba(183,121,31,0.05)] p-3">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#B7791F]">Nari also suggests a new category</p>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#B7791F]">Kemi also suggests a new category</p>
                 <p className="text-[12px] font-semibold text-[#1A1C20]">{newTagSuggestion.label}</p>
                 <p className="text-[10px] italic text-[#8B919A]">"{newTagSuggestion.feedHeading}"</p>
                 <p className="mt-1 text-[10px] text-[#9AA0A8]">This category doesn't exist yet. Ask your engineer to add it to the tag list.</p>
