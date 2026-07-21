@@ -437,10 +437,12 @@ export function StoryReader({
   }
 
   // Prefer the reader's referral invite link so a brand-new signup through
-  // the share earns them the referral reward; fall back to the plain story
+  // the share earns them the referral reward; the story slug rides along so
+  // the invite route can send the recipient straight to this story instead
+  // of a generic feed once they've signed in. Fall back to the plain story
   // URL when there's no code (logged-out reader).
   const shareUrl = referralCode
-    ? `https://narriva.pro/kekere/invite/${referralCode}`
+    ? `https://narriva.pro/kekere/invite/${referralCode}?story=${encodeURIComponent(story.slug ?? story.id)}`
     : `https://narriva.pro/kekere/story/${story.slug ?? story.id}`;
   const shareText = `I just read "${story.title}" on Kekere Stories. Check it out: ${shareUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
