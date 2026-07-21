@@ -194,14 +194,11 @@ export function KemiChat() {
               )}
 
               {loading && (
-                <li className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl bg-[var(--color-ink)]/[0.06] px-4 py-3 text-[13px] text-[var(--color-ink-muted)]">
-                    <span className="flex gap-1">
-                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "0ms" }} />
-                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "150ms" }} />
-                      <span className="inline-block h-[5px] w-[5px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "300ms" }} />
-                    </span>
-                    Kemi is thinking
+                <li className="flex justify-start" aria-label="Kemi is typing">
+                  <div className="flex items-center gap-1 rounded-2xl bg-[var(--color-ink)]/[0.06] px-4 py-3">
+                    <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "0ms" }} />
+                    <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "150ms" }} />
+                    <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "300ms" }} />
                   </div>
                 </li>
               )}

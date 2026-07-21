@@ -24,6 +24,7 @@ interface MessageEntry {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  recommendedSlugs?: string[];
 }
 
 export interface KemiRecommendation {
@@ -78,12 +79,18 @@ export async function POST(request: Request) {
     getKemiReaderContext(userId),
   ]);
 
-  const ai = await askKemiAI(
-    message,
-    history,
-    formatCatalogForPrompt(catalog),
-    formatReaderContextForPrompt(readerContext),
+  // Slugs already pitched earlier in this conversation — folded into the
+  // reader-context text so the model has a structural signal not to loop
+  // back onto the same recommendation, on top of the prompt instruction.
+  const alreadySuggestedSlugs = Array.from(
+    new Set(priorMessages.flatMap((m) => m.recommendedSlugs ?? [])),
   );
+  let readerContextText = formatReaderContextForPrompt(readerContext);
+  if (alreadySuggestedSlugs.length > 0) {
+    readerContextText += `\nAlready suggested earlier in this conversation — don't repeat these unless the reader explicitly asks to revisit one: ${alreadySuggestedSlugs.join(", ")}.`;
+  }
+
+  const ai = await askKemiAI(message, history, formatCatalogForPrompt(catalog), readerContextText);
 
   if (!ai) {
     // Not persisted — this is a status message, not a real turn, and
@@ -109,7 +116,12 @@ export async function POST(request: Request) {
       coverImageUrl: s.coverImageRef ? storyCoverUrl(s.coverImageRef) : null,
     }));
 
-  const assistantEntry: MessageEntry = { role: "assistant", content: ai.reply, timestamp };
+  const assistantEntry: MessageEntry = {
+    role: "assistant",
+    content: ai.reply,
+    timestamp,
+    ...(recommendations.length > 0 ? { recommendedSlugs: recommendations.map((r) => r.slug) } : {}),
+  };
   await upsertConversation(sessionId, userId, existing, [userEntry, assistantEntry]);
 
   return NextResponse.json({ answer: ai.reply, away: false, recommendations });
