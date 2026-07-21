@@ -1,6 +1,9 @@
 import type { StoryTier } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getRatingSummaryByStory, getWriterRatingSummary, type RatingSummary } from "@/lib/data/kekere-ratings";
+import { MIN_COMING_SOON_WORD_COUNT } from "@/content/kekere-coming-soon";
+
+export { MIN_COMING_SOON_WORD_COUNT };
 
 export interface PublicWriterProfile {
   id: string;
@@ -12,8 +15,53 @@ export interface PublicWriterProfile {
   socialLinks: { label: string; href: string }[];
   memberSince: Date;
   kekereUsername: string | null;
-  currentlyWriting: string | null;
+  comingSoon: ComingSoonStory | null;
   crossPromotionEnabled: boolean;
+}
+
+export interface ComingSoonStory {
+  id: string;
+  title: string;
+  hookLine: string;
+}
+
+export interface EligibleDraft {
+  id: string;
+  title: string;
+  hookLine: string;
+  wordCount: number;
+  updatedAt: Date;
+}
+
+/** This writer's own drafts that have enough written to feature as a
+ * "coming soon" pick — powers the picker in the profile edit form. */
+export async function getEligibleComingSoonDrafts(writerId: string): Promise<EligibleDraft[]> {
+  return prisma.story.findMany({
+    where: { authorId: writerId, status: "DRAFT", wordCount: { gte: MIN_COMING_SOON_WORD_COUNT } },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, title: true, hookLine: true, wordCount: true, updatedAt: true },
+  });
+}
+
+/**
+ * Re-validates a writer's `currentlyWritingStoryId` at read time rather than
+ * trusting the stored pointer — it's a soft reference (see the schema
+ * comment), so a story that got published, deleted, or edited back below
+ * the word-count bar simply stops resolving here instead of needing to be
+ * proactively cleared from every place a story's status can change.
+ */
+export async function getValidatedComingSoonStory(writerId: string, storyId: string): Promise<ComingSoonStory | null> {
+  const story = await prisma.story.findFirst({
+    where: {
+      id: storyId,
+      authorId: writerId,
+      status: "DRAFT",
+      wordCount: { gte: MIN_COMING_SOON_WORD_COUNT },
+    },
+    select: { id: true, title: true, hookLine: true },
+  });
+  if (!story) return null;
+  return { id: story.id, title: story.title, hookLine: story.hookLine.trim() };
 }
 
 /**
@@ -52,7 +100,7 @@ export async function getPublicWriterProfile(identifier: string): Promise<Public
         socialLinks: true,
         createdAt: true,
         kekereUsername: true,
-        currentlyWriting: true,
+        currentlyWritingStoryId: true,
         crossPromotionEnabled: true,
       },
     }),
@@ -61,6 +109,10 @@ export async function getPublicWriterProfile(identifier: string): Promise<Public
 
   if (!user) return { kind: "not_found" };
   if (publishedCount === 0) return { kind: "not_a_writer", name: user.name };
+
+  const comingSoon = user.currentlyWritingStoryId
+    ? await getValidatedComingSoonStory(user.id, user.currentlyWritingStoryId)
+    : null;
 
   return {
     kind: "writer",
@@ -74,7 +126,7 @@ export async function getPublicWriterProfile(identifier: string): Promise<Public
       socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
       memberSince: user.createdAt,
       kekereUsername: user.kekereUsername,
-      currentlyWriting: user.currentlyWriting,
+      comingSoon,
       crossPromotionEnabled: user.crossPromotionEnabled,
     },
   };

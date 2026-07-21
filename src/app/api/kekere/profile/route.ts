@@ -4,10 +4,11 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { updateKekereProfile } from "@/lib/data/kekere-profile-stats";
 import { setKekereUsername } from "@/lib/data/kekere-username";
+import { getValidatedComingSoonStory } from "@/lib/data/kekere-writer-profile";
 
 export const PATCH = withAuth(async (request, session) => {
   const body = await request.json().catch(() => ({}));
-  const { name, bio, socialLinks, country, currentlyWriting, crossPromotionEnabled, kekereUsername } = body;
+  const { name, bio, socialLinks, country, currentlyWritingStoryId, crossPromotionEnabled, kekereUsername } = body;
 
   if (typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -18,14 +19,28 @@ export const PATCH = withAuth(async (request, session) => {
   if (country !== undefined && country !== null && typeof country !== "string") {
     return NextResponse.json({ error: "Country must be a string" }, { status: 400 });
   }
-  if (currentlyWriting !== undefined && currentlyWriting !== null && typeof currentlyWriting !== "string") {
-    return NextResponse.json({ error: "Currently-writing teaser must be a string" }, { status: 400 });
+  if (
+    currentlyWritingStoryId !== undefined &&
+    currentlyWritingStoryId !== null &&
+    typeof currentlyWritingStoryId !== "string"
+  ) {
+    return NextResponse.json({ error: "currentlyWritingStoryId must be a string" }, { status: 400 });
   }
   if (crossPromotionEnabled !== undefined && typeof crossPromotionEnabled !== "boolean") {
     return NextResponse.json({ error: "crossPromotionEnabled must be a boolean" }, { status: 400 });
   }
   if (kekereUsername !== undefined && kekereUsername !== null && typeof kekereUsername !== "string") {
     return NextResponse.json({ error: "Username must be a string" }, { status: 400 });
+  }
+
+  // Never trust the client's word that a story is an eligible draft of
+  // theirs — re-check ownership/status/word-count server-side, same as the
+  // read-time validation the public profile itself relies on.
+  if (currentlyWritingStoryId !== undefined && currentlyWritingStoryId !== null) {
+    const validated = await getValidatedComingSoonStory(session.user.id, currentlyWritingStoryId);
+    if (!validated) {
+      return NextResponse.json({ error: "not_eligible" }, { status: 400 });
+    }
   }
 
   let parsedSocialLinks: { label: string; href: string }[] | undefined;
@@ -57,8 +72,7 @@ export const PATCH = withAuth(async (request, session) => {
     bio: bio.slice(0, 280),
     socialLinks: parsedSocialLinks,
     country: typeof country === "string" ? country.trim().slice(0, 80) || null : undefined,
-    currentlyWriting:
-      typeof currentlyWriting === "string" ? currentlyWriting.trim().slice(0, 140) || null : undefined,
+    currentlyWritingStoryId: currentlyWritingStoryId !== undefined ? currentlyWritingStoryId || null : undefined,
     crossPromotionEnabled: typeof crossPromotionEnabled === "boolean" ? crossPromotionEnabled : undefined,
   });
 
