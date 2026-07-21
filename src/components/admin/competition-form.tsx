@@ -25,8 +25,30 @@ export interface CompetitionFormValues {
   /** Empty string means no minimum — a single word-count ceiling rather
    * than a range. */
   wordCountMin: string;
-  status: "DRAFT" | "OPEN" | "CLOSED" | "JUDGING" | "COMPLETE";
+  status: "DRAFT" | "UPCOMING" | "OPEN" | "CLOSED" | "JUDGING" | "COMPLETE";
 }
+
+const STATUS_SELECT_LABELS: Record<CompetitionFormValues["status"], string> = {
+  DRAFT: "Draft",
+  UPCOMING: "Coming soon",
+  OPEN: "Open",
+  CLOSED: "Closed",
+  JUDGING: "Judging",
+  COMPLETE: "Complete",
+};
+
+// Announce a competition (theme, prize, rules) well ahead of its start date
+// by setting it to "Coming soon" — it's visible on /kekere/competitions and
+// its own detail page, just without an entry form, until it's flipped to
+// Open when submissions actually start.
+const STATUS_HELP: Record<CompetitionFormValues["status"], string> = {
+  DRAFT: "Not visible anywhere on the public site yet.",
+  UPCOMING: "Visible on the public competitions page with a “Coming soon” label — theme, prize, and rules show, but there's no entry form yet. Switch to Open once submissions should start.",
+  OPEN: "Visible publicly and accepting entries.",
+  CLOSED: "Visible publicly; the entry form is hidden.",
+  JUDGING: "Visible publicly as under judging; the entry form is hidden.",
+  COMPLETE: "Visible publicly with winners shown, once placements are set below.",
+};
 
 const EMPTY: CompetitionFormValues = {
   slug: "",
@@ -174,16 +196,20 @@ export function CompetitionForm({ mode, competitionId, initial }: CompetitionFor
         <Label htmlFor="status">Status</Label>
         <Select value={values.status} onValueChange={(v) => set("status", v as CompetitionFormValues["status"])}>
           <SelectTrigger id="status">
-            <SelectValue>{values.status}</SelectValue>
+            <SelectValue>{STATUS_SELECT_LABELS[values.status]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="DRAFT">Draft</SelectItem>
-            <SelectItem value="OPEN">Open</SelectItem>
+            <SelectItem value="DRAFT">Draft (hidden from the public site)</SelectItem>
+            <SelectItem value="UPCOMING">Coming soon (public, not open for entries yet)</SelectItem>
+            <SelectItem value="OPEN">Open (accepting entries)</SelectItem>
             <SelectItem value="CLOSED">Closed</SelectItem>
             <SelectItem value="JUDGING">Judging</SelectItem>
             <SelectItem value="COMPLETE">Complete</SelectItem>
           </SelectContent>
         </Select>
+        <p className="text-xs text-[var(--color-ink)]/55">
+          {STATUS_HELP[values.status]}
+        </p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

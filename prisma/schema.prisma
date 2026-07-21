@@ -901,6 +901,11 @@ model SubmissionUpdate {
 
 enum CompetitionStatus {
   DRAFT
+  // Publicly visible (theme, prize, rules) but not accepting entries yet —
+  // for announcing a competition ahead of its start date. The public pages
+  // treat this like OPEN for visibility purposes and like CLOSED for entry
+  // purposes (see CompetitionCard/CompetitionDetail's STATUS maps).
+  UPCOMING
   OPEN
   CLOSED
   JUDGING
