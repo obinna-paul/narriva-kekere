@@ -430,8 +430,13 @@ export function NotesView({
             >
               <span
                 className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
-                  notesEnabled ? "translate-x-[22px]" : "translate-x-0.5",
+                  // left-0.5 anchors the knob explicitly rather than relying on
+                  // its browser-computed static position (which doesn't
+                  // reliably resolve to 0 for an absolutely-positioned span
+                  // with no left/right set) — that's what let the knob render
+                  // outside the track entirely in the "on" state.
+                  "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                  notesEnabled ? "translate-x-5" : "translate-x-0",
                 )}
               />
             </button>

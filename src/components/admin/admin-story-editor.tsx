@@ -712,8 +712,12 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
               }`}
             >
               <span
-                className={`absolute top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
-                  isAdult ? "translate-x-[18px]" : "translate-x-[2px]"
+                // left-[2px] anchors the knob explicitly — relying on its
+                // browser-computed static position (no left/right set)
+                // doesn't reliably resolve to 0 and can render the knob
+                // outside the track.
+                className={`absolute left-[2px] top-[2px] h-4 w-4 rounded-full bg-white transition-transform ${
+                  isAdult ? "translate-x-[16px]" : "translate-x-0"
                 }`}
               />
             </span>
