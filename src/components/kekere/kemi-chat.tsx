@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { X, Send, ChevronRight } from "lucide-react";
+import { X, Send, ChevronRight, BookHeart } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { generateUUID } from "@/lib/utils/uuid";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
@@ -126,10 +126,9 @@ export function KemiChat() {
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label="Ask Kemi for a story recommendation"
-        className="h-[38px] w-[38px] flex-none overflow-hidden rounded-full ring-2 ring-[var(--color-primary)]/70 transition-transform hover:scale-105"
+        className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/30 transition-transform hover:scale-105"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={KEMI_AVATAR} alt="" className="h-full w-full object-cover" />
+        <BookHeart size={16} aria-hidden="true" />
       </button>
 
       {open &&
