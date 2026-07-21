@@ -22,7 +22,7 @@ const competitionSchema = z.object({
   prizeDescription: z.string().min(1),
   wordCountLimit: z.number().int().positive(),
   wordCountMin: z.number().int().positive().nullable().optional(),
-  status: z.enum(["DRAFT", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
+  status: z.enum(["DRAFT", "UPCOMING", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
 });
 
 export const POST = withAuth(

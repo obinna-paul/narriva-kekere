@@ -4,6 +4,7 @@ import type { MockCompetition } from "@/content/mock/kekere-competitions";
 
 const STATUS_STYLES: Record<MockCompetition["status"], string> = {
   DRAFT: "bg-[var(--color-ink)]/10 text-[var(--color-ink-muted)]",
+  UPCOMING: "bg-[rgba(224,138,74,0.18)] text-[#B14E22]",
   OPEN: "bg-[#C75D2C] text-white",
   JUDGING: "bg-[rgba(31,75,75,0.14)] text-[#1F4B4B]",
   CLOSED: "bg-[rgba(42,26,18,0.08)] text-[#8A7565]",
@@ -12,6 +13,7 @@ const STATUS_STYLES: Record<MockCompetition["status"], string> = {
 
 const STATUS_LABELS: Record<MockCompetition["status"], string> = {
   DRAFT: "Draft",
+  UPCOMING: "Coming soon",
   OPEN: "OPEN",
   JUDGING: "JUDGING",
   CLOSED: "CLOSED",

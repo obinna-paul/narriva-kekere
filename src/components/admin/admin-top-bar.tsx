@@ -13,7 +13,7 @@ const ROUTE_META: Record<string, { section: string; subsection?: string; title: 
   "/admin/nari-intelligence": { section: "Narriva", title: "Nari Intelligence" },
   "/admin/story-review": { section: "Kekere", title: "Story Review Queue" },
   "/admin/performance": { section: "Kekere", title: "Trending & Performance" },
-  "/admin/competitions": { section: "Kekere", title: "Competitions" },
+  "/admin/kekere/competitions": { section: "Kekere", title: "Competitions" },
   "/admin/contracts": { section: "Kekere", title: "Publishing Contracts" },
   "/admin/economy": { section: "Kekere", title: "Cowrie Economy" },
   "/admin/withdrawals": { section: "Kekere", title: "Withdrawal Requests" },
@@ -40,6 +40,7 @@ export function AdminTopBar({ range = "30d", onRangeChange, showRange = true, on
   const pathname = usePathname();
   const meta = ROUTE_META[pathname]
     ?? (pathname.startsWith("/admin/kekere/writers/") ? { section: "Kekere", title: "Author a Story" } : null)
+    ?? (pathname.startsWith("/admin/kekere/competitions/") ? { section: "Kekere", title: "Competitions" } : null)
     ?? { section: "Admin", title: "Dashboard" };
 
   return (

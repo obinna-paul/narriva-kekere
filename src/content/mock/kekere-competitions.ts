@@ -1,7 +1,7 @@
 // Matches the real Prisma CompetitionStatus enum (Phase 13) — DRAFT/COMPLETE
 // weren't in the original Phase 10 mock set, but the type needs to cover
 // them so the real-data adapter can produce this same shape.
-export type CompetitionStatus = "DRAFT" | "OPEN" | "CLOSED" | "JUDGING" | "COMPLETE";
+export type CompetitionStatus = "DRAFT" | "UPCOMING" | "OPEN" | "CLOSED" | "JUDGING" | "COMPLETE";
 
 export interface MockCompetitionWinner {
   storyId: string;

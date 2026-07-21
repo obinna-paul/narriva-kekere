@@ -44,10 +44,22 @@ function useCountdown(deadline: string) {
 
 const STATUS_LABELS: Record<MockCompetition["status"], string> = {
   DRAFT: "Draft",
+  UPCOMING: "COMING SOON",
   OPEN: "OPEN",
   JUDGING: "JUDGING",
   CLOSED: "CLOSED",
   COMPLETE: "COMPLETE",
+};
+
+/** What to show in place of the entry form when the competition isn't
+ * open — distinct copy for "hasn't started yet" vs. every other closed
+ * state, so an UPCOMING competition doesn't read as if it already ended. */
+const NOT_OPEN_MESSAGE: Record<Exclude<MockCompetition["status"], "OPEN">, string> = {
+  DRAFT: "Submissions closed",
+  UPCOMING: "Entries open soon — check back nearer the date.",
+  JUDGING: "Submissions closed",
+  CLOSED: "Submissions closed",
+  COMPLETE: "Submissions closed",
 };
 
 export interface CompetitionDetailProps {
@@ -91,7 +103,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
           </p>
         </div>
 
-        {countdown && (
+        {competition.status === "OPEN" && countdown && (
           <div className="relative mt-[26px] flex gap-[10px]">
             {[
               { val: countdown.days, label: "Days" },
@@ -176,8 +188,8 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
           </div>
         </section>
 
-        {competition.status === "OPEN" &&
-          (countdown && competition.id ? (
+        {competition.status === "OPEN" ? (
+          countdown && competition.id ? (
             <CompetitionApply
               competitionId={competition.id}
               competitionSlug={competition.slug}
@@ -188,7 +200,12 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
             <p className="rounded-xl bg-[var(--color-ink)]/10 px-4 py-[17px] text-center text-sm font-medium text-[var(--color-ink)]/60">
               Submissions closed
             </p>
-          ))}
+          )
+        ) : (
+          <p className="rounded-xl bg-[var(--color-ink)]/10 px-4 py-[17px] text-center text-sm font-medium text-[var(--color-ink)]/60">
+            {NOT_OPEN_MESSAGE[competition.status]}
+          </p>
+        )}
 
         {countdown && competition.status === "OPEN" && (
           <p className="mt-[14px] text-center text-[12.5px] text-[var(--color-ink-muted-3)]">

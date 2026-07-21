@@ -37,7 +37,7 @@ const updateSchema = z.object({
   prizeDescription: z.string().min(1).optional(),
   wordCountLimit: z.number().int().positive().optional(),
   wordCountMin: z.number().int().positive().nullable().optional(),
-  status: z.enum(["DRAFT", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
+  status: z.enum(["DRAFT", "UPCOMING", "OPEN", "CLOSED", "JUDGING", "COMPLETE"]).optional(),
 });
 
 export const PUT = withAuth(
