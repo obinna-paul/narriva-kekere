@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: { default: "Kekere Stories", template: "%s | Kekere Stories" },
   description: DESCRIPTION,
   manifest: "/kekere/manifest.webmanifest",
+  // Explicit icons here replace (rather than merge with) the root layout's
+  // Narriva favicon.ico for every page under this route group — the Kekere
+  // "K" mark, not Narriva's, is what a Kekere browser tab shows.
+  icons: {
+    icon: "/kekere/icons/icon-192.png",
+    shortcut: "/kekere/icons/icon-192.png",
+    apple: "/kekere/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

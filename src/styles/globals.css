@@ -124,19 +124,30 @@ body {
   Drop cap — the first letter of the first paragraph is enlarged to span two
   lines, the way a novel opens a chapter, while the rest of the first word
   stays normal (::first-letter only ever touches the single leading glyph).
-  Kept in the body serif and ink colour for an authentic literary feel
-  rather than a decorative accent. Uses :first-of-type so it lands on the
-  first real paragraph even if the body happens to open with a heading, and
-  the float lets the following lines wrap snugly around it.
+  Kept in the body serif, body weight, and ink colour for an authentic
+  literary feel rather than a decorative accent. Uses :first-of-type so it
+  lands on the first real paragraph even if the body happens to open with a
+  heading, and the float lets the following lines wrap snugly around it.
+
+  Deliberately uses line-height: 1 with no padding, rather than a fractional
+  line-height + em-based padding-top (what this used to be): browsers do NOT
+  size a ::first-letter float's box as line-height × font-size the way they
+  do a normal line box — measured in Chromium, a 0.66 line-height plus
+  padding-top computed to ~43px of CSS but the box Chromium actually laid
+  out was 73px tall, and the glyph's floated bottom edge landed ~6px below
+  the second line of text it was meant to sit flush with (the "jumping off
+  its position" look). font-size is the only reliable lever here — this
+  value (2.65em against the reader's 18px/1.6 body type) was reached by
+  measuring the live rendered box (Range.getBoundingClientRect against the
+  paragraph's second wrapped line) until the cap's bottom edge landed within
+  a fraction of a pixel of that line's bottom, not by eyeballing.
 */
 .story-reader-prose .ProseMirror > p:first-of-type::first-letter {
   float: left;
-  font-size: 3.1em;
-  /* line-height 1 sits the cap's top on the first line's cap height instead of
-     letting a sub-1 value pull it up above the text (the "jumping up" look). */
-  line-height: 0.66;
-  padding-top: 0.11em;
-  padding-right: 0.06em;
+  font-size: 2.65em;
+  line-height: 1;
+  padding: 0;
+  margin-right: 0.06em;
   /* Same weight as the body text — a thin cap, not a bold one. */
   font-weight: 400;
   /* Never justify-stretch or hyphenate around the cap itself. */
