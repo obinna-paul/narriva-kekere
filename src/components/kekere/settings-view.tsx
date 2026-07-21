@@ -211,8 +211,11 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
             }`}
           >
             <span
-              className={`absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${
-                emailNotificationsEnabled ? "translate-x-[21px]" : "translate-x-[3px]"
+              // left-[3px] anchors the knob explicitly — relying on its
+              // browser-computed static position (no left/right set) doesn't
+              // reliably resolve to 0 and can render the knob outside the track.
+              className={`absolute left-[3px] top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-transform ${
+                emailNotificationsEnabled ? "translate-x-[18px]" : "translate-x-0"
               }`}
             />
           </span>
