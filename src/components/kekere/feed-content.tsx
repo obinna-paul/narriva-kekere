@@ -208,6 +208,20 @@ export function FeedContent({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // The browser's own scroll restoration (returning to this tab after being
+  // backgrounded, or a soft "back" navigation) can land the feed mid-scroll,
+  // which — combined with the sticky greeting/Genre header — reads as if the
+  // page opened straight into the Genre row with the greeting never shown.
+  // The feed should always open at the top; take manual control of restoration
+  // and force it there on every fresh mount of this component.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (!tagOpen) return;
     function handleClick(e: MouseEvent) {
