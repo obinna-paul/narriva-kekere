@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Sparkles, X, Send, ChevronRight } from "lucide-react";
+import { X, Send, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { generateUUID } from "@/lib/utils/uuid";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
@@ -15,6 +15,8 @@ interface KemiMessage {
   recommendations?: KemiRecommendation[];
   isAway?: boolean;
 }
+
+const KEMI_AVATAR = "/kekere/kemi-avatar.png";
 
 const QUICK_STARTS = ["Surprise me", "Something funny", "I've got 10 minutes", "Make me cry"];
 
@@ -124,9 +126,10 @@ export function KemiChat() {
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label="Ask Kemi for a story recommendation"
-        className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/30 transition-transform hover:scale-105"
+        className="h-[38px] w-[38px] flex-none overflow-hidden rounded-full ring-2 ring-[var(--color-primary)]/70 transition-transform hover:scale-105"
       >
-        <Sparkles size={16} aria-hidden="true" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={KEMI_AVATAR} alt="" className="h-full w-full object-cover" />
       </button>
 
       {open &&
@@ -156,15 +159,13 @@ export function KemiChat() {
               {/* Header */}
               <div className="flex flex-none items-center justify-between px-5 pb-3 pt-1">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--color-primary)] text-white">
-                    <Sparkles size={16} aria-hidden="true" />
+                  <span className="h-9 w-9 flex-none overflow-hidden rounded-full ring-2 ring-[var(--color-primary)]/70">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={KEMI_AVATAR} alt="" className="h-full w-full object-cover" />
                   </span>
-                  <div>
-                    <p className="font-[family-name:var(--font-display)] text-[15.5px] font-semibold leading-tight text-[var(--color-ink)]">
-                      Kemi
-                    </p>
-                    <p className="text-[11.5px] text-[var(--color-ink-muted)]">Your Kekere reading companion</p>
-                  </div>
+                  <p className="font-[family-name:var(--font-display)] text-[15.5px] font-semibold leading-tight text-[var(--color-ink)]">
+                    Kemi
+                  </p>
                 </div>
                 <button
                   type="button"
