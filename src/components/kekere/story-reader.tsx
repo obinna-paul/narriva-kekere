@@ -441,7 +441,7 @@ export function StoryReader({
   // URL when there's no code (logged-out reader).
   const shareUrl = referralCode
     ? `https://narriva.pro/kekere/invite/${referralCode}`
-    : `https://narriva.pro/kekere/story/${story.id}`;
+    : `https://narriva.pro/kekere/story/${story.slug ?? story.id}`;
   const shareText = `I just read "${story.title}" on Kekere Stories. Check it out: ${shareUrl}`;
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 

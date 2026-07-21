@@ -55,6 +55,7 @@ export async function getPublicWriterProfile(userId: string): Promise<PublicWrit
 
 export interface WriterProfileStory {
   id: string;
+  slug: string | null;
   title: string;
   hookLine: string;
   coverColor: string;
@@ -76,6 +77,7 @@ export async function getWriterPublishedStories(userId: string): Promise<WriterP
     where: { authorId: userId, status: "PUBLISHED" },
     select: {
       id: true,
+      slug: true,
       title: true,
       hookLine: true,
       coverColor: true,
@@ -109,6 +111,7 @@ export async function getWriterPublishedStories(userId: string): Promise<WriterP
 
   return stories.map((s) => ({
     id: s.id,
+    slug: s.slug,
     title: s.title,
     hookLine: s.hookLine,
     coverColor: s.coverColor,

@@ -366,7 +366,7 @@ export function FeedContent({
             {winnerStories.map((story) => (
               <Link
                 key={story.id}
-                href={`/kekere/story/${story.id}`}
+                href={`/kekere/story/${story.slug ?? story.id}`}
                 className="block w-[140px] flex-none"
                 style={{ scrollSnapAlign: "start" }}
               >
@@ -423,7 +423,7 @@ export function FeedContent({
       {featuredStory && (
         <section className="px-5 py-[18px]">
           <Link
-            href={`/kekere/story/${featuredStory.id}`}
+            href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`}
             className="relative block h-[220px] overflow-hidden rounded-[18px]"
             style={{ background: "radial-gradient(circle at 70% 20%,#E2A565,#C75D2C 45%,#5A2410)" }}
           >

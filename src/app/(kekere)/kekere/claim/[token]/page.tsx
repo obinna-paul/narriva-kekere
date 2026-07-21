@@ -103,7 +103,7 @@ export default function ClaimPageClient() {
       });
 
       if (result.storyId) {
-        window.location.href = `/kekere/story/${result.storyId}`;
+        window.location.href = `/kekere/story/${result.storySlug ?? result.storyId}`;
       } else {
         window.location.href = "/kekere";
       }

@@ -28,6 +28,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
 
   return {
     id: story.id,
+    slug: story.slug,
     title: story.title,
     hookLine: story.hookLine,
     authorName: story.author.name,

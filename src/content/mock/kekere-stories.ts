@@ -24,6 +24,10 @@ export type KekereGenre = (typeof KEKERE_GENRES)[number];
 
 export interface MockStory {
   id: string;
+  /** Public URL segment (/kekere/story/[slug]) — null for the static mock
+   * catalog and for any real story somehow missing one; every consumer that
+   * builds a story link should fall back to `id` when this is null. */
+  slug: string | null;
   title: string;
   hookLine: string;
   authorName: string;

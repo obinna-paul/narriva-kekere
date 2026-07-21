@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderContractSignedEmail } from "@/lib/email/templates";
 import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
+import { nextSlugForTitle, withSlugRetry } from "@/lib/data/kekere-slugs";
 
 const signSchema = z.object({
   signedName: z.string().min(1, "Signed name is required."),
@@ -125,45 +126,60 @@ export const POST = withAuth(async (request, session, { params }) => {
     }
   }
 
-  await prisma.kekereContract.update({
-    where: { id },
-    data: {
-      status: "SIGNED",
-      signedName,
-      signedAt,
-      signerIp,
-      ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
-    },
-  });
+  const linkedStoryId: string | null = contract.storyId ?? null;
 
-  // If the contract is linked to a PENDING_CONTRACT story, publish it now.
-  // storyId was added via db push; cast until `prisma generate` runs on restart.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const linkedStoryId: string | null = (contract as any).storyId ?? null;
+  await withSlugRetry(() =>
+    prisma.$transaction(async (tx) => {
+      await tx.kekereContract.update({
+        where: { id },
+        data: {
+          status: "SIGNED",
+          signedName,
+          signedAt,
+          signerIp,
+          ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
+        },
+      });
+
+      // If the contract is linked to a PENDING_CONTRACT story, publish it now
+      // — assigning its permanent slug in the same transaction that flips it
+      // live, so the two can never disagree.
+      if (linkedStoryId) {
+        const linkedStory = await tx.story.findUnique({
+          where: { id: linkedStoryId },
+          select: { title: true },
+        });
+        const slug = linkedStory ? await nextSlugForTitle(tx, linkedStory.title) : undefined;
+        await tx.story.updateMany({
+          where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
+          data: { status: "PUBLISHED", isDraft: false, publishedAt: signedAt, ...(slug ? { slug } : {}) },
+        });
+      }
+    })
+  );
+
   if (linkedStoryId) {
-    await prisma.story.updateMany({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      where: { id: linkedStoryId, status: "PENDING_CONTRACT" as any },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { status: "PUBLISHED" as any, isDraft: false, publishedAt: signedAt },
-    });
     notifyFollowersOfPublish(linkedStoryId).catch(console.error);
   }
 
   const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;
 
-  // Fetch story title for the email if this contract is linked to a story
+  // Fetch story title/slug for the email if this contract is linked to a story
   let storyTitle = "your story";
+  let storySlug: string | null = null;
   if (linkedStoryId) {
-    const story = await prisma.story.findUnique({ where: { id: linkedStoryId }, select: { title: true } });
-    if (story) storyTitle = story.title;
+    const story = await prisma.story.findUnique({ where: { id: linkedStoryId }, select: { title: true, slug: true } });
+    if (story) {
+      storyTitle = story.title;
+      storySlug = story.slug;
+    }
   }
 
   const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
   const storyUrl = linkedStoryId
-    ? `${baseUrl}/kekere/story/${linkedStoryId}`
+    ? `${baseUrl}/kekere/story/${storySlug ?? linkedStoryId}`
     : `${baseUrl}/kekere`;
 
   const signedHtml = linkedStoryId

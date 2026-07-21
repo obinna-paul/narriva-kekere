@@ -77,12 +77,12 @@ export function StoryPreviewSheet({
   function handleReadNow() {
     if (!isLoggedIn) {
       onClose();
-      router.push(`/login?callbackUrl=${encodeURIComponent(`/kekere/story/${story!.id}`)}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/kekere/story/${story!.slug ?? story!.id}`)}`);
       return;
     }
     // Navigate directly — the story page handles unlock, paywall, and admin access
     onClose();
-    router.push(`/kekere/story/${story!.id}`);
+    router.push(`/kekere/story/${story!.slug ?? story!.id}`);
   }
 
   async function handleUnlock() {
@@ -97,7 +97,7 @@ export function StoryPreviewSheet({
       }
       // Unlocked — navigate to full story
       onClose();
-      router.push(`/kekere/story/${story!.id}`);
+      router.push(`/kekere/story/${story!.slug ?? story!.id}`);
     } finally {
       setUnlocking(false);
     }

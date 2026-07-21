@@ -44,7 +44,7 @@ function StatTile({ value, label }: { value: string; label: string }) {
 function StoryListItem({ story }: { story: WriterProfileStory }) {
   return (
     <Link
-      href={`/kekere/story/${story.id}`}
+      href={`/kekere/story/${story.slug ?? story.id}`}
       className="flex gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 transition-colors hover:border-[var(--color-primary)]/40"
     >
       <div

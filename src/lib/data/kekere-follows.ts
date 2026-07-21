@@ -170,9 +170,10 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
   try {
     const story = await prisma.story.findUnique({
       where: { id: storyId },
-      select: { title: true, authorId: true, author: { select: { name: true } } },
+      select: { title: true, slug: true, authorId: true, author: { select: { name: true } } },
     });
     if (!story) return;
+    const storyPath = story.slug ?? storyId;
 
     const followers = await prisma.follow.findMany({
       where: { writerId: story.authorId },
@@ -186,7 +187,7 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
         type: "WRITER_PUBLISHED" as const,
         title: `New from ${story.author.name}`,
         body: `${story.author.name} just published "${story.title}."`,
-        link: `/kekere/story/${storyId}`,
+        link: `/kekere/story/${storyPath}`,
       })),
     });
 
@@ -197,13 +198,13 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
           followerName: recipient.name,
           writerName: story.author.name,
           storyTitle: story.title,
-          storyId,
+          storyId: storyPath,
           unsubscribeUrl: recipient.unsubscribeUrl,
         });
         await sendEmail({
           to: recipient.email,
           subject: `New from ${story.author.name} on Kekere Stories`,
-          body: `${story.author.name}, a writer you follow, just published "${story.title}." Read it: ${SITE_URL}/kekere/story/${storyId}`,
+          body: `${story.author.name}, a writer you follow, just published "${story.title}." Read it: ${SITE_URL}/kekere/story/${storyPath}`,
           html,
         });
       }),

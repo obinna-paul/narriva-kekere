@@ -111,7 +111,7 @@ export function StoryCard({ story, className, readProgress, onPreview }: StoryCa
 
   return (
     <a
-      href={`/kekere/story/${story.id}`}
+      href={`/kekere/story/${story.slug ?? story.id}`}
       className={cn(
         "block overflow-hidden rounded-2xl bg-[var(--color-surface)] shadow-sm shadow-black/5 ring-1 ring-[var(--color-border)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]",
         className
