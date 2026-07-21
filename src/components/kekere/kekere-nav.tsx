@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { BottomNav } from "@/components/kekere/bottom-nav";
 import { UserMenu } from "@/components/shared/user-menu";
 import { NotificationBell } from "@/components/kekere/NotificationBell";
+import { KemiChat } from "@/components/kekere/kemi-chat";
 
 const NAV_ITEMS = [
   { href: "/kekere/feed", label: "Feed", icon: BookOpen },
@@ -76,6 +77,7 @@ export function KekereNav({ user }: KekereNavProps = {}) {
         </div>
       </header>
       <BottomNav />
+      {user && <KemiChat />}
     </>
   );
 }

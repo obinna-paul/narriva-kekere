@@ -125,6 +125,7 @@ model User {
   deliverableComments  DeliverableComment[]
   projectMessages      ProjectMessage[]
   nariConversations    NariConversation[]
+  kemiConversations    KemiConversation[]
   kekereContracts      KekereContract[]
   notifications        Notification[]
   paragraphComments    ParagraphComment[]
@@ -1143,6 +1144,24 @@ model AdminAction {
   createdAt    DateTime @default(now())
 
   @@index([targetUserId])
+}
+
+// A reader's chat history with Kemi, the Kekere-side reading companion (a
+// separate persona from Narriva's Nari — no shared conversation model).
+// Kemi only ever exists inside the authenticated Kekere app, so unlike
+// NariConversation (anonymous marketing-site visitors), userId is required.
+model KemiConversation {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Full conversation as an array of {role, content, timestamp}.
+  messages      Json
+  startedAt     DateTime @default(now())
+  lastMessageAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([lastMessageAt])
 }
 
 model NariConversation {
