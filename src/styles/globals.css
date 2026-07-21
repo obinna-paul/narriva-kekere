@@ -131,11 +131,14 @@ body {
 */
 .story-reader-prose .ProseMirror > p:first-of-type::first-letter {
   float: left;
-  font-size: 3.3em;
-  line-height: 0.82;
-  padding-top: 0.02em;
-  padding-right: 0.07em;
-  font-weight: 600;
+  font-size: 3.1em;
+  /* line-height 1 sits the cap's top on the first line's cap height instead of
+     letting a sub-1 value pull it up above the text (the "jumping up" look). */
+  line-height: 0.66;
+  padding-top: 0.11em;
+  padding-right: 0.06em;
+  /* Same weight as the body text — a thin cap, not a bold one. */
+  font-weight: 400;
   /* Never justify-stretch or hyphenate around the cap itself. */
   -webkit-hyphens: manual;
   hyphens: manual;

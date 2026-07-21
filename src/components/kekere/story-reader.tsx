@@ -262,6 +262,10 @@ export function StoryReader({
     "--color-ink-muted": theme.inkMuted,
     "--color-ink-muted-2": theme.inkMuted2,
     "--color-ink-muted-3": theme.inkMuted3,
+    // Reader-theme border tokens, so outlines follow the reading theme instead
+    // of a hardcoded dark-ink border that vanishes on the dark background.
+    "--color-border": theme.border,
+    "--color-border-strong": theme.swatchRing,
   } as CSSProperties;
 
   // Once a successful unlock triggers router.refresh(), this fires when the
@@ -1062,7 +1066,7 @@ export function StoryReader({
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="cursor-pointer rounded-[30px] border border-[rgba(42,26,18,0.16)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  className="cursor-pointer rounded-[30px] border border-[var(--color-border-strong)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                 >
                   I finished this
                 </button>
