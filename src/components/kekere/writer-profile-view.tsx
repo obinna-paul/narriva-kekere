@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Star, Quote, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
-import type { PublicWriterProfile, WriterProfileStats, WriterProfileStory } from "@/lib/data/kekere-writer-profile";
+import type {
+  PublicWriterProfile,
+  WriterProfileStats,
+  WriterProfileStory,
+  SimilarWriter,
+} from "@/lib/data/kekere-writer-profile";
+import type { PraiseWallNote } from "@/lib/data/kekere-notes";
+import type { FollowerAvatar } from "@/lib/data/kekere-follows";
 
 function formatCount(n: number): string {
   if (n >= 1000) {
@@ -84,9 +91,57 @@ export interface WriterProfileViewProps {
   stats: WriterProfileStats;
   stories: WriterProfileStory[];
   followerCount: number;
+  followerAvatars: FollowerAvatar[];
+  praiseWallNotes: PraiseWallNote[];
+  similarWriters: SimilarWriter[];
   viewerIsLoggedIn: boolean;
   viewerIsFollowing: boolean;
   isOwnProfile: boolean;
+}
+
+function PraiseWallCard({ note }: { note: PraiseWallNote }) {
+  return (
+    <div className="flex-none w-[260px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <Quote size={16} className="text-[var(--color-primary)]/50" />
+      <p className="mt-2 line-clamp-5 text-[13.5px] italic leading-[1.5] text-[var(--color-ink)]">
+        &ldquo;{note.body}&rdquo;
+      </p>
+      <p className="mt-3 text-[12px] font-semibold text-[var(--color-ink-muted-2)]">
+        {note.fromUserName}
+        <span className="font-normal text-[var(--color-ink-muted-3)]"> · on &ldquo;{note.storyTitle}&rdquo;</span>
+      </p>
+    </div>
+  );
+}
+
+function SimilarWriterCard({ writer }: { writer: SimilarWriter }) {
+  const initial = writer.name.trim().charAt(0).toUpperCase() || "?";
+  const avatarUrl = writer.avatar ? userAvatarUrl(writer.avatar) : null;
+  const avatarColor = writer.avatarColor ?? "#C75D2C";
+  return (
+    <Link
+      href={`/kekere/writer/${writer.kekereUsername ?? writer.id}`}
+      className="flex flex-none w-[150px] flex-col items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition-colors hover:border-[var(--color-primary)]/40"
+    >
+      <span
+        className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[20px] font-semibold text-white"
+        style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial
+        )}
+      </span>
+      <p className="mt-2.5 truncate text-[13.5px] font-semibold text-[var(--color-ink)]">{writer.name}</p>
+      {writer.topStoryTitle && (
+        <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-[var(--color-ink-muted-2)]">
+          {writer.topStoryTitle}
+        </p>
+      )}
+    </Link>
+  );
 }
 
 export function WriterProfileView({
@@ -94,6 +149,9 @@ export function WriterProfileView({
   stats,
   stories,
   followerCount,
+  followerAvatars,
+  praiseWallNotes,
+  similarWriters,
   viewerIsLoggedIn,
   viewerIsFollowing,
   isOwnProfile,
@@ -151,6 +209,16 @@ export function WriterProfileView({
           </div>
         )}
 
+        {profile.currentlyWriting && (
+          <div className="mx-auto mt-3 flex max-w-[340px] items-start gap-2 rounded-2xl border border-[rgba(199,93,44,0.25)] bg-[rgba(199,93,44,0.06)] px-3.5 py-2.5 text-left">
+            <Sparkles size={14} className="mt-[1px] flex-none text-[var(--color-primary)]" />
+            <p className="text-[12.5px] leading-[1.45] text-[var(--color-ink)]">
+              <span className="font-semibold text-[var(--color-primary)]">Coming soon — </span>
+              {profile.currentlyWriting}
+            </p>
+          </div>
+        )}
+
         <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)]">
           Member since {formatMemberSince(profile.memberSince)}
         </p>
@@ -161,6 +229,7 @@ export function WriterProfileView({
           initialFollowing={viewerIsFollowing}
           initialFollowerCount={followerCount}
           isOwnProfile={isOwnProfile}
+          followerAvatars={followerAvatars}
         />
       </section>
 
@@ -173,7 +242,22 @@ export function WriterProfileView({
             label={stats.rating.count > 0 ? `${stats.rating.count} rating${stats.rating.count === 1 ? "" : "s"}` : "No ratings yet"}
           />
         </div>
+      </section>
 
+      {praiseWallNotes.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+            What readers say
+          </h2>
+          <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
+            {praiseWallNotes.map((note) => (
+              <PraiseWallCard key={note.id} note={note} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="px-[22px]">
         <h2 className={cn("mb-3 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]")}>
           Published stories
         </h2>
@@ -183,6 +267,20 @@ export function WriterProfileView({
           ))}
         </div>
       </section>
+
+      {profile.crossPromotionEnabled && similarWriters.length > 0 && (
+        <section className="mt-9">
+          <h2 className="mb-3 flex items-center gap-1.5 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+            <Users size={16} className="text-[var(--color-primary)]" />
+            You might also like
+          </h2>
+          <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
+            {similarWriters.map((writer) => (
+              <SimilarWriterCard key={writer.id} writer={writer} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

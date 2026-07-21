@@ -44,10 +44,14 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return new Response("Not found", { status: 404 });
   }
   const { profile } = result;
+  // params.id may actually be a kekereUsername — getPublicWriterProfile
+  // already resolved the real id above, so every lookup below must use
+  // that, not the raw route param.
+  const writerId = profile.id;
 
   const [stats, stories, logoBuffer] = await Promise.all([
-    getWriterProfileStats(params.id),
-    getWriterPublishedStories(params.id),
+    getWriterProfileStats(writerId),
+    getWriterPublishedStories(writerId),
     readFile(path.join(process.cwd(), "public", "kekere-logo.png")),
   ]);
 
@@ -66,6 +70,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
   const avatarColor = profile.avatarColor ?? "#C75D2C";
   const hasRating = stats.rating.average !== null && stats.rating.count > 0;
+  const vanityUrl = `${SITE_URL.replace("https://", "")}/kekere/writer/${profile.kekereUsername ?? profile.id}`;
 
   const cardStories = featuredStories.map((s, i) => ({
     story: s,
@@ -87,7 +92,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     `${stats.publishedCount} ${stats.publishedCount === 1 ? "story" : "stories"}`,
     `Since ${memberSince}`,
     "Kekere Stories",
-    `Read my stories at ${SITE_URL.replace("https://", "")}/kekere`,
+    `Read my stories at ${vanityUrl}`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -354,7 +359,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
             Kekere Stories
           </div>
           <div style={{ display: "flex", marginTop: 6, fontSize: 14, letterSpacing: 1, color: WARM_GRAY }}>
-            Read my stories at {SITE_URL.replace("https://", "")}/kekere
+            Read my stories at {vanityUrl}
           </div>
         </div>
       </div>

@@ -11,6 +11,9 @@ export interface PublicWriterProfile {
   avatar: string | null;
   socialLinks: { label: string; href: string }[];
   memberSince: Date;
+  kekereUsername: string | null;
+  currentlyWriting: string | null;
+  crossPromotionEnabled: boolean;
 }
 
 /**
@@ -26,13 +29,34 @@ export type PublicWriterProfileResult =
   | { kind: "not_a_writer"; name: string }
   | { kind: "not_found" };
 
-export async function getPublicWriterProfile(userId: string): Promise<PublicWriterProfileResult> {
+/**
+ * `identifier` is either a raw user id (every existing internal link — the
+ * feed, notifications, AuthorChip, the writer's own "view your public
+ * profile" fallback) or a kekereUsername (the prettier vanity URL surfaced
+ * once a writer sets one). Trying both in one query keeps every old link
+ * working forever without a redirect, since the two id spaces can't
+ * collide: usernames are validated to a short human-legible charset,
+ * nothing like a cuid.
+ */
+export async function getPublicWriterProfile(identifier: string): Promise<PublicWriterProfileResult> {
   const [user, publishedCount] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, bio: true, country: true, avatarColor: true, avatar: true, socialLinks: true, createdAt: true },
+    prisma.user.findFirst({
+      where: { OR: [{ id: identifier }, { kekereUsername: identifier }] },
+      select: {
+        id: true,
+        name: true,
+        bio: true,
+        country: true,
+        avatarColor: true,
+        avatar: true,
+        socialLinks: true,
+        createdAt: true,
+        kekereUsername: true,
+        currentlyWriting: true,
+        crossPromotionEnabled: true,
+      },
     }),
-    prisma.story.count({ where: { authorId: userId, status: "PUBLISHED" } }),
+    prisma.story.count({ where: { author: { OR: [{ id: identifier }, { kekereUsername: identifier }] }, status: "PUBLISHED" } }),
   ]);
 
   if (!user) return { kind: "not_found" };
@@ -49,6 +73,9 @@ export async function getPublicWriterProfile(userId: string): Promise<PublicWrit
       avatar: user.avatar,
       socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
       memberSince: user.createdAt,
+      kekereUsername: user.kekereUsername,
+      currentlyWriting: user.currentlyWriting,
+      crossPromotionEnabled: user.crossPromotionEnabled,
     },
   };
 }
@@ -193,4 +220,68 @@ export async function getWriterStatsBatch(writerIds: string[]): Promise<Map<stri
       return [id, { publishedCount: countByWriter.get(id) ?? 0, rating }];
     }),
   );
+}
+
+export interface SimilarWriter {
+  id: string;
+  name: string;
+  avatar: string | null;
+  avatarColor: string | null;
+  kekereUsername: string | null;
+  topStoryTitle: string;
+}
+
+/**
+ * Cross-promotion candidates for the "you might also like" section — other
+ * writers who've also opted in (crossPromotionEnabled), ranked by how many
+ * of the same tags they write in. The candidate pool itself is already
+ * small (opted-in writers with a published story), so scoring in memory
+ * here matches the batching approach used elsewhere in this file rather
+ * than reaching for raw SQL for a three-table join.
+ */
+export async function getSimilarWriters(writerId: string, limit = 3): Promise<SimilarWriter[]> {
+  const myTags = await prisma.storyTag.findMany({
+    where: { story: { authorId: writerId, status: "PUBLISHED" } },
+    select: { tagId: true },
+  });
+  const myTagIds = new Set(myTags.map((t) => t.tagId));
+  if (myTagIds.size === 0) return [];
+
+  const candidates = await prisma.user.findMany({
+    where: { id: { not: writerId }, crossPromotionEnabled: true, stories: { some: { status: "PUBLISHED" } } },
+    select: {
+      id: true,
+      name: true,
+      avatar: true,
+      avatarColor: true,
+      kekereUsername: true,
+      stories: {
+        where: { status: "PUBLISHED" },
+        orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+        select: { title: true, tags: { select: { tagId: true } } },
+      },
+    },
+  });
+
+  const scored = candidates.map((c) => {
+    const theirTagIds = new Set(c.stories.flatMap((s) => s.tags.map((t) => t.tagId)));
+    let sharedTagCount = 0;
+    theirTagIds.forEach((id) => {
+      if (myTagIds.has(id)) sharedTagCount++;
+    });
+    return { candidate: c, sharedTagCount };
+  });
+
+  return scored
+    .filter((s) => s.sharedTagCount > 0)
+    .sort((a, b) => b.sharedTagCount - a.sharedTagCount)
+    .slice(0, limit)
+    .map(({ candidate: c }) => ({
+      id: c.id,
+      name: c.name,
+      avatar: c.avatar,
+      avatarColor: c.avatarColor,
+      kekereUsername: c.kekereUsername,
+      topStoryTitle: c.stories[0]?.title ?? "",
+    }));
 }

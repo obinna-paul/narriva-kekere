@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Send, Flag, UserX, PenLine, Inbox as InboxIcon, ChevronDown } from "lucide-react";
+import { Send, Flag, UserX, PenLine, Inbox as InboxIcon, ChevronDown, Pin, PinOff } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { NotePrompt, SentNote, InboxNote, BlockedSender } from "@/lib/data/kekere-notes";
 
@@ -131,14 +131,18 @@ function SentNoteRow({ note }: { note: SentNote }) {
 
 function InboxNoteRow({
   note,
+  maxPinnedNotes,
   onReplied,
   onReported,
   onBlocked,
+  onPinToggled,
 }: {
   note: InboxNote;
+  maxPinnedNotes: number;
   onReplied: (id: string, body: string) => void;
   onReported: (id: string) => void;
   onBlocked: (userId: string) => void;
+  onPinToggled: (id: string, pinned: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(!note.read);
   const [marking, setMarking] = useState(false);
@@ -146,6 +150,33 @@ function InboxNoteRow({
   const [replying, setReplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [pinning, setPinning] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  async function togglePin() {
+    setPinning(true);
+    setPinError(null);
+    const next = !note.pinned;
+    try {
+      const res = await fetch(`/api/kekere/notes/${note.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pin", pinned: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPinError(
+          data.error === "limit_reached" ? `You can pin up to ${maxPinnedNotes} notes.` : "Couldn't update — try again.",
+        );
+        return;
+      }
+      onPinToggled(note.id, next);
+    } catch {
+      setPinError("Couldn't update — try again.");
+    } finally {
+      setPinning(false);
+    }
+  }
 
   async function toggleExpand() {
     const next = !expanded;
@@ -206,8 +237,9 @@ function InboxNoteRow({
         {!note.read && <span className="h-2 w-2 flex-none rounded-full bg-[var(--color-primary)]" />}
         <Avatar name={note.fromUserName} color={note.fromUserAvatarColor} />
         <div className="min-w-0 flex-1">
-          <p className={cn("truncate text-[13.5px]", note.read ? "font-medium" : "font-bold", "text-[var(--color-ink)]")}>
+          <p className={cn("flex items-center gap-1.5 truncate text-[13.5px]", note.read ? "font-medium" : "font-bold", "text-[var(--color-ink)]")}>
             {note.fromUserName}
+            {note.pinned && <Pin size={11} className="flex-none fill-current text-[var(--color-primary)]" />}
           </p>
           <p className="truncate text-[12px] text-[var(--color-ink-muted-2)]">on &ldquo;{note.storyTitle}&rdquo;</p>
         </div>
@@ -251,6 +283,20 @@ function InboxNoteRow({
           )}
 
           <div className="mt-3 flex items-center gap-3 border-t border-[var(--color-border)] pt-2.5">
+            <button
+              type="button"
+              onClick={togglePin}
+              disabled={pinning}
+              className={cn(
+                "flex items-center gap-1 text-[11.5px] font-medium disabled:opacity-60",
+                note.pinned
+                  ? "text-[var(--color-primary)]"
+                  : "text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]",
+              )}
+            >
+              {note.pinned ? <PinOff size={12} /> : <Pin size={12} />}
+              {note.pinned ? "Unpin" : "Pin to profile"}
+            </button>
             <button type="button" onClick={report} className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]">
               <Flag size={12} /> Report
             </button>
@@ -266,6 +312,12 @@ function InboxNoteRow({
               </button>
             )}
           </div>
+          {pinError && <p className="mt-2 text-[12px] text-[#A13A3A]">{pinError}</p>}
+          {!note.pinned && (
+            <p className="mt-2 text-[11px] text-[var(--color-ink-muted-3)]">
+              Pin a note to feature it as a testimonial on your public profile — up to {maxPinnedNotes}.
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -279,6 +331,7 @@ export interface NotesViewProps {
   initialInbox: InboxNote[];
   initialBlockedSenders: BlockedSender[];
   initialNotesEnabled: boolean;
+  maxPinnedNotes: number;
 }
 
 type Tab = "sent" | "inbox";
@@ -290,6 +343,7 @@ export function NotesView({
   initialInbox,
   initialBlockedSenders,
   initialNotesEnabled,
+  maxPinnedNotes,
 }: NotesViewProps) {
   const [tab, setTab] = useState<Tab>("sent");
   const [prompts, setPrompts] = useState(initialPrompts);
@@ -320,6 +374,10 @@ export function NotesView({
 
   function handleBlocked(userId: string) {
     setInbox((prev) => prev.filter((n) => n.fromUserId !== userId));
+  }
+
+  function handlePinToggled(noteId: string, pinned: boolean) {
+    setInbox((prev) => prev.map((n) => (n.id === noteId ? { ...n, pinned } : n)));
   }
 
   async function toggleNotesEnabled() {
@@ -450,7 +508,15 @@ export function NotesView({
           ) : (
             <div className="flex flex-col gap-2.5">
               {inbox.map((n) => (
-                <InboxNoteRow key={n.id} note={n} onReplied={handleReplied} onReported={handleReported} onBlocked={handleBlocked} />
+                <InboxNoteRow
+                  key={n.id}
+                  note={n}
+                  maxPinnedNotes={maxPinnedNotes}
+                  onReplied={handleReplied}
+                  onReported={handleReported}
+                  onBlocked={handleBlocked}
+                  onPinToggled={handlePinToggled}
+                />
               ))}
             </div>
           )}

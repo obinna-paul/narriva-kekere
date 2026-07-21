@@ -10,6 +10,7 @@ import {
   getWriterInbox,
   getBlockedSenders,
   getNotesEnabled,
+  MAX_PINNED_NOTES,
 } from "@/lib/data/kekere-notes";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function KekereNotesPage() {
           initialInbox={inbox}
           initialBlockedSenders={blockedSenders}
           initialNotesEnabled={notesEnabled}
+          maxPinnedNotes={MAX_PINNED_NOTES}
         />
       </div>
     </KekereTheme>

@@ -21,6 +21,9 @@ export async function getKekereUserProfile(userId: string) {
       country: true,
       createdAt: true,
       lastLoginAt: true,
+      kekereUsername: true,
+      currentlyWriting: true,
+      crossPromotionEnabled: true,
     },
   });
   if (!user) return null;
@@ -87,7 +90,14 @@ export async function getReaderStats(userId: string): Promise<ReaderStats> {
 
 export async function updateKekereProfile(
   userId: string,
-  data: { name: string; bio: string; socialLinks?: SocialLink[]; country?: string | null },
+  data: {
+    name: string;
+    bio: string;
+    socialLinks?: SocialLink[];
+    country?: string | null;
+    currentlyWriting?: string | null;
+    crossPromotionEnabled?: boolean;
+  },
 ) {
   return prisma.user.update({
     where: { id: userId },
@@ -96,8 +106,17 @@ export async function updateKekereProfile(
       bio: data.bio,
       socialLinks: data.socialLinks,
       country: data.country,
+      currentlyWriting: data.currentlyWriting,
+      crossPromotionEnabled: data.crossPromotionEnabled,
     },
-    select: { name: true, bio: true, socialLinks: true, country: true },
+    select: {
+      name: true,
+      bio: true,
+      socialLinks: true,
+      country: true,
+      currentlyWriting: true,
+      crossPromotionEnabled: true,
+    },
   });
 }
 

@@ -3,10 +3,11 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { updateKekereProfile } from "@/lib/data/kekere-profile-stats";
+import { setKekereUsername } from "@/lib/data/kekere-username";
 
 export const PATCH = withAuth(async (request, session) => {
   const body = await request.json().catch(() => ({}));
-  const { name, bio, socialLinks, country } = body;
+  const { name, bio, socialLinks, country, currentlyWriting, crossPromotionEnabled, kekereUsername } = body;
 
   if (typeof name !== "string" || !name.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -16,6 +17,15 @@ export const PATCH = withAuth(async (request, session) => {
   }
   if (country !== undefined && country !== null && typeof country !== "string") {
     return NextResponse.json({ error: "Country must be a string" }, { status: 400 });
+  }
+  if (currentlyWriting !== undefined && currentlyWriting !== null && typeof currentlyWriting !== "string") {
+    return NextResponse.json({ error: "Currently-writing teaser must be a string" }, { status: 400 });
+  }
+  if (crossPromotionEnabled !== undefined && typeof crossPromotionEnabled !== "boolean") {
+    return NextResponse.json({ error: "crossPromotionEnabled must be a boolean" }, { status: 400 });
+  }
+  if (kekereUsername !== undefined && kekereUsername !== null && typeof kekereUsername !== "string") {
+    return NextResponse.json({ error: "Username must be a string" }, { status: 400 });
   }
 
   let parsedSocialLinks: { label: string; href: string }[] | undefined;
@@ -31,11 +41,25 @@ export const PATCH = withAuth(async (request, session) => {
     parsedSocialLinks = socialLinks.slice(0, 5);
   }
 
+  // Username has its own uniqueness/format rules and a distinct error shape
+  // the client needs to show inline ("that one's taken") — handled as its
+  // own step rather than folded into the general profile update.
+  if (kekereUsername !== undefined) {
+    const trimmed = typeof kekereUsername === "string" ? kekereUsername.trim() : "";
+    const result = await setKekereUsername(session.user.id, trimmed || null);
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+  }
+
   const profile = await updateKekereProfile(session.user.id, {
     name: name.trim(),
     bio: bio.slice(0, 280),
     socialLinks: parsedSocialLinks,
     country: typeof country === "string" ? country.trim().slice(0, 80) || null : undefined,
+    currentlyWriting:
+      typeof currentlyWriting === "string" ? currentlyWriting.trim().slice(0, 140) || null : undefined,
+    crossPromotionEnabled: typeof crossPromotionEnabled === "boolean" ? crossPromotionEnabled : undefined,
   });
 
   return NextResponse.json(profile);
