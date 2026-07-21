@@ -9,6 +9,7 @@ import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
 import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
+import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import {
   buildGreetingPool,
@@ -301,11 +302,12 @@ export function FeedContent({
           </span>
         </div>
 
-        {/* Browse by tag dropdown, search, and the cowrie balance all share
+        {/* Browse by tag, search, Ask Kemi, and the cowrie balance all share
             this row now — moving the balance chip down here (it used to sit
             top-right, next to the greeting) frees the whole row above for
             the greeting text instead of splitting it with a fixed-width
-            chip. */}
+            chip. Kemi sits right beside search — the app's three ways to
+            find something to read (browse, search, ask) live together. */}
         <div className="relative flex items-center justify-between gap-2 px-5 pb-[14px] pt-1">
           <div className="flex min-w-0 items-center gap-2">
             <div ref={dropdownRef} className="relative flex-none">
@@ -338,6 +340,7 @@ export function FeedContent({
               )}
             </div>
             <StorySearch onPreview={setPreviewStory} />
+            <KemiChat />
           </div>
           <Link
             href="/kekere/wallet"
