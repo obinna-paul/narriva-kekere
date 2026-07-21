@@ -126,7 +126,7 @@ export function KemiChat() {
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}
         aria-label="Ask Kemi for a story recommendation"
-        className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
+        className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(199,93,44,0.35)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(199,93,44,0.55)]"
       >
         Ask Kemi
       </button>
