@@ -7,6 +7,7 @@ import { getWriterBankDetails } from "@/lib/data/kekere-bank-details";
 import { getStreakStats } from "@/lib/data/kekere-streaks";
 import { getUnreadNoteCount } from "@/lib/data/kekere-notes";
 import { getFollowingWriters } from "@/lib/data/kekere-follows";
+import { getValidatedComingSoonStory } from "@/lib/data/kekere-writer-profile";
 import { userAvatarUrl } from "@/lib/storage/cloudinary";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,14 @@ export default async function KekereProfilePage() {
         [],
       ];
 
+  // Re-resolve the stored pointer here rather than trusting it as-is — same
+  // read-time validation the public profile relies on, so a story that's
+  // since been published/deleted/shrunk below the bar just stops showing up.
+  const comingSoon =
+    userId && profile?.currentlyWritingStoryId
+      ? await getValidatedComingSoonStory(userId, profile.currentlyWritingStoryId)
+      : null;
+
   return (
     <KekereTheme>
       <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
@@ -51,7 +60,7 @@ export default async function KekereProfilePage() {
           avatarUrl={profile?.avatar ? userAvatarUrl(profile.avatar) : null}
           socialLinks={profile?.socialLinks ?? []}
           kekereUsername={profile?.kekereUsername ?? null}
-          currentlyWriting={profile?.currentlyWriting ?? ""}
+          comingSoon={comingSoon}
           crossPromotionEnabled={profile?.crossPromotionEnabled ?? false}
           bankDetails={bankDetails}
           hasAuthoredAnyStory={writerStats.hasAuthoredAnyStory}

@@ -3,7 +3,21 @@
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogOut, Link2, Gift, Mail, BookOpen, Eye, ChevronRight, Share2, Star, BarChart3 } from "lucide-react";
+import {
+  LogOut,
+  Link2,
+  Gift,
+  Mail,
+  BookOpen,
+  Eye,
+  ChevronRight,
+  Share2,
+  Star,
+  BarChart3,
+  Sparkles,
+  RefreshCw,
+  Check,
+} from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
 import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/bank-details-section";
@@ -11,7 +25,9 @@ import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
 import { ShareProfileSheet } from "@/components/kekere/share-profile-sheet";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
+import type { AuthorStorySummary } from "@/lib/data/kekere-stories";
 import { SITE_URL } from "@/content/decisions";
+import { MIN_COMING_SOON_WORD_COUNT } from "@/content/kekere-coming-soon";
 
 /** "Label|https://url" per line — same plain-text convention as the admin's
  * Narriva author-form social links editor (src/components/admin/author-form.tsx),
@@ -200,7 +216,7 @@ export interface ProfileViewProps {
   avatarUrl: string | null;
   socialLinks: readonly { label: string; href: string }[];
   kekereUsername: string | null;
-  currentlyWriting: string;
+  comingSoon: { id: string; title: string; hookLine: string } | null;
   crossPromotionEnabled: boolean;
   bankDetails: BankDetailsProp | null;
   hasAuthoredAnyStory: boolean;
@@ -224,7 +240,7 @@ export function ProfileView(props: ProfileViewProps) {
   const [country, setCountry] = useState(props.country ?? "");
   const [socialLinks, setSocialLinks] = useState(props.socialLinks);
   const [kekereUsername, setKekereUsername] = useState(props.kekereUsername ?? "");
-  const [currentlyWriting, setCurrentlyWriting] = useState(props.currentlyWriting);
+  const [comingSoon, setComingSoon] = useState(props.comingSoon);
   const [crossPromotionEnabled, setCrossPromotionEnabled] = useState(props.crossPromotionEnabled);
   const [avatarUrl, setAvatarUrl] = useState(props.avatarUrl);
   const [editing, setEditing] = useState(false);
@@ -232,10 +248,17 @@ export function ProfileView(props: ProfileViewProps) {
   const [draftBio, setDraftBio] = useState(bio);
   const [draftCountry, setDraftCountry] = useState(country);
   const [draftUsername, setDraftUsername] = useState(kekereUsername);
-  const [draftCurrentlyWriting, setDraftCurrentlyWriting] = useState(currentlyWriting);
+  const [draftComingSoonId, setDraftComingSoonId] = useState(comingSoon?.id ?? null);
   const [draftCrossPromotionEnabled, setDraftCrossPromotionEnabled] = useState(crossPromotionEnabled);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<AuthorStorySummary[] | null>(null);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [draftsError, setDraftsError] = useState<string | null>(null);
+  const [kemiDraftId, setKemiDraftId] = useState<string | null>(null);
+  const [kemiSuggestion, setKemiSuggestion] = useState<string | null>(null);
+  const [kemiLoading, setKemiLoading] = useState(false);
+  const [kemiError, setKemiError] = useState<string | null>(null);
   const [draftSocialLinksText, setDraftSocialLinksText] = useState(
     socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"),
   );
@@ -251,16 +274,92 @@ export function ProfileView(props: ProfileViewProps) {
     setDraftBio(bio);
     setDraftCountry(country);
     setDraftUsername(kekereUsername);
-    setDraftCurrentlyWriting(currentlyWriting);
+    setDraftComingSoonId(comingSoon?.id ?? null);
     setDraftCrossPromotionEnabled(crossPromotionEnabled);
     setUsernameError(null);
     setSaveError(null);
     setDraftSocialLinksText(socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"));
+    setKemiDraftId(null);
+    setKemiSuggestion(null);
+    setKemiError(null);
     setEditing(true);
+    if (props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0) {
+      void loadDrafts();
+    }
   }
 
   function cancelEdit() {
     setEditing(false);
+  }
+
+  async function loadDrafts() {
+    setDraftsLoading(true);
+    setDraftsError(null);
+    try {
+      const res = await fetch("/api/kekere/stories/mine");
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data?.stories)) {
+        setDraftsError("Couldn't load your drafts.");
+        return;
+      }
+      setDrafts((data.stories as AuthorStorySummary[]).filter((s) => s.status === "DRAFT"));
+    } catch {
+      setDraftsError("Couldn't load your drafts — check your connection.");
+    }
+    setDraftsLoading(false);
+  }
+
+  function selectDraft(id: string | null) {
+    setDraftComingSoonId(id);
+    setKemiDraftId(null);
+    setKemiSuggestion(null);
+    setKemiError(null);
+  }
+
+  async function askKemiForHookline(storyId: string) {
+    setKemiDraftId(storyId);
+    setKemiSuggestion(null);
+    setKemiError(null);
+    setKemiLoading(true);
+    try {
+      const res = await fetch(`/api/kekere/stories/${storyId}/kemi-hookline`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.hookLine !== "string") {
+        setKemiError(
+          data.error === "too_short"
+            ? "This draft needs a bit more written before Kemi can suggest a hook line."
+            : data.error === "unavailable"
+              ? "Kemi's not able to help right now — try again shortly."
+              : "Couldn't reach Kemi — try again.",
+        );
+        return;
+      }
+      setKemiSuggestion(data.hookLine);
+    } catch {
+      setKemiError("Couldn't reach Kemi — check your connection and try again.");
+    }
+    setKemiLoading(false);
+  }
+
+  async function acceptKemiSuggestion(storyId: string) {
+    if (!kemiSuggestion) return;
+    const hookLine = kemiSuggestion;
+    try {
+      const res = await fetch(`/api/kekere/stories/${storyId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hookLine }),
+      });
+      if (!res.ok) {
+        setKemiError("Couldn't save that hook line — try again.");
+        return;
+      }
+      setDrafts((prev) => (prev ? prev.map((d) => (d.id === storyId ? { ...d, hookLine } : d)) : prev));
+      setKemiSuggestion(null);
+      setKemiDraftId(null);
+    } catch {
+      setKemiError("Couldn't save that hook line — check your connection and try again.");
+    }
   }
 
   async function saveEdit(e: React.FormEvent) {
@@ -282,7 +381,7 @@ export function ProfileView(props: ProfileViewProps) {
           country: draftCountry.trim() || null,
           socialLinks: parsedSocialLinks,
           kekereUsername: normalizedUsername || null,
-          currentlyWriting: draftCurrentlyWriting.trim() || null,
+          currentlyWritingStoryId: draftComingSoonId,
           crossPromotionEnabled: draftCrossPromotionEnabled,
         }),
       });
@@ -296,6 +395,8 @@ export function ProfileView(props: ProfileViewProps) {
           setUsernameError("That username is taken — try another.");
         } else if (data.error === "invalid_format") {
           setUsernameError("3-24 characters: lowercase letters, numbers, and single hyphens only.");
+        } else if (data.error === "not_eligible") {
+          setSaveError("That draft is no longer eligible as a “coming soon” pick — choose another.");
         } else {
           setSaveError("Couldn't save your changes — try again in a moment.");
         }
@@ -313,7 +414,18 @@ export function ProfileView(props: ProfileViewProps) {
     setCountry(draftCountry.trim());
     setSocialLinks(parsedSocialLinks);
     setKekereUsername(normalizedUsername);
-    setCurrentlyWriting(draftCurrentlyWriting.trim());
+    if (!draftComingSoonId) {
+      setComingSoon(null);
+    } else {
+      const match = drafts?.find((d) => d.id === draftComingSoonId);
+      if (match) {
+        setComingSoon({ id: match.id, title: match.title, hookLine: (match.hookLine ?? "").trim() });
+      } else if (draftComingSoonId === comingSoon?.id) {
+        setComingSoon(comingSoon);
+      } else {
+        setComingSoon(null);
+      }
+    }
     setCrossPromotionEnabled(draftCrossPromotionEnabled);
     setSaving(false);
     setEditing(false);
@@ -547,24 +659,156 @@ export function ProfileView(props: ProfileViewProps) {
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="profile-currently-writing"
-                    className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
-                  >
-                    Currently writing
-                  </label>
-                  <input
-                    id="profile-currently-writing"
-                    value={draftCurrentlyWriting}
-                    onChange={(e) => setDraftCurrentlyWriting(e.target.value)}
-                    placeholder="e.g. A quiet story about Lagos traffic and second chances"
-                    maxLength={140}
-                    className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-                    style={{ fontFamily: "inherit" }}
-                  />
-                  <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
-                    A &ldquo;coming soon&rdquo; teaser shown on your public profile. Leave blank to hide it.
+                  <label className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">Coming soon</label>
+                  <div className="mb-[10px] text-xs text-[var(--color-ink-muted-3)]">
+                    Feature a work-in-progress on your public profile — its title and hook line, never the full
+                    text. Pick one of your drafts below.
                   </div>
+
+                  {draftsLoading && (
+                    <p className="rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[13.5px] text-[var(--color-ink-muted-2)]">
+                      Loading your drafts…
+                    </p>
+                  )}
+                  {draftsError && <p className="mb-2 text-[12.5px] text-[#A13A3A]">{draftsError}</p>}
+
+                  {drafts && (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => selectDraft(null)}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-[10px] border px-[15px] py-[12px] text-left transition-colors",
+                          draftComingSoonId === null
+                            ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
+                            : "border-[rgba(42,26,18,0.16)] bg-white",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 flex-none items-center justify-center rounded-full border",
+                            draftComingSoonId === null
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
+                              : "border-[rgba(42,26,18,0.25)]",
+                          )}
+                        >
+                          {draftComingSoonId === null && <Check size={10} className="text-white" strokeWidth={3} />}
+                        </span>
+                        <span className="text-[13.5px] font-medium text-[var(--color-ink)]">
+                          None — don&rsquo;t show a teaser
+                        </span>
+                      </button>
+
+                      {drafts.length === 0 && (
+                        <p className="rounded-[10px] border border-dashed border-[rgba(42,26,18,0.2)] px-[15px] py-[13px] text-[13px] text-[var(--color-ink-muted-2)]">
+                          You don&rsquo;t have any drafts yet — start a new story to feature one here.
+                        </p>
+                      )}
+
+                      {drafts.map((draft) => {
+                        const eligible = draft.wordCount >= MIN_COMING_SOON_WORD_COUNT;
+                        const selected = draftComingSoonId === draft.id;
+                        const hasHookline = (draft.hookLine ?? "").trim().length > 0;
+
+                        return (
+                          <div
+                            key={draft.id}
+                            className={cn(
+                              "rounded-[10px] border px-[15px] py-[12px] transition-colors",
+                              selected
+                                ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
+                                : "border-[rgba(42,26,18,0.16)] bg-white",
+                              !eligible && "opacity-55",
+                            )}
+                          >
+                            <button
+                              type="button"
+                              disabled={!eligible}
+                              onClick={() => selectDraft(draft.id)}
+                              className="flex w-full items-start gap-2.5 text-left disabled:cursor-not-allowed"
+                            >
+                              <span
+                                className={cn(
+                                  "mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border",
+                                  selected
+                                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
+                                    : "border-[rgba(42,26,18,0.25)]",
+                                )}
+                              >
+                                {selected && <Check size={10} className="text-white" strokeWidth={3} />}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13.5px] font-semibold text-[var(--color-ink)]">
+                                  {draft.title || "Untitled story"}
+                                </span>
+                                <span className="mt-0.5 block text-[12px] text-[var(--color-ink-muted-2)]">
+                                  {eligible
+                                    ? `${draft.wordCount.toLocaleString()} words written`
+                                    : `Needs ${(MIN_COMING_SOON_WORD_COUNT - draft.wordCount).toLocaleString()} more words to feature`}
+                                </span>
+                              </span>
+                            </button>
+
+                            {selected && (
+                              <div className="mt-3 border-t border-[rgba(42,26,18,0.08)] pt-3">
+                                {hasHookline && kemiDraftId !== draft.id && (
+                                  <p className="text-[12.5px] italic leading-[1.5] text-[var(--color-ink-muted)]">
+                                    &ldquo;{draft.hookLine}&rdquo;
+                                  </p>
+                                )}
+
+                                {kemiDraftId === draft.id ? (
+                                  <div className="flex flex-col gap-2">
+                                    {kemiLoading && (
+                                      <p className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-ink-muted-2)]">
+                                        <Sparkles size={12} className="animate-pulse text-[var(--color-primary)]" />
+                                        Kemi is reading your draft…
+                                      </p>
+                                    )}
+                                    {kemiError && <p className="text-[12.5px] text-[#A13A3A]">{kemiError}</p>}
+                                    {kemiSuggestion && (
+                                      <>
+                                        <p className="rounded-[8px] bg-[rgba(199,93,44,0.08)] px-3 py-2.5 text-[12.5px] italic leading-[1.5] text-[var(--color-ink)]">
+                                          &ldquo;{kemiSuggestion}&rdquo;
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => acceptKemiSuggestion(draft.id)}
+                                            className="flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-3 py-[7px] text-[12px] font-semibold text-white"
+                                          >
+                                            <Check size={11} /> Use this
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => askKemiForHookline(draft.id)}
+                                            disabled={kemiLoading}
+                                            className="flex items-center gap-1 rounded-full border border-[rgba(42,26,18,0.16)] px-3 py-[7px] text-[12px] font-semibold text-[var(--color-ink)] disabled:opacity-50"
+                                          >
+                                            <RefreshCw size={11} /> Try again
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                ) : (
+                                  !hasHookline && (
+                                    <button
+                                      type="button"
+                                      onClick={() => askKemiForHookline(draft.id)}
+                                      className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-primary)]"
+                                    >
+                                      <Sparkles size={13} /> Ask Kemi for a hook line
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px]">

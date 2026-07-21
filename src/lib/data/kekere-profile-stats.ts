@@ -22,7 +22,7 @@ export async function getKekereUserProfile(userId: string) {
       createdAt: true,
       lastLoginAt: true,
       kekereUsername: true,
-      currentlyWriting: true,
+      currentlyWritingStoryId: true,
       crossPromotionEnabled: true,
     },
   });
@@ -95,7 +95,7 @@ export async function updateKekereProfile(
     bio: string;
     socialLinks?: SocialLink[];
     country?: string | null;
-    currentlyWriting?: string | null;
+    currentlyWritingStoryId?: string | null;
     crossPromotionEnabled?: boolean;
   },
 ) {
@@ -106,7 +106,7 @@ export async function updateKekereProfile(
       bio: data.bio,
       socialLinks: data.socialLinks,
       country: data.country,
-      currentlyWriting: data.currentlyWriting,
+      currentlyWritingStoryId: data.currentlyWritingStoryId,
       crossPromotionEnabled: data.crossPromotionEnabled,
     },
     select: {
@@ -114,7 +114,7 @@ export async function updateKekereProfile(
       bio: true,
       socialLinks: true,
       country: true,
-      currentlyWriting: true,
+      currentlyWritingStoryId: true,
       crossPromotionEnabled: true,
     },
   });

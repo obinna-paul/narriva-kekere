@@ -99,9 +99,14 @@ model User {
   // never auto-generated, so a writer only gets a pretty URL once they
   // actually choose one.
   kekereUsername         String?  @unique
-  // Optional "what's next" teaser shown on the public profile — free text,
-  // no publish workflow attached.
-  currentlyWriting       String?
+  // "Coming soon" teaser: points at one of this writer's own DRAFT stories
+  // (see MIN_COMING_SOON_WORD_COUNT in kekere-writer-profile.ts for the
+  // "enough written to show off" bar) to feature its title/hookline on the
+  // public profile. A soft reference (like referredBy above), not a Prisma
+  // relation — re-validated at read time (still a DRAFT, still theirs,
+  // still long enough) rather than kept in sync by hooking into every place
+  // a story's status can change (submit, publish, delete).
+  currentlyWritingStoryId String?
   // Opt-in: shows a "you might also like" section of similar writers on
   // this writer's own public profile, and makes them eligible to appear in
   // that section on other opted-in writers' profiles. Off by default.

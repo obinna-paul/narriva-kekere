@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Star, Quote, Sparkles, Users } from "lucide-react";
+import { MapPin, Star, Quote, Sparkles, Users, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
@@ -100,17 +100,45 @@ export interface WriterProfileViewProps {
 }
 
 function PraiseWallCard({ note }: { note: PraiseWallNote }) {
+  const initial = note.fromUserName.trim().charAt(0).toUpperCase() || "?";
+  const avatarColor = note.fromUserAvatarColor ?? "#C75D2C";
+
   return (
-    <div className="flex-none w-[260px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-      <Quote size={16} className="text-[var(--color-primary)]/50" />
-      <p className="mt-2 line-clamp-5 text-[13.5px] italic leading-[1.5] text-[var(--color-ink)]">
-        &ldquo;{note.body}&rdquo;
+    <Link
+      href={`/kekere/story/${note.storySlug ?? note.storyId}`}
+      className="group relative flex w-[270px] flex-none flex-col overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-gradient-to-b from-white to-[var(--color-cream)] p-5 shadow-[0_10px_26px_-16px_rgba(42,26,18,0.3)] transition-all hover:-translate-y-[3px] hover:border-[var(--color-primary)]/35 hover:shadow-[0_18px_34px_-16px_rgba(199,93,44,0.4)]"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-1 -top-4 select-none font-[family-name:var(--font-display)] text-[110px] font-bold leading-none text-[var(--color-primary)]/[0.06]"
+      >
+        &rdquo;
+      </span>
+
+      <div className="relative flex items-center gap-2.5">
+        <span
+          className="flex h-8 w-8 flex-none items-center justify-center rounded-full font-[family-name:var(--font-display)] text-[13px] font-bold text-white"
+          style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
+        >
+          {initial}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{note.fromUserName}</p>
+          <p className="text-[10.5px] uppercase tracking-[0.08em] text-[var(--color-ink-muted-3)]">Reader</p>
+        </div>
+      </div>
+
+      <p className="relative mt-3.5 line-clamp-5 flex-1 font-[family-name:var(--font-display)] text-[14.5px] italic leading-[1.55] text-[var(--color-ink)]">
+        {note.body}
       </p>
-      <p className="mt-3 text-[12px] font-semibold text-[var(--color-ink-muted-2)]">
-        {note.fromUserName}
-        <span className="font-normal text-[var(--color-ink-muted-3)]"> · on &ldquo;{note.storyTitle}&rdquo;</span>
-      </p>
-    </div>
+
+      <div className="relative mt-4 flex items-center gap-1.5 border-t border-[var(--color-border)] pt-3 text-[12px] text-[var(--color-ink-muted-2)]">
+        <BookOpen size={12} className="flex-none text-[var(--color-primary)]" />
+        <span className="truncate">
+          on <span className="font-semibold text-[var(--color-ink)]">&ldquo;{note.storyTitle}&rdquo;</span>
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -209,13 +237,24 @@ export function WriterProfileView({
           </div>
         )}
 
-        {profile.currentlyWriting && (
-          <div className="mx-auto mt-3 flex max-w-[340px] items-start gap-2 rounded-2xl border border-[rgba(199,93,44,0.25)] bg-[rgba(199,93,44,0.06)] px-3.5 py-2.5 text-left">
-            <Sparkles size={14} className="mt-[1px] flex-none text-[var(--color-primary)]" />
-            <p className="text-[12.5px] leading-[1.45] text-[var(--color-ink)]">
-              <span className="font-semibold text-[var(--color-primary)]">Coming soon — </span>
-              {profile.currentlyWriting}
-            </p>
+        {profile.comingSoon && (
+          <div className="mx-auto mt-4 max-w-[360px] overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.22)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] text-left shadow-[0_10px_26px_-16px_rgba(199,93,44,0.45)]">
+            <div className="flex items-center gap-1.5 border-b border-[rgba(199,93,44,0.18)] bg-[rgba(199,93,44,0.09)] px-4 py-[7px]">
+              <Sparkles size={12} className="text-[var(--color-primary)]" />
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--color-primary)]">
+                Coming soon
+              </span>
+            </div>
+            <div className="px-4 py-3.5">
+              <h3 className="font-[family-name:var(--font-display)] text-[16.5px] font-bold leading-tight text-[var(--color-ink)]">
+                {profile.comingSoon.title}
+              </h3>
+              {profile.comingSoon.hookLine && (
+                <p className="mt-1.5 text-[13px] italic leading-[1.5] text-[var(--color-ink-muted)]">
+                  {profile.comingSoon.hookLine}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -246,7 +285,8 @@ export function WriterProfileView({
 
       {praiseWallNotes.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-3 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+          <h2 className="mb-3 flex items-center gap-1.5 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+            <Quote size={15} className="text-[var(--color-primary)]" />
             What readers say
           </h2>
           <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
