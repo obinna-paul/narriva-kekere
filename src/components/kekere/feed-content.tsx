@@ -302,7 +302,8 @@ export function FeedContent({
           </span>
         </div>
 
-        {/* Browse by tag, search, Ask Kemi, and the cowrie balance all share
+        {/* Genre (still tags under the hood — "Genre" is just the friendlier
+            label here), search, Ask Kemi, and the cowrie balance all share
             this row now — moving the balance chip down here (it used to sit
             top-right, next to the greeting) frees the whole row above for
             the greeting text instead of splitting it with a fixed-width
@@ -316,7 +317,7 @@ export function FeedContent({
                 onClick={() => setTagOpen(!tagOpen)}
                 className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
               >
-                Browse by tag ▾
+                Genre ▾
               </button>
               {tagOpen && (
                 <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
