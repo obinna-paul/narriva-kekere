@@ -67,13 +67,42 @@ export function extractImpersonation(request: Request) {
   return getImpersonationFromCookies(request);
 }
 
+// 60 days — generous and explicit, so a reader who leaves the app for a
+// while and comes back is never bounced to login just because a shorter
+// default lapsed. Both session and jwt must agree, or next-auth falls back
+// to its own (shorter) default for whichever one is left unset.
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  },
+  jwt: {
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        // Explicit, matching maxAge — without this the cookie's own expiry
+        // can end up shorter-lived than the JWT it holds, in which case the
+        // browser discards it (and the reader gets logged out) well before
+        // the token itself would have expired.
+        maxAge: SESSION_MAX_AGE_SECONDS,
+      },
+    },
   },
   providers: [
     CredentialsProvider({
