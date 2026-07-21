@@ -543,7 +543,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
               className="inline-flex items-center gap-1.5 rounded-[7px] border border-[rgba(199,93,44,0.3)] bg-[#FFF8F2] px-3 py-1.5 text-[11px] font-semibold text-[#C75D2C] hover:bg-[#FFEDDD] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Sparkles size={12} />
-              {suggesting ? "Reading..." : "Nari suggest tag & hook"}
+              {suggesting ? "Reading..." : "Kemi suggest tag & hook"}
             </button>
           </div>
           <input
@@ -566,7 +566,7 @@ export function AdminStoryEditor({ storyId, authorName, status, initial }: Admin
           <div className="rounded-[10px] border border-[rgba(31,75,75,0.25)] bg-[#F0F7F7] p-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#1F4B4B]">
-                Nari&rsquo;s suggestions
+                Kemi&rsquo;s suggestions
               </span>
               <button
                 type="button"
