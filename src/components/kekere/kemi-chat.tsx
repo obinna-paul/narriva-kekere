@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { X, Send, ChevronRight, BookHeart } from "lucide-react";
+import { X, Send, ChevronRight, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { generateUUID } from "@/lib/utils/uuid";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
@@ -128,7 +128,7 @@ export function KemiChat() {
         aria-label="Ask Kemi for a story recommendation"
         className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/30 transition-transform hover:scale-105"
       >
-        <BookHeart size={16} aria-hidden="true" />
+        <MessageCircle size={16} aria-hidden="true" />
       </button>
 
       {open &&
