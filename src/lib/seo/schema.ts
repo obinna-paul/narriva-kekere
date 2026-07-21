@@ -132,6 +132,7 @@ export function articleSchema(post: ArticleSchemaInput) {
 
 interface CreativeWorkSchemaInput {
   id: string;
+  slug: string | null;
   title: string;
   hookLine: string;
   genre: string;
@@ -149,7 +150,7 @@ export function creativeWorkSchema(story: CreativeWorkSchemaInput) {
     genre: story.genre,
     wordCount: story.wordCount,
     inLanguage: "en",
-    url: `${SITE_URL}/kekere/story/${story.id}`,
+    url: `${SITE_URL}/kekere/story/${story.slug ?? story.id}`,
     ...(story.publishedAt ? { datePublished: story.publishedAt.toISOString() } : {}),
     author: {
       "@type": "Person",

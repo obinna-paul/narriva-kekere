@@ -60,7 +60,7 @@ function LibraryCard({
 
   return (
     <Link
-      href={`/kekere/story/${story.id}`}
+      href={`/kekere/story/${story.slug ?? story.id}`}
       className="flex gap-[14px] rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white p-3 transition-colors hover:border-[var(--color-primary)]"
     >
       <div

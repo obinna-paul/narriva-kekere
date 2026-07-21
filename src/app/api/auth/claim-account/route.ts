@@ -159,6 +159,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     storyId: signResult.storyId,
+    storySlug: signResult.storySlug,
     contractId: pendingContract.id,
     writerEmail: user.email,
   });

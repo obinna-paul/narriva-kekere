@@ -74,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     fetchAllBlogPosts(),
     prisma.story.findMany({
       where: { status: "PUBLISHED" },
-      select: { id: true, updatedAt: true },
+      select: { id: true, slug: true, updatedAt: true },
     }),
   ]);
 
@@ -107,7 +107,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     })),
     ...stories.map((story) => ({
-      url: `${SITE_URL}/kekere/story/${story.id}`,
+      url: `${SITE_URL}/kekere/story/${story.slug ?? story.id}`,
       lastModified: story.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.6,

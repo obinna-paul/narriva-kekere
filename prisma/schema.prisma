@@ -393,6 +393,13 @@ model Story {
   author   User   @relation("StoryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
   title    String
+  // The public URL segment (/kekere/story/[slug]) — lowercase, hyphenated,
+  // deduped with a -1/-2/... suffix (see src/lib/data/kekere-slugs.ts).
+  // Assigned once, the moment a story is first published, and frozen after
+  // that (a title edit post-publish never changes it) so a shared or
+  // search-indexed link never breaks. Null until then — draft/unpublished
+  // stories have no public URL to assign one to.
+  slug     String? @unique
   hookLine String
   // A Tiptap document ({ type: "doc", content: [...] }) — every paragraph
   // node carries a stable attrs.id (see src/lib/tiptap/doc-utils.ts), which

@@ -361,7 +361,7 @@ export default async function KekereLandingPage() {
                 className="w-[140px] flex-none"
                 style={{ scrollSnapAlign: "start" }}
               >
-                <Link href={`/kekere/story/${story.id}`}>
+                <Link href={`/kekere/story/${story.slug ?? story.id}`}>
                   <div
                     className="relative aspect-[3/4] overflow-hidden rounded-[10px] shadow-[var(--shadow-card)]"
                     style={{ background: story.coverImageUrl ? undefined : thumbnailPattern(story.id) }}
@@ -381,7 +381,7 @@ export default async function KekereLandingPage() {
                   </div>
                 </Link>
                 <div className="mt-3">
-                  <Link href={`/kekere/story/${story.id}`}>
+                  <Link href={`/kekere/story/${story.slug ?? story.id}`}>
                     <h3 className="font-[family-name:var(--font-display)] text-[17px] font-semibold leading-[1.2] text-[var(--color-ink)]">
                       {story.title}
                     </h3>

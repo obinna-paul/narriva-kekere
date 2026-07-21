@@ -3,6 +3,7 @@ import { StoryIllegalStateError, StoryNotFoundError } from "@/lib/data/kekere-st
 import { createNotification } from "@/lib/notifications/create";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { generateStoryAudio } from "@/lib/audio/generate";
+import { nextSlugForTitle, withSlugRetry } from "@/lib/data/kekere-slugs";
 import type { Story, StoryTier } from "@prisma/client";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
@@ -63,24 +64,30 @@ export async function decideStoryModeration(
 
   switch (input.action) {
     case "approve": {
-      const updated = await prisma.story.update({
-        where: { id },
-        data: {
-          status: "PUBLISHED",
-          publishedAt: new Date(),
-          isDraft: false,
-          tier: input.tier ?? story.tier,
-          cowrieCost: input.cowrieCost ?? story.cowrieCost,
-          plagiarismFlagged,
-        },
-      });
+      const updated = await withSlugRetry(() =>
+        prisma.$transaction(async (tx) => {
+          const slug = await nextSlugForTitle(tx, story.title);
+          return tx.story.update({
+            where: { id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              isDraft: false,
+              tier: input.tier ?? story.tier,
+              cowrieCost: input.cowrieCost ?? story.cowrieCost,
+              plagiarismFlagged,
+              slug,
+            },
+          });
+        })
+      );
       await createNotification({
         userId: updated.authorId,
         type: "STORY_APPROVED",
         title: "Your story has been published!",
         body:
           `"${updated.title}" is now live on Kekere Stories at ${updated.cowrieCost} cowries.`,
-        link: `/kekere/story/${updated.id}`,
+        link: `/kekere/story/${updated.slug ?? updated.id}`,
       });
       // Fire-and-forget — narration audio can take a while to generate
       // (multiple TTS calls for longer stories) and must not block the

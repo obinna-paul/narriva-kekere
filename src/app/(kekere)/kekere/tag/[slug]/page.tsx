@@ -29,7 +29,7 @@ function StoryGrid({ stories }: { stories: MockStory[] }) {
       {stories.map((story) => (
         <Link
           key={story.id}
-          href={`/kekere/story/${story.id}`}
+          href={`/kekere/story/${story.slug ?? story.id}`}
           className="block"
         >
           <div

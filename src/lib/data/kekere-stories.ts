@@ -210,6 +210,25 @@ export const getStoryById = cache(async (id: string): Promise<StoryWithAuthor | 
   return prisma.story.findUnique({ where: { id }, include: authorInclude });
 });
 
+export const getStoryBySlug = cache(async (slug: string): Promise<StoryWithAuthor | null> => {
+  return prisma.story.findUnique({ where: { slug }, include: authorInclude });
+});
+
+/** Resolves the story detail route's [slug] param, which may be the real
+ * slug (the normal case) or a legacy/shared cuid link from before slugs
+ * existed — tries slug first, falls back to id, and tells the caller which
+ * one matched so it can redirect an id-matched request to the canonical
+ * slug URL (see the story page). */
+export async function getStoryBySlugOrId(
+  slugOrId: string
+): Promise<{ story: StoryWithAuthor; matchedBy: "slug" | "id" } | null> {
+  const bySlug = await getStoryBySlug(slugOrId);
+  if (bySlug) return { story: bySlug, matchedBy: "slug" };
+  const byId = await getStoryById(slugOrId);
+  if (byId) return { story: byId, matchedBy: "id" };
+  return null;
+}
+
 async function isStoryUnlockedFor(
   story: Pick<Story, "id" | "cowrieCost" | "authorId">,
   userId?: string

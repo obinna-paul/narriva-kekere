@@ -213,7 +213,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
                 return (
                   <Link
                     key={winner.storyId}
-                    href={story ? `/kekere/story/${story.id}` : "#"}
+                    href={story ? `/kekere/story/${story.slug ?? story.id}` : "#"}
                     className="flex items-center justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-[rgba(42,26,18,0.08)] transition-colors hover:ring-[var(--color-primary)]/40"
                   >
                     <div>
