@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Star, Quote, Sparkles, Users, BookOpen } from "lucide-react";
+import { MapPin, Star, Quote, Users, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
@@ -237,27 +237,6 @@ export function WriterProfileView({
           </div>
         )}
 
-        {profile.comingSoon && (
-          <div className="mx-auto mt-4 max-w-[360px] overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.22)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] text-left shadow-[0_10px_26px_-16px_rgba(199,93,44,0.45)]">
-            <div className="flex items-center gap-1.5 border-b border-[rgba(199,93,44,0.18)] bg-[rgba(199,93,44,0.09)] px-4 py-[7px]">
-              <Sparkles size={12} className="text-[var(--color-primary)]" />
-              <span className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--color-primary)]">
-                Coming soon
-              </span>
-            </div>
-            <div className="px-4 py-3.5">
-              <h3 className="font-[family-name:var(--font-display)] text-[16.5px] font-bold leading-tight text-[var(--color-ink)]">
-                {profile.comingSoon.title}
-              </h3>
-              {profile.comingSoon.hookLine && (
-                <p className="mt-1.5 text-[13px] italic leading-[1.5] text-[var(--color-ink-muted)]">
-                  {profile.comingSoon.hookLine}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
         <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)]">
           Member since {formatMemberSince(profile.memberSince)}
         </p>
@@ -307,6 +286,24 @@ export function WriterProfileView({
           ))}
         </div>
       </section>
+
+      {profile.comingSoon && (
+        <section className="mt-9 px-[22px]">
+          <h2 className="mb-3 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+            Coming soon
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.22)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] px-5 py-4 shadow-[0_10px_26px_-16px_rgba(199,93,44,0.45)]">
+            <h3 className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-tight text-[var(--color-ink)]">
+              {profile.comingSoon.title}
+            </h3>
+            {profile.comingSoon.hookLine && (
+              <p className="mt-2 text-[13.5px] italic leading-[1.55] text-[var(--color-ink-muted)]">
+                {profile.comingSoon.hookLine}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {profile.crossPromotionEnabled && similarWriters.length > 0 && (
         <section className="mt-9">
