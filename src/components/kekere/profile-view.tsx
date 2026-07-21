@@ -235,6 +235,7 @@ export function ProfileView(props: ProfileViewProps) {
   const [draftCurrentlyWriting, setDraftCurrentlyWriting] = useState(currentlyWriting);
   const [draftCrossPromotionEnabled, setDraftCrossPromotionEnabled] = useState(crossPromotionEnabled);
   const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [draftSocialLinksText, setDraftSocialLinksText] = useState(
     socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"),
   );
@@ -253,6 +254,7 @@ export function ProfileView(props: ProfileViewProps) {
     setDraftCurrentlyWriting(currentlyWriting);
     setDraftCrossPromotionEnabled(crossPromotionEnabled);
     setUsernameError(null);
+    setSaveError(null);
     setDraftSocialLinksText(socialLinks.map((l) => `${l.label}|${l.href}`).join("\n"));
     setEditing(true);
   }
@@ -265,6 +267,7 @@ export function ProfileView(props: ProfileViewProps) {
     e.preventDefault();
     setSaving(true);
     setUsernameError(null);
+    setSaveError(null);
 
     const parsedSocialLinks = parseSocialLinks(draftSocialLinksText);
     const normalizedUsername = draftUsername.trim().toLowerCase();
@@ -283,21 +286,26 @@ export function ProfileView(props: ProfileViewProps) {
           crossPromotionEnabled: draftCrossPromotionEnabled,
         }),
       });
+      // A failed save must never be treated as a success — this used to fall
+      // through to the optimistic update below for any error other than
+      // "taken"/"invalid_format" (e.g. a server error), silently showing
+      // "saved" in the UI for a change that never actually persisted.
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data.error === "taken") {
           setUsernameError("That username is taken — try another.");
-          setSaving(false);
-          return;
-        }
-        if (data.error === "invalid_format") {
+        } else if (data.error === "invalid_format") {
           setUsernameError("3-24 characters: lowercase letters, numbers, and single hyphens only.");
-          setSaving(false);
-          return;
+        } else {
+          setSaveError("Couldn't save your changes — try again in a moment.");
         }
+        setSaving(false);
+        return;
       }
     } catch {
-      // Persisted locally regardless
+      setSaveError("Couldn't save your changes — check your connection and try again.");
+      setSaving(false);
+      return;
     }
 
     setName(draftName);
@@ -386,6 +394,12 @@ export function ProfileView(props: ProfileViewProps) {
               {saving ? "Saving…" : "Save"}
             </button>
           </div>
+
+          {saveError && (
+            <div className="mb-[18px] rounded-[10px] border border-[rgba(193,58,58,0.22)] bg-[rgba(193,58,58,0.06)] px-[15px] py-[11px] text-[13.5px] text-[#A13A3A]">
+              {saveError}
+            </div>
+          )}
 
           <div className="mb-[26px] text-center">
             <input
