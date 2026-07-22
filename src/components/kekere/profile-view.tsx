@@ -14,7 +14,6 @@ import {
   Share2,
   Star,
   BarChart3,
-  Sparkles,
   RefreshCw,
   Check,
 } from "lucide-react";
@@ -761,7 +760,8 @@ export function ProfileView(props: ProfileViewProps) {
                                   <div className="flex flex-col gap-2">
                                     {kemiLoading && (
                                       <p className="flex items-center gap-1.5 text-[12.5px] text-[var(--color-ink-muted-2)]">
-                                        <Sparkles size={12} className="animate-pulse text-[var(--color-primary)]" />
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src="/kekere/kemi-avatar.png" alt="" className="h-4 w-4 animate-pulse rounded-full object-cover" />
                                         Kemi is reading your draft…
                                       </p>
                                     )}
@@ -798,7 +798,8 @@ export function ProfileView(props: ProfileViewProps) {
                                       onClick={() => askKemiForHookline(draft.id)}
                                       className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-primary)]"
                                     >
-                                      <Sparkles size={13} /> Ask Kemi for a hook line
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src="/kekere/kemi-avatar.png" alt="" className="h-[18px] w-[18px] rounded-full object-cover" /> Ask Kemi for a hook line
                                     </button>
                                   )
                                 )}

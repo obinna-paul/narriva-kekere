@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { X, Send, ChevronRight } from "lucide-react";
@@ -8,6 +8,12 @@ import { cn } from "@/lib/utils/cn";
 import { generateUUID } from "@/lib/utils/uuid";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { KemiRecommendation } from "@/app/api/kekere/kemi/chat/route";
+import {
+  buildKemiGreetingPool,
+  pickRandomKemiGreeting,
+  renderKemiGreeting,
+  getLastKemiGreetingKey,
+} from "@/content/kemi-chat-greetings";
 
 interface KemiMessage {
   role: "user" | "kemi";
@@ -20,9 +26,6 @@ const KEMI_AVATAR = "/kekere/kemi-avatar.png";
 
 const QUICK_STARTS = ["Surprise me", "Something funny", "I've got 10 minutes", "Make me cry"];
 
-const INTRO =
-  "Hey, I'm Kemi 👋 Tell me what you're in the mood for and I'll find you something good — or just say \"surprise me.\"";
-
 /**
  * Kemi's entry point and chat — the third way to find something to read,
  * alongside browsing by tag and search (this component's trigger sits
@@ -31,7 +34,7 @@ const INTRO =
  * as a story preview, so it follows the same sheet/backdrop convention as
  * StoryPreviewSheet rather than Narriva's lightweight coexisting NariWidget.
  */
-export function KemiChat() {
+export function KemiChat({ readerName, readerId }: { readerName?: string; readerId?: string | null }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<KemiMessage[]>([]);
@@ -46,6 +49,25 @@ export function KemiChat() {
   if (typeof window !== "undefined") {
     localStorage.setItem("kemi-sid", sessionId.current);
   }
+
+  const pickGreeting = useCallback(() => {
+    const pool = buildKemiGreetingPool(readerName);
+    const lastKey = getLastKemiGreetingKey(readerId);
+    let avoidText: string | null = null;
+    try {
+      avoidText = localStorage.getItem(lastKey);
+    } catch {
+      // localStorage unavailable — skip avoidance
+    }
+    const template = pickRandomKemiGreeting(pool, avoidText);
+    const text = renderKemiGreeting(template, readerName);
+    try {
+      localStorage.setItem(lastKey, text);
+    } catch {
+      // localStorage unavailable — skip persistence
+    }
+    return text;
+  }, [readerName, readerId]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -69,7 +91,7 @@ export function KemiChat() {
   function handleOpen() {
     setOpen(true);
     if (messages.length === 0) {
-      setMessages([{ role: "kemi", text: INTRO }]);
+      setMessages([{ role: "kemi", text: pickGreeting() }]);
     }
   }
 
