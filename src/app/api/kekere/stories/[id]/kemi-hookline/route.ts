@@ -37,7 +37,17 @@ export const POST = withAuth(async (_request, session, { params }: { params: { i
   }
 
   const plainText = docToPlainText(story.body as unknown as TiptapDoc);
-  if (plainText.trim().length < 50) {
+  const plainTextLen = plainText.trim().length;
+
+  console.log("[kemi-hookline]", {
+    storyId: params.id,
+    title: story.title,
+    wordCount: story.wordCount,
+    plainTextLen,
+    plainTextPreview: plainText.trim().slice(0, 80),
+  });
+
+  if (plainTextLen < 50) {
     return NextResponse.json({ error: "too_short" }, { status: 400 });
   }
 
@@ -45,6 +55,8 @@ export const POST = withAuth(async (_request, session, { params }: { params: { i
   if (!hookLine) {
     return NextResponse.json({ error: "unavailable" }, { status: 503 });
   }
+
+  console.log("[kemi-hookline] result:", { storyId: params.id, hookLine });
 
   return NextResponse.json({ hookLine });
 });
