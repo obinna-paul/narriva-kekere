@@ -1,6 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { MapPin, Star, Quote, Users, BookOpen } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+import { MapPin, Star, Quote, Users, BookOpen, Heart } from "lucide-react";
 import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
@@ -34,17 +35,6 @@ function RatingLine({ average, count }: { average: number | null; count: number 
       <Star size={13} className="fill-current" />
       {average.toFixed(1)} <span className="font-normal text-[var(--color-ink-muted-2)]">· {count} rating{count === 1 ? "" : "s"}</span>
     </span>
-  );
-}
-
-function StatTile({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-3 py-[18px] text-center">
-      <div className="font-[family-name:var(--font-display)] text-[22px] font-semibold leading-none text-[var(--color-primary)]">
-        {value}
-      </div>
-      <div className="mt-1 text-[11.5px] leading-[1.3] text-[var(--color-ink-muted-2)]">{label}</div>
-    </div>
   );
 }
 
@@ -86,59 +76,119 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
   );
 }
 
-export interface WriterProfileViewProps {
-  profile: PublicWriterProfile;
-  stats: WriterProfileStats;
-  stories: WriterProfileStory[];
-  followerCount: number;
-  followerAvatars: FollowerAvatar[];
-  praiseWallNotes: PraiseWallNote[];
-  similarWriters: SimilarWriter[];
-  viewerIsLoggedIn: boolean;
-  viewerIsFollowing: boolean;
-  isOwnProfile: boolean;
+// ---------------------------------------------------------------------------
+// Section divider — a thin, warm, decorative line that sections the profile
+// into visual chapters without being harsh.
+// ---------------------------------------------------------------------------
+function SectionDivider() {
+  return (
+    <div className="flex items-center gap-3 px-[22px]">
+      <div className="h-px flex-1 bg-[rgba(42,26,18,0.08)]" />
+      <div className="h-1 w-1 rounded-full bg-[var(--color-primary)]/30" />
+      <div className="h-px flex-1 bg-[rgba(42,26,18,0.08)]" />
+    </div>
+  );
 }
 
+// ---------------------------------------------------------------------------
+// Stats strip — a single horizontal bar that replaces the old three-tile grid.
+// Four key metrics with icons, large numbers, and small labels, separated by
+// thin vertical rules. Feels editorial, like a magazine's author sidebar.
+// ---------------------------------------------------------------------------
+function StatsStrip({
+  stories,
+  reads,
+  followers,
+  rating,
+  ratingCount,
+}: {
+  stories: number;
+  reads: number;
+  followers: number;
+  rating: number | null;
+  ratingCount: number;
+}) {
+  return (
+    <div className="mx-[22px] flex items-stretch overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.08)] bg-[linear-gradient(175deg,#FFFFFF,#FDF8F3)]">
+      <StatItem icon={<BookOpen size={15} />} value={String(stories)} label={stories === 1 ? "Story" : "Stories"} />
+      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <StatItem icon={<Heart size={15} />} value={formatCount(reads)} label="Reads" />
+      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <StatItem icon={<Users size={15} />} value={formatCount(followers)} label="Followers" />
+      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <StatItem
+        icon={<Star size={15} />}
+        value={rating !== null ? rating.toFixed(1) : "—"}
+        label={ratingCount > 0 ? `${ratingCount} rating${ratingCount === 1 ? "" : "s"}` : "No ratings"}
+      />
+    </div>
+  );
+}
+
+function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-2 py-4">
+      <span className="mb-1 text-[var(--color-ink-muted-2)]">{icon}</span>
+      <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold leading-none text-[var(--color-ink)]">
+        {value}
+      </span>
+      <span className="mt-1 text-[10.5px] leading-tight text-[var(--color-ink-muted-2)]">{label}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Praise wall card — completely redesigned. No longer a horizontal-scroll
+// wide card; now a full-width vertical card with a left accent stripe,
+// reader avatar, quote-text, and a linked story attribution. The wall
+// is built card by card so they read like a gallery of gratitude.
+// ---------------------------------------------------------------------------
 function PraiseWallCard({ note }: { note: PraiseWallNote }) {
   const initial = note.fromUserName.trim().charAt(0).toUpperCase() || "?";
   const avatarColor = note.fromUserAvatarColor ?? "#C75D2C";
 
   return (
-    <Link
-      href={`/kekere/story/${note.storySlug ?? note.storyId}`}
-      className="group relative flex w-[270px] flex-none flex-col overflow-hidden rounded-[20px] border border-[var(--color-border)] bg-gradient-to-b from-white to-[var(--color-cream)] p-5 shadow-[0_10px_26px_-16px_rgba(42,26,18,0.3)] transition-all hover:-translate-y-[3px] hover:border-[var(--color-primary)]/35 hover:shadow-[0_18px_34px_-16px_rgba(199,93,44,0.4)]"
-    >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -right-1 -top-4 select-none font-[family-name:var(--font-display)] text-[110px] font-bold leading-none text-[var(--color-primary)]/[0.06]"
-      >
-        &rdquo;
-      </span>
+    <div className="group relative overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white">
+      {/* Left accent stripe */}
+      <div
+        className="absolute bottom-0 left-0 top-0 w-[4px] rounded-l-2xl opacity-60"
+        style={{ background: `linear-gradient(180deg, ${avatarColor}00, ${avatarColor}44, ${avatarColor}00)` }}
+      />
 
-      <div className="relative flex items-center gap-2.5">
+      {/* Top: reader identity */}
+      <Link
+        href={`/kekere/story/${note.storySlug ?? note.storyId}`}
+        className="flex items-center gap-3 px-5 pt-4"
+      >
         <span
-          className="flex h-8 w-8 flex-none items-center justify-center rounded-full font-[family-name:var(--font-display)] text-[13px] font-bold text-white"
+          className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[14px] font-bold text-white shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
           style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
         >
           {initial}
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-[var(--color-ink)]">{note.fromUserName}</p>
-          <p className="text-[10.5px] uppercase tracking-[0.08em] text-[var(--color-ink-muted-3)]">Reader</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-[var(--color-ink)]">{note.fromUserName}</p>
+          <p className="text-[11px] text-[var(--color-ink-muted-3)]">a reader</p>
         </div>
-      </div>
+        <Quote size={14} className="flex-none text-[var(--color-primary)]/20" />
+      </Link>
 
-      <p className="relative mt-3.5 line-clamp-5 flex-1 font-[family-name:var(--font-display)] text-[14.5px] italic leading-[1.55] text-[var(--color-ink)]">
+      {/* Middle: the note */}
+      <p className="relative px-5 py-3 font-[family-name:var(--font-display)] text-[14.5px] italic leading-[1.6] text-[var(--color-ink)]">
         {note.body}
       </p>
 
-      <div className="relative mt-4 flex items-center gap-1.5 border-t border-[var(--color-border)] pt-3 text-[12px] text-[var(--color-ink-muted-2)]">
-        <BookOpen size={12} className="flex-none text-[var(--color-primary)]" />
+      {/* Bottom: linked story attribution */}
+      <Link
+        href={`/kekere/story/${note.storySlug ?? note.storyId}`}
+        className="flex items-center gap-1.5 border-t border-[rgba(42,26,18,0.06)] px-5 py-3 text-[12px] text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-cream)]/60"
+      >
+        <BookOpen size={12} className="flex-none text-[var(--color-primary)]/70" />
         <span className="truncate">
-          on <span className="font-semibold text-[var(--color-ink)]">&ldquo;{note.storyTitle}&rdquo;</span>
+          left on <span className="font-semibold text-[var(--color-ink)]">&ldquo;{note.storyTitle}&rdquo;</span>
         </span>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
@@ -149,10 +199,10 @@ function SimilarWriterCard({ writer }: { writer: SimilarWriter }) {
   return (
     <Link
       href={`/kekere/writer/${writer.kekereUsername ?? writer.id}`}
-      className="flex flex-none w-[150px] flex-col items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition-colors hover:border-[var(--color-primary)]/40"
+      className="flex w-[150px] flex-none flex-col items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-center transition-colors hover:border-[var(--color-primary)]/40"
     >
       <span
-        className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[20px] font-semibold text-white"
+        className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-[20px] font-semibold text-white"
         style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
       >
         {avatarUrl ? (
@@ -172,6 +222,19 @@ function SimilarWriterCard({ writer }: { writer: SimilarWriter }) {
   );
 }
 
+export interface WriterProfileViewProps {
+  profile: PublicWriterProfile;
+  stats: WriterProfileStats;
+  stories: WriterProfileStory[];
+  followerCount: number;
+  followerAvatars: FollowerAvatar[];
+  praiseWallNotes: PraiseWallNote[];
+  similarWriters: SimilarWriter[];
+  viewerIsLoggedIn: boolean;
+  viewerIsFollowing: boolean;
+  isOwnProfile: boolean;
+}
+
 export function WriterProfileView({
   profile,
   stats,
@@ -187,16 +250,20 @@ export function WriterProfileView({
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
   const avatarUrl = profile.avatar ? userAvatarUrl(profile.avatar) : null;
   const avatarColor = profile.avatarColor ?? "#C75D2C";
+  const hasMeta = !!(profile.country || profile.memberSince);
+  const hasBio = !!(profile.bio && profile.bio.trim());
+  const hasComingSoon = !!profile.comingSoon;
 
   return (
-    <div className="mx-auto max-w-[560px] pb-[64px]">
-      <section className="px-[22px] pb-[30px] pt-[44px] text-center">
-        <div
-          className="mx-auto flex h-[96px] w-[96px] items-center justify-center overflow-hidden rounded-full p-1"
-          style={{ background: avatarColor }}
-        >
+    <div className="mx-auto max-w-[560px] pb-[80px]">
+      {/* ================================================================ */}
+      {/* HERO — avatar, name, meta, bio, socials, follow                  */}
+      {/* ================================================================ */}
+      <section className="px-[22px] pb-6 pt-[52px] text-center">
+        {/* Avatar — larger, with an outer glow ring */}
+        <div className="mx-auto flex h-[112px] w-[112px] items-center justify-center rounded-full p-[3px] shadow-[0_0_0_5px_rgba(199,93,44,0.06),0_4px_24px_rgba(42,26,18,0.1)]" style={{ background: avatarColor }}>
           <div
-            className="flex h-full w-full items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-display)] text-[34px] font-semibold text-white"
+            className="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[38px] font-semibold text-white"
             style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
           >
             {avatarUrl ? (
@@ -207,29 +274,47 @@ export function WriterProfileView({
             )}
           </div>
         </div>
-        <h1 className="mt-4 font-[family-name:var(--font-display)] text-[26px] font-semibold text-[var(--color-ink)]">
+
+        {/* Name */}
+        <h1 className="mt-5 font-[family-name:var(--font-display)] text-[28px] font-semibold leading-tight tracking-[-0.3px] text-[var(--color-ink)]">
           {profile.name}
         </h1>
-        {profile.country && (
-          <p className="mt-1.5 flex items-center justify-center gap-1 text-[13px] text-[var(--color-ink-muted-2)]">
-            <MapPin size={13} /> Writer from {profile.country}
+
+        {/* Meta line — country + member since, with a subtle dot separator */}
+        {hasMeta && (
+          <p className="mt-1.5 flex items-center justify-center gap-1.5 text-[13px] text-[var(--color-ink-muted-2)]">
+            {profile.country && (
+              <>
+                <MapPin size={12} className="text-[var(--color-primary)]/70" />
+                {profile.country}
+              </>
+            )}
+            {profile.country && profile.memberSince && (
+              <span className="text-[var(--color-ink-muted-3)]">·</span>
+            )}
+            {profile.memberSince && (
+              <span>Member since {formatMemberSince(profile.memberSince)}</span>
+            )}
           </p>
         )}
-        {profile.bio && (
-          <p className="mx-auto mt-2 max-w-[340px] text-[14.5px] leading-[1.5] text-[var(--color-ink-muted)]">
+
+        {/* Bio — with more breathing room */}
+        {hasBio && (
+          <p className="mx-auto mt-3 max-w-[400px] text-[15px] leading-[1.6] text-[var(--color-ink-muted)]">
             {profile.bio}
           </p>
         )}
 
+        {/* Social links */}
         {profile.socialLinks.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-[8px]">
+          <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
             {profile.socialLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
+                className="rounded-full border border-[rgba(42,26,18,0.10)] bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_1px_4px_rgba(199,93,44,0.1)]"
               >
                 {link.label}
               </a>
@@ -237,47 +322,58 @@ export function WriterProfileView({
           </div>
         )}
 
-        <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)]">
-          Member since {formatMemberSince(profile.memberSince)}
-        </p>
-
-        <WriterFollowHeader
-          writerId={profile.id}
-          isLoggedIn={viewerIsLoggedIn}
-          initialFollowing={viewerIsFollowing}
-          initialFollowerCount={followerCount}
-          isOwnProfile={isOwnProfile}
-          followerAvatars={followerAvatars}
-        />
-      </section>
-
-      <section className="px-[22px]">
-        <div className="mb-8 grid grid-cols-3 gap-[10px]">
-          <StatTile value={String(stats.publishedCount)} label={stats.publishedCount === 1 ? "Story" : "Stories"} />
-          <StatTile value={formatCount(stats.totalReads)} label="Reads" />
-          <StatTile
-            value={stats.rating.average !== null ? stats.rating.average.toFixed(1) : "—"}
-            label={stats.rating.count > 0 ? `${stats.rating.count} rating${stats.rating.count === 1 ? "" : "s"}` : "No ratings yet"}
+        {/* Follow button + follower preview */}
+        <div className="mt-4">
+          <WriterFollowHeader
+            writerId={profile.id}
+            isLoggedIn={viewerIsLoggedIn}
+            initialFollowing={viewerIsFollowing}
+            initialFollowerCount={followerCount}
+            isOwnProfile={isOwnProfile}
+            followerAvatars={followerAvatars}
           />
         </div>
       </section>
 
-      {praiseWallNotes.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 flex items-center gap-1.5 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
-            <Quote size={15} className="text-[var(--color-primary)]" />
-            What readers say
-          </h2>
-          <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
-            {praiseWallNotes.map((note) => (
-              <PraiseWallCard key={note.id} note={note} />
-            ))}
+      {/* ================================================================ */}
+      {/* STATS STRIP                                                      */}
+      {/* ================================================================ */}
+      <div className="mb-8">
+        <StatsStrip
+          stories={stats.publishedCount}
+          reads={stats.totalReads}
+          followers={followerCount}
+          rating={stats.rating.average}
+          ratingCount={stats.rating.count}
+        />
+      </div>
+
+      {/* ================================================================ */}
+      {/* COMING SOON — moved up, before published stories                 */}
+      {/* ================================================================ */}
+      {hasComingSoon && (
+        <section className="mb-8 px-[22px]">
+          <div className="overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.18)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] p-5 shadow-[0_8px_24px_-10px_rgba(199,93,44,0.25)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-primary)]/70">
+              Coming soon
+            </p>
+            <h3 className="mt-1 font-[family-name:var(--font-display)] text-[19px] font-bold leading-tight text-[var(--color-ink)]">
+              {profile.comingSoon.title}
+            </h3>
+            {profile.comingSoon.hookLine && (
+              <p className="mt-2 text-[14px] italic leading-[1.55] text-[var(--color-ink-muted)]">
+                {profile.comingSoon.hookLine}
+              </p>
+            )}
           </div>
         </section>
       )}
 
+      {/* ================================================================ */}
+      {/* PUBLISHED STORIES — kept as-is per user request                  */}
+      {/* ================================================================ */}
       <section className="px-[22px]">
-        <h2 className={cn("mb-3 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]")}>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
           Published stories
         </h2>
         <div className="flex flex-col gap-2.5">
@@ -287,37 +383,71 @@ export function WriterProfileView({
         </div>
       </section>
 
-      {profile.comingSoon && (
-        <section className="mt-9 px-[22px]">
-          <h2 className="mb-3 font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
-            Coming soon
-          </h2>
-          <div className="overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.22)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] px-5 py-4 shadow-[0_10px_26px_-16px_rgba(199,93,44,0.45)]">
-            <h3 className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-tight text-[var(--color-ink)]">
-              {profile.comingSoon.title}
-            </h3>
-            {profile.comingSoon.hookLine && (
-              <p className="mt-2 text-[13.5px] italic leading-[1.55] text-[var(--color-ink-muted)]">
-                {profile.comingSoon.hookLine}
-              </p>
-            )}
+      {/* ================================================================ */}
+      {/* PRAISE WALL — redesigned stacked testimonial cards               */}
+      {/* ================================================================ */}
+      {praiseWallNotes.length > 0 && (
+        <>
+          <div className="my-10">
+            <SectionDivider />
           </div>
-        </section>
+
+          <section className="px-[22px]">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)]/10">
+                <Heart size={13} className="text-[var(--color-primary)]" />
+              </span>
+              <h2 className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+                What readers say
+              </h2>
+              <span className="ml-auto rounded-full bg-[var(--color-primary-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+                {praiseWallNotes.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {praiseWallNotes.map((note) => (
+                <PraiseWallCard key={note.id} note={note} />
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
+      {/* ================================================================ */}
+      {/* SIMILAR WRITERS                                                  */}
+      {/* ================================================================ */}
       {profile.crossPromotionEnabled && similarWriters.length > 0 && (
-        <section className="mt-9">
-          <h2 className="mb-3 flex items-center gap-1.5 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
-            <Users size={16} className="text-[var(--color-primary)]" />
-            You might also like
-          </h2>
-          <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
-            {similarWriters.map((writer) => (
-              <SimilarWriterCard key={writer.id} writer={writer} />
-            ))}
+        <>
+          <div className="my-10">
+            <SectionDivider />
           </div>
-        </section>
+
+          <section>
+            <h2 className="mb-3 flex items-center gap-2 px-[22px] font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
+              <Users size={16} className="text-[var(--color-primary)]" />
+              Writers you might like
+            </h2>
+            <div className="scrollx flex gap-3 overflow-x-auto px-[22px] pb-1">
+              {similarWriters.map((writer) => (
+                <SimilarWriterCard key={writer.id} writer={writer} />
+              ))}
+            </div>
+          </section>
+        </>
       )}
+
+      {/*
+        Message count badge — not wired up yet.
+        Kept commented out for when the feature is launched.
+        {stats.unreadMessages > 0 && (
+          <div className="px-[22px] mt-4">
+            <Link href="/kekere/notes" className="flex items-center gap-2 rounded-full bg-[var(--color-primary)]/10 px-4 py-2.5 text-[13px] font-semibold text-[var(--color-primary)]">
+              <MessageCircle size={14} />
+              {stats.unreadMessages} new note{stats.unreadMessages === 1 ? '' : 's'} from readers
+            </Link>
+          </div>
+        )}
+      */}
     </div>
   );
 }
