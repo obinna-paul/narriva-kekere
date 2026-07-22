@@ -32,11 +32,23 @@ export const POST = withAuth(
     if (!story) return NextResponse.json({ error: "Story not found" }, { status: 404 });
 
     const bodyText = bodyToPlainText(story.body);
-    // Send the full story body — Kekere stories are 800–15,000 words, well
-    // within the 128K-token context window. Kemi needs the full text to
-    // suggest a hookline that references concrete specifics from the story,
-    // not generic themes. (Previously limited to 2500 chars.)
-    const fullText = bodyText;
+
+    // Build a smart excerpt: opening (first ~10k chars = ~1600 words) for the
+    // setup + characters + tone, and if the story is longer than that, the
+    // ending (~3k chars = ~500 words) for the tension point/resolution context.
+    // The full text was overwhelming the model and it couldn't follow its
+    // instructions reliably. This excerpt gives Kemi enough to find concrete
+    // specifics for both tags and hooklines.
+    const OPENING_LEN = 10000;
+    const ENDING_LEN = 3000;
+    let excerpt: string;
+    if (bodyText.length <= OPENING_LEN + ENDING_LEN) {
+      excerpt = bodyText;
+    } else {
+      const opening = bodyText.slice(0, OPENING_LEN);
+      const ending = bodyText.slice(-ENDING_LEN);
+      excerpt = `${opening}\n\n[... story continues ...]\n\n${ending}`;
+    }
 
     const tagCatalog = buildTagCatalogForAI();
 
@@ -48,8 +60,8 @@ Title: ${story.title}
 Genre: ${story.genre}
 Current hook line: ${story.hookLine ?? "(none)"}
 
-Full story text:
-${fullText}
+Story excerpt:
+${excerpt}
 
 ---
 
@@ -137,6 +149,7 @@ No markdown fences. No commentary. JSON only.`;
         max_tokens: 500,
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: AbortSignal.timeout(25000),
     });
 
     if (!res.ok) {
