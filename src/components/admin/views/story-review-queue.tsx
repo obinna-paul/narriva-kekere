@@ -89,6 +89,8 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<TagSuggestion[] | null>(null);
   const [newTagSuggestion, setNewTagSuggestion] = useState<NewTagSuggestion | null>(null);
+  const [suggestedHookLine, setSuggestedHookLine] = useState<string | null>(null);
+  const [applyingHookLine, setApplyingHookLine] = useState(false);
   const [suggestedIsAdult, setSuggestedIsAdult] = useState<boolean | null>(null);
   const [suggestError, setSuggestError] = useState<string | null>(null);
 
@@ -96,6 +98,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
     setSuggesting(true);
     setSuggestions(null);
     setNewTagSuggestion(null);
+    setSuggestedHookLine(null);
     setSuggestedIsAdult(null);
     setSuggestError(null);
     try {
@@ -104,6 +107,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
       const data = await res.json();
       setSuggestions(data.suggestions ?? []);
       setNewTagSuggestion(data.newTag ?? null);
+      setSuggestedHookLine(data.hookLine ?? null);
       setSuggestedIsAdult(typeof data.isAdult === "boolean" ? data.isAdult : null);
     } catch {
       setSuggestError("Kemi couldn't read the story right now. Try again.");
@@ -118,6 +122,25 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
     if (suggestedIsAdult !== null) setIsAdult(suggestedIsAdult);
     setSuggestions(null);
     setNewTagSuggestion(null);
+  }
+
+  async function applyHookLineSuggestion() {
+    if (!suggestedHookLine) return;
+    setApplyingHookLine(true);
+    try {
+      const res = await fetch(`/api/admin/kekere/stories/${story.id}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hookLine: suggestedHookLine }),
+      });
+      if (res.ok) {
+        setSuggestedHookLine(null);
+      }
+    } catch {
+      // silently fail — admin can retry
+    } finally {
+      setApplyingHookLine(false);
+    }
   }
 
   async function handleCoverFile(file: File) {
@@ -304,6 +327,24 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                   className="mt-2.5 w-full rounded-[7px] bg-[#6B21A8] py-2 text-[11px] font-semibold text-white hover:bg-[#5a1a8f]"
                 >
                   Use these tags
+                </button>
+              </div>
+            )}
+
+            {/* Nari hookline suggestion */}
+            {suggestedHookLine && (
+              <div className="mb-2 rounded-[8px] border border-[rgba(107,33,168,0.18)] bg-[rgba(107,33,168,0.04)] p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#6B21A8]">Kemi suggests a hook line</p>
+                <p className="rounded-[6px] bg-white px-3 py-2.5 text-[12.5px] italic leading-[1.55] text-[#1A1C20]">
+                  &ldquo;{suggestedHookLine}&rdquo;
+                </p>
+                <button
+                  type="button"
+                  onClick={applyHookLineSuggestion}
+                  disabled={applyingHookLine}
+                  className="mt-2.5 w-full rounded-[7px] bg-[#6B21A8] py-2 text-[11px] font-semibold text-white hover:bg-[#5a1a8f] disabled:opacity-50"
+                >
+                  {applyingHookLine ? "Saving…" : "Use this hook line"}
                 </button>
               </div>
             )}
