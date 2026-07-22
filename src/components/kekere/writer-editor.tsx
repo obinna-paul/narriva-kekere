@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils/cn";
 import { READING_WPM } from "@/content/decisions";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
+import { AuthorChip } from "@/components/kekere/author-chip";
 import { createEditorExtensions } from "@/lib/tiptap/editor-config";
 import {
   plainTextToDoc,
@@ -61,6 +62,9 @@ export interface WriterEditorProps {
   competitionTitle?: string;
   competitionDeadlineLabel?: string;
   initialStoryId?: string;
+  authorName?: string;
+  authorAvatarUrl?: string | null;
+  authorAvatarColor?: string | null;
 }
 
 function countWords(text: string): number {
@@ -95,6 +99,9 @@ export function WriterEditor({
   competitionTitle,
   competitionDeadlineLabel,
   initialStoryId,
+  authorName,
+  authorAvatarUrl,
+  authorAvatarColor,
 }: WriterEditorProps) {
   const router = useRouter();
 
@@ -892,42 +899,46 @@ export function WriterEditor({
             <span className="text-sm text-[var(--color-ink-muted)]">
               This is what you&apos;re submitting. Our team will review it within 5–7 business days.
             </span>
-            <button
-              type="button"
-              onClick={() => setSubmitPreviewOpen(false)}
-              className="text-sm font-semibold text-[var(--color-primary)] hover:underline"
-            >
-              Go back and edit
-            </button>
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-8">
             <div className="mx-auto max-w-[680px]">
               <h1 className="font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.2] text-[var(--color-ink)]">
                 {title || "Untitled story"}
               </h1>
-              <p className="mt-3 font-[family-name:var(--font-display)] text-[19px] italic leading-[1.4] text-[var(--color-ink-muted)]">
-                {hookLine || "No hook line"}
-              </p>
-              <p className="mt-2 text-xs text-[var(--color-ink-muted-3)]">
-                {wordCount.toLocaleString()} words · ~{readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                {authorName ? (
+                  <AuthorChip
+                    authorId=""
+                    authorName={authorName}
+                    avatarColor={authorAvatarColor}
+                    avatarUrl={authorAvatarUrl}
+                    size="md"
+                    linked={false}
+                  />
+                ) : (
+                  <span className="text-[13.5px] text-[var(--color-ink-muted-2)]">by you</span>
+                )}
+                <span className="text-[13.5px] text-[var(--color-ink-muted-2)]">
+                  · {readingTimeMinutes > 0 ? readingTimeMinutes : "< 1"} min read
+                </span>
+              </div>
               <div className="mt-6">
                 <StoryReaderContent doc={previewDoc} />
               </div>
             </div>
           </div>
-          <div className="border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)] px-6 py-4 flex justify-end gap-3">
+          <div className="flex flex-none items-center gap-3 border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)] px-6 py-4">
             <button
               type="button"
               onClick={() => setSubmitPreviewOpen(false)}
-              className={cn(buttonVariants({ variant: "secondary" }), "rounded-[10px]")}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
             >
               Go back and edit
             </button>
             <button
               type="button"
               onClick={confirmSubmit}
-              className={cn(buttonVariants({ variant: "primary" }), "rounded-[10px]")}
+              className={cn(buttonVariants({ variant: "primary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
             >
               Confirm and submit
             </button>

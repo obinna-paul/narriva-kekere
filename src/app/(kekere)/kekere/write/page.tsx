@@ -3,6 +3,9 @@ import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { WriterEditor } from "@/components/kekere/writer-editor";
 import { WriterDashboard } from "@/components/kekere/writer-dashboard";
 import { getCompetitionBySlug } from "@/lib/data/kekere-competitions";
+import { getKekereUserProfile } from "@/lib/data/kekere-profile-stats";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +43,9 @@ export default async function KekereWritePage({
     ? await getCompetitionBySlug(searchParams.competition)
     : null;
 
+  const session = await getServerSession(authOptions);
+  const profile = session?.user?.id ? await getKekereUserProfile(session.user.id) : null;
+
   return (
     <KekereTheme>
       <WriterEditor
@@ -48,6 +54,9 @@ export default async function KekereWritePage({
         competitionTitle={competition?.title}
         competitionDeadlineLabel={competition ? closesInLabel(competition.deadline) : undefined}
         initialStoryId={searchParams.id}
+        authorName={profile?.name ?? undefined}
+        authorAvatarUrl={profile?.avatar ?? null}
+        authorAvatarColor={profile?.avatarColor ?? null}
       />
     </KekereTheme>
   );
