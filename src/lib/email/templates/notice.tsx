@@ -1,5 +1,6 @@
 import { Link, Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock, type SignatureProps } from "./signature";
 
 interface NoticeEmailProps {
   preview: string;
@@ -11,6 +12,8 @@ interface NoticeEmailProps {
   cta?: { label: string; url: string };
   /** Passed through to BaseEmail — only set on opt-in retention emails. */
   unsubscribeUrl?: string;
+  /** Optional personal signature block — rendered below the last line inside the card. */
+  signature?: SignatureProps;
 }
 
 /**
@@ -20,7 +23,7 @@ interface NoticeEmailProps {
  * ones (BaseEmail card, styles.h1/p, the tinted info-box convention from
  * story-accepted.tsx / story-rejected.tsx), just parameterized.
  */
-export function NoticeEmail({ preview, heading, lines, highlight, cta, unsubscribeUrl }: NoticeEmailProps) {
+export function NoticeEmail({ preview, heading, lines, highlight, cta, unsubscribeUrl, signature }: NoticeEmailProps) {
   const positive = highlight?.tone === "positive";
   const boxBg = positive ? "#F6FBF8" : "#FDF8F3";
   const boxBorder = positive ? "rgba(31,138,91,0.18)" : "rgba(42,26,18,0.12)";
@@ -82,6 +85,8 @@ export function NoticeEmail({ preview, heading, lines, highlight, cta, unsubscri
           </Link>
         </Section>
       )}
+
+      {signature && <SignatureBlock {...signature} />}
     </BaseEmail>
   );
 }

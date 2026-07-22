@@ -12,6 +12,8 @@ import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 import { NoticeEmail } from "./notice";
 import { SITE_URL } from "@/content/decisions";
 
+export { SignatureBlock, type SignatureProps } from "./signature";
+
 export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
   return render(createElement(OtpEmail, props));
 }
