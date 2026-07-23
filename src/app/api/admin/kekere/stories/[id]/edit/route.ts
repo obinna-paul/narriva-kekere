@@ -72,6 +72,74 @@ const editSchema = z.object({
   isAdult: z.boolean().optional(),
 });
 
+const partialEditSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  hookLine: z.string().min(1).max(300).optional(),
+  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]).optional(),
+  cowrieCost: z.number().int().min(1).max(10).optional(),
+  tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags").optional(),
+  coverImageRef: z.string().optional(),
+  isAdult: z.boolean().optional(),
+});
+
+/** Partial update — unlike PUT, the admin only sends the fields they want to
+ *  change and the rest stay as-is. Used by the review queue's "Use this hook
+ *  line" button and similar spot-edits. */
+export const PATCH = withAuth(
+  async (request, _session, { params }) => {
+    const { id } = params as { id: string };
+
+    const body = await request.json().catch(() => null);
+    const parsed = partialEditSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const existing = await prisma.story.findUnique({
+      where: { id },
+      select: { id: true, body: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Story not found" }, { status: 404 });
+    }
+
+    const data = parsed.data;
+    const update: Record<string, unknown> = {};
+
+    if (data.title !== undefined) update.title = data.title;
+    if (data.hookLine !== undefined) update.hookLine = data.hookLine;
+    if (data.tier !== undefined) update.tier = data.tier;
+    if (data.cowrieCost !== undefined) update.cowrieCost = data.cowrieCost;
+    if (data.coverImageRef !== undefined) update.coverImageRef = data.coverImageRef;
+    if (data.isAdult !== undefined) update.isAdult = data.isAdult;
+
+    // Only update lastSavedAt if at least one field changed
+    if (Object.keys(update).length > 0) {
+      update.lastSavedAt = new Date();
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const story = await tx.story.update({
+        where: { id },
+        data: update,
+      });
+
+      if (data.tagIds !== undefined) {
+        await tx.storyTag.deleteMany({ where: { storyId: id } });
+        await tx.storyTag.createMany({
+          data: data.tagIds.map((tagId) => ({ storyId: id, tagId })),
+          skipDuplicates: true,
+        });
+      }
+
+      return story;
+    });
+
+    return NextResponse.json({ success: true, story: { id: updated.id, lastSavedAt: updated.lastSavedAt } });
+  },
+  { roles: ["ADMIN"] },
+);
+
 export const PUT = withAuth(
   async (request, _session, { params }) => {
     const { id } = params as { id: string };
