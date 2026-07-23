@@ -554,10 +554,10 @@ export function WriterEditor({
           scrolls away with the rest of the page like ordinary content. */}
       <div className="border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]" data-writer-chrome>
         <div className="mx-auto flex max-w-[680px] flex-wrap items-center justify-between gap-2 px-[22px] py-2.5">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex flex-none items-center gap-3">
             <Link
               href="/kekere/write"
-              className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-primary)]"
+              className="whitespace-nowrap font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-primary)]"
               title="Back to your stories"
             >
               ‹ Stories
@@ -571,12 +571,13 @@ export function WriterEditor({
               {STATUS_LABELS[status]}
             </span>
           </div>
-          {/* The save row — status pill, Save, and Submit all live together
-              here so the header collapses to a single line instead of the
-              two (sometimes three, once wrapped) rows it used to take. */}
-          <div className="flex flex-wrap items-center justify-end gap-2" data-writer-header-actions>
+          {/* The save row — status pill, Save, Submit, and the hamburger all
+              stay together on one non-wrapping line (tight paddings/gaps are
+              deliberate — this has to fit alongside itself on a ~360px
+              phone without spilling onto a third line). */}
+          <div className="flex flex-nowrap items-center justify-end gap-1.5" data-writer-header-actions>
             {isEditable && (
-              <div className="flex flex-none items-center gap-[7px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
+              <div className="flex flex-none items-center gap-[6px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-2 py-[5px]">
                 {saveStatus.kind === "saving" ? (
                   <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
                 ) : (
@@ -588,26 +589,22 @@ export function WriterEditor({
                     style={{ backgroundColor: saveStatusColor(saveStatus.kind) }}
                   />
                 )}
-                <span className="whitespace-nowrap text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
+                <span className="whitespace-nowrap text-[11.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
                   {savedLabel.text}
                 </span>
                 {saveStatus.kind === "conflict" && (
-                  <button type="button" onClick={openHistory} className="text-[12.5px] font-semibold text-[#B3371D] underline">
+                  <button type="button" onClick={openHistory} className="text-[11.5px] font-semibold text-[#B3371D] underline">
                     View conflict
                   </button>
                 )}
               </div>
             )}
-            {/* Save/Submit/hamburger stay together as one non-wrapping unit
-                — only the save-status pill wraps onto its own line first,
-                so the hamburger never strands alone on a third line. */}
-            <div className="flex flex-none items-center gap-2">
             {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
             {isEditable && mode === "scroll" && storyId && (
               <button
                 type="button"
                 onClick={() => editorHandle.current?.flush("Manual save")}
-                className="flex items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                className="flex flex-none items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
                 title="Save (Cmd+S)"
               >
                 Save
@@ -618,7 +615,7 @@ export function WriterEditor({
                 type="button"
                 disabled={!title || wordCount === 0}
                 onClick={handleClickSubmit}
-                className="rounded-[8px] bg-[var(--color-primary)] px-[18px] py-[9px] text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-50"
+                className="flex-none rounded-[8px] bg-[var(--color-primary)] px-[14px] py-[7px] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-50"
               >
                 {status === "REVISIONS_REQUESTED" ? "Resubmit" : "Submit"}
               </button>
@@ -629,9 +626,9 @@ export function WriterEditor({
                   <button
                     type="button"
                     aria-label="More options"
-                    className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
+                    className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
                   >
-                    <Menu size={19} />
+                    <Menu size={18} />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -668,7 +665,6 @@ export function WriterEditor({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            </div>
           </div>
         </div>
         {/* Hidden file input for the "Upload document" menu action — lives
