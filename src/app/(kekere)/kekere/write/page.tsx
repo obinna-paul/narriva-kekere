@@ -4,8 +4,7 @@ import { WriterEditor } from "@/components/kekere/writer-editor";
 import { WriterDashboard } from "@/components/kekere/writer-dashboard";
 import { getCompetitionBySlug } from "@/lib/data/kekere-competitions";
 import { getKekereUserProfile } from "@/lib/data/kekere-profile-stats";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
+import { getCurrentSession } from "@/lib/auth/middleware";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +42,7 @@ export default async function KekereWritePage({
     ? await getCompetitionBySlug(searchParams.competition)
     : null;
 
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   const profile = session?.user?.id ? await getKekereUserProfile(session.user.id) : null;
 
   return (
