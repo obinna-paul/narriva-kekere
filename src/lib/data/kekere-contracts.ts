@@ -331,3 +331,53 @@ export async function declineContract(
 
   return { success: true };
 }
+
+export interface RepairedDeclinedStory {
+  contractId: string;
+  storyId: string;
+  storyTitle: string;
+  writerEmail: string;
+}
+
+/**
+ * One-time backfill for stories left stuck in PENDING_CONTRACT by an earlier
+ * version of declineContract that flipped the contract to DECLINED without
+ * ever touching the linked story. Idempotent — safe to run more than once,
+ * since a story already reverted to DRAFT no longer matches the query.
+ */
+export async function repairStuckDeclinedContracts(): Promise<RepairedDeclinedStory[]> {
+  const stuck = await prisma.kekereContract.findMany({
+    where: { status: "DECLINED", story: { status: "PENDING_CONTRACT" } },
+    include: {
+      story: { select: { id: true, title: true } },
+      writer: { select: { email: true } },
+    },
+  });
+
+  const repaired: RepairedDeclinedStory[] = [];
+  for (const contract of stuck) {
+    if (!contract.story) continue;
+
+    await prisma.story.update({
+      where: { id: contract.story.id },
+      data: { status: "DRAFT" },
+    });
+
+    await createNotification({
+      userId: contract.writerId,
+      type: "CONTRACT_DECLINED",
+      title: `"${contract.story.title}" is back in your hands`,
+      body: "You declined the publishing agreement, so your story is fully yours again — edit it any time and resubmit whenever you're ready.",
+      link: `/kekere/write?id=${contract.story.id}`,
+    });
+
+    repaired.push({
+      contractId: contract.id,
+      storyId: contract.story.id,
+      storyTitle: contract.story.title,
+      writerEmail: contract.writer.email,
+    });
+  }
+
+  return repaired;
+}
