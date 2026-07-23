@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { History, X, ScanEye, Maximize2, Minimize2, FileText, Download } from "lucide-react";
+import { History, X, ScanEye, Maximize2, Minimize2, FileText, Download, Menu } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { generateJSON } from "@tiptap/core";
 import { cn } from "@/lib/utils/cn";
 import { READING_WPM } from "@/content/decisions";
@@ -561,16 +562,6 @@ export function WriterEditor({
             >
               ‹ Stories
             </Link>
-            {mode === "scroll" && storyId && (
-              <button
-                type="button"
-                onClick={openHistory}
-                aria-label="Version history"
-                className="flex-none text-[var(--color-ink-muted)] hover:text-[var(--color-primary)]"
-              >
-                <History size={18} />
-              </button>
-            )}
             <span
               className={cn(
                 "flex-none rounded-full px-2.5 py-1 text-[11px] font-semibold",
@@ -580,6 +571,51 @@ export function WriterEditor({
               {STATUS_LABELS[status]}
             </span>
           </div>
+          {storyId && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="More options"
+                  className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
+                >
+                  <Menu size={19} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {isEditable && (
+                  <DropdownMenuItem onSelect={focusModeRef.current ? exitFocusMode : enterFocusMode}>
+                    {focusModeRef.current ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    {focusModeRef.current ? "Exit full screen" : "Full screen"}
+                  </DropdownMenuItem>
+                )}
+                {isEditable && (
+                  <DropdownMenuItem onSelect={openPreview}>
+                    <ScanEye size={16} />
+                    Preview
+                  </DropdownMenuItem>
+                )}
+                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && mode === "scroll" && (
+                  <DropdownMenuItem disabled={importing} onSelect={handleUploadClick}>
+                    <FileText size={16} />
+                    Upload document
+                  </DropdownMenuItem>
+                )}
+                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && (
+                  <DropdownMenuItem disabled={exporting} onSelect={handleExport}>
+                    <Download size={16} />
+                    Export as document
+                  </DropdownMenuItem>
+                )}
+                {mode === "scroll" && (
+                  <DropdownMenuItem onSelect={openHistory}>
+                    <History size={16} />
+                    Version history
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
         <div className="mx-auto flex max-w-[680px] flex-wrap items-center justify-between gap-2 px-[22px] pb-2.5">
           {isEditable && (
@@ -623,66 +659,19 @@ export function WriterEditor({
                     Save
                   </button>
                 )}
-                {/* B7.1 — Focus button */}
-                <button
-                  type="button"
-                  onClick={focusModeRef.current ? exitFocusMode : enterFocusMode}
-                  className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
-                  title={focusModeRef.current ? "Exit focus mode" : "Focus mode (⤢)"}
-                >
-                  {focusModeRef.current ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                </button>
-                {/* Preview button */}
-                <button
-                  type="button"
-                  onClick={openPreview}
-                  className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
-                  title="Preview"
-                >
-                  <ScanEye size={15} />
-                </button>
-                {/* Upload button — pull an existing Word doc straight into
-                    the editor, formatting intact. Same editable window as
-                    Save (DRAFT / REVISIONS_REQUESTED — matches the import
-                    route's own server-side gate), scroll mode only since
-                    there's no rich-text body to import into in chapters mode. */}
-                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && mode === "scroll" && storyId && (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={handleFileChosen}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleUploadClick}
-                      disabled={importing}
-                      className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:opacity-50"
-                      title="Upload a Word document (.doc or .docx)"
-                    >
-                      <FileText size={15} />
-                    </button>
-                  </>
-                )}
-                {/* Export button — any window where the writer is actively
-                    writing: before first submission, or while working
-                    through requested revisions. Matches the export route's
-                    own server-side gate. */}
-                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && storyId && (
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    disabled={exporting}
-                    className="flex h-8 w-8 items-center justify-center rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:opacity-50"
-                    title="Export as .docx"
-                  >
-                    <Download size={15} />
-                  </button>
-                )}
               </div>
             )}
+            {/* Hidden file input for the "Upload document" menu action —
+                lives outside the menu itself since a Radix DropdownMenuItem
+                unmounts on select, which would drop the ref right as
+                fileInputRef.current?.click() needs it. */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleFileChosen}
+              className="hidden"
+            />
             {isEditable && (
               <button
                 type="button"
