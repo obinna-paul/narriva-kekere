@@ -39,7 +39,7 @@ const RELATIVE_TIME_TICK_MS = 30000;
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
-type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED";
+type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED" | "CHANGES_PROPOSED";
 type Mode = "scroll" | "chapters";
 
 interface Chapter {
@@ -81,6 +81,7 @@ const STATUS_STYLES: Record<Status, string> = {
   PENDING_CONTRACT: "bg-[rgba(31,111,74,0.1)] text-[var(--color-success)]",
   PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
   REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
+  CHANGES_PROPOSED: "bg-[rgba(199,122,30,0.12)] text-[#A8690F]",
 };
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -91,6 +92,7 @@ const STATUS_LABELS: Record<Status, string> = {
   PENDING_CONTRACT: "Contract pending",
   PUBLISHED: "Published",
   REJECTED: "Not accepted",
+  CHANGES_PROPOSED: "Edits proposed",
 };
 
 export function WriterEditor({

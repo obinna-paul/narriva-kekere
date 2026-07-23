@@ -28,6 +28,7 @@ const STATUS_LABEL: Record<StoryStatus, string> = {
   PUBLISHED: "Published",
   REJECTED: "Not accepted",
   PENDING_CONTRACT: "Contract pending",
+  CHANGES_PROPOSED: "Edits proposed",
 };
 
 const STATUS_COLORS: Record<StoryStatus, { bg: string; text: string }> = {
@@ -38,6 +39,7 @@ const STATUS_COLORS: Record<StoryStatus, { bg: string; text: string }> = {
   PUBLISHED:             { bg: "bg-[rgba(31,111,74,.1)]",       text: "text-[#1F6F4A]" },
   REJECTED:              { bg: "bg-[rgba(179,55,29,.1)]",       text: "text-[#B3371D]" },
   PENDING_CONTRACT:      { bg: "bg-[rgba(130,80,190,.1)]",      text: "text-[#6C3BAA]" },
+  CHANGES_PROPOSED:      { bg: "bg-[rgba(199,122,30,.12)]",     text: "text-[#A8690F]" },
 };
 
 const STATUS_ICON: Record<StoryStatus, ReactNode> = {
@@ -48,6 +50,7 @@ const STATUS_ICON: Record<StoryStatus, ReactNode> = {
   PUBLISHED:           <CheckCircle2 size={13} />,
   REJECTED:            <AlertCircle size={13} />,
   PENDING_CONTRACT:    <FileText size={13} />,
+  CHANGES_PROPOSED:    <FileText size={13} />,
 };
 
 const EDITABLE: StoryStatus[] = ["DRAFT", "REVISIONS_REQUESTED"];
