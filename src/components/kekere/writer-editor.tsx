@@ -71,17 +71,6 @@ const STATUS_LABELS: Record<Status, string> = {
   ACCEPTED: "Accepted for publishing",
 };
 
-const STATUS_LABELS: Record<Status, string> = {
-  DRAFT: "Draft",
-  SUBMITTED: "Submitted",
-  REVIEWING: "In review",
-  REVISIONS_REQUESTED: "Revisions requested",
-  PENDING_CONTRACT: "Contract pending",
-  PUBLISHED: "Published",
-  REJECTED: "Not accepted",
-  CHANGES_PROPOSED: "Edits proposed",
-};
-
 export function WriterEditor({
   competitionId,
   competitionSlug,

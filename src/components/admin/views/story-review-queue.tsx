@@ -831,7 +831,7 @@ export function StoryReviewQueue() {
           </button>
           <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{queue.length}</span>
         </div>
-        </div>
+
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-4 py-10 text-center">
             <p className="text-[13px] font-semibold text-[#1A1C20]">Queue is clear</p>

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { nextSlugForTitle } from "@/lib/utils/slugs";
+import { nextSlugForTitle } from "@/lib/data/kekere-slugs";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { createNotification } from "@/lib/notifications/create";
 
