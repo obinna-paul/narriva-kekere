@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight } from "lucide-react";
+import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { docParagraphsToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 
@@ -33,7 +33,6 @@ type ParaKind = "unchanged" | "changed" | "added" | "removed";
 type Decision = "accept" | "reject";
 interface CommentState { resolved: boolean; reply: string }
 
-// A change unit the writer decides on, in reading order.
 interface Unit {
   id: string;
   kind: ParaKind;
@@ -62,16 +61,12 @@ export function WriterReviewView(props: WriterReviewProps) {
     return m;
   }, [props.comments]);
 
-  // Build the ordered list of units the writer reviews: every edited paragraph
-  // (unchanged/changed/added), with removed originals slotted after their
-  // nearest surviving predecessor.
   const units = useMemo<Unit[]>(() => {
     const list: Unit[] = [];
     for (const p of editedParas) {
       const kind: ParaKind = !p.id || !origHtmlById.has(p.id) ? "added" : origHtmlById.get(p.id) !== p.html ? "changed" : "unchanged";
       list.push({ id: p.id, kind, newHtml: p.html, oldHtml: p.id ? origHtmlById.get(p.id) : undefined, textAlign: p.textAlign, comments: p.id ? commentsByPara[p.id] ?? [] : [] });
     }
-    // Insert removed originals after their nearest earlier surviving paragraph.
     originalParas.forEach((p, i) => {
       if (!p.id || editedIds.has(p.id) || !p.html.trim()) return;
       let insertAt = list.length;
@@ -92,17 +87,17 @@ export function WriterReviewView(props: WriterReviewProps) {
   const setComment = (id: string, patch: Partial<CommentState>) =>
     setCommentState((prev) => ({ ...prev, [id]: { ...commentFor(id), ...patch } }));
 
-  const anyRejected =
-    changeUnits.some((u) => decisionFor(u.id) === "reject") || (props.hookLineChanged && false); // hook line handled separately below
+  const anyRejected = changeUnits.some((u) => decisionFor(u.id) === "reject");
   const rejectedHook = props.hookLineChanged && (decisions["__hook__"] ?? "accept") === "reject";
   const hasReply = Object.values(commentState).some((c) => c.reply.trim().length > 0);
   const goesToEditor = anyRejected || rejectedHook || hasReply;
 
+  const totalChanges = changeUnits.length + (props.hookLineChanged ? 1 : 0);
+  const acceptedCount = changeUnits.filter((u) => decisionFor(u.id) === "accept").length + (props.hookLineChanged ? (rejectedHook ? 0 : 1) : 0);
+
   async function submit() {
     setBusy(true);
     setError(null);
-    // Only paragraph decisions travel to the server (hook-line rejection is
-    // folded into the note so the editor sees it — the merge is paragraph-level).
     const paraDecisions: Record<string, Decision> = {};
     for (const u of changeUnits) paraDecisions[u.id] = decisionFor(u.id);
     const commentDecisions: Record<string, { resolved?: boolean; reply?: string }> = {};
@@ -136,205 +131,345 @@ export function WriterReviewView(props: WriterReviewProps) {
 
   if (done) {
     return (
-      <div className="px-[22px] pb-24 pt-24 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[rgba(31,138,91,0.12)] text-[var(--color-accent)]">
-          <Check size={26} />
+      <div className="mx-auto max-w-[560px] px-[22px] pb-24 pt-24 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]">
+          <Check size={28} />
         </div>
-        <h1 className="font-[family-name:var(--font-display)] text-xl font-semibold text-[var(--color-ink)]">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[var(--color-ink)]">
           {done === "contract" ? "Edits accepted" : "Sent back to your editor"}
         </h1>
-        <p className="mx-auto mt-2 max-w-sm text-[13.5px] text-[var(--color-ink-muted-2)]">
+        <p className="mx-auto mt-3 max-w-sm text-[14px] leading-relaxed text-[var(--color-ink-muted)]">
           {done === "contract"
-            ? "Taking you to your publishing contract — sign it and your story goes live."
-            : "Your editor will reconcile your choices and get back to you. We'll let you know when there's an update."}
+            ? "Taking you to your publishing contract — sign it and your story enters the publishing queue."
+            : "Your editor will review your feedback and get back to you. We'll notify you when there's an update."}
         </p>
       </div>
     );
   }
 
   return (
-    <div className="px-[22px] pb-[calc(150px+env(safe-area-inset-bottom))] pt-[18px]">
-      <div className="mb-5 flex items-center gap-3">
-        <Link href="/kekere/feed" className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]" aria-label="Back">
-          <ChevronLeft size={20} />
-        </Link>
-        <span className="font-[family-name:var(--font-display)] text-lg font-semibold text-[var(--color-ink)]">Review your edits</span>
+    <div className="mx-auto max-w-[640px] px-[22px] pb-[calc(120px+env(safe-area-inset-bottom))] pt-6">
+      {/* Top navigation */}
+      <Link href="/kekere/feed" className="mb-5 inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]" aria-label="Back">
+        <ChevronLeft size={20} />
+      </Link>
+
+      {/* Header */}
+      <div className="mb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-primary)]">Editorial review</p>
+        <h1 className="mt-1 font-[family-name:var(--font-display)] text-[26px] font-semibold leading-tight tracking-[-0.2px] text-[var(--color-ink)]">{props.title}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--color-ink-muted-2)]">
+          <span>{totalChanges} change{totalChanges === 1 ? "" : "s"} to review</span>
+          <span className="text-[var(--color-ink-muted-3)]">·</span>
+          <span>{acceptedCount} accepted</span>
+        </div>
       </div>
 
-      <div className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-primary)]">Your editor reviewed</p>
-        <h1 className="mt-1 font-[family-name:var(--font-display)] text-[22px] font-semibold leading-tight text-[var(--color-ink)]">{props.title}</h1>
-        <p className="mt-2 text-[13px] text-[var(--color-ink-muted-2)]">
-          {changeUnits.length === 0 && !props.hookLineChanged
-            ? "No text changes — just notes for you below. Reply or resolve, then send."
-            : "Accept each change or keep your own wording. Reply to any note. Nothing is published until you're done."}
-        </p>
-      </div>
-
+      {/* Editor's cover note */}
       {props.summaryNote && (
-        <div className="mb-5 rounded-2xl border border-[rgba(199,93,44,0.25)] bg-[rgba(199,93,44,0.05)] p-4">
-          <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-primary)]"><PencilLine size={12} /> A note from your editor</p>
-          <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--color-ink)]">{props.summaryNote}</p>
+        <div className="mb-6 rounded-2xl border border-[rgba(199,93,44,0.2)] bg-gradient-to-br from-[rgba(199,93,44,0.05)] to-[rgba(199,93,44,0.02)] p-5">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(199,93,44,0.12)]">
+              <PencilLine size={13} className="text-[var(--color-primary)]" />
+            </span>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--color-primary)]">A note from your editor</p>
+          </div>
+          <p className="whitespace-pre-wrap text-[14px] leading-[1.65] text-[var(--color-ink)]">{props.summaryNote}</p>
         </div>
       )}
 
-      <div className="mb-6 flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[13px]">
-        <span className="text-[var(--color-ink-muted-2)]">If you accept everything, your story goes to contract at</span>
-        <span className="font-semibold text-[var(--color-ink)]">{props.cowrieCost} cowrie{props.cowrieCost === 1 ? "" : "s"} · you keep {props.writerSharePercent}%</span>
-      </div>
+      {/* Progress — only show when there are changes to review */}
+      {totalChanges > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-[12px]">
+            <span className="font-semibold text-[var(--color-ink)]">{acceptedCount} of {totalChanges} accepted</span>
+            <span className="text-[var(--color-ink-muted-2)]">{Math.round((acceptedCount / totalChanges) * 100)}%</span>
+          </div>
+          <div className="mt-1.5 h-[4px] w-full overflow-hidden rounded-full bg-[rgba(42,26,18,0.08)]">
+            <div className="h-full rounded-full bg-[var(--color-primary)] transition-all duration-300" style={{ width: `${(acceptedCount / totalChanges) * 100}%` }} />
+          </div>
+        </div>
+      )}
 
-      {/* Hook line */}
+      {/* Hook line diff */}
       {props.hookLineChanged && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Hook line</h2>
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <p className={cn("mb-1.5 text-[14px] italic leading-relaxed", rejectedHook ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")}>{props.originalHookLine || "— (none)"}</p>
-            <p className={cn("border-l-2 pl-3 text-[15px] italic leading-relaxed", rejectedHook ? "border-[var(--color-ink-muted-3)] text-[var(--color-ink-muted-3)] line-through" : "border-[var(--color-primary)] text-[var(--color-ink)]")}>{props.editedHookLine}</p>
-            <ChoiceToggle
-              accepted={!rejectedHook}
-              onAccept={() => setDecisions((p) => ({ ...p, __hook__: "accept" }))}
-              onReject={() => setDecisions((p) => ({ ...p, __hook__: "reject" }))}
-              acceptLabel="Use editor's"
-              rejectLabel="Keep mine"
-            />
+        <section className="mb-8">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Hook line</h2>
+          <div className="overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)]">
+            {/* Original */}
+            <div className={cn("px-5 py-4", rejectedHook ? "bg-[rgba(42,26,18,0.02)]" : "bg-[rgba(193,58,58,0.04)]")}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Your original</p>
+              <p className={cn("font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed", rejectedHook ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")}>
+                {props.originalHookLine || "—"}
+              </p>
+            </div>
+            <div className="h-px bg-[rgba(42,26,18,0.08)]" />
+            {/* Edited */}
+            <div className={cn("px-5 py-4 border-l-[3px]", rejectedHook ? "border-[var(--color-primary)]" : "border-[#1F8A5B]")}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Editor's proposed</p>
+              <p className={cn("font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed", rejectedHook ? "line-through text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")}>
+                {props.editedHookLine || "—"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3" />
+          <DiffToggle
+            accepted={!rejectedHook}
+            onAccept={() => setDecisions((p) => ({ ...p, __hook__: "accept" }))}
+            onReject={() => setDecisions((p) => ({ ...p, __hook__: "reject" }))}
+            acceptLabel="Use editor's hook line"
+            rejectLabel="Keep my original"
+          />
+        </section>
+      )}
+
+      {/* Body diff */}
+      {props.bodyChanged && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Story text</h2>
+          <div className="flex flex-col gap-4">
+            {units.map((u, i) => {
+              if (u.kind === "unchanged") {
+                return (
+                  <p key={u.id || i} className="px-1 text-[15px] leading-[1.75] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
+                );
+              }
+
+              const rejected = decisionFor(u.id) === "reject";
+
+              return (
+                <div key={u.id || i} className="relative overflow-hidden rounded-xl border border-[rgba(42,26,18,0.1)]">
+                  {/* Kind badge */}
+                  <div className="flex items-center justify-between border-b border-[rgba(42,26,18,0.06)] bg-[rgba(42,26,18,0.02)] px-4 py-2">
+                    <span className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]",
+                      u.kind === "added" ? "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]" :
+                      u.kind === "removed" ? "bg-[rgba(193,58,58,0.1)] text-[#A13A3A]" :
+                      "bg-[rgba(199,93,44,0.12)] text-[var(--color-primary)]",
+                    )}>
+                      <AlertCircle size={10} />
+                      {u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Change {i + 1} of {changeUnits.length}</span>
+                  </div>
+
+                  <div className="p-4">
+                    {/* Old text */}
+                    {u.kind !== "added" && u.oldHtml && (
+                      <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Original</p>
+                        <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml }} />
+                      </div>
+                    )}
+
+                    {/* New text */}
+                    {u.kind !== "removed" && u.newHtml && (
+                      <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}>
+                        <p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>
+                          {rejected ? "Keep mine instead" : "Editor's version"}
+                        </p>
+                        <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml }} />
+                      </div>
+                    )}
+
+                    {/* Removed-only: show old text with remove option */}
+                    {u.kind === "removed" && (
+                      <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(42,26,18,0.02)] text-[var(--color-ink)]" : "bg-[rgba(193,58,58,0.05)] text-[var(--color-ink-muted-3)] line-through")}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">This will be removed</p>
+                        <p className="text-[14.5px] leading-[1.7]" dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
+                      </div>
+                    )}
+
+                    {/* Decision toggle */}
+                    <div className="mt-4">
+                      <DiffToggle
+                        accepted={!rejected}
+                        onAccept={() => setDecision(u.id, "accept")}
+                        onReject={() => setDecision(u.id, "reject")}
+                        acceptLabel={u.kind === "removed" ? "Remove this paragraph" : u.kind === "added" ? "Keep this paragraph" : "Use editor's version"}
+                        rejectLabel={u.kind === "removed" ? "Keep this paragraph" : u.kind === "added" ? "Drop this paragraph" : "Keep my original"}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Inline comments */}
+                  {u.comments.length > 0 && (
+                    <div className="border-t border-[rgba(42,26,18,0.06)] bg-[rgba(199,93,44,0.02)] px-4 py-3">
+                      {u.comments.map((c) => (
+                        <InlineComment
+                          key={c.id}
+                          comment={c}
+                          state={commentFor(c.id)}
+                          onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
+                          onReplyChange={(v) => setComment(c.id, { reply: v })}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      {/* Body */}
-      <section className="mb-6">
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
-          {props.bodyChanged ? "Proposed text" : "Your story"}
-        </h2>
-        <div className="story-reader-prose rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-[15px] leading-[1.75] text-[var(--color-ink)] [&_em]:italic [&_strong]:font-bold [&_u]:underline">
-          {units.map((u, i) => {
-            const rejected = decisionFor(u.id) === "reject";
-            const highlight = u.kind !== "unchanged";
-            return (
-              <div key={u.id || i} className={highlight ? "-mx-2 mb-2 rounded-[10px] px-2 py-2" : ""} style={highlight ? { background: "rgba(199,93,44,0.05)" } : undefined}>
-                {/* changed: show old struck + new (or, if kept-mine, original wins) */}
-                {u.kind === "changed" && (
-                  <>
-                    <p className={cn("mb-1 text-[13.5px] leading-relaxed", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
-                    <div className="flex items-start gap-2">
-                      <span className="mt-1 flex-none rounded-full bg-[rgba(199,93,44,0.14)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--color-primary)]">Edited</span>
-                      <p className={cn("mb-1 min-w-0 flex-1", rejected && "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "<br/>" }} />
-                    </div>
-                  </>
-                )}
-                {u.kind === "added" && (
-                  <div className="flex items-start gap-2">
-                    <span className="mt-1 flex-none rounded-full bg-[rgba(199,93,44,0.14)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--color-primary)]">New</span>
-                    <p className={cn("mb-1 min-w-0 flex-1", rejected && "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "<br/>" }} />
-                  </div>
-                )}
-                {u.kind === "removed" && (
-                  <div className="flex items-start gap-2">
-                    <span className="mt-1 flex-none rounded-full bg-[rgba(20,22,26,0.1)] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[var(--color-ink-muted-2)]">Removed</span>
-                    <p className={cn("mb-1 min-w-0 flex-1", !rejected && "text-[var(--color-ink-muted-3)] line-through")} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
-                  </div>
-                )}
-                {u.kind === "unchanged" && (
-                  <p className="mb-[1em]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "<br/>" }} />
-                )}
+      {/* Comments-only message */}
+      {!props.bodyChanged && props.comments.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Notes from your editor</h2>
+          <div className="rounded-2xl border border-[rgba(42,26,18,0.1)] bg-[rgba(199,93,44,0.02)] p-4">
+            {props.comments.map((c) => (
+              <InlineComment
+                key={c.id}
+                comment={c}
+                state={commentFor(c.id)}
+                onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
+                onReplyChange={(v) => setComment(c.id, { reply: v })}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
-                {u.kind !== "unchanged" && (
-                  <ChoiceToggle
-                    accepted={!rejected}
-                    onAccept={() => setDecision(u.id, "accept")}
-                    onReject={() => setDecision(u.id, "reject")}
-                    acceptLabel={u.kind === "removed" ? "Remove it" : u.kind === "added" ? "Keep it" : "Use editor's"}
-                    rejectLabel={u.kind === "removed" ? "Keep it" : u.kind === "added" ? "Drop it" : "Keep mine"}
-                  />
-                )}
+      {error && <p className="mb-4 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
 
-                {u.comments.map((c) => {
-                  const cs = commentFor(c.id);
-                  return (
-                    <div key={c.id} className="mt-2 rounded-[10px] border border-[rgba(199,93,44,0.2)] bg-[rgba(199,93,44,0.04)] px-3 py-2">
-                      <div className="flex items-start gap-2">
-                        <MessageSquare size={13} className="mt-0.5 flex-none text-[var(--color-primary)]" />
-                        <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-[var(--color-ink)]">{c.body}</p>
-                      </div>
-                      {cs.reply.trim() && (
-                        <div className="mt-1.5 flex items-start gap-1.5 pl-[21px] text-[12.5px] text-[var(--color-ink-muted-2)]">
-                          <CornerDownRight size={12} className="mt-0.5 flex-none" />
-                          <span className="whitespace-pre-wrap">{cs.reply}</span>
-                        </div>
-                      )}
-                      <div className="mt-2 flex items-center gap-3 pl-[21px]">
-                        <button type="button" onClick={() => setComment(c.id, { resolved: !cs.resolved })} className={cn("flex items-center gap-1 text-[11px] font-semibold", cs.resolved ? "text-[var(--color-accent)]" : "text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]")}>
-                          <Check size={12} /> {cs.resolved ? "Resolved" : "Mark resolved"}
-                        </button>
-                        <ReplyField value={cs.reply} onChange={(v) => setComment(c.id, { reply: v })} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {error && <p className="mb-3 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
-
+      {/* Writer note — only shown when sending back */}
       {goesToEditor && (
-        <div className="mb-3">
-          <label className="mb-1.5 block text-[12px] font-semibold text-[var(--color-ink)]">Anything to tell your editor? (optional)</label>
+        <div className="mb-4">
+          <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">A note to your editor (optional)</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
-            placeholder="Explain the choices you kept…"
-            className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-3 py-2.5 text-[14px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
+            placeholder="Explain why you kept certain changes…"
+            className="w-full resize-none rounded-xl border border-[rgba(42,26,18,0.14)] bg-white px-4 py-3 text-[14px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/30"
           />
         </div>
       )}
 
+      {/* Submit */}
+      <div className="sticky bottom-0 -mx-[22px] border-t border-[rgba(42,26,18,0.08)] bg-[var(--color-bg)] px-[22px] py-4">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={submit}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-xl py-[14px] text-[15px] font-semibold text-white transition-all disabled:opacity-50",
+            goesToEditor ? "bg-[#6C3BAA] hover:bg-[#5a2f8f]" : "bg-[#1F8A5B] hover:bg-[#1a7a50]",
+          )}
+        >
+          {busy ? (
+            "Submitting…"
+          ) : goesToEditor ? (
+            <>Send my review to the editor <ArrowRight size={16} /></>
+          ) : (
+            <>Accept all changes <ArrowRight size={16} /></>
+          )}
+        </button>
+        {goesToEditor ? (
+          <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
+            You kept some of your own wording or left a reply, so this goes back to your editor for review.
+          </p>
+        ) : (
+          <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
+            By accepting all changes, you agree that this version of your story will move forward to the publishing contract.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DiffToggle — prominent binary accept/reject control
+// ---------------------------------------------------------------------------
+function DiffToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: {
+  accepted: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+  acceptLabel: string;
+  rejectLabel: string;
+}) {
+  return (
+    <div className="flex gap-2">
       <button
         type="button"
-        disabled={busy}
-        onClick={submit}
-        className={cn("w-full rounded-[12px] py-[15px] text-[15px] font-semibold text-white transition-opacity disabled:opacity-50", goesToEditor ? "bg-[var(--color-ink)]" : "bg-[var(--color-primary)]")}
+        onClick={onAccept}
+        className={cn(
+          "flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all",
+          accepted
+            ? "bg-[#1F8A5B] text-white shadow-[0_1px_3px_rgba(31,138,91,0.25)]"
+            : "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B] hover:bg-[rgba(31,138,91,0.14)]",
+        )}
       >
-        {busy ? "Submitting…" : goesToEditor ? "Send my review to the editor" : "Accept edits & continue to contract"}
+        {accepted && <Check size={14} className="mr-1.5 inline-block align-middle" />}
+        {acceptLabel}
       </button>
-      {goesToEditor && (
-        <p className="mt-2 text-center text-[11.5px] text-[var(--color-ink-muted-2)]">
-          You kept some of your own wording or left a reply, so this goes back to your editor to reconcile — not straight to contract.
-        </p>
-      )}
+      <button
+        type="button"
+        onClick={onReject}
+        className={cn(
+          "flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all",
+          !accepted
+            ? "bg-[#6C3BAA] text-white shadow-[0_1px_3px_rgba(108,59,170,0.25)]"
+            : "bg-[rgba(108,59,170,0.08)] text-[#6C3BAA] hover:bg-[rgba(108,59,170,0.14)]",
+        )}
+      >
+        {rejectLabel}
+      </button>
     </div>
   );
 }
 
-function ChoiceToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: { accepted: boolean; onAccept: () => void; onReject: () => void; acceptLabel: string; rejectLabel: string }) {
+// ---------------------------------------------------------------------------
+// InlineComment — editor note with reply and resolve toggle
+// ---------------------------------------------------------------------------
+function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
+  comment: EditorialComment;
+  state: CommentState;
+  onToggleResolved: () => void;
+  onReplyChange: (v: string) => void;
+}) {
   return (
-    <div className="mt-2 inline-flex overflow-hidden rounded-[8px] border border-[var(--color-border)] text-[11.5px] font-semibold">
-      <button type="button" onClick={onAccept} className={cn("px-3 py-1.5 transition-colors", accepted ? "bg-[var(--color-primary)] text-white" : "bg-transparent text-[var(--color-ink-muted-2)] hover:bg-[rgba(42,26,18,0.04)]")}>{acceptLabel}</button>
-      <button type="button" onClick={onReject} className={cn("px-3 py-1.5 transition-colors", !accepted ? "bg-[var(--color-ink)] text-white" : "bg-transparent text-[var(--color-ink-muted-2)] hover:bg-[rgba(42,26,18,0.04)]")}>{rejectLabel}</button>
+    <div className={cn(
+      "rounded-xl border p-3 transition-colors",
+      state.resolved
+        ? "border-[rgba(31,138,91,0.2)] bg-[rgba(31,138,91,0.04)]"
+        : "border-[rgba(199,93,44,0.2)] bg-[rgba(199,93,44,0.04)]",
+    )}>
+      <div className="flex items-start gap-2.5">
+        <MessageSquare size={14} className={cn("mt-0.5 flex-none", state.resolved ? "text-[#1F8A5B]" : "text-[var(--color-primary)]")} />
+        <div className="min-w-0 flex-1">
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--color-ink)]">{comment.body}</p>
+          {state.reply.trim() && (
+            <div className="mt-2 flex items-start gap-1.5 text-[12.5px] text-[var(--color-ink-muted)]">
+              <CornerDownRight size={11} className="mt-0.5 flex-none" />
+              <span className="whitespace-pre-wrap">{state.reply}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-2.5 flex items-center gap-3 pl-[26px]">
+        <button
+          type="button"
+          onClick={onToggleResolved}
+          className={cn(
+            "flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+            state.resolved
+              ? "bg-[rgba(31,138,91,0.1)] text-[#1F8A5B]"
+              : "bg-[rgba(42,26,18,0.06)] text-[var(--color-ink-muted-2)] hover:bg-[rgba(42,26,18,0.1)] hover:text-[var(--color-ink)]",
+          )}
+        >
+          <Check size={11} /> {state.resolved ? "Resolved" : "Mark resolved"}
+        </button>
+        <input
+          type="text"
+          value={state.reply}
+          onChange={(e) => onReplyChange(e.target.value)}
+          placeholder="Reply to your editor…"
+          className="min-w-0 flex-1 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1 text-[12.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
+        />
+      </div>
     </div>
-  );
-}
-
-function ReplyField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  if (!open && !value) {
-    return (
-      <button type="button" onClick={() => setOpen(true)} className="text-[11px] font-semibold text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]">
-        Reply
-      </button>
-    );
-  }
-  return (
-    <input
-      type="text"
-      value={value}
-      autoFocus={open}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Reply to your editor…"
-      className="min-w-0 flex-1 rounded-[7px] border border-[rgba(42,26,18,0.16)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
-    />
   );
 }
