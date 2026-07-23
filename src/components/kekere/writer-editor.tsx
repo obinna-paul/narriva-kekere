@@ -666,8 +666,11 @@ export function WriterEditor({
                     </button>
                   </>
                 )}
-                {/* Export button — only before a draft has ever been submitted */}
-                {status === "DRAFT" && storyId && (
+                {/* Export button — any window where the writer is actively
+                    writing: before first submission, or while working
+                    through requested revisions. Matches the export route's
+                    own server-side gate. */}
+                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && storyId && (
                   <button
                     type="button"
                     onClick={handleExport}

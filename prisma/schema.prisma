@@ -249,6 +249,9 @@ enum NotificationType {
   STREAK_AT_RISK
   // The admin has proposed editorial changes the writer needs to review/accept.
   EDITS_PROPOSED
+  // The writer declined a publishing contract — their story is back in their
+  // hands, fully editable again.
+  CONTRACT_DECLINED
 }
 
 model Notification {

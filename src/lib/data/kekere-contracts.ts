@@ -276,7 +276,7 @@ export async function declineContract(
     include: {
       template: { select: { contractType: true } },
       writer: { select: { name: true, email: true } },
-      story: { select: { title: true } },
+      story: { select: { id: true, title: true, status: true } },
     },
   });
 
@@ -293,6 +293,24 @@ export async function declineContract(
       declineReason: reason?.trim() || null,
     },
   });
+
+  // Declining is the writer's call, not an editorial rejection — hand the
+  // story straight back to them as a fully editable draft rather than
+  // leaving it stuck in PENDING_CONTRACT with no way to touch it.
+  if (contract.story && contract.story.status === "PENDING_CONTRACT") {
+    await prisma.story.update({
+      where: { id: contract.story.id },
+      data: { status: "DRAFT" },
+    });
+
+    await createNotification({
+      userId: contract.writerId,
+      type: "CONTRACT_DECLINED",
+      title: `"${contract.story.title}" is back in your hands`,
+      body: "You declined the publishing agreement, so your story is fully yours again — edit it any time and resubmit whenever you're ready.",
+      link: `/kekere/write?id=${contract.story.id}`,
+    });
+  }
 
   await sendEmail({
     to: SUPPORT_EMAIL,

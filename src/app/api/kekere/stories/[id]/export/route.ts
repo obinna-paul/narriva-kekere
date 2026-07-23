@@ -6,14 +6,15 @@ import { getStoryById } from "@/lib/data/kekere-stories";
 import { tiptapDocToDocxBuffer } from "@/lib/tiptap/docx-export";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 
-const EXPORTABLE_STATUSES = ["DRAFT", "REJECTED"];
+const EXPORTABLE_STATUSES = ["DRAFT", "REVISIONS_REQUESTED", "REJECTED"];
 
-/** A writer can get their own words back out of the app in exactly two
- * windows: before they've ever submitted (DRAFT), or after Kekere has
- * rejected it. Everything in between (SUBMITTED, REVIEWING,
- * REVISIONS_REQUESTED, PENDING_CONTRACT) is mid-review or on its way to
- * publication, and PUBLISHED stories are already public — none of those
- * are exportable. */
+/** A writer can get their own words back out of the app whenever the story
+ * is theirs to actively write: before they've ever submitted (DRAFT), while
+ * they're working through requested revisions (REVISIONS_REQUESTED), or
+ * after Kekere has rejected it (REJECTED). Everything else (SUBMITTED,
+ * REVIEWING, PENDING_CONTRACT, CHANGES_PROPOSED, ACCEPTED) is mid-review or
+ * on its way to publication, and PUBLISHED stories are already public —
+ * none of those are exportable. */
 export const GET = withAuth(async (_request, session, { params }: { params: { id: string } }) => {
   const story = await getStoryById(params.id);
   if (!story) {
