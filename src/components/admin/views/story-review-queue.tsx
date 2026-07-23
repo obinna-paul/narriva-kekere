@@ -72,12 +72,13 @@ interface DecisionPanelProps {
    * notes) the writer must approve — turns the publish action into
    * "send to writer" instead of the straight-to-contract fast path. */
   requiresWriterApproval: boolean;
-  /** Called after the hookline is saved to the server — lets the parent
-   * update the displayed hookline in the story detail section. */
-  onHookLineSaved?: (hookLine: string) => void;
+  /** Called when the admin accepts the suggested hookline. The parent
+   * handles saving to the database AND updating local state — the panel
+   * just calls this and waits for it to resolve. */
+  onApplyHookLine?: (hookLine: string) => Promise<boolean>;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onHookLineSaved }: DecisionPanelProps) {
+function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
@@ -128,28 +129,15 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   }
 
   async function applyHookLineSuggestion() {
-    if (!suggestedHookLine) return;
+    if (!suggestedHookLine || !onApplyHookLine) return;
     setApplyingHookLine(true);
-    try {
-      const res = await fetch(`/api/admin/kekere/stories/${story.id}/edit`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hookLine: suggestedHookLine }),
-      });
-      if (res.ok) {
-        setSuggestedHookLine(null);
-        onHookLineSaved?.(suggestedHookLine);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        console.error("[applyHookLine] server error:", res.status, err);
-        setSuggestError(`Couldn't save the hook line (${res.status}). Try again.`);
-      }
-    } catch (networkErr) {
-      console.error("[applyHookLine] network error:", networkErr);
-      setSuggestError("Couldn't reach the server. Check your connection.");
-    } finally {
-      setApplyingHookLine(false);
+    const ok = await onApplyHookLine(suggestedHookLine);
+    if (ok) {
+      setSuggestedHookLine(null);
+    } else {
+      setSuggestError("Couldn't save the hook line. Try again.");
     }
+    setApplyingHookLine(false);
   }
 
   async function handleCoverFile(file: File) {
@@ -996,7 +984,23 @@ export function StoryReviewQueue() {
             onCoverUploaded={(ref, preview) => { setCoverImageRef(ref || null); setCoverPreview(preview || null); }}
             onCoverRemoved={() => { setCoverImageRef(null); setCoverPreview(null); }}
             requiresWriterApproval={hasEdits || commentCount > 0}
-            onHookLineSaved={(hookLine) => { setDraftHookLine(hookLine); lastSavedHookRef.current = hookLine; }}
+            onApplyHookLine={async (hookLine) => {
+              try {
+                const res = await fetch(`/api/admin/kekere/stories/${selected.id}/edit`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ hookLine }),
+                });
+                if (res.ok) {
+                  setDraftHookLine(hookLine);
+                  lastSavedHookRef.current = hookLine;
+                  return true;
+                }
+                return false;
+              } catch {
+                return false;
+              }
+            }}
           />
         ) : (
           <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-8 text-center">
