@@ -30,6 +30,9 @@ interface StoryDetail extends QueueStory {
   isAdult: boolean;
   editWriterNote?: string | null;
   status: string;
+  coverImageRef: string | null;
+  coverPreviewUrl: string | null;
+  tagIds: string[];
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -85,7 +88,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
   const [tier, setTier] = useState(story.tier ?? "STANDARD");
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [tagIds, setTagIds] = useState<string[]>(story.tagIds);
   const [isAdult, setIsAdult] = useState(story.isAdult);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -230,7 +233,9 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
               </button>
             )}
             {coverError && (
-              <p className="mt-1 text-[10px] text-[#C0392B]">A cover image is required before sending the contract.</p>
+              <p className="mt-1 text-[10px] text-[#C0392B]">
+                {queueTab === "publishing" ? "A cover image is required before publishing." : "A cover image is required before sending the contract."}
+              </p>
             )}
           </div>
 
@@ -462,7 +467,9 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
 
       {tab === "publish" && requiresWriterApproval && (
         <p className="-mt-1 text-[11px] leading-snug text-[#8B919A]">
-          You&rsquo;ve edited or annotated this story, so it goes to the writer to approve your changes before the contract.
+          {queueTab === "publishing"
+            ? "You’ve edited or annotated this story, so it goes to the writer for one more approval pass before you can publish."
+            : "You’ve edited or annotated this story, so it goes to the writer to approve your changes before the contract."}
         </p>
       )}
 
@@ -660,8 +667,11 @@ export function StoryReviewQueue() {
         lastSavedHookRef.current = dbHook;
         setHasEdits(false);
       }
-      setCoverImageRef(null);
-      setCoverPreview(null);
+      // Seed from whatever the story already has — non-null for a stage-2
+      // (ACCEPTED) story that already went through stage 1, null for a fresh
+      // stage-1 story that's never had terms set yet.
+      setCoverImageRef(detail.coverImageRef ?? null);
+      setCoverPreview(detail.coverPreviewUrl ?? null);
     } catch {
       setSelected(null);
       setEditData(null);
@@ -711,8 +721,13 @@ export function StoryReviewQueue() {
     setActing(true);
 
     const isPublishNow = queueTab === "publishing" && action === "publish" && selected.status === "ACCEPTED";
+    // Stage 2: an ACCEPTED story's terms are already locked in from stage 1
+    // — sending tracked changes for another approval pass never re-touches
+    // cowrie cost/tier/tags/cover, so it's a separate, much simpler endpoint.
+    const isPostContractEdits = queueTab === "publishing" && action === "send_to_writer" && selected.status === "ACCEPTED";
     const endpoint = isPublishNow
         ? `/api/admin/kekere/stories/${selectedId}/publish-now`
+      : isPostContractEdits ? `/api/admin/kekere/stories/${selectedId}/send-post-contract-edits`
       : action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
       : action === "send_to_writer" ? `/api/admin/kekere/stories/${selectedId}/send-to-writer`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
@@ -720,7 +735,9 @@ export function StoryReviewQueue() {
 
     const body = isPublishNow
       ? undefined
-      : action === "publish"
+      : isPostContractEdits
+        ? { ...(note.trim() ? { summaryNote: note } : {}) }
+        : action === "publish"
         ? {
             cowrieCost,
             tier,
@@ -1034,6 +1051,7 @@ export function StoryReviewQueue() {
       <div className="w-[300px] flex-none overflow-y-auto">
         {selected ? (
           <DecisionPanel
+            key={selected.id}
             story={selected}
             onAction={handleAction}
             acting={acting}

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
+import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 
 export const GET = withAuth(
   async (_request, _session, { params }) => {
@@ -18,6 +19,7 @@ export const GET = withAuth(
             createdAt: true,
           },
         },
+        tags: { select: { tagId: true } },
       },
     });
 
@@ -53,6 +55,9 @@ export const GET = withAuth(
       wordCount: story.wordCount ?? 0,
       readingTime: story.readingTime ?? 0,
       cowrieCost: story.cowrieCost,
+      coverImageRef: story.coverImageRef,
+      coverPreviewUrl: story.coverImageRef ? storyCoverUrl(story.coverImageRef) : null,
+      tagIds: story.tags.map((t) => t.tagId),
       completionRate: story.completionRate,
       moderationNotes: story.moderationNotes,
       editWriterNote: story.editWriterNote,

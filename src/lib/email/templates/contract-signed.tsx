@@ -7,6 +7,11 @@ interface ContractSignedEmailProps {
   signedAt: string;
   storyUrl?: string;
   pdfAttached?: boolean;
+  /** True only for writers whose story goes live immediately on signing
+   * (onboarded/admin-authored). Everyone else lands in the ACCEPTED "to be
+   * published" queue — the copy and CTA below must not claim the story is
+   * live when it isn't. */
+  isLive: boolean;
 }
 
 export function ContractSignedEmail({
@@ -15,20 +20,38 @@ export function ContractSignedEmail({
   signedAt,
   storyUrl = "https://narriva.pro/kekere",
   pdfAttached = true,
+  isLive,
 }: ContractSignedEmailProps) {
   return (
-    <BaseEmail preview={`Your story "${storyTitle}" is now live on Kekere Stories`}>
+    <BaseEmail
+      preview={
+        isLive
+          ? `Your story "${storyTitle}" is now live on Kekere Stories`
+          : `Your contract for "${storyTitle}" is signed`
+      }
+    >
 
-      <Text style={styles.h1}>Your story is live 🎉</Text>
+      <Text style={styles.h1}>{isLive ? "Your story is live 🎉" : "Your contract is signed"}</Text>
 
       <Text style={styles.p}>
-        Hi {writerName}, you signed your publishing contract on {signedAt} and your story{" "}
-        <strong>"{storyTitle}"</strong> is now live on Kekere Stories.
+        {isLive ? (
+          <>
+            Hi {writerName}, you signed your publishing contract on {signedAt} and your story{" "}
+            <strong>&ldquo;{storyTitle}&rdquo;</strong> is now live on Kekere Stories.
+          </>
+        ) : (
+          <>
+            Hi {writerName}, you signed your publishing contract on {signedAt}.{" "}
+            <strong>&ldquo;{storyTitle}&rdquo;</strong> is now in our publishing queue, where our editors will
+            prepare it for release.
+          </>
+        )}
       </Text>
 
       <Text style={styles.p}>
-        Readers can find it in the feed right now. Every time someone unlocks your story,
-        70% of the cowrie payment comes directly to your writer wallet.
+        {isLive
+          ? "Readers can find it in the feed right now. Every time someone unlocks your story, 70% of the cowrie payment comes directly to your writer wallet."
+          : "We'll email you the moment it's live, with a link you can share. If our editors have any changes to suggest first, you'll get a chance to review them."}
       </Text>
 
       {/* Signed confirmation block */}
@@ -45,13 +68,15 @@ export function ContractSignedEmail({
         <Text style={{ margin: 0, fontSize: 14, color: "#2A1A12", lineHeight: "1.6" }}>
           {pdfAttached
             ? "A signed copy of your publishing agreement is attached to this email — keep it for your records."
-            : "Your contract has been signed and your story is now live. A copy of your publishing agreement will be available in your dashboard."}
+            : isLive
+              ? "Your contract has been signed and your story is now live. A copy of your publishing agreement will be available in your dashboard."
+              : "Your contract has been signed. A copy of your publishing agreement will be available in your dashboard."}
         </Text>
       </Section>
 
       <Section style={{ textAlign: "center", marginBottom: 24 }}>
         <Link href={storyUrl} style={styles.button()}>
-          See your story on Kekere →
+          {isLive ? "See your story on Kekere →" : "Track your publishing progress →"}
         </Link>
       </Section>
 

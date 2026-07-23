@@ -77,7 +77,13 @@ export interface SignContractParams {
 
 export async function signContractAndPublishStory(
   params: SignContractParams,
-): Promise<{ storyId: string | null; storySlug: string | null; signedPdfBuffer: Buffer | null; pdfFilename: string | null }> {
+): Promise<{
+  storyId: string | null;
+  storySlug: string | null;
+  signedPdfBuffer: Buffer | null;
+  pdfFilename: string | null;
+  pdfRef: string | null;
+}> {
   const { contractId, signedName, signerIp = "unknown" } = params;
 
   const contract = await prisma.kekereContract.findUnique({
@@ -188,8 +194,14 @@ export async function signContractAndPublishStory(
   const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
+  // Only an onboarded writer's story is actually live at this point — for
+  // everyone else the story is now in the ACCEPTED "to be published" queue,
+  // so the email/CTA must point at the contracts inbox, not a story page
+  // that doesn't exist publicly yet.
   const storyUrl = linkedStoryId
-    ? `${baseUrl}/kekere/story/${storySlug ?? linkedStoryId}`
+    ? isOnboarded
+      ? `${baseUrl}/kekere/story/${storySlug ?? linkedStoryId}`
+      : `${baseUrl}/kekere/contracts`
     : `${baseUrl}/kekere`;
 
   const signedHtml = linkedStoryId
@@ -199,6 +211,7 @@ export async function signContractAndPublishStory(
         signedAt: signedDateStr,
         storyUrl,
         pdfAttached: !!attachmentBuffer,
+        isLive: isOnboarded,
       }).catch(() => undefined)
     : undefined;
 
@@ -239,7 +252,13 @@ export async function signContractAndPublishStory(
       : "/kekere/contracts",
   });
 
-  return { storyId: linkedStoryId, storySlug, signedPdfBuffer: pdfBuffer, pdfFilename: attachmentFilename };
+  await sendEmail({
+    to: SUPPORT_EMAIL,
+    subject: `${contract.writer.name} has signed a ${contract.template.contractType} contract`,
+    body: `Writer: ${contract.writer.name} (${contract.writer.email})\nContract type: ${contract.template.contractType}\nSigned at: ${signedAt.toISOString()}${linkedStoryId ? `\nStory ID: ${linkedStoryId} — ${isOnboarded ? "now published" : "now in the To Be Published queue"}` : ""}`,
+  });
+
+  return { storyId: linkedStoryId, storySlug, signedPdfBuffer: pdfBuffer, pdfFilename: attachmentFilename, pdfRef };
 }
 
 /**

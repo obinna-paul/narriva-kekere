@@ -4,14 +4,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { generateSignedContractPdf } from "@/lib/contracts/pdf";
-import { generateSignedContractDocx } from "@/lib/contracts/docx";
-import { getPortalFileDownloadUrl, uploadPortalFile } from "@/lib/storage/r2";
-import { sendEmail } from "@/lib/email/send";
-import { renderContractSignedEmail } from "@/lib/email/templates";
-import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
-import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
-import { nextSlugForTitle, withSlugRetry } from "@/lib/data/kekere-slugs";
+import { signContractAndPublishStory } from "@/lib/data/kekere-contracts";
+import { getPortalFileDownloadUrl } from "@/lib/storage/r2";
 
 const signSchema = z.object({
   signedName: z.string().min(1, "Signed name is required."),
@@ -25,6 +19,15 @@ function getClientIp(request: Request): string {
   );
 }
 
+/**
+ * The writer-facing sign action from the in-app Contracts inbox. All the
+ * actual signing logic (PDF/DOCX generation, the onboarded-vs-regular-writer
+ * publish branch, emails, notifications) lives in signContractAndPublishStory
+ * — shared with the claim-account flow so both paths can never diverge again.
+ * This route only owns what's specific to being an authenticated in-app
+ * request: verifying the signer owns the contract, and turning the
+ * resulting pdfRef into a downloadUrl for the immediate post-sign UI state.
+ */
 export const POST = withAuth(async (request, session, { params }) => {
   const writerId = session.user.id;
   const { id } = params as { id: string };
@@ -44,24 +47,17 @@ export const POST = withAuth(async (request, session, { params }) => {
     );
   }
 
-  const { signedName } = parsed.data;
-
   const contract = await prisma.kekereContract.findUnique({
     where: { id },
-    include: {
-      template: { select: { contractType: true } },
-      writer: { select: { name: true, email: true } },
-    },
+    select: { writerId: true, status: true },
   });
 
   if (!contract) {
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
-
   if (contract.writerId !== writerId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
   if (contract.status !== "PENDING") {
     return NextResponse.json(
       { error: "Only pending contracts can be signed." },
@@ -69,149 +65,25 @@ export const POST = withAuth(async (request, session, { params }) => {
     );
   }
 
-  const now = Date.now();
-  if (contract.expiresAt && contract.expiresAt.getTime() < now) {
-    await prisma.kekereContract.update({
-      where: { id },
-      data: { status: "EXPIRED" },
-    });
-
-    return NextResponse.json({ error: "contract_expired" }, { status: 400 });
-  }
-
-  const signedAt = new Date();
-  const signerIp = getClientIp(request);
-
-  // Try to generate PDF for email attachment, but don't block signing if it fails.
-  // pdf-lib's standard fonts only support WinAnsi-encodable characters and
-  // throw on names outside that (e.g. Yoruba/Igbo tonal diacritics like
-  // "Ọláyínká") — fall back to a .docx (no such encoding restriction) rather
-  // than silently sending the writer no copy of their contract at all.
-  let pdfBuffer: Buffer | null = null;
-  let pdfRef: string | null = null;
-  let attachmentBuffer: Buffer | null = null;
-  let attachmentFilename: string | null = null;
+  let result;
   try {
-    const pdfBytes = await generateSignedContractPdf(
-      contract.body,
-      signedName,
-      signedAt,
-      signerIp,
-    );
-    pdfBuffer = Buffer.from(pdfBytes);
-    attachmentBuffer = pdfBuffer;
-    attachmentFilename = `kekere-publishing-agreement-${contract.id}.pdf`;
-
-    // Try to upload to R2 for download link (optional)
-    const r2Ready = !!(
-      process.env.CLOUDFLARE_R2_ENDPOINT &&
-      process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
-      process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
-      process.env.CLOUDFLARE_R2_BUCKET
-    );
-    if (r2Ready) {
-      try {
-        pdfRef = await uploadPortalFile(pdfBuffer, `contract-${id}.pdf`, "application/pdf");
-      } catch (err) {
-        console.error("R2 upload failed (non-blocking):", err);
-      }
+    result = await signContractAndPublishStory({
+      contractId: id,
+      signedName: parsed.data.signedName,
+      signerIp: getClientIp(request),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Something went wrong.";
+    if (message === "Contract has expired") {
+      return NextResponse.json({ error: "contract_expired" }, { status: 400 });
     }
-  } catch (err) {
-    console.error("PDF generation failed for contract", id, "— falling back to .docx:", err);
-    try {
-      attachmentBuffer = await generateSignedContractDocx(contract.body, signedName, signedAt, signerIp);
-      attachmentFilename = `kekere-publishing-agreement-${contract.id}.docx`;
-    } catch (docxErr) {
-      console.error("DOCX fallback also failed for contract", id, ":", docxErr);
+    if (message === "Only pending contracts can be signed") {
+      return NextResponse.json({ error: message }, { status: 400 });
     }
+    throw error;
   }
 
-  const linkedStoryId: string | null = contract.storyId ?? null;
-
-  await withSlugRetry(() =>
-    prisma.$transaction(async (tx) => {
-      await tx.kekereContract.update({
-        where: { id },
-        data: {
-          status: "SIGNED",
-          signedName,
-          signedAt,
-          signerIp,
-          ...(pdfRef ? { signedPdfRef: pdfRef } : {}),
-        },
-      });
-
-      // If the contract is linked to a PENDING_CONTRACT story, publish it now
-      // — assigning its permanent slug in the same transaction that flips it
-      // live, so the two can never disagree.
-      if (linkedStoryId) {
-        const linkedStory = await tx.story.findUnique({
-          where: { id: linkedStoryId },
-          select: { title: true },
-        });
-        const slug = linkedStory ? await nextSlugForTitle(tx, linkedStory.title) : undefined;
-        await tx.story.updateMany({
-          where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
-          data: { status: "PUBLISHED", isDraft: false, publishedAt: signedAt, ...(slug ? { slug } : {}) },
-        });
-      }
-    })
-  );
-
-  if (linkedStoryId) {
-    notifyFollowersOfPublish(linkedStoryId).catch(console.error);
-  }
-
-  const downloadUrl = pdfRef ? await getPortalFileDownloadUrl(pdfRef).catch(() => null) : null;
-
-  // Fetch story title/slug for the email if this contract is linked to a story
-  let storyTitle = "your story";
-  let storySlug: string | null = null;
-  if (linkedStoryId) {
-    const story = await prisma.story.findUnique({ where: { id: linkedStoryId }, select: { title: true, slug: true } });
-    if (story) {
-      storyTitle = story.title;
-      storySlug = story.slug;
-    }
-  }
-
-  const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
-  const storyUrl = linkedStoryId
-    ? `${baseUrl}/kekere/story/${storySlug ?? linkedStoryId}`
-    : `${baseUrl}/kekere`;
-
-  const signedHtml = linkedStoryId
-    ? await renderContractSignedEmail({
-        writerName: contract.writer.name,
-        storyTitle,
-        signedAt: signedDateStr,
-        storyUrl,
-        pdfAttached: !!attachmentBuffer,
-      }).catch(() => undefined)
-    : undefined;
-
-  await sendEmail({
-    from: KEKERE_SUBMISSIONS_FROM,
-    to: contract.writer.email,
-    subject: linkedStoryId
-      ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
-      : "Your contract is signed",
-    body: linkedStoryId
-      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
-      : `Hi ${contract.writer.name},\n\nYour contract has been signed.\n\nThe Kekere Stories Team`,
-    html: signedHtml,
-    ...(attachmentBuffer && attachmentFilename
-      ? { attachments: [{ filename: attachmentFilename, content: attachmentBuffer }] }
-      : {}),
-  });
-
-  await sendEmail({
-    to: SUPPORT_EMAIL,
-    subject: `${contract.writer.name} has signed a ${contract.template.contractType} contract`,
-    body: `Writer: ${contract.writer.name} (${contract.writer.email})\nContract type: ${contract.template.contractType}\nSigned at: ${signedAt.toISOString()}${contract.storyId ? `\nStory ID: ${contract.storyId} — now published` : ""}`,
-  });
+  const downloadUrl = result.pdfRef ? await getPortalFileDownloadUrl(result.pdfRef).catch(() => null) : null;
 
   return NextResponse.json({ success: true, downloadUrl });
 });
