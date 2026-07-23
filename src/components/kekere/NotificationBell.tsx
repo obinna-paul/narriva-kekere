@@ -264,7 +264,9 @@ export function NotificationBell() {
             {notifications.length > 0 && (
               <div className="flex-1 overflow-y-auto py-[6px]">
                 {notifications.map((n) => {
-                  const { glyph, bg, fg } = TYPE_CONFIG[n.type];
+                  const config = TYPE_CONFIG[n.type];
+                  if (!config) return null;
+                  const { glyph, bg, fg } = config;
                   const dx = dragId === n.id ? dragDx : 0;
                   const isDragging = dragId === n.id;
 
