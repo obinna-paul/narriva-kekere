@@ -252,7 +252,8 @@ function StoryCard({
   const isEditable = EDITABLE.includes(story.status);
   const isRejected = story.status === "REJECTED";
   const canDelete = story.status === "DRAFT" || isRejected;
-  const { bg, text } = STATUS_COLORS[story.status];
+  const colors = STATUS_COLORS[story.status];
+  const { bg, text } = colors ?? { bg: "bg-[rgba(42,26,18,.07)]", text: "text-[rgba(42,26,18,.6)]" };
 
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
