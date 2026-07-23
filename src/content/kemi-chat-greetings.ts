@@ -44,7 +44,7 @@ export function buildKemiGreetingPool(name?: string): KemiGreetingTemplate[] {
     ...CHEEKY_PLAYFUL,
     ...CURIOUS_GENTLE,
     ...ENERGETIC_BUBBLY,
-    ...(tod === "morning" || tod === "evening" ? TIME_OF_DAY[tod] : []),
+    ...(tod === "morning" || tod === "evening" ? (TIME_OF_DAY[tod] ?? []) : []),
     ...(isWeekend ? WEEKEND : []),
     ...(hour >= 21 || hour < 2 ? LATE_NIGHT : []),
   ];

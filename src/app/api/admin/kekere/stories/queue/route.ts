@@ -3,13 +3,13 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import type { Prisma } from "@prisma/client";
+import type { StoryStatus } from "@prisma/client";
 
 export const GET = withAuth(
   async (request) => {
-    const tab = request.nextUrl.searchParams.get("tab") ?? "submitted";
+    const tab = new URL(request.url).searchParams.get("tab") ?? "submitted";
 
-    const statusFilter = tab === "publishing"
+    const statusFilter: StoryStatus[] = tab === "publishing"
       ? ["ACCEPTED", "CHANGES_PROPOSED"]
       : ["SUBMITTED", "REVISIONS_REQUESTED"];
     const stories = await prisma.story.findMany({

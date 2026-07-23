@@ -40,6 +40,32 @@ const RELATIVE_TIME_TICK_MS = 30000;
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
 type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED" | "CHANGES_PROPOSED" | "ACCEPTED";
+type Mode = "scroll" | "chapters";
+
+interface Chapter {
+  id: string;
+  title: string;
+  content: string;
+}
+
+interface VersionSummary {
+  id: string;
+  versionNumber: number;
+  wordCount: number;
+  label: string;
+  savedAt: string;
+}
+
+export interface WriterEditorProps {
+  competitionId?: string;
+  competitionSlug?: string;
+  competitionTitle?: string;
+  competitionDeadlineLabel?: string;
+  initialStoryId?: string;
+  authorName?: string;
+  authorAvatarUrl?: string | null;
+  authorAvatarColor?: string | null;
+}
 
 function countWords(text: string): number {
   return text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;

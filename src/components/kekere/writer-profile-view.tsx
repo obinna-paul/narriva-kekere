@@ -252,7 +252,7 @@ export function WriterProfileView({
   const avatarColor = profile.avatarColor ?? "#C75D2C";
   const hasMeta = !!(profile.country || profile.memberSince);
   const hasBio = !!(profile.bio && profile.bio.trim());
-  const hasComingSoon = !!profile.comingSoon;
+  const comingSoon = profile.comingSoon;
 
   return (
     <div className="mx-auto max-w-[560px] pb-[80px]">
@@ -351,18 +351,18 @@ export function WriterProfileView({
       {/* ================================================================ */}
       {/* COMING SOON — moved up, before published stories                 */}
       {/* ================================================================ */}
-      {hasComingSoon && (
+      {comingSoon && (
         <section className="mb-8 px-[22px]">
           <div className="overflow-hidden rounded-2xl border border-[rgba(199,93,44,0.18)] bg-gradient-to-br from-[var(--color-primary-muted)] via-[var(--color-cream)] to-[var(--color-primary-muted)] p-5 shadow-[0_8px_24px_-10px_rgba(199,93,44,0.25)]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-primary)]/70">
               Coming soon
             </p>
             <h3 className="mt-1 font-[family-name:var(--font-display)] text-[19px] font-bold leading-tight text-[var(--color-ink)]">
-              {profile.comingSoon.title}
+              {comingSoon.title}
             </h3>
-            {profile.comingSoon.hookLine && (
+            {comingSoon.hookLine && (
               <p className="mt-2 text-[14px] italic leading-[1.55] text-[var(--color-ink-muted)]">
-                {profile.comingSoon.hookLine}
+                {comingSoon.hookLine}
               </p>
             )}
           </div>

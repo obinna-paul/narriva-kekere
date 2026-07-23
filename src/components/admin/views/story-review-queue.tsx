@@ -29,6 +29,7 @@ interface StoryDetail extends QueueStory {
   readingTime: number;
   isAdult: boolean;
   editWriterNote?: string | null;
+  status: string;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -77,10 +78,9 @@ interface DecisionPanelProps {
    * just calls this and waits for it to resolve. */
   onApplyHookLine?: (hookLine: string) => Promise<boolean>;
   queueTab: "submitted" | "publishing";
-  onPublishNow?: () => Promise<void>;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine, queueTab, onPublishNow }: DecisionPanelProps) {
+function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine, queueTab }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
