@@ -90,8 +90,11 @@ export const PATCH = withAuth(
     const { id } = params as { id: string };
 
     const body = await request.json().catch(() => null);
+    console.log("[admin-edit PATCH]", { id, bodyKeys: body ? Object.keys(body) : null });
+
     const parsed = partialEditSchema.safeParse(body);
     if (!parsed.success) {
+      console.warn("[admin-edit PATCH] validation failed:", parsed.error.flatten());
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
 

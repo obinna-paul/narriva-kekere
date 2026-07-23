@@ -135,9 +135,14 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
       });
       if (res.ok) {
         setSuggestedHookLine(null);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("[applyHookLine] server error:", res.status, err);
+        setSuggestError(`Couldn't save the hook line (${res.status}). Try again.`);
       }
-    } catch {
-      // silently fail — admin can retry
+    } catch (networkErr) {
+      console.error("[applyHookLine] network error:", networkErr);
+      setSuggestError("Couldn't reach the server. Check your connection.");
     } finally {
       setApplyingHookLine(false);
     }
