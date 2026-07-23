@@ -553,7 +553,7 @@ export function WriterEditor({
           pinned while scrolling; this back-link/status/actions block
           scrolls away with the rest of the page like ordinary content. */}
       <div className="border-b border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)]" data-writer-chrome>
-        <div className="mx-auto flex max-w-[680px] items-center justify-between px-[22px] py-2.5">
+        <div className="mx-auto flex max-w-[680px] flex-wrap items-center justify-between gap-2 px-[22px] py-2.5">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <Link
               href="/kekere/write"
@@ -571,107 +571,48 @@ export function WriterEditor({
               {STATUS_LABELS[status]}
             </span>
           </div>
-          {storyId && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="More options"
-                  className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
-                >
-                  <Menu size={19} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {isEditable && (
-                  <DropdownMenuItem onSelect={focusModeRef.current ? exitFocusMode : enterFocusMode}>
-                    {focusModeRef.current ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                    {focusModeRef.current ? "Exit full screen" : "Full screen"}
-                  </DropdownMenuItem>
-                )}
-                {isEditable && (
-                  <DropdownMenuItem onSelect={openPreview}>
-                    <ScanEye size={16} />
-                    Preview
-                  </DropdownMenuItem>
-                )}
-                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && mode === "scroll" && (
-                  <DropdownMenuItem disabled={importing} onSelect={handleUploadClick}>
-                    <FileText size={16} />
-                    Upload document
-                  </DropdownMenuItem>
-                )}
-                {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && (
-                  <DropdownMenuItem disabled={exporting} onSelect={handleExport}>
-                    <Download size={16} />
-                    Export as document
-                  </DropdownMenuItem>
-                )}
-                {mode === "scroll" && (
-                  <DropdownMenuItem onSelect={openHistory}>
-                    <History size={16} />
-                    Version history
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        <div className="mx-auto flex max-w-[680px] flex-wrap items-center justify-between gap-2 px-[22px] pb-2.5">
-          {isEditable && (
-            <div className="flex flex-none items-center gap-[7px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
-              {saveStatus.kind === "saving" ? (
-                <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
-              ) : (
-                <span
-                  className={cn(
-                    "h-2 w-2 flex-none rounded-full",
-                    saveStatus.kind === "dirty" && "animate-pulse"
-                  )}
-                  style={{ backgroundColor: saveStatusColor(saveStatus.kind) }}
-                />
-              )}
-              <span className="whitespace-nowrap text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
-                {savedLabel.text}
-              </span>
-              {saveStatus.kind === "conflict" && (
-                <button type="button" onClick={openHistory} className="text-[12.5px] font-semibold text-[#B3371D] underline">
-                  View conflict
-                </button>
-              )}
-            </div>
-          )}
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-2" data-writer-header-actions>
-            {/* Icon cluster stays together as one flex item — if it and
-                Submit don't both fit on one line, Submit wraps to its own
-                line below instead of being pushed off-screen. Nothing here
-                ever needs horizontal scrolling to reach. */}
+          {/* The save row — status pill, Save, and Submit all live together
+              here so the header collapses to a single line instead of the
+              two (sometimes three, once wrapped) rows it used to take. */}
+          <div className="flex flex-wrap items-center justify-end gap-2" data-writer-header-actions>
             {isEditable && (
-              <div className="flex flex-wrap items-center gap-2">
-                {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
-                {mode === "scroll" && storyId && (
-                  <button
-                    type="button"
-                    onClick={() => editorHandle.current?.flush("Manual save")}
-                    className="flex items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
-                    title="Save (Cmd+S)"
-                  >
-                    Save
+              <div className="flex flex-none items-center gap-[7px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-3 py-[5px]">
+                {saveStatus.kind === "saving" ? (
+                  <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
+                ) : (
+                  <span
+                    className={cn(
+                      "h-2 w-2 flex-none rounded-full",
+                      saveStatus.kind === "dirty" && "animate-pulse"
+                    )}
+                    style={{ backgroundColor: saveStatusColor(saveStatus.kind) }}
+                  />
+                )}
+                <span className="whitespace-nowrap text-[12.5px] font-medium" style={{ color: saveStatusColor(saveStatus.kind) }}>
+                  {savedLabel.text}
+                </span>
+                {saveStatus.kind === "conflict" && (
+                  <button type="button" onClick={openHistory} className="text-[12.5px] font-semibold text-[#B3371D] underline">
+                    View conflict
                   </button>
                 )}
               </div>
             )}
-            {/* Hidden file input for the "Upload document" menu action —
-                lives outside the menu itself since a Radix DropdownMenuItem
-                unmounts on select, which would drop the ref right as
-                fileInputRef.current?.click() needs it. */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={handleFileChosen}
-              className="hidden"
-            />
+            {/* Save/Submit/hamburger stay together as one non-wrapping unit
+                — only the save-status pill wraps onto its own line first,
+                so the hamburger never strands alone on a third line. */}
+            <div className="flex flex-none items-center gap-2">
+            {/* B2.4 — Explicit Save button (Cmd/Ctrl+S does the same) */}
+            {isEditable && mode === "scroll" && storyId && (
+              <button
+                type="button"
+                onClick={() => editorHandle.current?.flush("Manual save")}
+                className="flex items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                title="Save (Cmd+S)"
+              >
+                Save
+              </button>
+            )}
             {isEditable && (
               <button
                 type="button"
@@ -679,14 +620,71 @@ export function WriterEditor({
                 onClick={handleClickSubmit}
                 className="rounded-[8px] bg-[var(--color-primary)] px-[18px] py-[9px] text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-50"
               >
-                {status === "REVISIONS_REQUESTED" ? "Resubmit for review" : "Submit for review"}
+                {status === "REVISIONS_REQUESTED" ? "Resubmit" : "Submit"}
               </button>
             )}
+            {storyId && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="More options"
+                    className="flex h-8 w-8 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
+                  >
+                    <Menu size={19} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {isEditable && (
+                    <DropdownMenuItem onSelect={focusModeRef.current ? exitFocusMode : enterFocusMode}>
+                      {focusModeRef.current ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                      {focusModeRef.current ? "Exit full screen" : "Full screen"}
+                    </DropdownMenuItem>
+                  )}
+                  {isEditable && (
+                    <DropdownMenuItem onSelect={openPreview}>
+                      <ScanEye size={16} />
+                      Preview
+                    </DropdownMenuItem>
+                  )}
+                  {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && mode === "scroll" && (
+                    <DropdownMenuItem disabled={importing} onSelect={handleUploadClick}>
+                      <FileText size={16} />
+                      Upload document
+                    </DropdownMenuItem>
+                  )}
+                  {(status === "DRAFT" || status === "REVISIONS_REQUESTED") && (
+                    <DropdownMenuItem disabled={exporting} onSelect={handleExport}>
+                      <Download size={16} />
+                      Export as document
+                    </DropdownMenuItem>
+                  )}
+                  {mode === "scroll" && (
+                    <DropdownMenuItem onSelect={openHistory}>
+                      <History size={16} />
+                      Version history
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            </div>
           </div>
         </div>
+        {/* Hidden file input for the "Upload document" menu action — lives
+            outside the menu itself since a Radix DropdownMenuItem unmounts
+            on select, which would drop the ref right as
+            fileInputRef.current?.click() needs it. */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          onChange={handleFileChosen}
+          className="hidden"
+        />
       </div>
 
-      <main className="mx-auto max-w-[680px] px-[22px] pb-[80px] pt-[26px]">
+      <main className="mx-auto max-w-[680px] px-[22px] pb-[80px] pt-[18px]">
         {status === "REVISIONS_REQUESTED" && moderationNotes && (
           <div className="mb-6 rounded-lg border-l-4 border-[var(--color-primary)] bg-[var(--color-primary-muted)] px-4 py-3" data-writer-chrome>
             <p className="text-sm font-semibold text-[var(--color-ink)]">Feedback from the editorial team</p>
