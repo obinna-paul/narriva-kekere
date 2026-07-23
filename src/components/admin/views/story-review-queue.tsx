@@ -62,7 +62,7 @@ interface NewTagSuggestion {
 
 interface DecisionPanelProps {
   story: StoryDetail;
-  onAction: (action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) => void;
+  onAction: (action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean, tier: string) => void;
   acting: boolean;
   coverImageRef: string | null;
   coverPreview: string | null;
@@ -82,6 +82,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
+  const [tier, setTier] = useState(story.tier ?? "STANDARD");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [isAdult, setIsAdult] = useState(story.isAdult);
   const [uploading, setUploading] = useState(false);
@@ -247,6 +248,30 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                 className="flex-1 accent-[#C75D2C]"
               />
               <span className="w-8 text-center text-[14px] font-bold text-[#1A1C20]">{cowrieCost}</span>
+            </div>
+          </div>
+
+          {/* Tier selector */}
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
+              Tier
+            </label>
+            <div className="flex gap-1.5">
+              {(["STANDARD", "FEATURED", "CHAMPION"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTier(t)}
+                  className={cn(
+                    "flex-1 rounded-[7px] py-2 text-[11px] font-bold uppercase tracking-[0.04em] transition-colors",
+                    tier === t
+                      ? TIER_COLORS[t]
+                      : "bg-[#F4F5F7] text-[#9AA0A8] hover:bg-[rgba(20,22,26,0.06)]",
+                  )}
+                >
+                  {t === "STANDARD" ? "Standard" : t === "FEATURED" ? "Featured" : "Champion"}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -449,6 +474,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
             cowrieCost,
             tagIds,
             isAdult,
+            tier,
           )
         }
         className={cn(
@@ -654,7 +680,7 @@ export function StoryReviewQueue() {
     }
   }
 
-  async function handleAction(action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean) {
+  async function handleAction(action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean, tier: string) {
     if (!selectedId || !selected) return;
 
     const promotes = action === "publish" || action === "send_to_writer";
@@ -687,7 +713,7 @@ export function StoryReviewQueue() {
       action === "publish"
         ? {
             cowrieCost,
-            tier: selected.tier,
+            tier,
             tagIds,
             isAdult,
             ...(coverImageRef ? { coverImageRef } : {}),
@@ -695,7 +721,7 @@ export function StoryReviewQueue() {
         : action === "send_to_writer"
         ? {
             cowrieCost,
-            tier: selected.tier,
+            tier,
             tagIds,
             isAdult,
             ...(coverImageRef ? { coverImageRef } : {}),
