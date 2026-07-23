@@ -42,8 +42,24 @@ export default async function KekereWritePage({
     ? await getCompetitionBySlug(searchParams.competition)
     : null;
 
-  const session = await getCurrentSession();
-  const profile = session?.user?.id ? await getKekereUserProfile(session.user.id) : null;
+  let authorName: string | undefined;
+  let authorAvatarUrl: string | null = null;
+  let authorAvatarColor: string | null = null;
+
+  try {
+    const session = await getCurrentSession();
+    if (session?.user?.id) {
+      const profile = await getKekereUserProfile(session.user.id);
+      if (profile) {
+        authorName = profile.name;
+        authorAvatarUrl = profile.avatar;
+        authorAvatarColor = profile.avatarColor;
+      }
+    }
+  } catch {
+    // Profile fetch is best-effort — the editor still works without it.
+    // The submit preview just shows "by you" instead of the author chip.
+  }
 
   return (
     <KekereTheme>
@@ -53,9 +69,9 @@ export default async function KekereWritePage({
         competitionTitle={competition?.title}
         competitionDeadlineLabel={competition ? closesInLabel(competition.deadline) : undefined}
         initialStoryId={searchParams.id}
-        authorName={profile?.name ?? undefined}
-        authorAvatarUrl={profile?.avatar ?? null}
-        authorAvatarColor={profile?.avatarColor ?? null}
+        authorName={authorName}
+        authorAvatarUrl={authorAvatarUrl}
+        authorAvatarColor={authorAvatarColor}
       />
     </KekereTheme>
   );
