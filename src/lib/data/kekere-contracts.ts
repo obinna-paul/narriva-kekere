@@ -84,7 +84,7 @@ export async function signContractAndPublishStory(
     where: { id: contractId },
     include: {
       template: { select: { contractType: true } },
-      writer: { select: { name: true, email: true } },
+      writer: { select: { name: true, email: true, createdByAdminId: true } },
     },
   });
 
@@ -137,6 +137,7 @@ export async function signContractAndPublishStory(
   }
 
   const linkedStoryId = contract.storyId;
+  const isOnboarded = contract.writer?.createdByAdminId != null;
 
   await withSlugRetry(() =>
     prisma.$transaction(async (tx) => {
@@ -159,13 +160,18 @@ export async function signContractAndPublishStory(
         const slug = linkedStory ? await nextSlugForTitle(tx, linkedStory.title) : undefined;
         await tx.story.updateMany({
           where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
-          data: { status: "PUBLISHED", isDraft: false, publishedAt: signedAt, ...(slug ? { slug } : {}) },
+          data: isOnboarded
+            ? { status: "PUBLISHED", isDraft: false, publishedAt: signedAt, ...(slug ? { slug } : {}) }
+            : { status: "ACCEPTED" },
         });
       }
     })
   );
 
-  if (linkedStoryId) {
+  // Only onboarded writers go straight to PUBLISHED — notify their followers.
+  // Regular writers go to ACCEPTED (To Be Published queue) — followers are
+  // notified later when the editor clicks Publish.
+  if (linkedStoryId && isOnboarded) {
     notifyFollowersOfPublish(linkedStoryId).catch(console.error);
   }
 
@@ -200,10 +206,14 @@ export async function signContractAndPublishStory(
     from: KEKERE_SUBMISSIONS_FROM,
     to: contract.writer.email,
     subject: linkedStoryId
-      ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
+      ? isOnboarded
+        ? `Your story is live — "${storyTitle}" is now on Kekere Stories`
+        : `Contract signed — "${storyTitle}" is now in the publishing queue`
       : "Your contract is signed",
     body: linkedStoryId
-      ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
+      ? isOnboarded
+        ? `Hi ${contract.writer.name},\n\nYour publishing contract has been signed and "${storyTitle}" is now live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
+        : `Hi ${contract.writer.name},\n\nYour publishing contract has been signed. "${storyTitle}" is now in our publishing queue where our editors will prepare it for release. We'll send you updates if any changes are needed.\n\nThank you for publishing with Kekere Stories.\n\nThe Kekere Stories Team`
       : `Hi ${contract.writer.name},\n\nYour contract has been signed.\n\nThe Kekere Stories Team`,
     html: signedHtml,
     ...(attachmentBuffer && attachmentFilename
@@ -214,11 +224,19 @@ export async function signContractAndPublishStory(
   await createNotification({
     userId: contract.writerId,
     type: "STORY_APPROVED",
-    title: linkedStoryId ? `"${storyTitle}" is now live!` : "Contract signed",
+    title: linkedStoryId
+      ? isOnboarded
+        ? `"${storyTitle}" is now live!`
+        : `"${storyTitle}" — contract signed`
+      : "Contract signed",
     body: linkedStoryId
-      ? "Your story is now live on Kekere Stories. Readers can find and unlock it right now."
+      ? isOnboarded
+        ? "Your story is now live on Kekere Stories. Readers can find and unlock it right now."
+        : "Your contract is signed and your story is in the publishing queue. We'll let you know when it's ready."
       : "Your contract has been signed.",
-    link: linkedStoryId ? `/kekere/story/${storySlug ?? linkedStoryId}` : "/kekere/contracts",
+    link: linkedStoryId
+      ? isOnboarded ? `/kekere/story/${storySlug ?? linkedStoryId}` : "/kekere/contracts"
+      : "/kekere/contracts",
   });
 
   return { storyId: linkedStoryId, storySlug, signedPdfBuffer: pdfBuffer, pdfFilename: attachmentFilename };

@@ -372,15 +372,19 @@ enum StoryStatus {
   REVISIONS_REQUESTED
   PUBLISHED
   REJECTED
-  // Story is fully set up (content, price, tags) but waiting for the author to
-  // sign the publishing contract before going live.
+  // Story has been approved at Stage 1 review and the publishing contract is
+  // waiting for the author to sign. Once signed, the story moves to ACCEPTED
+  // (Stage 2 — To Be Published queue) where the editor can make tracked
+  // changes. Previously PENDING_CONTRACT went straight to PUBLISHED on signing.
   PENDING_CONTRACT
   // The admin has edited/annotated the story and sent those changes to the
-  // writer, who must accept them before the story advances to the contract.
-  // The editorial working copy (editedBody/editedHookLine) and editorial
-  // comments are what the writer reviews; publishing terms are already set on
-  // the row so acceptance can go straight to the contract.
+  // writer, who must accept them before the story advances.
   CHANGES_PROPOSED
+  // Writer has signed the publishing contract. Story enters the "To Be
+  // Published" editing queue. Editor makes tracked changes, writer reviews,
+  // back-and-forth until editor clicks Publish. (Does not apply to
+  // onboarded/invited writers — they go straight to PUBLISHED on signing.)
+  ACCEPTED
 }
 
 enum StoryTier {

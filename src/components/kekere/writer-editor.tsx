@@ -39,39 +39,13 @@ const RELATIVE_TIME_TICK_MS = 30000;
 
 const EMPTY_DOC: TiptapDoc = { type: "doc", content: [] };
 
-type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED" | "CHANGES_PROPOSED";
-type Mode = "scroll" | "chapters";
-
-interface Chapter {
-  id: string;
-  title: string;
-  content: string;
-}
-
-interface VersionSummary {
-  id: string;
-  versionNumber: number;
-  wordCount: number;
-  label: string;
-  savedAt: string;
-}
-
-export interface WriterEditorProps {
-  competitionId?: string;
-  competitionSlug?: string;
-  competitionTitle?: string;
-  competitionDeadlineLabel?: string;
-  initialStoryId?: string;
-  authorName?: string;
-  authorAvatarUrl?: string | null;
-  authorAvatarColor?: string | null;
-}
+type Status = "DRAFT" | "SUBMITTED" | "REVIEWING" | "REVISIONS_REQUESTED" | "PENDING_CONTRACT" | "PUBLISHED" | "REJECTED" | "CHANGES_PROPOSED" | "ACCEPTED";
 
 function countWords(text: string): number {
   return text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length;
 }
 
-const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED", "PENDING_CONTRACT"];
+const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED"];
 
 const STATUS_STYLES: Record<Status, string> = {
   DRAFT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
@@ -82,6 +56,19 @@ const STATUS_STYLES: Record<Status, string> = {
   PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
   REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
   CHANGES_PROPOSED: "bg-[rgba(199,122,30,0.12)] text-[#A8690F]",
+  ACCEPTED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
+};
+
+const STATUS_LABELS: Record<Status, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted",
+  REVIEWING: "In review",
+  REVISIONS_REQUESTED: "Revisions requested",
+  PENDING_CONTRACT: "Contract pending",
+  PUBLISHED: "Published",
+  REJECTED: "Not accepted",
+  CHANGES_PROPOSED: "Edits proposed",
+  ACCEPTED: "Accepted for publishing",
 };
 
 const STATUS_LABELS: Record<Status, string> = {

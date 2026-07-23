@@ -76,9 +76,11 @@ interface DecisionPanelProps {
    * handles saving to the database AND updating local state — the panel
    * just calls this and waits for it to resolve. */
   onApplyHookLine?: (hookLine: string) => Promise<boolean>;
+  queueTab: "submitted" | "publishing";
+  onPublishNow?: () => Promise<void>;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine }: DecisionPanelProps) {
+function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine, queueTab, onPublishNow }: DecisionPanelProps) {
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
@@ -485,7 +487,11 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
         {acting
           ? "Processing…"
           : tab === "publish"
-          ? requiresWriterApproval
+          ? queueTab === "publishing"
+            ? requiresWriterApproval
+              ? "Send edits to writer for approval"
+              : "Publish now"
+            : requiresWriterApproval
             ? "Send edits to writer for approval"
             : "Send publishing contract"
           : tab === "reject"
@@ -540,6 +546,7 @@ export function StoryReviewQueue() {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+  const [queueTab, setQueueTab] = useState<"submitted" | "publishing">("submitted");
 
   // Admin editing state — reset when a new story is selected
   const [editingContent, setEditingContent] = useState(false);
@@ -602,7 +609,7 @@ export function StoryReviewQueue() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/kekere/stories/queue");
+      const res = await fetch(`/api/admin/kekere/stories/queue?tab=${queueTab}`);
       if (!res.ok) throw new Error(`${res.status}`);
       const d = await res.json();
       setQueue(d.stories ?? []);
@@ -611,7 +618,7 @@ export function StoryReviewQueue() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [queueTab]);
 
   useEffect(() => { loadQueue(); }, [loadQueue]);
 
@@ -703,14 +710,17 @@ export function StoryReviewQueue() {
 
     setActing(true);
 
-    const endpoint =
-      action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
+    const isPublishNow = queueTab === "publishing" && action === "publish" && selected.status === "ACCEPTED";
+    const endpoint = isPublishNow
+        ? `/api/admin/kekere/stories/${selectedId}/publish-now`
+      : action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
       : action === "send_to_writer" ? `/api/admin/kekere/stories/${selectedId}/send-to-writer`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
       : `/api/admin/kekere/stories/${selectedId}/request-revisions`;
 
-    const body =
-      action === "publish"
+    const body = isPublishNow
+      ? undefined
+      : action === "publish"
         ? {
             cowrieCost,
             tier,
@@ -735,12 +745,14 @@ export function StoryReviewQueue() {
       const res = await fetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
       if (!res.ok) throw new Error("Action failed");
 
       let successMsg = action === "reject" ? "Story rejected." : action === "revisions" ? "Revision request sent." : "";
-      if (promotes) {
+      if (isPublishNow) {
+        successMsg = "Story published and now live.";
+      } else if (promotes) {
         const data = await res.json();
         successMsg =
           action === "send_to_writer"
@@ -796,9 +808,29 @@ export function StoryReviewQueue() {
 
       {/* Left pane — queue list */}
       <div className="flex w-[200px] flex-none flex-col gap-2 overflow-y-auto">
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-[12px] font-semibold text-[#8B919A]">QUEUE</span>
-          <span className="rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{queue.length}</span>
+        <div className="mb-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => { setQueueTab("submitted"); setSelectedId(null); setSelected(null); }}
+            className={cn(
+              "rounded-[6px] px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              queueTab === "submitted" ? "bg-[#1A1C20] text-white" : "text-[#8B919A] hover:bg-[rgba(20,22,26,0.06)]",
+            )}
+          >
+            Story Queue
+          </button>
+          <button
+            type="button"
+            onClick={() => { setQueueTab("publishing"); setSelectedId(null); setSelected(null); }}
+            className={cn(
+              "rounded-[6px] px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              queueTab === "publishing" ? "bg-[#1A1C20] text-white" : "text-[#8B919A] hover:bg-[rgba(20,22,26,0.06)]",
+            )}
+          >
+            To Be Published
+          </button>
+          <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{queue.length}</span>
+        </div>
         </div>
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-4 py-10 text-center">
@@ -1005,6 +1037,7 @@ export function StoryReviewQueue() {
             story={selected}
             onAction={handleAction}
             acting={acting}
+            queueTab={queueTab}
             coverImageRef={coverImageRef}
             coverPreview={coverPreview}
             onCoverUploaded={(ref, preview) => { setCoverImageRef(ref || null); setCoverPreview(preview || null); }}

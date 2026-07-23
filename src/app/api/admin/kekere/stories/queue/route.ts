@@ -6,9 +6,14 @@ import { prisma } from "@/lib/db/prisma";
 import type { Prisma } from "@prisma/client";
 
 export const GET = withAuth(
-  async () => {
+  async (request) => {
+    const tab = request.nextUrl.searchParams.get("tab") ?? "submitted";
+
+    const statusFilter = tab === "publishing"
+      ? ["ACCEPTED", "CHANGES_PROPOSED"]
+      : ["SUBMITTED", "REVISIONS_REQUESTED"];
     const stories = await prisma.story.findMany({
-      where: { status: { in: ["SUBMITTED", "REVISIONS_REQUESTED"] } },
+      where: { status: { in: statusFilter } },
       include: {
         author: { select: { name: true, slug: true } },
       },
