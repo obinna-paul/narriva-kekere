@@ -28,8 +28,11 @@ export const PUT = withAuth(
   async (request, _session, { params }) => {
     const { id } = params as { id: string };
 
-    const story = await prisma.story.findUnique({ where: { id }, select: { id: true } });
+    const story = await prisma.story.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!story) return NextResponse.json({ error: "Story not found" }, { status: 404 });
+    if (story.status !== "SUBMITTED" && story.status !== "REVISIONS_REQUESTED") {
+      return NextResponse.json({ error: "Story must be submitted or in revisions to publish" }, { status: 400 });
+    }
 
     let body: unknown;
     try { body = await request.json(); }

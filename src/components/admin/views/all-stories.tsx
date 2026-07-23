@@ -23,6 +23,8 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING_CONTRACT: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
   PUBLISHED: "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]",
   REJECTED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
+  CHANGES_PROPOSED: "bg-[rgba(199,122,30,0.12)] text-[#A8690F]",
+  ACCEPTED: "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B]",
 };
 
 const STATUS_OPTIONS = [
@@ -32,6 +34,8 @@ const STATUS_OPTIONS = [
   { value: "REVIEWING", label: "Reviewing" },
   { value: "REVISIONS_REQUESTED", label: "Revisions requested" },
   { value: "PENDING_CONTRACT", label: "Pending contract" },
+  { value: "CHANGES_PROPOSED", label: "Edits proposed" },
+  { value: "ACCEPTED", label: "Accepted — in publishing queue" },
   { value: "PUBLISHED", label: "Published" },
   { value: "REJECTED", label: "Rejected" },
 ];

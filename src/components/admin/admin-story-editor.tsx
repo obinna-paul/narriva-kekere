@@ -43,13 +43,21 @@ const STATUS_LABELS: Record<string, string> = {
   REVIEWING: "Under review",
   REVISIONS_REQUESTED: "Revisions requested",
   PENDING_CONTRACT: "Pending contract",
+  CHANGES_PROPOSED: "Edits proposed — awaiting writer review",
+  ACCEPTED: "Accepted — in publishing queue",
   PUBLISHED: "Published — live on the feed",
   REJECTED: "Rejected",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PUBLISHED: "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]",
+  DRAFT: "bg-[rgba(20,22,26,0.07)] text-[#646B73]",
+  SUBMITTED: "bg-[rgba(183,121,31,0.12)] text-[#B7791F]",
+  REVIEWING: "bg-[rgba(183,121,31,0.12)] text-[#B7791F]",
+  REVISIONS_REQUESTED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
   PENDING_CONTRACT: "bg-[rgba(30,58,138,0.10)] text-[#1E3A8A]",
+  CHANGES_PROPOSED: "bg-[rgba(199,122,30,0.12)] text-[#A8690F]",
+  ACCEPTED: "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B]",
+  PUBLISHED: "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]",
   REJECTED: "bg-[rgba(192,57,43,0.10)] text-[#C0392B]",
 };
 

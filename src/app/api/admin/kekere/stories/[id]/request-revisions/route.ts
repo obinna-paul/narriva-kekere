@@ -27,6 +27,10 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
 
+    if (story.status !== "SUBMITTED" && story.status !== "REVISIONS_REQUESTED") {
+      return NextResponse.json({ error: "Only submitted stories can be sent back for revisions" }, { status: 400 });
+    }
+
     let body: unknown;
     try {
       body = await request.json();
