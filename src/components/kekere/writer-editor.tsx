@@ -745,7 +745,7 @@ export function WriterEditor({
 
         {!isEditable && !justSubmitted && (
           <p className="mb-6 text-sm text-[var(--color-ink-muted-3)]" data-writer-chrome>
-            This story can&apos;t be edited while it&apos;s {STATUS_LABELS[status].toLowerCase()}.
+            This story can&apos;t be edited while it&apos;s {(STATUS_LABELS[status] ?? status).toLowerCase()}.
           </p>
         )}
 
