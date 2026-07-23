@@ -25,6 +25,7 @@ interface ContractDetail {
   signedName?: string;
   signedPdfRef?: string;
   expiresAt?: string;
+  storyId?: string | null;
 }
 
 export function ContractsInbox({ contracts, writerName = "" }: { contracts: ContractSummary[]; writerName?: string }) {
@@ -37,6 +38,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
   const [signError, setSignError] = useState<string | null>(null);
   const [signed, setSigned] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [declined, setDeclined] = useState(false);
 
   const pending = contracts.filter((c) => c.status === "PENDING");
   const archive = contracts.filter((c) => c.status !== "PENDING");
@@ -80,8 +82,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
     if (!detail) return;
     try {
       await fetch(`/api/kekere/contracts/${detail.id}/decline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "" }) });
-      setSelectedId(null);
-      setDetail(null);
+      setDeclined(true);
     } catch {}
   }
 
@@ -89,6 +90,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
     setSelectedId(null);
     setDetail(null);
     setSigned(false);
+    setDeclined(false);
     setSignedName("");
   }
 
@@ -113,7 +115,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
               </div>
               <p className="mt-4 text-[12px] text-[#A08C7C]">Sent {new Date(detail.sentAt).toLocaleDateString()}</p>
 
-              {detail.status === "PENDING" && !signed && (
+              {detail.status === "PENDING" && !signed && !declined && (
                 <div className="mt-6 border-t border-[rgba(42,26,18,0.08)] pt-5">
                   <p className="mb-3 text-[13px] leading-[1.55] text-[#5A4535]">
                     By tapping <strong>I accept</strong>, you agree to the terms above and sign this contract as:
@@ -185,6 +187,23 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
                     <button type="button" onClick={() => { window.location.href = downloadUrl; }} className="mt-3 flex items-center gap-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] font-medium text-[#1F8A5B]">
                       <Download size={14} /> Download signed PDF
                     </button>
+                  )}
+                </div>
+              )}
+
+              {declined && (
+                <div className="mt-6 rounded-[16px] bg-[rgba(42,26,18,0.05)] px-4 py-4">
+                  <div className="text-[14px] font-semibold text-[#2A1A12]">Declined</div>
+                  <p className="mt-1 text-[12px] text-[#8A7565]">
+                    Your story is fully yours again — edit it any time and resubmit whenever you&apos;re ready.
+                  </p>
+                  {detail.storyId && (
+                    <Link
+                      href={`/kekere/write?id=${detail.storyId}`}
+                      className="mt-3 inline-flex items-center gap-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] font-medium text-[#2A1A12]"
+                    >
+                      Edit your story
+                    </Link>
                   )}
                 </div>
               )}

@@ -12,6 +12,7 @@ export const GET = withAuth(async (request, session, { params }) => {
     where: { id },
     include: {
       template: { select: { name: true, contractType: true } },
+      story: { select: { id: true } },
     },
   });
 
@@ -45,5 +46,6 @@ export const GET = withAuth(async (request, session, { params }) => {
     declineReason: contract.declineReason,
     expiresAt: contract.expiresAt?.toISOString() ?? null,
     sentAt: contract.sentAt.toISOString(),
+    storyId: contract.story?.id ?? null,
   });
 });
