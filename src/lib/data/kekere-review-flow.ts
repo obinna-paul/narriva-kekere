@@ -1,7 +1,7 @@
 import { Prisma, type StoryTier } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
-import { renderStoryAcceptedEmail } from "@/lib/email/templates";
+import { renderStoryAcceptedEmail, renderEditsToReviewEmail, renderPostContractEditsEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM, SUPPORT_EMAIL } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
@@ -267,10 +267,16 @@ export async function sendEditsToWriter(
     body: "Our editor has proposed some changes to your story. Review them and accept before it goes to contract.",
     link: `/kekere/review/${storyId}`,
   });
+  const editsToReviewHtml = await renderEditsToReviewEmail({
+    writerName: story.author.name,
+    storyTitle: story.title,
+    reviewUrl,
+  });
   await sendEmail({
     to: story.author.email,
     subject: `Edits to review on "${story.title}" — Kekere Stories`,
-    body: `Hi ${story.author.name},\n\nOur editor has reviewed "${story.title}" and proposed some changes for you to look over. Nothing is published yet — your story only moves forward once you accept the edits.\n\nReview them here: ${reviewUrl}\n\nYou can accept the changes, or send them back with a note if something isn't right.\n\nThe Kekere Stories Team`,
+    body: `Hi ${story.author.name},\n\nOur editor has reviewed "${story.title}" and proposed some changes for you to look over. Nothing is published yet — your story only moves forward once you accept the edits.\n\nReview them here: ${reviewUrl}\n\nYou can accept the changes, or send them back with a note if something isn't right.\n\nKemi, from the Kekere Stories editorial team`,
+    html: editsToReviewHtml,
     from: KEKERE_SUBMISSIONS_FROM,
   });
 
@@ -330,10 +336,16 @@ export async function sendPostContractEditsToWriter(
     body: "Your contract is signed and your editor has made some changes before publishing. Review them — nothing is live yet.",
     link: `/kekere/review/${storyId}`,
   });
+  const postContractEditsHtml = await renderPostContractEditsEmail({
+    writerName: story.author.name,
+    storyTitle: story.title,
+    reviewUrl,
+  });
   await sendEmail({
     to: story.author.email,
     subject: `Final changes to review on "${story.title}" — Kekere Stories`,
-    body: `Hi ${story.author.name},\n\nYour contract for "${story.title}" is signed, and while preparing it for publication our editor made some changes for you to look over. Nothing is live yet — your story only goes live once you review these changes.\n\nReview them here: ${reviewUrl}\n\nYou can accept the changes, or send them back with a note if something isn't right.\n\nThe Kekere Stories Team`,
+    body: `Hi ${story.author.name},\n\nYour contract for "${story.title}" is signed, and while preparing it for publication our editor made some changes for you to look over. Nothing is live yet — your story only goes live once you review these changes.\n\nReview them here: ${reviewUrl}\n\nKemi, from the Kekere Stories editorial team`,
+    html: postContractEditsHtml,
     from: KEKERE_SUBMISSIONS_FROM,
   });
 

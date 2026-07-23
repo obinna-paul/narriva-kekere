@@ -1,5 +1,6 @@
 import { Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock } from "./signature";
 
 interface StoryRejectedEmailProps {
   writerName: string;
@@ -14,8 +15,8 @@ export function StoryRejectedEmail({ writerName, storyTitle, editorFeedback }: S
       <Text style={styles.h1}>About your submission</Text>
 
       <Text style={styles.p}>
-        Hi {writerName}, thank you for submitting <strong>"{storyTitle}"</strong> to Kekere Stories.
-        Our editors have reviewed it and it's not the right fit for us at this time.
+        Hi {writerName}, thank you for submitting <strong>&ldquo;{storyTitle}&rdquo;</strong> to Kekere Stories.
+        Our editors have reviewed it and it&rsquo;s not the right fit for us at this time.
       </Text>
 
       {/* Editor feedback */}
@@ -27,7 +28,7 @@ export function StoryRejectedEmail({ writerName, storyTitle, editorFeedback }: S
         marginBottom: 24,
       }}>
         <Text style={{ margin: "0 0 10px", fontSize: 12, fontWeight: 700, color: "#8A7565", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
-          Editor's note
+          Editor&rsquo;s note
         </Text>
         <Text style={{ margin: 0, fontSize: 15, color: "#2A1A12", lineHeight: "1.7", fontStyle: "italic" }}>
           {editorFeedback}
@@ -35,13 +36,15 @@ export function StoryRejectedEmail({ writerName, storyTitle, editorFeedback }: S
       </Section>
 
       <Text style={styles.p}>
-        This doesn't mean the story can't be great — editorial judgment is subjective, and what
-        doesn't fit Kekere today may be exactly right somewhere else, or at a different stage of revision.
+        This doesn&rsquo;t mean the story can&rsquo;t be great — editorial judgment is subjective, and what
+        doesn&rsquo;t fit Kekere today may be exactly right somewhere else, or at a different stage of revision.
       </Text>
 
-      <Text style={{ ...styles.p, marginBottom: 0 }}>
+      <Text style={styles.p}>
         We hope to see more of your writing. Keep going.
       </Text>
+
+      <SignatureBlock name="Kemi" role="Editorial Team" brand="Kekere Stories" />
 
     </BaseEmail>
   );

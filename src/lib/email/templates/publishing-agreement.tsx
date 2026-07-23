@@ -1,5 +1,6 @@
 import { Link, Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock } from "./signature";
 
 interface PublishingAgreementEmailProps {
   writerName: string;
@@ -54,6 +55,8 @@ export function PublishingAgreementEmail({
       <Text style={styles.muted}>
         Welcome to Kekere Stories — we&rsquo;re excited to have you.
       </Text>
+
+      <SignatureBlock name="Kemi" role="Editorial Team" brand="Kekere Stories" />
     </BaseEmail>
   );
 }

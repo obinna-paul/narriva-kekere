@@ -1,5 +1,6 @@
 import { Link, Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock } from "./signature";
 
 interface ContractSignedEmailProps {
   writerName: string;
@@ -80,9 +81,7 @@ export function ContractSignedEmail({
         </Link>
       </Section>
 
-      <Text style={styles.muted}>
-        Thank you for publishing with Kekere Stories, an imprint of Narriva Publishing.
-      </Text>
+      <SignatureBlock name="Kemi" role="Editorial Team" brand="Kekere Stories" />
 
     </BaseEmail>
   );

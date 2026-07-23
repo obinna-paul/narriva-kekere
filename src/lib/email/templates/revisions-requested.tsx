@@ -1,5 +1,6 @@
 import { Link, Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock } from "./signature";
 
 interface RevisionsRequestedEmailProps {
   writerName: string;
@@ -24,9 +25,9 @@ export function RevisionsRequestedEmail({
       <Text style={styles.h1}>Your story needs a few changes</Text>
 
       <Text style={styles.p}>
-        Hi {writerName}, an editor has reviewed <strong>"{storyTitle}"</strong> and has some
+        Hi {writerName}, an editor has reviewed <strong>&ldquo;{storyTitle}&rdquo;</strong> and has some
         feedback before it can be published. This is a normal part of the process — it means
-        we're interested.
+        we&rsquo;re interested.
       </Text>
 
       {/* Editor notes */}
@@ -46,7 +47,7 @@ export function RevisionsRequestedEmail({
       </Section>
 
       <Text style={{ ...styles.p, marginBottom: 24 }}>
-        Open your story in the Kekere editor, make the changes, and resubmit when you're ready.
+        Open your story in the Kekere editor, make the changes, and resubmit when you&rsquo;re ready.
       </Text>
 
       <Section style={{ textAlign: "center", marginBottom: 24 }}>
@@ -56,9 +57,11 @@ export function RevisionsRequestedEmail({
       </Section>
 
       <Text style={styles.muted}>
-        Take your time — there's no deadline on revisions. We'll review it again as soon as
+        Take your time — there&rsquo;s no deadline on revisions. We&rsquo;ll review it again as soon as
         you resubmit.
       </Text>
+
+      <SignatureBlock name="Kemi" role="Editorial Team" brand="Kekere Stories" />
 
     </BaseEmail>
   );
