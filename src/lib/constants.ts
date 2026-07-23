@@ -10,7 +10,11 @@ export const KEKERE_SUBMISSIONS_EMAIL = "submission@narriva.pro";
 // contract offer/reminder/signed/declined, "your story is live". Anything
 // NOT about a submission or contract (OTP, password reset, referral rewards,
 // wallet history, withdrawals) should use KEKERE_GENERAL_FROM instead.
-export const KEKERE_SUBMISSIONS_FROM = `Kekere Stories <${KEKERE_SUBMISSIONS_EMAIL}>`;
+// Sent as "Kemi" (the same editorial voice writers already know from the
+// in-app writing assistant) rather than the faceless brand name — every
+// email sent under this identity should carry her SignatureBlock at the
+// bottom so the name on the envelope matches the name that signed it.
+export const KEKERE_SUBMISSIONS_FROM = `Kemi from Kekere <${KEKERE_SUBMISSIONS_EMAIL}>`;
 
 // Sender identity for general Kekere Stories account mail — OTP/email
 // verification, password reset, referral rewards, wallet transaction

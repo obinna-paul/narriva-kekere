@@ -8,6 +8,7 @@ import { StoryRejectedEmail } from "./story-rejected";
 import { RevisionsRequestedEmail } from "./revisions-requested";
 import { ResetPasswordEmail } from "./reset-password";
 import { PublishingAgreementEmail } from "./publishing-agreement";
+import { ContractDeclinedEmail } from "./contract-declined";
 import { WalletHistoryEmail, type WalletHistoryRow } from "./wallet-history";
 import { NoticeEmail } from "./notice";
 import { SITE_URL } from "@/content/decisions";
@@ -79,6 +80,14 @@ export async function renderPublishingAgreementEmail(props: {
   return render(createElement(PublishingAgreementEmail, props));
 }
 
+export async function renderContractDeclinedEmail(props: {
+  writerName: string;
+  storyTitle?: string;
+  submissionsEmail: string;
+}) {
+  return render(createElement(ContractDeclinedEmail, props));
+}
+
 export async function renderWalletHistoryEmail(props: {
   name: string;
   from: string;
@@ -124,6 +133,7 @@ export async function renderStoryUnpublishedEmail(props: {
         `Your story "${storyTitle}" has been unpublished from Kekere Stories. It's now back in draft status — readers who previously unlocked it retain access, and you're welcome to edit and resubmit it for review.`,
       ],
       highlight: { label: "Reason", rows: [reason] },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
     }),
   );
 }
@@ -142,6 +152,7 @@ export async function renderContractOfferEmail(props: {
         "A publishing contract has been sent to you. Please review it and sign with one tap — it's waiting for you in your Kekere Stories profile.",
       ],
       cta: { label: "Review & sign your contract →", url: contractUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
     }),
   );
 }
@@ -162,6 +173,49 @@ export async function renderContractReminderEmail(props: {
         `If you have questions, reply to this email or contact ${SITE_URL.replace("https://", "")}.`,
       ],
       cta: { label: "Review & sign your contract →", url: contractUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
+    }),
+  );
+}
+
+export async function renderEditsToReviewEmail(props: {
+  writerName: string;
+  storyTitle: string;
+  reviewUrl: string;
+}) {
+  const { writerName, storyTitle, reviewUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `Edits to review on "${storyTitle}"`,
+      heading: "A few changes for you to review",
+      lines: [
+        `Hi ${writerName},`,
+        `Our editor has reviewed "${storyTitle}" and proposed some changes for you to look over. Nothing is published yet — your story only moves forward once you accept the edits.`,
+        "You can accept the changes, or send them back with a note if something isn't right.",
+      ],
+      cta: { label: "Review the changes →", url: reviewUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
+    }),
+  );
+}
+
+export async function renderPostContractEditsEmail(props: {
+  writerName: string;
+  storyTitle: string;
+  reviewUrl: string;
+}) {
+  const { writerName, storyTitle, reviewUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `Final changes to review on "${storyTitle}"`,
+      heading: "One more look before you go live",
+      lines: [
+        `Hi ${writerName},`,
+        `Your contract for "${storyTitle}" is signed, and while preparing it for publication our editor made some changes for you to look over. Nothing is live yet — your story only goes live once you review these changes.`,
+        "You can accept the changes, or send them back with a note if something isn't right.",
+      ],
+      cta: { label: "Review the changes →", url: reviewUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
     }),
   );
 }

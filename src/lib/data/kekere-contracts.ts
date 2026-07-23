@@ -3,7 +3,7 @@ import { renderContractBody } from "@/lib/contracts/render";
 import { generateSignedContractPdf } from "@/lib/contracts/pdf";
 import { generateSignedContractDocx } from "@/lib/contracts/docx";
 import { sendEmail } from "@/lib/email/send";
-import { renderContractSignedEmail } from "@/lib/email/templates";
+import { renderContractSignedEmail, renderContractDeclinedEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { uploadPortalFile } from "@/lib/storage/r2";
@@ -319,14 +319,20 @@ export async function declineContract(
   });
 
   // A warmer note than a dry "you have declined…" — this is an emotional
-  // moment for a writer, so it reads like a person wrote it (plain text, no
-  // bulk-mail template) and leaves the door wide open without any pressure.
+  // moment for a writer, so it's styled like Kemi wrote it personally, with
+  // her signature at the bottom, rather than a dry system notice.
   const storyLabel = contract.story?.title ? `“${contract.story.title}”` : "your story";
+  const declinedHtml = await renderContractDeclinedEmail({
+    writerName: contract.writer.name,
+    storyTitle: contract.story?.title,
+    submissionsEmail: KEKERE_SUBMISSIONS_EMAIL,
+  });
   await sendEmail({
     from: KEKERE_SUBMISSIONS_FROM,
     to: contract.writer.email,
     subject: `Sorry to see ${storyLabel} go`,
-    body: `Hi ${contract.writer.name},\n\nAh — we were quietly hoping you'd say yes. You've declined the publishing agreement for ${storyLabel}, and that's completely your call. Your story, your rights, always.\n\nWe'll be honest: we're a little sad about it. We don't send an agreement for a story we aren't genuinely excited about, so ${storyLabel} slipping away stings just a bit on our end.\n\nBut there's zero pressure here. If you tapped decline by mistake, if you'd like to talk anything through, or if you simply change your mind next week, next month, or next year — we're one email away at ${KEKERE_SUBMISSIONS_EMAIL}. The door stays wide open.\n\nAnd if this is where we part ways for now: thank you for trusting us with your work long enough to consider it. Please keep writing. Stories like yours are exactly why Kekere exists.\n\nWarmly,\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+    body: `Hi ${contract.writer.name},\n\nAh — we were quietly hoping you'd say yes. You've declined the publishing agreement for ${storyLabel}, and that's completely your call. Your story, your rights, always.\n\nWe'll be honest: we're a little sad about it. We don't send an agreement for a story we aren't genuinely excited about, so ${storyLabel} slipping away stings just a bit on our end.\n\nBut there's zero pressure here. If you tapped decline by mistake, if you'd like to talk anything through, or if you simply change your mind next week, next month, or next year — we're one email away at ${KEKERE_SUBMISSIONS_EMAIL}. The door stays wide open.\n\nAnd if this is where we part ways for now: thank you for trusting us with your work long enough to consider it. Please keep writing. Stories like yours are exactly why Kekere exists.\n\nWarmly,\nKemi, from the Kekere Stories editorial team`,
+    html: declinedHtml,
   });
 
   return { success: true };

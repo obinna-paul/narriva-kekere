@@ -1,5 +1,6 @@
 import { Link, Section, Text } from "@react-email/components";
 import { BaseEmail, styles } from "./base";
+import { SignatureBlock } from "./signature";
 
 interface StoryAcceptedEmailProps {
   writerName: string;
@@ -71,10 +72,12 @@ export function StoryAcceptedEmail({
         </Link>
       </Section>
 
-      <Text style={{ ...styles.muted, marginBottom: 0 }}>
+      <Text style={styles.muted}>
         This contract offer expires in {expiresInDays} days. After that you&apos;ll need to resubmit
         your story if you&apos;d still like to publish with us.
       </Text>
+
+      <SignatureBlock name="Kemi" role="Editorial Team" brand="Kekere Stories" />
 
     </BaseEmail>
   );
