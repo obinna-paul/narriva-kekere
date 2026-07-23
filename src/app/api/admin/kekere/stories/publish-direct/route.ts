@@ -59,12 +59,20 @@ export const POST = withAuth(
 
     const writer = await prisma.user.findUnique({
       where: { id: writerId },
-      select: { name: true, email: true },
+      select: { name: true, email: true, createdByAdminId: true },
     });
 
     if (!writer) {
       return NextResponse.json({ error: "Writer not found" }, { status: 404 });
     }
+
+    // This route creates a story for an arbitrary existing writerId, so the
+    // signer isn't necessarily onboarded/admin-created — only writers with
+    // createdByAdminId set skip the ACCEPTED "to be published" queue and go
+    // straight to PUBLISHED on signing (see signContractAndPublishStory in
+    // kekere-contracts.ts). Checked the same way here so the copy sent below
+    // always matches what actually happens when this writer signs.
+    const isOnboarded = writer.createdByAdminId != null;
 
     const template = await prisma.kekereContractTemplate.findFirst({
       where: { contractType: "PUBLISHING" },
@@ -151,17 +159,24 @@ export const POST = withAuth(
       return { story, contract };
     });
 
+    // /kekere/contracts is the real, only contracts-inbox page — there is no
+    // /kekere/profile/contracts route.
+    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/contracts`;
     const acceptedHtml = await renderStoryAcceptedEmail({
       writerName: writer.name,
       storyTitle: title,
       cowrieCost,
       expiresInDays,
-      contractUrl: `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${contract.id}`,
+      contractUrl,
+      isLive: isOnboarded,
     }).catch(() => undefined);
+    const signInstruction = isOnboarded
+      ? "Your story goes live the moment you sign."
+      : "Signing moves your story into our publishing queue, where our editors prepare it for release.";
     await sendEmail({
       to: writer.email,
       subject: `"${title}" has been accepted for publishing — Kekere Stories`,
-      body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the publishing terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of every sale\n\nA publishing contract is waiting for you in the app. Open Kekere Stories, check your notifications, and sign it with one tap. Your story goes live the moment you sign.\n\nThe contract offer expires in ${expiresInDays} days — please sign before then.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
+      body: `Hi ${writer.name},\n\nGreat news — your story "${title}" has been accepted for publishing on Kekere Stories, an imprint of Narriva Publishing.\n\nHere are the publishing terms:\n• Price to readers: ${cowrieCost} cowrie${cowrieCost !== 1 ? "s" : ""}\n• Your earnings: 70% of every sale\n\nA publishing contract is waiting for you in the app. Open Kekere Stories, check your notifications, and sign it with one tap. ${signInstruction}\n\nThe contract offer expires in ${expiresInDays} days — please sign before then.\n\nThe Kekere Stories Team\n(An imprint of Narriva Publishing)`,
       from: KEKERE_SUBMISSIONS_FROM,
       html: acceptedHtml,
     });
@@ -170,8 +185,10 @@ export const POST = withAuth(
       userId: writerId,
       type: "CONTRACT_RECEIVED",
       title: `Publishing contract for "${title}"`,
-      body: "Kekere Stories has sent you a publishing contract. Tap to review and sign — your story goes live the moment you sign.",
-      link: `/kekere/profile/contracts/${contract.id}`,
+      body: isOnboarded
+        ? "Kekere Stories has sent you a publishing contract. Tap to review and sign — your story goes live the moment you sign."
+        : "Kekere Stories has sent you a publishing contract. Tap to review and sign — signing moves your story into our publishing queue.",
+      link: "/kekere/contracts",
     });
 
     return NextResponse.json({

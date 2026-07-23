@@ -8,6 +8,10 @@ interface StoryAcceptedEmailProps {
   writerSharePercent?: number;
   expiresInDays: number;
   contractUrl?: string;
+  /** True only for writers whose story goes live immediately on signing
+   * (onboarded/admin-authored). Everyone else enters the ACCEPTED "to be
+   * published" queue after signing, not straight to live. */
+  isLive: boolean;
 }
 
 export function StoryAcceptedEmail({
@@ -17,6 +21,7 @@ export function StoryAcceptedEmail({
   writerSharePercent = 70,
   expiresInDays,
   contractUrl = "https://narriva.pro/kekere/contracts",
+  isLive,
 }: StoryAcceptedEmailProps) {
   return (
     <BaseEmail preview={`"${storyTitle}" has been accepted for publishing on Kekere Stories`}>
@@ -25,7 +30,7 @@ export function StoryAcceptedEmail({
       <Text style={{ ...styles.muted, marginBottom: 20 }}>Publishing contract ready to sign</Text>
 
       <Text style={styles.p}>
-        Hi {writerName}, great news — your story <strong>"{storyTitle}"</strong> has been accepted
+        Hi {writerName}, great news — your story <strong>&ldquo;{storyTitle}&rdquo;</strong> has been accepted
         for publishing on Kekere Stories, an imprint of Narriva Publishing.
       </Text>
 
@@ -53,7 +58,10 @@ export function StoryAcceptedEmail({
 
       <Text style={styles.p}>
         A publishing contract is waiting for you in the app. Open Kekere Stories, check your
-        notifications, and sign it with one tap. Your story goes live the moment you sign.
+        notifications, and sign it with one tap.{" "}
+        {isLive
+          ? "Your story goes live the moment you sign."
+          : "Signing moves your story into our publishing queue, where our editors prepare it for release."}
       </Text>
 
       {/* CTA */}
@@ -64,8 +72,8 @@ export function StoryAcceptedEmail({
       </Section>
 
       <Text style={{ ...styles.muted, marginBottom: 0 }}>
-        This contract offer expires in {expiresInDays} days. After that you'll need to resubmit
-        your story if you'd still like to publish with us.
+        This contract offer expires in {expiresInDays} days. After that you&apos;ll need to resubmit
+        your story if you&apos;d still like to publish with us.
       </Text>
 
     </BaseEmail>

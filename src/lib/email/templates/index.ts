@@ -29,6 +29,7 @@ export async function renderStoryAcceptedEmail(props: {
   writerSharePercent?: number;
   expiresInDays: number;
   contractUrl?: string;
+  isLive: boolean;
 }) {
   return render(createElement(StoryAcceptedEmail, props));
 }
@@ -39,6 +40,7 @@ export async function renderContractSignedEmail(props: {
   signedAt: string;
   storyUrl?: string;
   pdfAttached?: boolean;
+  isLive: boolean;
 }) {
   return render(createElement(ContractSignedEmail, props));
 }

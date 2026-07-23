@@ -27,6 +27,9 @@ export interface WriterReviewProps {
   summaryNote: string | null;
   cowrieCost: number;
   writerSharePercent: number;
+  /** True once the contract's already signed — these are the editor's final
+   * tracked changes before publishing, not the first pre-contract pass. */
+  isPostContract: boolean;
 }
 
 type ParaKind = "unchanged" | "changed" | "added" | "removed";
@@ -49,7 +52,7 @@ export function WriterReviewView(props: WriterReviewProps) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<null | "contract" | "returned">(null);
+  const [done, setDone] = useState<null | "contract" | "accepted_post_contract" | "returned">(null);
 
   const editedParas = useMemo(() => docParagraphsToHtml(props.editedBody), [props.editedBody]);
   const originalParas = useMemo(() => docParagraphsToHtml(props.originalBody), [props.originalBody]);
@@ -121,8 +124,13 @@ export function WriterReviewView(props: WriterReviewProps) {
         return;
       }
       const data = await res.json();
-      setDone(data.outcome === "contract" ? "contract" : "returned");
-      setTimeout(() => router.push(data.outcome === "contract" ? "/kekere/contracts" : "/kekere/feed"), 1500);
+      const outcome: "contract" | "accepted_post_contract" | "returned" =
+        data.outcome === "contract" || data.outcome === "accepted_post_contract" ? data.outcome : "returned";
+      setDone(outcome);
+      setTimeout(
+        () => router.push(outcome === "contract" ? "/kekere/contracts" : "/kekere/feed"),
+        1500,
+      );
     } catch {
       setError("Network error. Please try again.");
       setBusy(false);
@@ -136,12 +144,18 @@ export function WriterReviewView(props: WriterReviewProps) {
           <Check size={28} />
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[var(--color-ink)]">
-          {done === "contract" ? "Edits accepted" : "Sent back to your editor"}
+          {done === "contract"
+            ? "Edits accepted"
+            : done === "accepted_post_contract"
+              ? "Changes approved"
+              : "Sent back to your editor"}
         </h1>
         <p className="mx-auto mt-3 max-w-sm text-[14px] leading-relaxed text-[var(--color-ink-muted)]">
           {done === "contract"
             ? "Taking you to your publishing contract — sign it and your story enters the publishing queue."
-            : "Your editor will review your feedback and get back to you. We'll notify you when there's an update."}
+            : done === "accepted_post_contract"
+              ? "Your editor will publish your story shortly — we'll let you know the moment it's live."
+              : "Your editor will review your feedback and get back to you. We'll notify you when there's an update."}
         </p>
       </div>
     );
@@ -372,7 +386,9 @@ export function WriterReviewView(props: WriterReviewProps) {
           </p>
         ) : (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
-            By accepting all changes, you agree that this version of your story will move forward to the publishing contract.
+            {props.isPostContract
+              ? "By accepting all changes, you agree that this version of your story is ready to publish."
+              : "By accepting all changes, you agree that this version of your story will move forward to the publishing contract."}
           </p>
         )}
       </div>
