@@ -69,7 +69,7 @@ function LibraryCard({
       >
         {story.coverImageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={story.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" />
+          <img src={story.coverImageUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         )}
         <span className="absolute right-[6px] top-[6px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[6px] py-[2px] text-[8px] font-bold text-white">
           {story.readingTimeMinutes}m

@@ -63,6 +63,7 @@ function RowCard({
             alt=""
             className="absolute inset-0 h-full w-full object-cover object-center"
             loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
         )}
         <span className="absolute right-[9px] top-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
@@ -399,6 +400,7 @@ export function FeedContent({
                       alt=""
                       className="absolute inset-0 h-full w-full object-cover object-center"
                       loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                   )}
                   <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">

@@ -236,6 +236,7 @@ export function KemiChat({ readerName, readerId }: { readerName?: string; reader
                                       src={rec.coverImageUrl}
                                       alt=""
                                       className="absolute inset-0 h-full w-full object-cover"
+                                      onError={(e) => { e.currentTarget.style.display = "none"; }}
                                     />
                                   )}
                                   {rec.isAdult && (

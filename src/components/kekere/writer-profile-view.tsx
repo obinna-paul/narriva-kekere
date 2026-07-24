@@ -50,7 +50,7 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
       >
         {story.coverImageRef && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={storyCoverUrl(story.coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <img src={storyCoverUrl(story.coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         )}
         {story.isAdult && <MatureBadge className="absolute right-[4px] top-[4px] px-[4px] py-[1px] text-[7.5px]" />}
       </div>

@@ -181,7 +181,7 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
                 >
                   {story.coverImageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={story.coverImageUrl} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
+                    <img src={story.coverImageUrl} alt="" className="h-full w-full object-cover object-center" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

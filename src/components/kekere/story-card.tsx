@@ -26,6 +26,7 @@ export function StoryCard({ story, className, readProgress, onPreview }: StoryCa
             alt=""
             className="absolute inset-0 h-full w-full object-cover object-center"
             loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />

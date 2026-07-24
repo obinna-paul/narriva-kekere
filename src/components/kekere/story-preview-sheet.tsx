@@ -137,6 +137,7 @@ export function StoryPreviewSheet({
                   src={story.coverImageUrl}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover object-center"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(0,0,0,0.88)] via-[rgba(0,0,0,0.25)] to-transparent" />
