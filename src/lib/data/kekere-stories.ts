@@ -1,8 +1,11 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { previewFraction } from "@/lib/utils/text-preview";
-import { STORY_TIER_RANGES, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
+import { STORY_TIER_RANGES, SITE_URL, type StoryTier as LowercaseStoryTier } from "@/content/decisions";
 import { categoryForTag, resolveCategoryBySlug, type TagCategory } from "@/content/story-tags";
+import { sendEmail } from "@/lib/email/send";
+import { renderStorySubmittedEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
 
@@ -397,10 +400,26 @@ export async function submitStory(id: string, authorId: string): Promise<Story> 
     );
   }
 
-  return prisma.story.update({
+  const updated = await prisma.story.update({
     where: { id },
     data: { status: "SUBMITTED", submittedAt: new Date() },
+    include: { author: { select: { name: true, email: true } } },
   });
+
+  const submittedHtml = await renderStorySubmittedEmail({
+    writerName: updated.author.name,
+    storyTitle: updated.title,
+    storyUrl: `${SITE_URL}/kekere/write?id=${updated.id}`,
+  });
+  await sendEmail({
+    to: updated.author.email,
+    subject: `We've got "${updated.title}" — Kekere Stories`,
+    body: `Hi ${updated.author.name},\n\nThank you for submitting "${updated.title}" to Kekere Stories. It's now with our editorial team for review.\n\nWe read every submission carefully, so it usually takes us 5–7 business days to get back to you. We'll email you the moment we have a decision — no need to do anything else in the meantime.\n\nKemi, from the Kekere Stories editorial team`,
+    html: submittedHtml,
+    from: KEKERE_SUBMISSIONS_FROM,
+  });
+
+  return updated;
 }
 
 export interface AuthorStorySummary {

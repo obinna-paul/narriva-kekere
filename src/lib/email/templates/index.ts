@@ -178,6 +178,27 @@ export async function renderContractReminderEmail(props: {
   );
 }
 
+export async function renderStorySubmittedEmail(props: {
+  writerName: string;
+  storyTitle: string;
+  storyUrl: string;
+}) {
+  const { writerName, storyTitle, storyUrl } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `We've got "${storyTitle}" — here's what happens next`,
+      heading: "Your story is in our hands",
+      lines: [
+        `Hi ${writerName},`,
+        `Thank you for submitting "${storyTitle}" to Kekere Stories. It's now with our editorial team for review.`,
+        "We read every submission carefully, so it usually takes us 5–7 business days to get back to you. We'll email you the moment we have a decision — no need to do anything else in the meantime.",
+      ],
+      cta: { label: "View your submission →", url: storyUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
+    }),
+  );
+}
+
 export async function renderEditsToReviewEmail(props: {
   writerName: string;
   storyTitle: string;
