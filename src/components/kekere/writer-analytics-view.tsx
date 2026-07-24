@@ -141,7 +141,7 @@ function StoryCoverThumb({ coverColor, coverImageRef }: { coverColor: string; co
     >
       {coverImageRef && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={storyCoverUrl(coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" />
+        <img src={storyCoverUrl(coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
       )}
     </div>
   );
