@@ -2,6 +2,7 @@ import type { StoryTier } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getRatingSummaryByStory, getWriterRatingSummary, type RatingSummary } from "@/lib/data/kekere-ratings";
 import { MIN_COMING_SOON_WORD_COUNT } from "@/content/kekere-coming-soon";
+import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 
 export { MIN_COMING_SOON_WORD_COUNT };
 
@@ -12,6 +13,11 @@ export interface PublicWriterProfile {
   country: string | null;
   avatarColor: string | null;
   avatar: string | null;
+  // Precomputed here (not by the client) — CLOUDINARY_CLOUD_NAME isn't
+  // NEXT_PUBLIC_-prefixed, so a "use client" component calling
+  // userAvatarUrl(avatar) itself would build a URL with an empty cloud
+  // name and every image would 404. See cloudinary-urls.ts's doc comment.
+  avatarUrl: string | null;
   socialLinks: { label: string; href: string }[];
   memberSince: Date;
   kekereUsername: string | null;
@@ -123,6 +129,7 @@ export async function getPublicWriterProfile(identifier: string): Promise<Public
       country: user.country,
       avatarColor: user.avatarColor,
       avatar: user.avatar,
+      avatarUrl: user.avatar ? userAvatarUrl(user.avatar) : null,
       socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
       memberSince: user.createdAt,
       kekereUsername: user.kekereUsername,
@@ -139,6 +146,8 @@ export interface WriterProfileStory {
   hookLine: string;
   coverColor: string;
   coverImageRef: string | null;
+  // See PublicWriterProfile.avatarUrl above for why this is precomputed here.
+  coverImageUrl: string | null;
   readingTime: number;
   tier: StoryTier;
   publishedAt: Date;
@@ -195,6 +204,7 @@ export async function getWriterPublishedStories(userId: string): Promise<WriterP
     hookLine: s.hookLine,
     coverColor: s.coverColor,
     coverImageRef: s.coverImageRef,
+    coverImageUrl: s.coverImageRef ? storyCoverUrl(s.coverImageRef) : null,
     readingTime: s.readingTime,
     tier: s.tier,
     publishedAt: s.publishedAt ?? s.createdAt,
@@ -278,6 +288,8 @@ export interface SimilarWriter {
   id: string;
   name: string;
   avatar: string | null;
+  // See PublicWriterProfile.avatarUrl above for why this is precomputed here.
+  avatarUrl: string | null;
   avatarColor: string | null;
   kekereUsername: string | null;
   topStoryTitle: string;
@@ -332,6 +344,7 @@ export async function getSimilarWriters(writerId: string, limit = 3): Promise<Si
       id: c.id,
       name: c.name,
       avatar: c.avatar,
+      avatarUrl: c.avatar ? userAvatarUrl(c.avatar) : null,
       avatarColor: c.avatarColor,
       kekereUsername: c.kekereUsername,
       topStoryTitle: c.stories[0]?.title ?? "",

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { FollowButton } from "@/components/kekere/follow-button";
-import { userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 
 export interface WriterFollowHeaderProps {
   writerId: string;
@@ -10,13 +9,13 @@ export interface WriterFollowHeaderProps {
   initialFollowing: boolean;
   initialFollowerCount: number;
   isOwnProfile: boolean;
-  followerAvatars: readonly { id: string; name: string; avatar: string | null; avatarColor: string | null }[];
+  followerAvatars: readonly { id: string; name: string; avatarUrl: string | null; avatarColor: string | null }[];
 }
 
 function FollowerAvatarStack({
   avatars,
 }: {
-  avatars: readonly { id: string; name: string; avatar: string | null; avatarColor: string | null }[];
+  avatars: readonly { id: string; name: string; avatarUrl: string | null; avatarColor: string | null }[];
 }) {
   if (avatars.length === 0) return null;
   return (
@@ -29,9 +28,9 @@ function FollowerAvatarStack({
             className="flex h-6 w-6 flex-none items-center justify-center overflow-hidden rounded-full ring-2 ring-[var(--color-bg)]"
             style={{ background: `linear-gradient(135deg, #E08A4A, ${a.avatarColor ?? "#C75D2C"})` }}
           >
-            {a.avatar ? (
+            {a.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={userAvatarUrl(a.avatar)} alt="" className="h-full w-full object-cover" />
+              <img src={a.avatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <span className="text-[9px] font-semibold text-white">{initial}</span>
             )}

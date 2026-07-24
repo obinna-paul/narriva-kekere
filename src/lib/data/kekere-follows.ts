@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderWriterPublishedEmail, renderNewFollowerEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/content/decisions";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
+import { userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 
 export type FollowResult =
   | { success: true; followerCount: number }
@@ -95,6 +96,11 @@ export interface FollowerAvatar {
   id: string;
   name: string;
   avatar: string | null;
+  // Precomputed here, not by the client — CLOUDINARY_CLOUD_NAME isn't
+  // NEXT_PUBLIC_-prefixed, so a "use client" component calling
+  // userAvatarUrl(avatar) itself would build a URL with an empty cloud
+  // name and every avatar would 404. See cloudinary-urls.ts's doc comment.
+  avatarUrl: string | null;
   avatarColor: string | null;
 }
 
@@ -108,7 +114,7 @@ export async function getRecentFollowerAvatars(writerId: string, limit = 6): Pro
     take: limit,
     select: { follower: { select: { id: true, name: true, avatar: true, avatarColor: true } } },
   });
-  return rows.map((r) => r.follower);
+  return rows.map((r) => ({ ...r.follower, avatarUrl: r.follower.avatar ? userAvatarUrl(r.follower.avatar) : null }));
 }
 
 export interface FollowedWriter {

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { MapPin, Star, Quote, Users, BookOpen, Heart } from "lucide-react";
-import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type {
@@ -48,9 +47,9 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
         className="relative h-[86px] w-[64px] flex-none overflow-hidden rounded-lg"
         style={{ backgroundColor: story.coverColor }}
       >
-        {story.coverImageRef && (
+        {story.coverImageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={storyCoverUrl(story.coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          <img src={story.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         )}
         {story.isAdult && <MatureBadge className="absolute right-[4px] top-[4px] px-[4px] py-[1px] text-[7.5px]" />}
       </div>
@@ -194,7 +193,7 @@ function PraiseWallCard({ note }: { note: PraiseWallNote }) {
 
 function SimilarWriterCard({ writer }: { writer: SimilarWriter }) {
   const initial = writer.name.trim().charAt(0).toUpperCase() || "?";
-  const avatarUrl = writer.avatar ? userAvatarUrl(writer.avatar) : null;
+  const avatarUrl = writer.avatarUrl;
   const avatarColor = writer.avatarColor ?? "#C75D2C";
   return (
     <Link
@@ -248,7 +247,7 @@ export function WriterProfileView({
   isOwnProfile,
 }: WriterProfileViewProps) {
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
-  const avatarUrl = profile.avatar ? userAvatarUrl(profile.avatar) : null;
+  const avatarUrl = profile.avatarUrl;
   const avatarColor = profile.avatarColor ?? "#C75D2C";
   const hasMeta = !!(profile.country || profile.memberSince);
   const hasBio = !!(profile.bio && profile.bio.trim());
