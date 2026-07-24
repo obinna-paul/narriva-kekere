@@ -165,13 +165,41 @@ export default async function KekereFeedPage() {
     ? { slug: signatureRowMeta.slug, feedHeading: signatureRowMeta.title, stories: signatureStories.map((s) => toFeedStoryData(s)) }
     : null;
 
+  // Each row above is picked independently (they run in parallel and don't
+  // know about each other's results), so the same story can easily land in
+  // more than one row — e.g. "We think you'll love these" and "Because you
+  // love X" both drawing on overlapping tag affinities. That reads as
+  // broken personalization rather than distinct picks, so dedupe across
+  // rows here: once a story has appeared in an earlier (higher, more
+  // prominent) row, later rows drop it. Render order in FeedContent is the
+  // priority order — Winner's Circle and Editor's Pick are curated/fixed,
+  // so they always keep their story; algorithmic rows below them yield.
+  const claimedStoryIds = new Set<string>();
+  const claim = (id: string) => claimedStoryIds.add(id);
+  const dedupe = <T extends { id: string }>(stories: T[]): T[] => {
+    const kept = stories.filter((s) => !claimedStoryIds.has(s.id));
+    kept.forEach((s) => claim(s.id));
+    return kept;
+  };
+
+  winnerStories.forEach((s) => claim(s.id));
+  if (featuredStory) claim(featuredStory.id);
+  inProgressStories.forEach((s) => claim(s.id));
+
+  const dedupedTrending = dedupe(trending);
+  const dedupedRecommendedStories = dedupe(recommendedStories);
+  const dedupedSignatureRow: FeedTagRow | null = signatureRow
+    ? { ...signatureRow, stories: dedupe(signatureRow.stories) }
+    : null;
+  const dedupedTagRows: FeedTagRow[] = feedTagRows.map((row) => ({ ...row, stories: dedupe(row.stories) }));
+
   // Collect all visible story IDs to batch-fetch reading progress
   const allStoryIds = [
-    ...trending.map((s) => s.id),
+    ...dedupedTrending.map((s) => s.id),
     ...inProgressStories.map((s) => s.id),
-    ...recommendedStories.map((s) => s.id),
-    ...(signatureRow?.stories.map((s) => s.id) ?? []),
-    ...feedTagRows.flatMap((row) => row.stories.map((s) => s.id)),
+    ...dedupedRecommendedStories.map((s) => s.id),
+    ...(dedupedSignatureRow?.stories.map((s) => s.id) ?? []),
+    ...dedupedTagRows.flatMap((row) => row.stories.map((s) => s.id)),
   ];
   const readingProgress = userId
     ? await getReadingProgressBatch(userId, Array.from(new Set(allStoryIds)))
@@ -181,13 +209,13 @@ export default async function KekereFeedPage() {
     <KekereTheme>
       <KekereNavWrapper />
       <FeedContent
-        trending={trending}
+        trending={dedupedTrending}
         featuredStory={featuredStory}
         winnerStories={winnerStories}
         inProgressStories={inProgressStories}
-        recommendedStories={recommendedStories}
-        signatureRow={signatureRow}
-        tagRows={feedTagRows}
+        recommendedStories={dedupedRecommendedStories}
+        signatureRow={dedupedSignatureRow}
+        tagRows={dedupedTagRows}
         balance={wallet?.spendingBalance ?? 0}
         isLoggedIn={!!userId}
         firstReadFree={firstReadFree}
