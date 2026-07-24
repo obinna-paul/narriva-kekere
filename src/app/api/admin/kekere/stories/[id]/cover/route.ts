@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { uploadStoryCover } from "@/lib/storage/cloudinary";
+import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -53,7 +54,7 @@ export const POST = withAuth(
       data: { coverImageRef },
     });
 
-    return NextResponse.json({ success: true, coverImageRef });
+    return NextResponse.json({ success: true, coverImageRef, previewUrl: storyCoverUrl(coverImageRef) });
   },
   { roles: ["ADMIN"] },
 );

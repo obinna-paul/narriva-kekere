@@ -1,7 +1,7 @@
-import { Prisma, type StoryTier } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
-import { renderStoryAcceptedEmail, renderEditsToReviewEmail, renderPostContractEditsEmail } from "@/lib/email/templates";
+import { renderStoryAcceptedEmail, renderPostContractEditsEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM, SUPPORT_EMAIL } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
@@ -11,11 +11,14 @@ import { listEditorialComments, type EditorialCommentDTO } from "@/lib/data/keke
 import { WRITER_EARNINGS_RATE } from "@/content/decisions";
 
 /**
- * The editorial review → contract flow. Two consents in order: the writer
- * approves the *edits* (CHANGES_PROPOSED → they accept), then signs the
- * *contract* (PENDING_CONTRACT → sign route → PUBLISHED). Publishing terms
- * (price/tier/tags/cover/rating) are captured when the admin sends the edits,
- * so acceptance can go straight to the contract.
+ * The editorial review → contract flow. At Story Review (SUBMITTED), the
+ * editor only reads and decides approve/decline/request-revisions — approving
+ * captures just the cowrie price (the one term the contract text actually
+ * states) and sends the agreement. Once the writer signs, the story enters
+ * the To Be Published queue (ACCEPTED), where tier/tags/cover/rating and any
+ * text edits are set via the generic admin edit endpoint and, if the editor
+ * makes changes, one more writer-approval round (CHANGES_PROPOSED → they
+ * accept) before Publish.
  */
 
 export class ReviewFlowError extends Error {
@@ -27,10 +30,6 @@ export class ReviewFlowError extends Error {
 
 export interface PublishingTerms {
   cowrieCost: number;
-  tier: StoryTier;
-  tagIds: string[];
-  coverImageRef?: string;
-  isAdult?: boolean;
 }
 
 /**
@@ -84,24 +83,15 @@ async function promoteWorkingCopy(
   return { hookLine: promotedHookLine, wordCount: promotedWordCount, readingTime: promotedReadingTime, hasEditedBody };
 }
 
-/** Sets the publishing terms + tags on a story row (does NOT change status).
- * Shared by the no-edits fast path (publish route) and send-edits-to-writer. */
+/** Sets the agreed cowrie price on a story row (does NOT change status).
+ * Called by the Story Review approve action before the contract is created —
+ * this is the only term the contract text itself states, so it's the only
+ * thing set here. Tier/tags/cover/rating are set later via the generic admin
+ * edit endpoint once the story is in the To Be Published queue. */
 export async function setPublishingTerms(storyId: string, terms: PublishingTerms): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    await tx.story.update({
-      where: { id: storyId },
-      data: {
-        cowrieCost: terms.cowrieCost,
-        tier: terms.tier,
-        ...(terms.coverImageRef ? { coverImageRef: terms.coverImageRef } : {}),
-        ...(terms.isAdult !== undefined ? { isAdult: terms.isAdult } : {}),
-      },
-    });
-    await tx.storyTag.deleteMany({ where: { storyId } });
-    await tx.storyTag.createMany({
-      data: terms.tagIds.map((tagId) => ({ storyId, tagId })),
-      skipDuplicates: true,
-    });
+  await prisma.story.update({
+    where: { id: storyId },
+    data: { cowrieCost: terms.cowrieCost },
   });
 }
 
@@ -115,8 +105,8 @@ export interface FinalizeContractResult {
  * Promotes the editorial working copy to the live story (snapshotting the
  * writer's original), creates the PENDING publishing contract, moves the story
  * to PENDING_CONTRACT, and sends the acceptance email + in-app notification.
- * Assumes the publishing terms (cowrieCost/tier/tags/cover/rating) are already
- * set on the row. Shared by the publish route's fast path and writer accept.
+ * Assumes the cowrie price is already set on the row (via setPublishingTerms).
+ * Called by the Story Review approve action.
  */
 export async function finalizeContract(
   storyId: string,
@@ -231,59 +221,6 @@ export async function finalizeContract(
 }
 
 /**
- * Admin sends the editorial working copy + comments to the writer for
- * approval. Captures the publishing terms now (so acceptance can go straight
- * to the contract) and moves the story to CHANGES_PROPOSED. No promotion, no
- * contract yet.
- */
-export async function sendEditsToWriter(
-  storyId: string,
-  input: PublishingTerms & { summaryNote?: string },
-): Promise<{ writerName: string }> {
-  const story = await prisma.story.findUnique({
-    where: { id: storyId },
-    include: { author: { select: { id: true, name: true, email: true } } },
-  });
-  if (!story) throw new ReviewFlowError("not_found", "Story not found");
-  if (story.status !== "SUBMITTED" && story.status !== "REVISIONS_REQUESTED") {
-    throw new ReviewFlowError("illegal_state", `Can't send edits while the story is ${story.status}.`);
-  }
-
-  await setPublishingTerms(storyId, input);
-  await prisma.story.update({
-    where: { id: storyId },
-    data: {
-      status: "CHANGES_PROPOSED",
-      editSummaryNote: input.summaryNote?.trim() || null,
-      editWriterNote: null,
-    },
-  });
-
-  const reviewUrl = `${SITE_URL}/kekere/review/${storyId}`;
-  await createNotification({
-    userId: story.author.id,
-    type: "EDITS_PROPOSED",
-    title: `Edits to review on "${story.title}"`,
-    body: "Our editor has proposed some changes to your story. Review them and accept before it goes to contract.",
-    link: `/kekere/review/${storyId}`,
-  });
-  const editsToReviewHtml = await renderEditsToReviewEmail({
-    writerName: story.author.name,
-    storyTitle: story.title,
-    reviewUrl,
-  });
-  await sendEmail({
-    to: story.author.email,
-    subject: `Edits to review on "${story.title}" — Kekere Stories`,
-    body: `Hi ${story.author.name},\n\nOur editor has reviewed "${story.title}" and proposed some changes for you to look over. Nothing is published yet — your story only moves forward once you accept the edits.\n\nReview them here: ${reviewUrl}\n\nYou can accept the changes, or send them back with a note if something isn't right.\n\nKemi, from the Kekere Stories editorial team`,
-    html: editsToReviewHtml,
-    from: KEKERE_SUBMISSIONS_FROM,
-  });
-
-  return { writerName: story.author.name };
-}
-
-/**
  * Whether a story has already had a contract signed for it — the reliable
  * way to tell a stage-1 (pre-contract) CHANGES_PROPOSED review apart from a
  * stage-2 (post-contract, "to be published" queue) one, since both use the
@@ -299,12 +236,12 @@ export async function isPostContractStory(storyId: string): Promise<boolean> {
 }
 
 /**
- * Stage 2: the editor has made tracked changes to an already-ACCEPTED
- * (contract signed) story and sends them to the writer for one more round of
- * approval before publishing. Unlike sendEditsToWriter (stage 1), publishing
- * terms are never touched here — they were already locked in when the
- * contract was signed, and re-opening cowrie cost/tier/tags after a writer
- * has agreed to specific terms would be the wrong thing to do.
+ * The editor has made tracked changes to an already-ACCEPTED (contract
+ * signed) story and sends them to the writer for one more round of approval
+ * before publishing. Publishing terms are never touched here — the cowrie
+ * price was already locked in when the contract was signed, and re-opening
+ * it after a writer has agreed to a specific price would be the wrong thing
+ * to do.
  */
 export async function sendPostContractEditsToWriter(
   storyId: string,

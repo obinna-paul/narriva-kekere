@@ -199,27 +199,6 @@ export async function renderStorySubmittedEmail(props: {
   );
 }
 
-export async function renderEditsToReviewEmail(props: {
-  writerName: string;
-  storyTitle: string;
-  reviewUrl: string;
-}) {
-  const { writerName, storyTitle, reviewUrl } = props;
-  return render(
-    createElement(NoticeEmail, {
-      preview: `Edits to review on "${storyTitle}"`,
-      heading: "A few changes for you to review",
-      lines: [
-        `Hi ${writerName},`,
-        `Our editor has reviewed "${storyTitle}" and proposed some changes for you to look over. Nothing is published yet — your story only moves forward once you accept the edits.`,
-        "You can accept the changes, or send them back with a note if something isn't right.",
-      ],
-      cta: { label: "Review the changes →", url: reviewUrl },
-      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
-    }),
-  );
-}
-
 export async function renderPostContractEditsEmail(props: {
   writerName: string;
   storyTitle: string;

@@ -8,21 +8,15 @@ import { setPublishingTerms, finalizeContract, ReviewFlowError } from "@/lib/dat
 
 const publishSchema = z.object({
   cowrieCost: z.number().int().min(1).max(10),
-  tier: z.enum(["STANDARD", "FEATURED", "CHAMPION"]),
-  tagIds: z.array(z.string()).min(1, "Select at least one tag").max(2, "Select at most two tags"),
-  /** Versioned Cloudinary ref — if omitted the existing coverImageRef is kept */
-  coverImageRef: z.string().optional(),
   expiresInDays: z.number().int().min(3).max(60).default(14),
-  /** Gates the reader behind an 18+ interstitial and shows the mature-content
-   * badge everywhere the story is listed. Omitted means "leave as-is." */
-  isAdult: z.boolean().optional(),
 });
 
 /**
- * The no-editorial-changes fast path: an admin approves a story as-is (or with
- * edits already baked into the working copy) and sends the publishing contract
- * straight away. When the admin has proposed edits the writer must approve
- * first, the review queue calls send-to-writer instead (CHANGES_PROPOSED).
+ * Approve a story at the initial Story Review Queue stage: the writer's
+ * cowrie price is the only term that's contractual (the agreement text
+ * states "Agreed Cowrie Price: X cowries"), so it's the only thing collected
+ * here. Cover, tier, tags, and mature-content rating are all set later, once
+ * the writer has signed and the story enters the To Be Published queue.
  */
 export const PUT = withAuth(
   async (request, _session, { params }) => {
@@ -43,10 +37,10 @@ export const PUT = withAuth(
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { cowrieCost, tier, tagIds, coverImageRef, expiresInDays, isAdult } = parsed.data;
+    const { cowrieCost, expiresInDays } = parsed.data;
 
     try {
-      await setPublishingTerms(id, { cowrieCost, tier, tagIds, coverImageRef, isAdult });
+      await setPublishingTerms(id, { cowrieCost });
       const result = await finalizeContract(id, { expiresInDays });
       return NextResponse.json({
         success: true,
