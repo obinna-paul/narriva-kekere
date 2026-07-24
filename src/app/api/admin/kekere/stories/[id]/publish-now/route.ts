@@ -6,6 +6,10 @@ import { prisma } from "@/lib/db/prisma";
 import { nextSlugForTitle } from "@/lib/data/kekere-slugs";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { createNotification } from "@/lib/notifications/create";
+import { sendEmail } from "@/lib/email/send";
+import { renderStoryLiveEmail } from "@/lib/email/templates";
+import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { SITE_URL } from "@/content/decisions";
 
 /**
  * Pushes a story from ACCEPTED to PUBLISHED — the story has already been
@@ -19,7 +23,13 @@ export const PUT = withAuth(
 
     const story = await prisma.story.findUnique({
       where: { id },
-      select: { id: true, status: true, title: true, authorId: true },
+      select: {
+        id: true,
+        status: true,
+        title: true,
+        authorId: true,
+        author: { select: { name: true, email: true } },
+      },
     });
 
     if (!story) return NextResponse.json({ error: "Story not found" }, { status: 404 });
@@ -50,6 +60,19 @@ export const PUT = withAuth(
       body: "Your story is now live on Kekere Stories. Readers can find and unlock it right now.",
       link: `/kekere/story/${slug ?? id}`,
     }).catch(console.error);
+
+    const storyUrl = `${SITE_URL}/kekere/story/${slug ?? id}`;
+    renderStoryLiveEmail({ writerName: story.author.name, storyTitle: story.title, storyUrl })
+      .then((html) =>
+        sendEmail({
+          to: story.author.email,
+          subject: `"${story.title}" is now live — Kekere Stories`,
+          body: `Hi ${story.author.name},\n\n"${story.title}" just went live on Kekere Stories. Readers can find and unlock it right now.\n\nSee it here: ${storyUrl}\n\nEvery time someone unlocks it, 70% of the cowrie payment comes directly to your writer wallet.\n\nKemi, from the Kekere Stories editorial team`,
+          html,
+          from: KEKERE_SUBMISSIONS_FROM,
+        }),
+      )
+      .catch(console.error);
 
     return NextResponse.json({ success: true, slug, publishedAt: publishedAt.toISOString() });
   },

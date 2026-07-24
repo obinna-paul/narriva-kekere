@@ -88,6 +88,28 @@ export async function renderContractDeclinedEmail(props: {
   return render(createElement(ContractDeclinedEmail, props));
 }
 
+export async function renderStoryLiveEmail(props: {
+  writerName: string;
+  storyTitle: string;
+  storyUrl: string;
+  writerSharePercent?: number;
+}) {
+  const { writerName, storyTitle, storyUrl, writerSharePercent = 70 } = props;
+  return render(
+    createElement(NoticeEmail, {
+      preview: `"${storyTitle}" is now live on Kekere Stories`,
+      heading: "Your story is live 🎉",
+      lines: [
+        `Hi ${writerName},`,
+        `"${storyTitle}" just went live on Kekere Stories. Readers can find and unlock it right now.`,
+        `Every time someone unlocks it, ${writerSharePercent}% of the cowrie payment comes directly to your writer wallet.`,
+      ],
+      cta: { label: "See your story on Kekere →", url: storyUrl },
+      signature: { name: "Kemi", role: "Editorial Team", brand: "Kekere Stories" },
+    }),
+  );
+}
+
 export async function renderWalletHistoryEmail(props: {
   name: string;
   from: string;
