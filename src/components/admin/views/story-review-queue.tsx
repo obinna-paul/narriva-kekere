@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
 import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEditor";
-import { isValidTiptapDoc, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { isValidTiptapDoc, docParagraphsToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { SaveStatus } from "@/lib/tiptap/save-status";
 import { ReviewEditorialComments } from "@/components/admin/views/review-editorial-comments";
 
@@ -66,7 +66,7 @@ interface NewTagSuggestion {
 
 interface DecisionPanelProps {
   story: StoryDetail;
-  onAction: (action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean, tier: string) => void;
+  onAction: (action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number) => void;
   acting: boolean;
   coverImageRef: string | null;
   coverPreview: string | null;
@@ -74,26 +74,49 @@ interface DecisionPanelProps {
   onCoverRemoved: () => void;
   /** True when the admin has made editorial changes (edited text or inline
    * notes) the writer must approve — turns the publish action into
-   * "send to writer" instead of the straight-to-contract fast path. */
+   * "send to writer" instead of the direct-publish fast path. Only ever
+   * relevant in the "publishing" (To Be Published) queue — Story Review never
+   * offers editing, so it's always false there. */
   requiresWriterApproval: boolean;
   /** Called when the admin accepts the suggested hookline. The parent
    * handles saving to the database AND updating local state — the panel
    * just calls this and waits for it to resolve. */
   onApplyHookLine?: (hookLine: string) => Promise<boolean>;
   queueTab: "submitted" | "publishing";
+  /** Called after tier/tags/mature-content persist server-side, so the
+   * parent's story detail (and the header tier badge) stay in sync. Only
+   * used in the "publishing" queue — Story Review never sets these. */
+  onDetailsPersisted: (patch: Partial<Pick<StoryDetail, "tier" | "isAdult" | "tagIds">>) => void;
 }
 
-function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, onCoverUploaded, onCoverRemoved, requiresWriterApproval, onApplyHookLine, queueTab }: DecisionPanelProps) {
+function DecisionPanel({
+  story,
+  onAction,
+  acting,
+  coverImageRef,
+  coverPreview,
+  onCoverUploaded,
+  onCoverRemoved,
+  requiresWriterApproval,
+  onApplyHookLine,
+  queueTab,
+  onDetailsPersisted,
+}: DecisionPanelProps) {
+  // Story Review only: which of Approve/Revisions/Decline is selected.
   const [tab, setTab] = useState<"publish" | "reject" | "revisions">("publish");
   const [note, setNote] = useState("");
   const [cowrieCost, setCowrieCost] = useState(Math.max(1, Math.min(10, story.cowrieCost || 3)));
+
+  // To Be Published only: story details, each persisted immediately on
+  // change via the generic admin edit endpoint — no longer bundled into the
+  // publish/send-to-writer payload, where they used to be silently discarded.
   const [tier, setTier] = useState(story.tier ?? "STANDARD");
   const [tagIds, setTagIds] = useState<string[]>(story.tagIds);
   const [isAdult, setIsAdult] = useState(story.isAdult);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const tagError = tab === "publish" && (tagIds.length < 1 || tagIds.length > 2);
-  const coverError = tab === "publish" && !coverPreview && !coverImageRef;
+  const tagError = queueTab === "publishing" && (tagIds.length < 1 || tagIds.length > 2);
+  const coverError = queueTab === "publishing" && !coverPreview && !coverImageRef;
 
   // Nari tag suggestions
   const [suggesting, setSuggesting] = useState(false);
@@ -103,6 +126,36 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
   const [applyingHookLine, setApplyingHookLine] = useState(false);
   const [suggestedIsAdult, setSuggestedIsAdult] = useState<boolean | null>(null);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+
+  async function persistDetail(patch: Partial<{ tier: string; tagIds: string[]; isAdult: boolean }>) {
+    try {
+      await fetch(`/api/admin/kekere/stories/${story.id}/edit`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      onDetailsPersisted(patch);
+    } catch {
+      // Non-fatal — the field stays at its new local value; the admin can
+      // retry by changing it again, and the next successful publish/send
+      // action always reads the DB, not this local state.
+    }
+  }
+
+  function handleTierChange(next: string) {
+    setTier(next);
+    void persistDetail({ tier: next });
+  }
+
+  function handleTagsChange(next: string[]) {
+    setTagIds(next);
+    if (next.length >= 1 && next.length <= 2) void persistDetail({ tagIds: next });
+  }
+
+  function handleIsAdultChange(next: boolean) {
+    setIsAdult(next);
+    void persistDetail({ isAdult: next });
+  }
 
   async function handleSuggestTags() {
     setSuggesting(true);
@@ -128,8 +181,8 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
 
   function applySuggestions() {
     if (!suggestions || suggestions.length === 0) return;
-    setTagIds(suggestions.slice(0, 2).map((s) => s.id));
-    if (suggestedIsAdult !== null) setIsAdult(suggestedIsAdult);
+    handleTagsChange(suggestions.slice(0, 2).map((s) => s.id));
+    if (suggestedIsAdult !== null) handleIsAdultChange(suggestedIsAdult);
     setSuggestions(null);
     setNewTagSuggestion(null);
   }
@@ -151,9 +204,8 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
     setUploading(true);
     try {
       const form = new FormData();
-      form.append("file", file);
-      form.append("storyId", story.id);
-      const res = await fetch("/api/admin/kekere/cover-upload", { method: "POST", body: form });
+      form.append("image", file);
+      const res = await fetch(`/api/admin/kekere/stories/${story.id}/cover`, { method: "POST", body: form });
       if (res.ok) {
         const { coverImageRef: ref, previewUrl } = await res.json();
         onCoverUploaded(ref, previewUrl);
@@ -174,27 +226,57 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
         </div>
       )}
 
-      <div className="flex gap-1 rounded-[8px] bg-[rgba(20,22,26,0.06)] p-[3px]">
-        {(["publish", "revisions", "reject"] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={cn(
-              "flex-1 rounded-[6px] py-2 text-[12px] font-semibold capitalize transition-colors",
-              tab === t
-                ? t === "publish" ? "bg-[#1F8A5B] text-white" : t === "reject" ? "bg-[#C0392B] text-white" : "bg-[#B7791F] text-white"
-                : "text-[#8B919A] hover:text-[#1A1C20]"
-            )}
-          >
-            {t === "revisions" ? "Revisions" : t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {tab === "publish" && (
+      {/* Story Review: approve / decline / send back for revision — the only
+          three outcomes at this stage. No cover/tier/tags/text editing. */}
+      {queueTab === "submitted" && (
         <>
-          {/* Cover image upload */}
+          <div className="flex gap-1 rounded-[8px] bg-[rgba(20,22,26,0.06)] p-[3px]">
+            {(["publish", "revisions", "reject"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={cn(
+                  "flex-1 rounded-[6px] py-2 text-[12px] font-semibold transition-colors",
+                  tab === t
+                    ? t === "publish" ? "bg-[#1F8A5B] text-white" : t === "reject" ? "bg-[#C0392B] text-white" : "bg-[#B7791F] text-white"
+                    : "text-[#8B919A] hover:text-[#1A1C20]"
+                )}
+              >
+                {t === "publish" ? "Approve" : t === "revisions" ? "Revisions" : "Decline"}
+              </button>
+            ))}
+          </div>
+
+          {tab === "publish" && (
+            <div>
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
+                Cowrie price (1–10)
+              </label>
+              <p className="mb-2 text-[10px] text-[#9AA0A8]">
+                This is the one term the publishing agreement states — everything else (cover, tier, tags) is set once the writer signs.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={cowrieCost}
+                  onChange={(e) => setCowrieCost(Number(e.target.value))}
+                  className="flex-1 accent-[#C75D2C]"
+                />
+                <span className="w-8 text-center text-[14px] font-bold text-[#1A1C20]">{cowrieCost}</span>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* To Be Published: the story details the editor sets before going
+          live — persists immediately, independent of the publish action. */}
+      {queueTab === "publishing" && (
+        <>
           <div>
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
               Story cover <span className="normal-case text-[#C0392B]">(required)</span>
@@ -233,32 +315,20 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
               </button>
             )}
             {coverError && (
-              <p className="mt-1 text-[10px] text-[#C0392B]">
-                {queueTab === "publishing" ? "A cover image is required before publishing." : "A cover image is required before sending the contract."}
-              </p>
+              <p className="mt-1 text-[10px] text-[#C0392B]">A cover image is required before publishing.</p>
             )}
           </div>
 
-          {/* Cowrie cost */}
           <div>
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
-              Cowrie cost (1–10)
+              Cowrie price
             </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={cowrieCost}
-                onChange={(e) => setCowrieCost(Number(e.target.value))}
-                className="flex-1 accent-[#C75D2C]"
-              />
-              <span className="w-8 text-center text-[14px] font-bold text-[#1A1C20]">{cowrieCost}</span>
+            <div className="flex items-center justify-between rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-[#F4F5F7] px-3 py-2.5">
+              <span className="text-[14px] font-bold text-[#1A1C20]">{story.cowrieCost} cowries</span>
+              <span className="text-[10px] text-[#9AA0A8]">Locked at contract signing</span>
             </div>
           </div>
 
-          {/* Tier selector */}
           <div>
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
               Tier
@@ -268,7 +338,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setTier(t)}
+                  onClick={() => handleTierChange(t)}
                   className={cn(
                     "flex-1 rounded-[7px] py-2 text-[11px] font-bold uppercase tracking-[0.04em] transition-colors",
                     tier === t
@@ -282,11 +352,10 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
             </div>
           </div>
 
-          {/* Mature content toggle */}
           <div>
             <button
               type="button"
-              onClick={() => setIsAdult((v) => !v)}
+              onClick={() => handleIsAdultChange(!isAdult)}
               className={cn(
                 "flex w-full items-center justify-between rounded-[8px] border px-3 py-2.5 transition-colors",
                 isAdult ? "border-[#A13A3A]/30 bg-[rgba(161,58,58,0.06)]" : "border-[rgba(20,22,26,0.14)] bg-[#F4F5F7]"
@@ -321,7 +390,6 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
             )}
           </div>
 
-          {/* Tags */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
@@ -392,7 +460,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
                 {suggestedIsAdult !== isAdult && (
                   <button
                     type="button"
-                    onClick={() => setIsAdult(suggestedIsAdult)}
+                    onClick={() => handleIsAdultChange(suggestedIsAdult)}
                     className="rounded-[6px] bg-[#6B21A8] px-2 py-1 text-[10px] font-semibold text-white hover:bg-[#5a1a8f]"
                   >
                     Apply
@@ -406,8 +474,8 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
               <div className="mb-2 rounded-[8px] border border-[rgba(183,121,31,0.25)] bg-[rgba(183,121,31,0.05)] p-3">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.05em] text-[#B7791F]">Kemi also suggests a new category</p>
                 <p className="text-[12px] font-semibold text-[#1A1C20]">{newTagSuggestion.label}</p>
-                <p className="text-[10px] italic text-[#8B919A]">"{newTagSuggestion.feedHeading}"</p>
-                <p className="mt-1 text-[10px] text-[#9AA0A8]">This category doesn't exist yet. Ask your engineer to add it to the tag list.</p>
+                <p className="text-[10px] italic text-[#8B919A]">&ldquo;{newTagSuggestion.feedHeading}&rdquo;</p>
+                <p className="mt-1 text-[10px] text-[#9AA0A8]">This category doesn&rsquo;t exist yet. Ask your engineer to add it to the tag list.</p>
               </div>
             )}
 
@@ -415,7 +483,7 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
               <p className="mb-1.5 text-[10px] text-[#C0392B]">{suggestError}</p>
             )}
 
-            <TagPicker value={tagIds} onChange={setTagIds} error={tagError} />
+            <TagPicker value={tagIds} onChange={handleTagsChange} error={tagError} />
             {tagError && (
               <p className="mt-1 text-[10px] text-[#C0392B]">Select 1 or 2 tags before publishing.</p>
             )}
@@ -425,17 +493,21 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
 
       <div>
         <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8B919A]">
-          {tab === "publish" ? "Editor note (optional)" : tab === "reject" ? "Rejection reason (required)" : "Revision instructions (required)"}
+          {queueTab === "publishing"
+            ? "Note to writer (only sent if you send edits for approval)"
+            : tab === "publish" ? "Editor note (optional)" : tab === "reject" ? "Decline reason (required)" : "Revision instructions (required)"}
         </label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           placeholder={
-            tab === "publish"
+            queueTab === "publishing"
+              ? "What changed, for the writer to review…"
+              : tab === "publish"
               ? "Optional note to the author…"
               : tab === "reject"
-              ? "Explain why this story is being rejected…"
+              ? "Explain why this story is being declined…"
               : "Describe what changes are needed…"
           }
           className="w-full resize-none rounded-[8px] border border-[rgba(20,22,26,0.14)] bg-[#F4F5F7] px-3 py-2.5 text-[13px] text-[#1A1C20] placeholder:text-[#9AA0A8] focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30"
@@ -448,10 +520,6 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
           <span className="font-medium text-[#1A1C20]">{story.genre}</span>
         </div>
         <div className="flex justify-between text-[12px]">
-          <span className="text-[#8B919A]">Tier</span>
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", TIER_COLORS[story.tier] ?? TIER_COLORS.STANDARD)}>{story.tier}</span>
-        </div>
-        <div className="flex justify-between text-[12px]">
           <span className="text-[#8B919A]">Words</span>
           <span className="font-medium text-[#1A1C20]">{story.wordCount.toLocaleString()}</span>
         </div>
@@ -459,51 +527,42 @@ function DecisionPanel({ story, onAction, acting, coverImageRef, coverPreview, o
           <span className="text-[#8B919A]">Submitted</span>
           <span className="font-medium text-[#1A1C20]">{relativeTime(story.submittedAt)}</span>
         </div>
-        <div className="flex justify-between text-[12px]">
-          <span className="text-[#8B919A]">Cowrie price</span>
-          <span className="font-medium text-[#1A1C20]">Set above ↑</span>
-        </div>
       </div>
 
-      {tab === "publish" && requiresWriterApproval && (
+      {queueTab === "publishing" && requiresWriterApproval && (
         <p className="-mt-1 text-[11px] leading-snug text-[#8B919A]">
-          {queueTab === "publishing"
-            ? "You’ve edited or annotated this story, so it goes to the writer for one more approval pass before you can publish."
-            : "You’ve edited or annotated this story, so it goes to the writer to approve your changes before the contract."}
+          You’ve edited or annotated this story, so it goes to the writer for one more approval pass before you can publish.
         </p>
       )}
 
       <button
         type="button"
-        disabled={acting || (tab !== "publish" && !note.trim()) || (tab === "publish" && (tagIds.length === 0 || coverError))}
-        onClick={() =>
-          onAction(
-            tab === "publish" ? (requiresWriterApproval ? "send_to_writer" : "publish") : tab,
-            note,
-            cowrieCost,
-            tagIds,
-            isAdult,
-            tier,
-          )
+        disabled={
+          acting ||
+          (queueTab === "submitted" && tab !== "publish" && !note.trim()) ||
+          (queueTab === "publishing" && (tagError || coverError))
         }
+        onClick={() => {
+          if (queueTab === "submitted") {
+            onAction(tab, note, cowrieCost);
+          } else {
+            onAction(requiresWriterApproval ? "send_to_writer" : "publish", note, cowrieCost);
+          }
+        }}
         className={cn(
           "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
-          tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
+          queueTab === "submitted"
+            ? tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
+            : "bg-[#1F8A5B] hover:bg-[#1a7a50]"
         )}
       >
         {acting
           ? "Processing…"
-          : tab === "publish"
-          ? queueTab === "publishing"
-            ? requiresWriterApproval
-              ? "Send edits to writer for approval"
-              : "Publish now"
-            : requiresWriterApproval
-            ? "Send edits to writer for approval"
-            : "Send publishing contract"
-          : tab === "reject"
-          ? "Reject story"
-          : "Request revisions"}
+          : queueTab === "submitted"
+          ? tab === "publish" ? "Send publishing contract" : tab === "reject" ? "Decline story" : "Request revisions"
+          : requiresWriterApproval
+          ? "Send edits to writer for approval"
+          : "Publish now"}
       </button>
     </div>
   );
@@ -542,6 +601,24 @@ function saveStatusLabel(status: SaveStatus): { text: string; tone: "muted" | "o
   }
 }
 
+/** Plain read-only render of a story body — no comment affordances, no edit
+ *  capability. Used at Story Review, where the editor only reads. */
+function ReadOnlyStoryBody({ doc }: { doc: TiptapDoc }) {
+  const paragraphs = docParagraphsToHtml(doc);
+  return (
+    <div className="story-reader-prose text-[15px] leading-[1.75] text-[#1A1C20] [&_em]:italic [&_strong]:font-bold [&_u]:underline">
+      {paragraphs.map((p, i) => (
+        <p
+          key={p.id || i}
+          className="mb-[1.25em]"
+          style={{ textAlign: p.textAlign ?? "left" }}
+          dangerouslySetInnerHTML={{ __html: p.html || "<br/>" }}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function StoryReviewQueue() {
@@ -555,7 +632,8 @@ export function StoryReviewQueue() {
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [queueTab, setQueueTab] = useState<"submitted" | "publishing">("submitted");
 
-  // Admin editing state — reset when a new story is selected
+  // Admin editing state — reset when a new story is selected. Only relevant
+  // in the "publishing" (To Be Published) tab — Story Review never edits.
   const [editingContent, setEditingContent] = useState(false);
   const [draftHookLine, setDraftHookLine] = useState("");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
@@ -667,9 +745,8 @@ export function StoryReviewQueue() {
         lastSavedHookRef.current = dbHook;
         setHasEdits(false);
       }
-      // Seed from whatever the story already has — non-null for a stage-2
-      // (ACCEPTED) story that already went through stage 1, null for a fresh
-      // stage-1 story that's never had terms set yet.
+      // Cover is only ever set once a story is ACCEPTED (To Be Published) —
+      // always null at the SUBMITTED stage.
       setCoverImageRef(detail.coverImageRef ?? null);
       setCoverPreview(detail.coverPreviewUrl ?? null);
     } catch {
@@ -697,7 +774,11 @@ export function StoryReviewQueue() {
     }
   }
 
-  async function handleAction(action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number, tagIds: string[], isAdult: boolean, tier: string) {
+  function updateSelectedDetails(patch: Partial<Pick<StoryDetail, "tier" | "isAdult" | "tagIds">>) {
+    setSelected((s) => (s ? { ...s, ...patch } : s));
+  }
+
+  async function handleAction(action: "publish" | "send_to_writer" | "reject" | "revisions", note: string, cowrieCost: number) {
     if (!selectedId || !selected) return;
 
     const promotes = action === "publish" || action === "send_to_writer";
@@ -721,15 +802,14 @@ export function StoryReviewQueue() {
     setActing(true);
 
     const isPublishNow = queueTab === "publishing" && action === "publish" && selected.status === "ACCEPTED";
-    // Stage 2: an ACCEPTED story's terms are already locked in from stage 1
-    // — sending tracked changes for another approval pass never re-touches
-    // cowrie cost/tier/tags/cover, so it's a separate, much simpler endpoint.
+    // An ACCEPTED story's price is already locked in from Story Review —
+    // sending tracked changes for another approval pass never re-touches it,
+    // so it's a separate, much simpler endpoint.
     const isPostContractEdits = queueTab === "publishing" && action === "send_to_writer" && selected.status === "ACCEPTED";
     const endpoint = isPublishNow
         ? `/api/admin/kekere/stories/${selectedId}/publish-now`
       : isPostContractEdits ? `/api/admin/kekere/stories/${selectedId}/send-post-contract-edits`
       : action === "publish" ? `/api/admin/kekere/stories/${selectedId}/publish`
-      : action === "send_to_writer" ? `/api/admin/kekere/stories/${selectedId}/send-to-writer`
       : action === "reject" ? `/api/admin/kekere/stories/${selectedId}/reject`
       : `/api/admin/kekere/stories/${selectedId}/request-revisions`;
 
@@ -738,22 +818,7 @@ export function StoryReviewQueue() {
       : isPostContractEdits
         ? { ...(note.trim() ? { summaryNote: note } : {}) }
         : action === "publish"
-        ? {
-            cowrieCost,
-            tier,
-            tagIds,
-            isAdult,
-            ...(coverImageRef ? { coverImageRef } : {}),
-          }
-        : action === "send_to_writer"
-        ? {
-            cowrieCost,
-            tier,
-            tagIds,
-            isAdult,
-            ...(coverImageRef ? { coverImageRef } : {}),
-            ...(note.trim() ? { summaryNote: note } : {}),
-          }
+        ? { cowrieCost }
         : action === "reject"
         ? { moderationNotes: note, internalReason: note, plagiarismFlagged: selected.plagiarismFlagged }
         : { moderationNotes: note };
@@ -766,7 +831,7 @@ export function StoryReviewQueue() {
       });
       if (!res.ok) throw new Error("Action failed");
 
-      let successMsg = action === "reject" ? "Story rejected." : action === "revisions" ? "Revision request sent." : "";
+      let successMsg = action === "reject" ? "Story declined." : action === "revisions" ? "Revision request sent." : "";
       if (isPublishNow) {
         successMsg = "Story published and now live.";
       } else if (promotes) {
@@ -809,6 +874,8 @@ export function StoryReviewQueue() {
   }
 
   if (error) return <AdminViewError message={error} onRetry={loadQueue} />;
+
+  const requiresWriterApproval = queueTab === "publishing" && (hasEdits || commentCount > 0);
 
   return (
     <div className="overflow-x-auto">
@@ -913,61 +980,63 @@ export function StoryReviewQueue() {
                 </span>
               </div>
 
-              {/* Row 2 — action toolbar */}
-              <div className="mt-3 flex items-center gap-2">
-                {hasEdits && (
-                  <span className="rounded-full bg-[rgba(199,93,44,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#C75D2C]">
-                    Edited
-                  </span>
-                )}
-                {commentCount > 0 && (
-                  <span className="rounded-full bg-[rgba(31,138,91,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#1F8A5B]">
-                    {commentCount} note{commentCount === 1 ? "" : "s"} for writer
-                  </span>
-                )}
-                {(() => {
-                  const label = saveStatusLabel(saveStatus);
-                  if (!label) return null;
-                  return (
-                    <span
-                      className={cn(
-                        "text-[10px] font-medium",
-                        label.tone === "ok" ? "text-[#1F8A5B]" : label.tone === "warn" ? "text-[#C0392B]" : "text-[#9AA0A8]",
-                      )}
-                    >
-                      {label.text}
+              {/* Row 2 — action toolbar (To Be Published only — Story Review is read-only) */}
+              {queueTab === "publishing" && (
+                <div className="mt-3 flex items-center gap-2">
+                  {hasEdits && (
+                    <span className="rounded-full bg-[rgba(199,93,44,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#C75D2C]">
+                      Edited
                     </span>
-                  );
-                })()}
-                <div className="flex-1" />
-                {hasEdits && (
+                  )}
+                  {commentCount > 0 && (
+                    <span className="rounded-full bg-[rgba(31,138,91,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#1F8A5B]">
+                      {commentCount} note{commentCount === 1 ? "" : "s"} for writer
+                    </span>
+                  )}
+                  {(() => {
+                    const label = saveStatusLabel(saveStatus);
+                    if (!label) return null;
+                    return (
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium",
+                          label.tone === "ok" ? "text-[#1F8A5B]" : label.tone === "warn" ? "text-[#C0392B]" : "text-[#9AA0A8]",
+                        )}
+                      >
+                        {label.text}
+                      </span>
+                    );
+                  })()}
+                  <div className="flex-1" />
+                  {hasEdits && (
+                    <button
+                      type="button"
+                      onClick={revertToOriginal}
+                      title="Discard all edits and restore the writer's original submission"
+                      className="rounded-[7px] border border-[rgba(192,57,43,0.25)] px-2.5 py-1.5 text-[10px] font-semibold text-[#C0392B] transition-colors hover:bg-[rgba(192,57,43,0.06)]"
+                    >
+                      Revert to original
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={revertToOriginal}
-                    title="Discard all edits and restore the writer's original submission"
-                    className="rounded-[7px] border border-[rgba(192,57,43,0.25)] px-2.5 py-1.5 text-[10px] font-semibold text-[#C0392B] transition-colors hover:bg-[rgba(192,57,43,0.06)]"
+                    onClick={toggleEditing}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                      editingContent
+                        ? "bg-[#1A1C20] text-white"
+                        : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
+                    )}
                   >
-                    Revert to original
+                    <Pencil size={11} />
+                    {editingContent ? "Done editing" : "Edit content"}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={toggleEditing}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
-                    editingContent
-                      ? "bg-[#1A1C20] text-white"
-                      : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
-                  )}
-                >
-                  <Pencil size={11} />
-                  {editingContent ? "Done editing" : "Edit content"}
-                </button>
-              </div>
+                </div>
+              )}
 
-              {/* Hook line — editable or read-only */}
+              {/* Hook line — editable (To Be Published) or read-only */}
               <div className="mt-4">
-                {editingContent ? (
+                {editingContent && queueTab === "publishing" ? (
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Hook line</label>
                     <input
@@ -994,11 +1063,13 @@ export function StoryReviewQueue() {
               </div>
             </div>
 
-            {/* Body — the real rich editor (server-autosaved to the editorial
-                working copy) when editing, a formatted read-only render
-                otherwise. The plain textarea is gone: edits now keep their
-                bold/italic and survive a closed tab or a handoff. */}
-            {editingContent ? (
+            {/* Body — Story Review always reads plain; To Be Published gets
+                the real rich editor (server-autosaved to the editorial
+                working copy) when editing, or the comment-annotated
+                read view otherwise. */}
+            {queueTab === "submitted" ? (
+              <ReadOnlyStoryBody doc={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC} />
+            ) : editingContent ? (
               <div style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}>
                 <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Story body</label>
                 <StoryEditor
@@ -1060,7 +1131,8 @@ export function StoryReviewQueue() {
             coverPreview={coverPreview}
             onCoverUploaded={(ref, preview) => { setCoverImageRef(ref || null); setCoverPreview(preview || null); }}
             onCoverRemoved={() => { setCoverImageRef(null); setCoverPreview(null); }}
-            requiresWriterApproval={hasEdits || commentCount > 0}
+            requiresWriterApproval={requiresWriterApproval}
+            onDetailsPersisted={updateSelectedDetails}
             onApplyHookLine={async (hookLine) => {
               try {
                 const res = await fetch(`/api/admin/kekere/stories/${selected.id}/edit`, {
