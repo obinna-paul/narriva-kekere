@@ -160,10 +160,23 @@ export async function searchStories(query: string): Promise<StoryWithAuthor[]> {
 }
 
 /**
- * Trending formula: number of StoryUnlock rows in the last 7 days, highest
- * first. Deliberately simple — no decay curve, no weighting — "what's
- * actually being unlocked right now." Stories with zero recent unlocks
- * still appear, just at the bottom, in a stable (insertion) order.
+ * A story only counts as trending once at least this many people have
+ * actually unlocked it in the window — deliberately low right now because
+ * the platform is pre-launch and almost every "active reader" is a test
+ * account, so even a single real unlock is meaningful signal. Raise this
+ * once there's real reader volume.
+ */
+const MIN_TRENDING_UNLOCKS = 1;
+
+/**
+ * Trending formula: each story's share of unique readers who unlocked
+ * *anything* in the last 7 days, not a raw unlock count — a story with 1
+ * unlock out of 5 active readers (20%) outranks one with 3 unlocks out of
+ * 200 (1.5%), and this is what stays meaningful as the reader base grows,
+ * rather than a count that means something different at every scale.
+ * Stories with fewer than MIN_TRENDING_UNLOCKS unlocks in the window are
+ * excluded entirely — "trending" means real, current engagement, not a
+ * backfilled list padded out with stories nobody's actually reading yet.
  */
 async function listStoriesTrending(
   where: Prisma.StoryWhereInput,
@@ -172,31 +185,41 @@ async function listStoriesTrending(
 ): Promise<ListStoriesResult> {
   const windowStart = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-  const [matchingStories, unlockCounts] = await Promise.all([
-    prisma.story.findMany({ where, select: { id: true } }),
+  const [matchingStories, unlockCounts, activeReaders] = await Promise.all([
+    // publishedAt-ordered so ties in trending score break deterministically
+    // (newest first) instead of relying on undefined DB row order.
+    prisma.story.findMany({ where, select: { id: true }, orderBy: { publishedAt: "desc" } }),
     prisma.storyUnlock.groupBy({
       by: ["storyId"],
       where: { unlockedAt: { gte: windowStart } },
       _count: { storyId: true },
     }),
+    prisma.storyUnlock.findMany({
+      where: { unlockedAt: { gte: windowStart } },
+      select: { userId: true },
+      distinct: ["userId"],
+    }),
   ]);
 
-  const matchingIds = matchingStories.map((s) => s.id);
-  const matchingIdSet = new Set(matchingIds);
+  const activeReaderCount = Math.max(activeReaders.length, 1);
+  const matchingIdSet = new Set(matchingStories.map((s) => s.id));
   const scoreByStoryId = new Map(
-    unlockCounts.filter((u) => matchingIdSet.has(u.storyId)).map((u) => [u.storyId, u._count.storyId])
+    unlockCounts
+      .filter((u) => matchingIdSet.has(u.storyId) && u._count.storyId >= MIN_TRENDING_UNLOCKS)
+      .map((u) => [u.storyId, u._count.storyId / activeReaderCount]),
   );
 
-  const orderedIds = [...matchingIds].sort(
-    (a, b) => (scoreByStoryId.get(b) ?? 0) - (scoreByStoryId.get(a) ?? 0)
-  );
+  const orderedIds = matchingStories
+    .map((s) => s.id)
+    .filter((id) => scoreByStoryId.has(id))
+    .sort((a, b) => scoreByStoryId.get(b)! - scoreByStoryId.get(a)!);
+
   const total = orderedIds.length;
   const pageIds = orderedIds.slice((page - 1) * pageSize, page * pageSize);
 
-  const stories = await prisma.story.findMany({
-    where: { id: { in: pageIds } },
-    include: authorInclude,
-  });
+  const stories = pageIds.length
+    ? await prisma.story.findMany({ where: { id: { in: pageIds } }, include: authorInclude })
+    : [];
 
   // Prisma's `id: { in: [...] }` doesn't preserve array order — re-sort to
   // match the computed trending ranking.
