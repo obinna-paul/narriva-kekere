@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag, ShieldAlert, Rows3, GalleryHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { ReportModal, type ReportTargetType } from "@/components/kekere/ReportModal";
@@ -28,6 +28,13 @@ import type { MockStory } from "@/content/mock/kekere-stories";
 type ReaderTheme = "white" | "cream" | "dark";
 
 const READER_THEME_STORAGE_KEY = "kekere-reader-theme";
+
+/** "scroll" is the original endless-scroll reading experience. "swipe"
+ *  paginates the story into full-screen columns via CSS multi-column layout
+ *  (the same technique real e-reader apps use) and navigates page-to-page
+ *  by touch swipe, tap zones, or arrow keys instead of scrolling. */
+type ReadingMode = "scroll" | "swipe";
+const READING_MODE_STORAGE_KEY = "kekere-reading-mode";
 // Once set, a reader isn't re-prompted on this device for any other 18+
 // story either — a single "yes I'm 18+" is treated as standing, matching
 // how most mature-content sites gate once per device rather than per title.
@@ -176,6 +183,12 @@ export function StoryReader({
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [contentHidden, setContentHidden] = useState(false);
 
+  const [readingMode, setReadingModeState] = useState<ReadingMode>("scroll");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
+  const [columnPx, setColumnPx] = useState<number | null>(null);
+  const [swipeBoxHeight, setSwipeBoxHeight] = useState<number | null>(null);
+
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ targetType: ReportTargetType; targetId: string } | null>(null);
 
@@ -219,6 +232,19 @@ export function StoryReader({
     }
   }, []);
 
+  // Same pattern for reading mode — defaults to scroll for the first paint,
+  // then upgrades to whichever mode this reader last picked on this device.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(READING_MODE_STORAGE_KEY);
+      if (saved === "scroll" || saved === "swipe") {
+        setReadingModeState(saved);
+      }
+    } catch {
+      // ignore unavailable storage
+    }
+  }, []);
+
   // Age gate: starts gated on the server (and on the client's first render,
   // matching it exactly) whenever the story is marked 18+ — this is the
   // *safe* default, since localStorage can't be read until after mount and
@@ -256,6 +282,14 @@ export function StoryReader({
     }
   }, [readerTheme]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(READING_MODE_STORAGE_KEY, readingMode);
+    } catch {
+      // ignore unavailable storage
+    }
+  }, [readingMode]);
+
   const theme = READER_THEMES[readerTheme];
   const themeVars = {
     "--color-ink": theme.ink,
@@ -279,6 +313,15 @@ export function StoryReader({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const ambientSoundRef = useRef<AmbientSoundMenuHandle>(null);
+  const swipeBoxRef = useRef<HTMLDivElement>(null);
+  const swipeScrollerRef = useRef<HTMLDivElement>(null);
+  const swipeColumnsRef = useRef<HTMLDivElement>(null);
+  const titleBlockRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Set right after a swipe-mode entry so the pagination-measurement effect
+  // knows to jump to the page matching current scroll progress instead of
+  // defaulting to page 0 — cleared once that jump has been applied.
+  const justEnteredSwipeRef = useRef(false);
   const comments = useParagraphComments(story.id, unlocked);
   const commentCounts = Object.fromEntries(
     Object.entries(comments.commentsByParagraph).map(([id, g]) => [id, g.count])
@@ -355,6 +398,10 @@ export function StoryReader({
     showChrome();
 
     function onScroll() {
+      // In swipe mode the window itself never scrolls (the reading area is
+      // capped to the viewport and paginates horizontally instead) — progress
+      // there is driven by page position in the pagination effect below.
+      if (readingMode !== "scroll") return;
       const h = document.documentElement.scrollHeight - window.innerHeight;
       const frac = h > 0 ? Math.min(1, window.scrollY / h) : 0;
       setProgress(frac);
@@ -375,7 +422,139 @@ export function StoryReader({
       window.removeEventListener("touchstart", showChrome);
       window.removeEventListener("beforeunload", flushProgress);
     };
-  }, [showChrome, saveProgress, flushProgress]);
+  }, [showChrome, saveProgress, flushProgress, readingMode]);
+
+  // Sizes the swipe reading box to exactly fill whatever vertical space is
+  // left below the fixed top progress bar/header and the title block, so the
+  // page area never causes the window itself to scroll — only the box's own
+  // horizontal, one-screen-at-a-time pagination should move.
+  useEffect(() => {
+    if (readingMode !== "swipe" || !unlocked) return;
+
+    function measure() {
+      const titleH = titleBlockRef.current?.getBoundingClientRect().height ?? 0;
+      const top = swipeBoxRef.current?.getBoundingClientRect().top ?? titleH + 78;
+      // Reserve enough room for the fixed "Page X of Y" pill (bottom-5 plus
+      // its own height) so the last line of text on a page never sits
+      // underneath it.
+      const BOTTOM_PADDING = 56;
+      setSwipeBoxHeight(Math.max(200, window.innerHeight - top - BOTTOM_PADDING));
+    }
+
+    measure();
+    window.addEventListener("resize", measure);
+    const t = setTimeout(measure, 50);
+    return () => {
+      window.removeEventListener("resize", measure);
+      clearTimeout(t);
+    };
+  }, [readingMode, unlocked]);
+
+  // Paginates the story into full-height CSS columns exactly one screen wide
+  // each, then measures how many columns ("pages") the content produced.
+  // Re-runs on resize and whenever the box height settles, since column
+  // height directly determines how much text fits per page.
+  useEffect(() => {
+    if (readingMode !== "swipe" || !unlocked || swipeBoxHeight === null) return;
+    const scroller = swipeScrollerRef.current;
+    const columns = swipeColumnsRef.current;
+    if (!scroller || !columns) return;
+
+    function measure() {
+      const cw = scroller!.clientWidth;
+      if (cw <= 0) return;
+      setColumnPx(cw);
+      // Force layout to pick up the new column-width before measuring.
+      const totalWidth = columns!.scrollWidth;
+      const pages = Math.max(1, Math.round(totalWidth / cw));
+      setPageCount(pages);
+
+      if (justEnteredSwipeRef.current) {
+        justEnteredSwipeRef.current = false;
+        const target = Math.round(progress * (pages - 1));
+        setPageIndex(target);
+        scroller!.scrollLeft = target * cw;
+      } else {
+        // Resize (e.g. rotation) — stay on the same page, just re-clamp it.
+        const clamped = Math.min(pageIndex, pages - 1);
+        scroller!.scrollLeft = clamped * cw;
+        if (clamped !== pageIndex) setPageIndex(clamped);
+      }
+    }
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(scroller);
+    // The Tiptap editor mounts asynchronously, so the first measurement can
+    // land before its content exists — remeasure shortly after.
+    const t = setTimeout(measure, 150);
+    return () => {
+      ro.disconnect();
+      clearTimeout(t);
+    };
+    // pageIndex/progress are read for the one-time entry jump above, not
+    // meant to re-trigger this whole remeasure on every page turn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readingMode, unlocked, swipeBoxHeight, story.bodyDoc]);
+
+  const goToPage = useCallback(
+    (next: number) => {
+      const scroller = swipeScrollerRef.current;
+      if (!scroller || columnPx === null) return;
+      const clamped = Math.max(0, Math.min(pageCount - 1, next));
+      setPageIndex(clamped);
+      scroller.scrollTo({ left: clamped * columnPx, behavior: "smooth" });
+      const frac = pageCount > 1 ? clamped / (pageCount - 1) : 0;
+      setProgress(frac);
+      saveProgress(frac);
+      showChrome();
+    },
+    [columnPx, pageCount, saveProgress, showChrome],
+  );
+
+  function handleSwipeTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+
+  function handleSwipeTouchEnd(e: React.TouchEvent) {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const SWIPE_THRESHOLD = 40;
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+    goToPage(dx < 0 ? pageIndex + 1 : pageIndex - 1);
+  }
+
+  // Arrow-key page turning, for anyone reading in swipe mode with a keyboard.
+  useEffect(() => {
+    if (readingMode !== "swipe" || !unlocked) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowRight") goToPage(pageIndex + 1);
+      else if (e.key === "ArrowLeft") goToPage(pageIndex - 1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [readingMode, unlocked, pageIndex, goToPage]);
+
+  function selectReadingMode(mode: ReadingMode) {
+    if (mode === readingMode) return;
+    if (mode === "swipe") {
+      justEnteredSwipeRef.current = true;
+    } else {
+      // Leaving swipe: land scroll mode at the equivalent vertical position
+      // once the content is back in normal flow (next paint).
+      requestAnimationFrame(() => {
+        const h = document.documentElement.scrollHeight - window.innerHeight;
+        if (h > 0) window.scrollTo({ top: h * progress });
+      });
+    }
+    setReadingModeState(mode);
+    setThemeMenuOpen(false);
+  }
 
   function requireLogin() {
     router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
@@ -892,6 +1071,33 @@ export function StoryReader({
                         </button>
                       );
                     })}
+
+                    <p className="mt-1 px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-ink-muted-3)]">
+                      Reading mode
+                    </p>
+                    {(
+                      [
+                        { key: "scroll" as const, label: "Scroll", Icon: Rows3 },
+                        { key: "swipe" as const, label: "Swipe pages", Icon: GalleryHorizontal },
+                      ]
+                    ).map(({ key, label, Icon }) => {
+                      const active = key === readingMode;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={active}
+                          onClick={() => selectReadingMode(key)}
+                          className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[var(--color-ink)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                          style={{ background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          <Icon className="h-[15px] w-[15px] flex-none text-[var(--color-ink-muted-2)]" />
+                          <span className="flex-1">{label}</span>
+                          {active && <Check className="h-[15px] w-[15px] flex-none text-[var(--color-primary)]" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -902,7 +1108,7 @@ export function StoryReader({
               themeBorder={theme.border}
               onOpenChange={handleSoundMenuOpenChange}
             />
-            {unlocked && (
+            {unlocked && readingMode === "scroll" && (
               <button
                 type="button"
                 aria-label={comments.panelOpen ? "Close comments" : "Open comments"}
@@ -1000,7 +1206,7 @@ export function StoryReader({
         )}
         style={{ paddingTop: 78 }}
       >
-        <div className="mb-[30px]">
+        <div ref={titleBlockRef} className="mb-[30px]">
           <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
             {story.genre.toUpperCase()}
           </span>
@@ -1039,6 +1245,68 @@ export function StoryReader({
           onCopy={(e) => e.preventDefault()}
         >
           {unlocked ? (
+            readingMode === "swipe" ? (
+              <div
+                ref={swipeBoxRef}
+                className="relative select-none"
+                style={{ height: swipeBoxHeight ?? 400 }}
+                onTouchStart={handleSwipeTouchStart}
+                onTouchEnd={handleSwipeTouchEnd}
+              >
+                <div ref={swipeScrollerRef} className="h-full overflow-hidden">
+                  <div
+                    ref={swipeColumnsRef}
+                    className="h-full [column-fill:auto] [column-gap:0px] [&_.ProseMirror_p]:mb-[0.9em]"
+                    style={{ columnWidth: columnPx ? `${columnPx}px` : undefined }}
+                  >
+                    {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
+                    <div className="pt-[30px] text-center" style={{ breakInside: "avoid" }}>
+                      <button
+                        type="button"
+                        onClick={handleFinish}
+                        className="cursor-pointer rounded-[30px] border border-[var(--color-border-strong)] bg-transparent px-6 py-3 text-sm font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                      >
+                        I finished this
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Invisible tap zones — narrow edge strips so the vast
+                    majority of the page stays free for text/selection, with
+                    left/right taps as a mouse-friendly alternative to swipe. */}
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  onClick={() => goToPage(pageIndex - 1)}
+                  disabled={pageIndex === 0}
+                  className="absolute inset-y-0 left-0 z-10 w-[13%] cursor-pointer disabled:cursor-default"
+                  style={{ background: "none", border: "none" }}
+                />
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  onClick={() => goToPage(pageIndex + 1)}
+                  disabled={pageIndex >= pageCount - 1}
+                  className="absolute inset-y-0 right-0 z-10 w-[13%] cursor-pointer disabled:cursor-default"
+                  style={{ background: "none", border: "none" }}
+                />
+
+                <div
+                  className={cn(
+                    "pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center transition-opacity duration-300",
+                    chromeVisible ? "opacity-100" : "opacity-0"
+                  )}
+                >
+                  <span
+                    className="rounded-full px-3 py-1 text-[11.5px] font-medium tabular-nums"
+                    style={{ backgroundColor: theme.headerBg, color: "var(--color-ink-muted-2)", border: `1px solid ${theme.border}` }}
+                  >
+                    Page {pageIndex + 1} of {pageCount}
+                  </span>
+                </div>
+              </div>
+            ) : (
             <div className="flex flex-col">
               <div ref={contentRef} className="relative">
                 {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
@@ -1074,6 +1342,7 @@ export function StoryReader({
                 </button>
               </div>
             </div>
+            )
           ) : (
             <>
               <div className="relative pt-2 text-center">
