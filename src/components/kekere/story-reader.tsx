@@ -316,7 +316,6 @@ export function StoryReader({
   const swipeBoxRef = useRef<HTMLDivElement>(null);
   const swipeScrollerRef = useRef<HTMLDivElement>(null);
   const swipeColumnsRef = useRef<HTMLDivElement>(null);
-  const titleBlockRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   // Set right after a swipe-mode entry so the pagination-measurement effect
   // knows to jump to the page matching current scroll progress instead of
@@ -425,15 +424,16 @@ export function StoryReader({
   }, [showChrome, saveProgress, flushProgress, readingMode]);
 
   // Sizes the swipe reading box to exactly fill whatever vertical space is
-  // left below the fixed top progress bar/header and the title block, so the
-  // page area never causes the window itself to scroll — only the box's own
-  // horizontal, one-screen-at-a-time pagination should move.
+  // left below the fixed top progress bar/header, so the page area never
+  // causes the window itself to scroll — only the box's own horizontal,
+  // one-screen-at-a-time pagination should move. The title block lives
+  // *inside* the paginated columns in swipe mode (see titleBlock below), not
+  // above this box, so box height only depends on the fixed header chrome.
   useEffect(() => {
     if (readingMode !== "swipe" || !unlocked) return;
 
     function measure() {
-      const titleH = titleBlockRef.current?.getBoundingClientRect().height ?? 0;
-      const top = swipeBoxRef.current?.getBoundingClientRect().top ?? titleH + 78;
+      const top = swipeBoxRef.current?.getBoundingClientRect().top ?? 78;
       // Reserve enough room for the fixed "Page X of Y" pill (bottom-5 plus
       // its own height) so the last line of text on a page never sits
       // underneath it.
@@ -979,6 +979,40 @@ export function StoryReader({
     );
   }
 
+  // Shared between the two reading modes: a fixed header above the content
+  // in scroll mode, or the first block of page 1 inside the paginated
+  // columns in swipe mode — see the two render sites below.
+  const titleBlock = (
+    <div className="mb-[30px]">
+      <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
+        {story.genre.toUpperCase()}
+      </span>
+      <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)] transition-colors duration-300">
+        {story.title}
+      </h1>
+      <div className="mt-[10px] flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <AuthorChip
+          authorId={story.authorId}
+          authorName={story.authorName}
+          avatarColor={story.authorAvatarColor}
+          avatarUrl={story.authorAvatarUrl}
+          size="md"
+        />
+        <span className="text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
+          · {story.readingTimeMinutes} min read
+        </span>
+        {!isOwnStory && (
+          <FollowButton
+            writerId={story.authorId}
+            isLoggedIn={isLoggedIn}
+            initialFollowing={initialFollowing}
+            variant="compact"
+          />
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div
       className="relative min-h-screen transition-colors duration-300"
@@ -1206,34 +1240,12 @@ export function StoryReader({
         )}
         style={{ paddingTop: 78 }}
       >
-        <div ref={titleBlockRef} className="mb-[30px]">
-          <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
-            {story.genre.toUpperCase()}
-          </span>
-          <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)] transition-colors duration-300">
-            {story.title}
-          </h1>
-          <div className="mt-[10px] flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <AuthorChip
-              authorId={story.authorId}
-              authorName={story.authorName}
-              avatarColor={story.authorAvatarColor}
-              avatarUrl={story.authorAvatarUrl}
-              size="md"
-            />
-            <span className="text-[13.5px] text-[var(--color-ink-muted-2)] transition-colors duration-300">
-              · {story.readingTimeMinutes} min read
-            </span>
-            {!isOwnStory && (
-              <FollowButton
-                writerId={story.authorId}
-                isLoggedIn={isLoggedIn}
-                initialFollowing={initialFollowing}
-                variant="compact"
-              />
-            )}
-          </div>
-        </div>
+        {/* In swipe mode this same block renders inside the paginated
+            columns instead (as the first block of page 1) so it only ever
+            costs page-1 space — everywhere else it's a normal fixed header
+            above the content, which scroll mode already "pages past" for
+            free the moment the reader scrolls down. */}
+        {!(unlocked && readingMode === "swipe") && titleBlock}
 
         <div
           style={{
@@ -1259,6 +1271,7 @@ export function StoryReader({
                     className="h-full [column-fill:auto] [column-gap:0px] [&_.ProseMirror_p]:mb-[0.9em]"
                     style={{ columnWidth: columnPx ? `${columnPx}px` : undefined }}
                   >
+                    <div style={{ breakInside: "avoid" }}>{titleBlock}</div>
                     {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
                     <div className="pt-[30px] text-center" style={{ breakInside: "avoid" }}>
                       <button
