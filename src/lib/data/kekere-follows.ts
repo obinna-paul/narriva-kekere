@@ -8,6 +8,7 @@ import { renderWriterPublishedEmail, renderNewFollowerEmail } from "@/lib/email/
 import { SITE_URL } from "@/content/decisions";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
 import { userAvatarUrl } from "@/lib/storage/cloudinary-urls";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 export type FollowResult =
   | { success: true; followerCount: number }
@@ -62,6 +63,7 @@ export async function followWriter(followerId: string, writerId: string): Promis
         unsubscribeUrl: recipient.unsubscribeUrl,
       });
       await sendEmail({
+        from: KEKERE_GENERAL_FROM,
         to: recipient.email,
         subject: `${followerName} started following you on Kekere Stories`,
         body: `${followerName} just started following you on Kekere Stories. They'll hear from us whenever you publish something new.`,
@@ -228,6 +230,7 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
           unsubscribeUrl: recipient.unsubscribeUrl,
         });
         await sendEmail({
+          from: KEKERE_GENERAL_FROM,
           to: recipient.email,
           subject: `New from ${story.author.name} on Kekere Stories`,
           body: `${story.author.name}, a writer you follow, just published "${story.title}." Read it: ${SITE_URL}/kekere/story/${storyPath}`,

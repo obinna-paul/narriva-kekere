@@ -4,6 +4,7 @@ import { getEmailRecipient } from "@/lib/notifications/email-preferences";
 import { containsProfanity } from "@/lib/moderation/profanity";
 import { sendEmail } from "@/lib/email/send";
 import { renderNoteReplyEmail, renderNoteReceivedEmail } from "@/lib/email/templates";
+import { KEKERE_GENERAL_FROM } from "@/lib/constants";
 
 const MAX_NOTE_LENGTH = 500;
 export const MAX_PINNED_NOTES = 6;
@@ -150,6 +151,7 @@ export async function sendNote(fromUserId: string, storyId: string, body: string
         unsubscribeUrl: recipient.unsubscribeUrl,
       });
       await sendEmail({
+        from: KEKERE_GENERAL_FROM,
         to: recipient.email,
         subject: `${readerName} sent you a note on Kekere Stories`,
         body: `${readerName} left you a note about "${story.title}." Read it and reply in your Kekere Stories notes inbox.`,
@@ -337,6 +339,7 @@ export async function replyToNote(noteId: string, writerId: string, replyBody: s
       unsubscribeUrl: recipient.unsubscribeUrl,
     });
     await sendEmail({
+      from: KEKERE_GENERAL_FROM,
       to: recipient.email,
       subject: `${writer?.name ?? "The writer"} replied to your note`,
       body: `${writer?.name ?? "The writer"} replied to the note you sent about "${note.story.title}." Read it in your Kekere Stories notes inbox.`,
