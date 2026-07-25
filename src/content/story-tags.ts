@@ -48,7 +48,6 @@ export const STORY_TAGS: readonly StoryTag[] = [
   { slug: "parenthood",      label: "Parenthood",       feedHeading: "Nobody's ready for it",                 description: "Raising children, mother- or fatherhood" },
 
   // Setting / place
-  { slug: "lagos",           label: "Lagos",            feedHeading: "The city that never sleeps on you",     description: "Set in Lagos, Nigeria" },
   { slug: "city",            label: "City",             feedHeading: "Urban stories, neon and noise",         description: "Set in or defined by city life" },
   { slug: "village",         label: "Village",          feedHeading: "Roots and red earth",                   description: "Rural settings, ancestral homes" },
   { slug: "diaspora",        label: "Diaspora",         feedHeading: "Between two worlds",                    description: "Africans or Nigerians living abroad" },
@@ -112,7 +111,7 @@ const TAG_DIMENSIONS: readonly { heading: string; slugs: readonly string[] }[] =
   },
   {
     heading: "SETTING / PLACE — where and when it happens",
-    slugs: ["lagos", "city", "village", "diaspora", "campus", "workplace", "historical"],
+    slugs: ["city", "village", "diaspora", "campus", "workplace", "historical"],
   },
   {
     heading: "GENRE / FORM — its narrative mode; often the single most defining tag for the whole story",
@@ -239,7 +238,6 @@ export const FEED_TAG_ORDER: readonly StoryTagSlug[] = [
   "psychological",
   "literary",
   "dark",
-  "lagos",
   "crime",
   "erotic",
   "coming-of-age",

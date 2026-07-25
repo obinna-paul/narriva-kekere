@@ -565,27 +565,29 @@ export function ProfileView(props: ProfileViewProps) {
                 style={{ fontFamily: "inherit" }}
               />
             </div>
-            <div>
-              <label
-                htmlFor="profile-bio"
-                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
-              >
-                Brief author bio
-              </label>
-              <textarea
-                id="profile-bio"
-                rows={4}
-                maxLength={280}
-                value={draftBio}
-                onChange={(e) => setDraftBio(e.target.value)}
-                placeholder="A couple of sentences readers will see on your public profile and shareable profile card."
-                className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
-                style={{ fontFamily: "inherit" }}
-              />
-              <div className="mt-[6px] text-right text-xs text-[var(--color-ink-muted-3)]">
-                {draftBio.length} / 280
+            {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
+              <div>
+                <label
+                  htmlFor="profile-bio"
+                  className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                >
+                  Brief author bio
+                </label>
+                <textarea
+                  id="profile-bio"
+                  rows={4}
+                  maxLength={280}
+                  value={draftBio}
+                  onChange={(e) => setDraftBio(e.target.value)}
+                  placeholder="A couple of sentences readers will see on your public profile and shareable profile card."
+                  className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                  style={{ fontFamily: "inherit" }}
+                />
+                <div className="mt-[6px] text-right text-xs text-[var(--color-ink-muted-3)]">
+                  {draftBio.length} / 280
+                </div>
               </div>
-            </div>
+            )}
             <div>
               <label
                 htmlFor="profile-country"
@@ -864,9 +866,11 @@ export function ProfileView(props: ProfileViewProps) {
             <h1 className="mt-4 font-[family-name:var(--font-display)] text-[26px] font-semibold text-[var(--color-ink)]">
               {name || "Unnamed"}
             </h1>
-            <p className="mx-auto mt-2 max-w-[300px] text-[14.5px] leading-[1.5] text-[var(--color-ink-muted)]">
-              {bio || "No bio yet."}
-            </p>
+            {props.hasAuthoredAnyStory && props.writingStats.publishedCount > 0 && (
+              <p className="mx-auto mt-2 max-w-[300px] text-[14.5px] leading-[1.5] text-[var(--color-ink-muted)]">
+                {bio || "No bio yet."}
+              </p>
+            )}
 
             {socialLinks.length > 0 && (
               <div className="mt-3 flex flex-wrap items-center justify-center gap-[8px]">
