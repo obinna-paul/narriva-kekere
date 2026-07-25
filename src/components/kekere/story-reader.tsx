@@ -188,6 +188,7 @@ export function StoryReader({
   const [pageCount, setPageCount] = useState(1);
   const [columnPx, setColumnPx] = useState<number | null>(null);
   const [swipeBoxHeight, setSwipeBoxHeight] = useState<number | null>(null);
+  const [rootHeight, setRootHeight] = useState<number | null>(null);
 
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ targetType: ReportTargetType; targetId: string } | null>(null);
@@ -313,6 +314,7 @@ export function StoryReader({
 
   const contentRef = useRef<HTMLDivElement>(null);
   const ambientSoundRef = useRef<AmbientSoundMenuHandle>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const swipeBoxRef = useRef<HTMLDivElement>(null);
   const swipeScrollerRef = useRef<HTMLDivElement>(null);
   const swipeColumnsRef = useRef<HTMLDivElement>(null);
@@ -429,10 +431,22 @@ export function StoryReader({
   // one-screen-at-a-time pagination should move. The title block lives
   // *inside* the paginated columns in swipe mode (see titleBlock below), not
   // above this box, so box height only depends on the fixed header chrome.
+  //
+  // Also pins the *root* div's own height to reach exactly the bottom of the
+  // viewport (not just "at least" via min-height, which is what caused
+  // residual scroll before this got measured explicitly). Reaching exactly
+  // the viewport bottom matters beyond scroll: it's what makes the reader's
+  // own theme background (white/cream/dark) fully cover the strip behind the
+  // fixed page-counter pill. Falling short there exposes the app shell's own
+  // background instead, which isn't reader-theme aware — on the dark reading
+  // theme that shows up as a mismatched, lighter box behind the pill.
   useEffect(() => {
     if (readingMode !== "swipe" || !unlocked) return;
 
     function measure() {
+      const rootTop = rootRef.current?.getBoundingClientRect().top ?? 0;
+      setRootHeight(Math.max(200, window.innerHeight - rootTop));
+
       const top = swipeBoxRef.current?.getBoundingClientRect().top ?? 78;
       // Reserve enough room for the fixed "Page X of Y" pill (bottom-5 plus
       // its own height) so the last line of text on a page never sits
@@ -1026,13 +1040,23 @@ export function StoryReader({
     </div>
   );
 
+  const swipeActive = unlocked && readingMode === "swipe";
+
   return (
     <div
+      ref={rootRef}
       className={cn(
         "relative transition-colors duration-300",
-        !(unlocked && readingMode === "swipe") && "min-h-screen"
+        !(swipeActive && rootHeight !== null) && "min-h-screen"
       )}
-      style={{ ...themeVars, backgroundColor: theme.bg }}
+      style={{
+        ...themeVars,
+        backgroundColor: theme.bg,
+        // In swipe mode, pin height to exactly the viewport bottom (not just
+        // a min-height) — see the measurement effect above for why "at
+        // least 100vh" isn't the same thing here.
+        ...(swipeActive && rootHeight !== null ? { height: rootHeight } : {}),
+      }}
     >
       <div className="fixed inset-x-0 top-0 z-50 h-[3px] transition-colors duration-300" style={{ backgroundColor: theme.track }}>
         <div
