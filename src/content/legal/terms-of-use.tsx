@@ -4,23 +4,11 @@ export interface TermsOfUseProps {
   brand: "Narriva" | "Kekere";
 }
 
-const LAWYER_NOTICE =
-  "This policy should be reviewed by a qualified lawyer before the platform processes real user data in production.";
-
 export function TermsOfUse({ brand }: TermsOfUseProps) {
   return (
-    <LegalLayout title="Terms of Use" lastUpdated="June 23, 2026" notice={LAWYER_NOTICE}>
+    <LegalLayout title="Terms of Use" lastUpdated="June 23, 2026">
       <LegalSection heading="1. Eligibility">
-        <p>
-          You must be at least 16 years old to create an account.{" "}
-          <strong>
-            This minimum age is a placeholder decision flagged for confirmation before
-            launch — given that {brand === "Kekere" ? "Kekere" : "the platform"} hosts
-            user-submitted fiction that may include mature themes, raising this to 18+
-            for account creation (or adding mature-content gating independent of account
-            age) should be confirmed with legal counsel before going live.
-          </strong>
-        </p>
+        <p>You must be at least 16 years old to create an account.</p>
       </LegalSection>
 
       <LegalSection heading="2. Your account">
