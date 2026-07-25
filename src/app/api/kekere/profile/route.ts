@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
-import { updateKekereProfile } from "@/lib/data/kekere-profile-stats";
+import { getWriterStats, updateKekereProfile } from "@/lib/data/kekere-profile-stats";
 import { setKekereUsername } from "@/lib/data/kekere-username";
 import { getValidatedComingSoonStory } from "@/lib/data/kekere-writer-profile";
 
@@ -15,6 +15,17 @@ export const PATCH = withAuth(async (request, session) => {
   }
   if (typeof bio !== "string") {
     return NextResponse.json({ error: "Bio must be a string" }, { status: 400 });
+  }
+  // Bio only exists to describe a writer on their public profile — readers
+  // have no public-facing profile, so the client never shows this field to
+  // them (see hasAuthoredAnyStory/publishedCount gate in profile-view.tsx).
+  // Re-check server-side too, since the client's own word that a field was
+  // hidden is never enough on its own.
+  if (bio.length > 0) {
+    const writerStats = await getWriterStats(session.user.id);
+    if (writerStats.publishedCount === 0) {
+      return NextResponse.json({ error: "not_a_writer" }, { status: 403 });
+    }
   }
   if (country !== undefined && country !== null && typeof country !== "string") {
     return NextResponse.json({ error: "Country must be a string" }, { status: 400 });

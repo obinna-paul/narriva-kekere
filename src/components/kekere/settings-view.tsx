@@ -229,7 +229,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
         <QuickLinkRow
           href="/kekere/profile"
           label="Edit profile"
-          description="Name, bio, country, avatar, and social links"
+          description="Name, country, avatar, and social links"
         />
         <QuickLinkRow
           href="/kekere/notes"
