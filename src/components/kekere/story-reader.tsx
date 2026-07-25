@@ -443,10 +443,15 @@ export function StoryReader({
 
     measure();
     window.addEventListener("resize", measure);
-    const t = setTimeout(measure, 50);
+    // Re-measure a beat later too: chrome like the InstallPrompt banner
+    // decides whether to render itself inside its own mount effect, so it
+    // can still shift this box's top offset after the first measurement.
+    const t1 = setTimeout(measure, 50);
+    const t2 = setTimeout(measure, 300);
     return () => {
       window.removeEventListener("resize", measure);
-      clearTimeout(t);
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, [readingMode, unlocked]);
 
@@ -460,7 +465,7 @@ export function StoryReader({
     const columns = swipeColumnsRef.current;
     if (!scroller || !columns) return;
 
-    function measure() {
+    function measure(isFinal: boolean) {
       const cw = scroller!.clientWidth;
       if (cw <= 0) return;
       setColumnPx(cw);
@@ -470,10 +475,17 @@ export function StoryReader({
       setPageCount(pages);
 
       if (justEnteredSwipeRef.current) {
-        justEnteredSwipeRef.current = false;
+        // The Tiptap editor mounts asynchronously (it's a brand-new instance
+        // in this branch, not the same one scroll mode used), so this first
+        // pass can measure against a doc that hasn't finished rendering yet
+        // — `pages` would read as 1 and the jump below would always land on
+        // page 0. Only clear the flag once a later, final measurement (after
+        // the content has actually settled) has had a chance to redo the
+        // jump against the real page count.
         const target = Math.round(progress * (pages - 1));
         setPageIndex(target);
         scroller!.scrollLeft = target * cw;
+        if (isFinal) justEnteredSwipeRef.current = false;
       } else {
         // Resize (e.g. rotation) — stay on the same page, just re-clamp it.
         const clamped = Math.min(pageIndex, pages - 1);
@@ -482,12 +494,13 @@ export function StoryReader({
       }
     }
 
-    measure();
-    const ro = new ResizeObserver(measure);
+    measure(false);
+    const ro = new ResizeObserver(() => measure(false));
     ro.observe(scroller);
-    // The Tiptap editor mounts asynchronously, so the first measurement can
-    // land before its content exists — remeasure shortly after.
-    const t = setTimeout(measure, 150);
+    // The Tiptap editor mounts asynchronously, so the first measurement(s)
+    // can land before its content exists — this remeasure, once the content
+    // has had time to settle, is what actually clears justEnteredSwipeRef.
+    const t = setTimeout(() => measure(true), 300);
     return () => {
       ro.disconnect();
       clearTimeout(t);
@@ -1015,7 +1028,10 @@ export function StoryReader({
 
   return (
     <div
-      className="relative min-h-screen transition-colors duration-300"
+      className={cn(
+        "relative transition-colors duration-300",
+        !(unlocked && readingMode === "swipe") && "min-h-screen"
+      )}
       style={{ ...themeVars, backgroundColor: theme.bg }}
     >
       <div className="fixed inset-x-0 top-0 z-50 h-[3px] transition-colors duration-300" style={{ backgroundColor: theme.track }}>
@@ -1235,7 +1251,14 @@ export function StoryReader({
       <div className={cn(comments.panelOpen && unlocked && "md:flex md:items-start md:justify-center md:gap-6")}>
       <main
         className={cn(
-          "relative z-[5] mx-auto max-w-[680px] px-8 pb-24",
+          "relative z-[5] mx-auto max-w-[680px] px-8",
+          // The swipe box's own height calc already reserves exactly the
+          // space it needs (down to the page-counter pill's clearance) — an
+          // extra bottom padding here would push the total page past one
+          // viewport and force the tiny bit of vertical scroll swipe mode is
+          // supposed to eliminate entirely. Scroll mode still wants it as
+          // normal breathing room after the content.
+          unlocked && readingMode === "swipe" ? "pb-0" : "pb-24",
           comments.panelOpen && unlocked && "md:mx-0"
         )}
         style={{ paddingTop: 78 }}
