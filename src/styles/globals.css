@@ -197,19 +197,7 @@ body {
   paragraph's second wrapped line) until the cap's bottom edge landed within
   a fraction of a pixel of that line's bottom, not by eyeballing.
 */
-/*
-  Two selectors, deliberately. :first-of-type is the structural default and
-  still covers the admin review panes, which render their own markup. But a
-  body that opens with an EMPTY paragraph — a stray leading Enter, or a Word
-  import that carries one in — puts :first-of-type on a paragraph with no
-  glyph to enlarge, so the cap silently renders nothing and the first real
-  line of the story starts flat. StoryReaderContent tags the first paragraph
-  that actually contains text with .story-drop-cap, which is what makes the
-  reader correct in that case. Both are listed rather than swapping one for
-  the other so the admin panes keep the behaviour they already had.
-*/
-.story-reader-prose .ProseMirror > p:first-of-type::first-letter,
-.story-reader-prose .ProseMirror > p.story-drop-cap::first-letter {
+.story-reader-prose .ProseMirror > p:first-of-type::first-letter {
   float: left;
   font-size: 2.65em;
   line-height: 1;
