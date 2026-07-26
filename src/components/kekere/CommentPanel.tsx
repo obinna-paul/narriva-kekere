@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Send, MoreVertical, Flag, CornerDownRight } from "lucide-react";
+import { X, Send, MoreVertical, Flag, Trash2, CornerDownRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { CommentDTO } from "@/components/kekere/use-paragraph-comments";
 
@@ -29,6 +29,8 @@ export interface CommentPanelProps {
   pendingNewCount: number;
   onApplyPending: () => void;
   onReportComment: (commentId: string) => void;
+  currentUserId: string | null;
+  onDeleteComment: (commentId: string, parentId?: string) => Promise<boolean>;
 }
 
 /** One comment row — shared by top-level comments and their replies, since
@@ -42,6 +44,8 @@ function CommentRow({
   setOpenMenuId,
   onReportComment,
   onReply,
+  canDelete,
+  onDelete,
 }: {
   comment: CommentDTO;
   isReply: boolean;
@@ -49,6 +53,8 @@ function CommentRow({
   setOpenMenuId: (id: string | null) => void;
   onReportComment: (commentId: string) => void;
   onReply?: () => void;
+  canDelete: boolean;
+  onDelete: () => void;
 }) {
   const c = comment;
   return (
@@ -85,19 +91,35 @@ function CommentRow({
                 role="menu"
                 className="absolute right-0 top-full z-50 mt-1 w-[150px] rounded-[10px] border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-1 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setOpenMenuId(null);
-                    onReportComment(c.id);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
-                  style={{ background: "none", border: "none", cursor: "pointer" }}
-                >
-                  <Flag size={13} className="flex-none" />
-                  Report
-                </button>
+                {canDelete ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      onDelete();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                    style={{ background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    <Trash2 size={13} className="flex-none" />
+                    Delete
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      onReportComment(c.id);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                    style={{ background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    <Flag size={13} className="flex-none" />
+                    Report
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -130,6 +152,8 @@ export function CommentPanel({
   pendingNewCount,
   onApplyPending,
   onReportComment,
+  currentUserId,
+  onDeleteComment,
 }: CommentPanelProps) {
   const [draft, setDraft] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -222,6 +246,8 @@ export function CommentPanel({
                       setReplyingToId(replyingToId === c.id ? null : c.id);
                       setReplyDraft("");
                     }}
+                    canDelete={!!currentUserId && c.userId === currentUserId}
+                    onDelete={() => onDeleteComment(c.id)}
                   />
 
                   {c.replies.length > 0 && (
@@ -234,6 +260,8 @@ export function CommentPanel({
                             openMenuId={openMenuId}
                             setOpenMenuId={setOpenMenuId}
                             onReportComment={onReportComment}
+                            canDelete={!!currentUserId && r.userId === currentUserId}
+                            onDelete={() => onDeleteComment(r.id, c.id)}
                           />
                         </li>
                       ))}

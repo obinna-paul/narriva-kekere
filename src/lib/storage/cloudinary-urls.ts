@@ -28,6 +28,13 @@ export function userAvatarUrl(ref: string): string {
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_200,h_200,c_fill/${ref}`;
 }
 
+/** Full-size avatar for the profile-picture lightbox — same square crop as
+ *  userAvatarUrl but at 800×800 so enlarging it on screen doesn't upscale
+ *  a 200×200 thumbnail into visible blur. */
+export function userAvatarLightboxUrl(ref: string): string {
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/f_auto,q_auto,w_800,h_800,c_fill/${ref}`;
+}
+
 /** Larger avatar, forced to PNG rather than f_auto — used by the
  *  server-rendered profile share card (src/app/api/kekere/writers/[id]/card),
  *  where satori/resvg's raster decoder needs a guaranteed-safe format

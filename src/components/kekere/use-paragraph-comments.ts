@@ -227,6 +227,91 @@ export function useParagraphComments(storyId: string, canFetch: boolean) {
     }
   }
 
+  /** Deletes a comment or reply the current reader owns. `parentId` is set
+   * only when deleting a reply, so the removal (and its rollback) knows to
+   * reach into the specific parent's `replies` array instead of the
+   * paragraph's own top-level list. Deleting a top-level comment removes
+   * its replies too — the server cascades this at the DB level, so the
+   * count is decremented by 1 + however many replies it had, matching. */
+  async function deleteComment(commentId: string, parentId?: string): Promise<boolean> {
+    if (!selectedParagraphId) return false;
+    setError(null);
+
+    let removedSnapshot: CommentDTO | undefined;
+
+    setCommentsByParagraph((prev) => {
+      const group = prev[selectedParagraphId];
+      if (!group) return prev;
+
+      if (parentId) {
+        const parent = group.comments.find((c) => c.id === parentId);
+        removedSnapshot = parent?.replies.find((r) => r.id === commentId);
+        return {
+          ...prev,
+          [selectedParagraphId]: {
+            ...group,
+            count: group.count - 1,
+            comments: group.comments.map((c) =>
+              c.id === parentId ? { ...c, replies: c.replies.filter((r) => r.id !== commentId) } : c
+            ),
+          },
+        };
+      }
+
+      removedSnapshot = group.comments.find((c) => c.id === commentId);
+      const removedCount = removedSnapshot ? 1 + removedSnapshot.replies.length : 1;
+      return {
+        ...prev,
+        [selectedParagraphId]: {
+          ...group,
+          count: group.count - removedCount,
+          comments: group.comments.filter((c) => c.id !== commentId),
+        },
+      };
+    });
+
+    try {
+      const res = await fetch(`/api/kekere/stories/${storyId}/comments/${commentId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Couldn't delete your comment.");
+      }
+      lastKnownTotal.current -= parentId ? 1 : 1 + (removedSnapshot?.replies.length ?? 0);
+      return true;
+    } catch (err) {
+      // Roll back — put the removed comment/reply back where it was.
+      if (removedSnapshot) {
+        const restored = removedSnapshot;
+        setCommentsByParagraph((prev) => {
+          const group = prev[selectedParagraphId];
+          if (!group) return prev;
+          if (parentId) {
+            return {
+              ...prev,
+              [selectedParagraphId]: {
+                ...group,
+                count: group.count + 1,
+                comments: group.comments.map((c) =>
+                  c.id === parentId ? { ...c, replies: [...c.replies, restored] } : c
+                ),
+              },
+            };
+          }
+          return {
+            ...prev,
+            [selectedParagraphId]: {
+              ...group,
+              count: group.count + 1 + restored.replies.length,
+              comments: [...group.comments, restored],
+            },
+          };
+        });
+      }
+      setError(err instanceof Error ? err.message : "Couldn't delete your comment.");
+      return false;
+    }
+  }
+
   return {
     panelOpen,
     setPanelOpen,
@@ -239,6 +324,7 @@ export function useParagraphComments(storyId: string, canFetch: boolean) {
     posting,
     error,
     postComment,
+    deleteComment,
     pendingNewCount,
     applyPending,
   };
