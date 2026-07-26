@@ -176,6 +176,16 @@ export function KemiChat({
     router.push(`/kekere/story/${slug}`);
   }
 
+  // "Why this one?" is offered as a real, tappable follow-up rather than
+  // something a reader has to know they're allowed to ask. Only under the
+  // NEWEST message, and only while it's still the last thing said — once
+  // the reader moves on, the prompt goes with it instead of littering the
+  // transcript with stale chips beside every past recommendation.
+  const lastMessage = messages[messages.length - 1];
+  const lastRecCount = lastMessage?.role === "kemi" ? lastMessage.recommendations?.length ?? 0 : 0;
+  const showWhyThisOne = !loading && lastRecCount > 0;
+  const whyChipLabel = lastRecCount > 1 ? "Why these?" : "Why this one?";
+
   return (
     <>
       <button
@@ -300,17 +310,34 @@ export function KemiChat({
                   ))}
 
                   {messages.length <= 1 && !loading && (
-                    <li className="flex flex-wrap gap-1.5 pt-1">
-                      {quickStarts.map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => send(chip)}
-                          className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                        >
-                          {chip}
-                        </button>
-                      ))}
+                    <li className="flex flex-col gap-2 pt-1">
+                      <div className="flex flex-wrap gap-1.5">
+                        {quickStarts.map((chip) => (
+                          <button
+                            key={chip}
+                            type="button"
+                            onClick={() => send(chip)}
+                            className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[11.5px] leading-snug text-[var(--color-ink-muted-2)]">
+                        Not sold on a pick? Ask her why she chose it.
+                      </p>
+                    </li>
+                  )}
+
+                  {showWhyThisOne && (
+                    <li className="flex pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => send(whyChipLabel)}
+                        className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                      >
+                        {whyChipLabel}
+                      </button>
                     </li>
                   )}
 
