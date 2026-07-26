@@ -15,7 +15,14 @@ export interface StoryReaderContentProps {
    * all need to know about the color palette. Defaults to none, since most
    * StoryReaderContent call sites (e.g. locked-preview rendering) have no
    * use for them. */
-  highlights?: { id: string; paragraphId: string; startOffset: number; endOffset: number; color: string }[];
+  highlights?: {
+    id: string;
+    paragraphId: string;
+    startOffset: number;
+    endOffset: number;
+    color: string;
+    text?: string;
+  }[];
 }
 
 /**
@@ -39,6 +46,7 @@ export function StoryReaderContent({ doc, highlights = [] }: StoryReaderContentP
       startOffset: h.startOffset,
       endOffset: h.endOffset,
       color: HIGHLIGHT_COLOR_BY_ID[h.color]?.overlay ?? HIGHLIGHT_COLOR_BY_ID.yellow.overlay,
+      text: h.text,
     }));
     editor.commands.setHighlights(spans);
     // highlights is a plain array recreated on every parent render even when

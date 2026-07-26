@@ -63,7 +63,10 @@ export function ensureParagraphIds(doc: TiptapDoc): TiptapDoc {
   return generateUniqueIds(doc, createReaderExtensions()) as TiptapDoc;
 }
 
-function paragraphPlainText(node: TiptapParagraphNode): string {
+/** The exact character sequence a paragraph's offsets are measured against —
+ * the server-side counterpart to reading `element.textContent` in the DOM.
+ * Exported because highlight anchoring re-derives offsets from it. */
+export function paragraphPlainText(node: TiptapParagraphNode): string {
   return (node.content ?? []).map((t) => t.text).join("");
 }
 

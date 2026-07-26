@@ -1442,6 +1442,17 @@ export function StoryReader({
                 />
               )}
 
+              {highlights.error && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  onClick={highlights.clearError}
+                  className="fixed inset-x-4 bottom-24 z-[70] mx-auto max-w-sm cursor-pointer rounded-2xl bg-[var(--color-ink)] px-4 py-3 text-center text-[13px] font-medium text-[var(--color-bg)] shadow-[0_10px_30px_-10px_rgba(42,26,18,0.5)]"
+                >
+                  {highlights.error}
+                </div>
+              )}
+
               {tappedHighlight && (
                 <HighlightToolbar
                   rect={tappedHighlight.rect}
