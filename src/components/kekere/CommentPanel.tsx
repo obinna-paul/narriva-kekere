@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { X, Send, MoreVertical, Flag } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { EmojiPicker } from "@/components/kekere/EmojiPicker";
 import type { CommentDTO } from "@/components/kekere/use-paragraph-comments";
 
 const BODY_LIMIT = 500;
@@ -29,9 +28,6 @@ export interface CommentPanelProps {
   onPost: (body: string) => Promise<boolean>;
   pendingNewCount: number;
   onApplyPending: () => void;
-  userReaction: string | null;
-  onSelectEmoji: (emoji: string) => void;
-  onRemoveEmoji: () => void;
   onReportComment: (commentId: string) => void;
 }
 
@@ -46,9 +42,6 @@ export function CommentPanel({
   onPost,
   pendingNewCount,
   onApplyPending,
-  userReaction,
-  onSelectEmoji,
-  onRemoveEmoji,
   onReportComment,
 }: CommentPanelProps) {
   const [draft, setDraft] = useState("");
@@ -100,12 +93,6 @@ export function CommentPanel({
           >
             {pendingNewCount} new comment{pendingNewCount === 1 ? "" : "s"} — Load new comments
           </button>
-        )}
-
-        {selectedParagraphId && unlocked && (
-          <div className="hidden border-b border-[var(--color-ink)]/[0.08] px-5 py-3 md:block">
-            <EmojiPicker userReaction={userReaction} onSelect={onSelectEmoji} onRemove={onRemoveEmoji} />
-          </div>
         )}
 
         <div className="flex-1 overflow-y-auto px-5 py-4">

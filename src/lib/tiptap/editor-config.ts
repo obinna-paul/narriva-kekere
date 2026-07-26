@@ -8,6 +8,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import type { AnyExtension } from "@tiptap/react";
 import { generateUUID } from "@/lib/utils/uuid";
 import { SearchAndReplace } from "@/lib/tiptap/search-and-replace";
+import { ReaderHighlights } from "@/lib/tiptap/reader-highlights";
 
 /**
  * UniqueID (below) generates and assigns `attrs.id` on every paragraph —
@@ -98,5 +99,6 @@ export function createReaderExtensions(): AnyExtension[] {
       filterTransaction: (transaction) => !transaction.getMeta("paste"),
     }),
     ParagraphIdAttribute,
+    ReaderHighlights,
   ];
 }

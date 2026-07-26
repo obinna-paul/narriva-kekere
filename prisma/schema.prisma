@@ -148,7 +148,7 @@ model User {
   kekereContracts      KekereContract[]
   notifications        Notification[]
   paragraphComments    ParagraphComment[]
-  paragraphReactions   ParagraphReaction[]
+  highlights           Highlight[]
   following            Follow[]              @relation("Following")
   followers            Follow[]              @relation("Followers")
   notesSent            Note[]                @relation("NotesSent")
@@ -542,7 +542,7 @@ model Story {
   platformEarnings   PlatformEarnings[]
   versions           StoryVersion[]
   paragraphComments  ParagraphComment[]
-  paragraphReactions ParagraphReaction[]
+  highlights         Highlight[]
   editorialComments  EditorialComment[]
   tags               StoryTag[]
   kekereContracts    KekereContract[]
@@ -625,22 +625,37 @@ model EditorialComment {
   @@index([storyId, status])
 }
 
-model ParagraphReaction {
-  id          String   @id @default(cuid())
+// A reader's private text highlight — visible only to the reader who made
+// it, never to other readers, the story's author, or admins (unlike
+// ParagraphComment, which is shared). Unlike ParagraphComment, a single
+// user can have several highlights within the same paragraph (one
+// per phrase they marked), so there's no uniqueness constraint on
+// storyId+paragraphId+userId, just an index for lookups.
+model Highlight {
+  id          String @id @default(cuid())
   storyId     String
-  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  paragraphId String
+  story       Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  paragraphId String // UUID from attrs.id — NOT a foreign key (lives in Story.body JSON)
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // A single emoji character from ALLOWED_REACTION_EMOJIS (see
-  // src/lib/tiptap/reaction-emojis.ts) — validated at the API layer, not
-  // by the database.
-  emoji       String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Plain-text character offsets into the paragraph's own flattened text
+  // content (marks like bold/italic don't affect this — see
+  // paragraphPlainText() in doc-utils.ts, which defines the same scheme).
+  startOffset Int
+  endOffset   Int
+  // One of HIGHLIGHT_COLOR_IDS (src/content/highlight-colors.ts) — validated
+  // at the API layer, not by the database.
+  color     String
+  // Snapshot of the highlighted text at creation time. Not re-validated
+  // against the live paragraph on read — if a writer edits the story after
+  // a highlight was made, the stored offsets may drift; the render path
+  // skips a highlight whose offsets no longer resolve rather than rendering
+  // garbage (see reader-highlights.ts).
+  text      String
+  createdAt DateTime @default(now())
 
-  @@unique([storyId, paragraphId, userId])
-  @@index([storyId, paragraphId])
+  @@index([storyId, paragraphId, userId])
+  @@index([userId])
 }
 
 enum ReportTargetType {
