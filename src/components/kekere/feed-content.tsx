@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils/cn";
 import { STORY_TAGS } from "@/content/story-tags";
 import type { MockStory } from "@/content/mock/kekere-stories";
 import type { WinnerStory, FeedTagRow } from "@/app/(kekere)/kekere/feed/page";
@@ -129,7 +128,20 @@ function StoryRow({
       </h2>
       <div
         className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
-        style={{ scrollSnapType: "x mandatory" }}
+        // scrollPaddingLeft (distinct from the px-5 padding above) tells the
+        // mandatory scroll-snap algorithm where the "start" of the scrollport
+        // really is. Without it, `padding` alone doesn't count for
+        // scroll-snap-align purposes — the browser instead snaps the first
+        // scroll-snap-align:start card flush against the container's raw
+        // edge the moment the row has enough cards to actually overflow,
+        // which visually eats the left padding and leaves the first card
+        // flush against the screen edge (confirmed via a live repro: the
+        // container's own scrollLeft rested at exactly 20px — its
+        // padding-left amount — instead of 0, on load, with no user
+        // interaction). Matching scroll-padding-left to padding-left keeps
+        // them in agreement, so scrollLeft: 0 is itself a valid snap
+        // position.
+        style={{ scrollSnapType: "x mandatory", scrollPaddingLeft: "20px" }}
       >
         {stories.map((story) => (
           <RowCard key={story.id} story={story} readProgress={readingProgress?.[story.id]} onPreview={onPreview} />

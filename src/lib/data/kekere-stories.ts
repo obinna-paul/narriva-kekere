@@ -160,53 +160,70 @@ export async function searchStories(query: string): Promise<StoryWithAuthor[]> {
 }
 
 /**
- * A story only counts as trending once at least this many people have
- * actually unlocked it in the window — deliberately low right now because
- * the platform is pre-launch and almost every "active reader" is a test
- * account, so even a single real unlock is meaningful signal. Raise this
- * once there's real reader volume.
+ * A story only counts as trending once at least this many *distinct*
+ * readers have unlocked it in the window (StoryUnlock is unique per
+ * user+story, so one row per distinct unlocker — no separate dedupe
+ * needed). One person opening a story is not a trend, no matter how small
+ * the reader base is — raise this further once there's real volume, but it
+ * should never drop back to 1.
  */
-const MIN_TRENDING_UNLOCKS = 1;
+const MIN_TRENDING_UNLOCKS = 3;
 
 /**
- * Trending formula: each story's share of unique readers who unlocked
- * *anything* in the last 7 days, not a raw unlock count — a story with 1
- * unlock out of 5 active readers (20%) outranks one with 3 unlocks out of
- * 200 (1.5%), and this is what stays meaningful as the reader base grows,
- * rather than a count that means something different at every scale.
- * Stories with fewer than MIN_TRENDING_UNLOCKS unlocks in the window are
- * excluded entirely — "trending" means real, current engagement, not a
- * backfilled list padded out with stories nobody's actually reading yet.
+ * Trending formula: each story's recency-weighted share of unique readers
+ * who unlocked *anything* in the last 7 days.
+ *
+ * Two ideas combined:
+ *  1. Share, not raw count — a story with 2 unlocks out of 5 active readers
+ *     (40%) outranks one with 3 unlocks out of 200 (1.5%), so the metric
+ *     stays meaningful as the reader base grows instead of meaning
+ *     something different at every scale.
+ *  2. Recency weighting — an unlock from an hour ago counts close to full
+ *     weight, one from nearly a week ago counts close to zero (linear decay
+ *     across the window). Otherwise a story that had a burst of unlocks 6
+ *     days ago but nothing since would keep outranking something genuinely
+ *     picking up momentum today, for the rest of the week.
+ *
+ * Stories with fewer than MIN_TRENDING_UNLOCKS distinct unlockers in the
+ * window are excluded entirely regardless of score — "trending" means real,
+ * current, multi-reader engagement, not a backfilled list padded out with
+ * whatever one person happened to open.
  */
 async function listStoriesTrending(
   where: Prisma.StoryWhereInput,
   page: number,
   pageSize: number
 ): Promise<ListStoriesResult> {
-  const windowStart = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const now = Date.now();
+  const windowStart = new Date(now - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const windowMs = now - windowStart.getTime();
 
-  const [matchingStories, unlockCounts, activeReaders] = await Promise.all([
+  const [matchingStories, recentUnlocks] = await Promise.all([
     // publishedAt-ordered so ties in trending score break deterministically
     // (newest first) instead of relying on undefined DB row order.
     prisma.story.findMany({ where, select: { id: true }, orderBy: { publishedAt: "desc" } }),
-    prisma.storyUnlock.groupBy({
-      by: ["storyId"],
-      where: { unlockedAt: { gte: windowStart } },
-      _count: { storyId: true },
-    }),
     prisma.storyUnlock.findMany({
       where: { unlockedAt: { gte: windowStart } },
-      select: { userId: true },
-      distinct: ["userId"],
+      select: { storyId: true, userId: true, unlockedAt: true },
     }),
   ]);
 
-  const activeReaderCount = Math.max(activeReaders.length, 1);
+  const activeReaderCount = Math.max(new Set(recentUnlocks.map((u) => u.userId)).size, 1);
   const matchingIdSet = new Set(matchingStories.map((s) => s.id));
+
+  const unlockerCountByStoryId = new Map<string, number>();
+  const weightedScoreByStoryId = new Map<string, number>();
+  for (const unlock of recentUnlocks) {
+    if (!matchingIdSet.has(unlock.storyId)) continue;
+    unlockerCountByStoryId.set(unlock.storyId, (unlockerCountByStoryId.get(unlock.storyId) ?? 0) + 1);
+    const weight = Math.max(0, 1 - (now - unlock.unlockedAt.getTime()) / windowMs);
+    weightedScoreByStoryId.set(unlock.storyId, (weightedScoreByStoryId.get(unlock.storyId) ?? 0) + weight);
+  }
+
   const scoreByStoryId = new Map(
-    unlockCounts
-      .filter((u) => matchingIdSet.has(u.storyId) && u._count.storyId >= MIN_TRENDING_UNLOCKS)
-      .map((u) => [u.storyId, u._count.storyId / activeReaderCount]),
+    Array.from(weightedScoreByStoryId.entries())
+      .filter(([storyId]) => (unlockerCountByStoryId.get(storyId) ?? 0) >= MIN_TRENDING_UNLOCKS)
+      .map(([storyId, weighted]) => [storyId, weighted / activeReaderCount]),
   );
 
   const orderedIds = matchingStories
