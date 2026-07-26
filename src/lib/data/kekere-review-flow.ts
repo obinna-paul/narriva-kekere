@@ -116,16 +116,24 @@ export async function finalizeContract(
 
   const story = await prisma.story.findUnique({
     where: { id: storyId },
-    include: { author: { select: { id: true, name: true, email: true, createdByAdminId: true } } },
+    include: { author: { select: { id: true, name: true, email: true } } },
   });
   if (!story) throw new ReviewFlowError("not_found", "Story not found");
 
-  // Onboarded/admin-created writers skip the ACCEPTED "to be published" queue
-  // and go straight to PUBLISHED the moment they sign — see
-  // signContractAndPublishStory in kekere-contracts.ts, which is the other
-  // half of this same branch. Checked the same way in both places so the
-  // copy sent here always matches what actually happens on signing.
-  const isOnboarded = story.author.createdByAdminId != null;
+  // Whether THIS STORY skips the ACCEPTED "to be published" queue and goes
+  // straight to PUBLISHED the moment it's signed depends on how the story
+  // itself was created (sourceType), not on whether the writer's account
+  // happens to have been set up by an admin. A writer onboarded via the
+  // admin tool can later submit an entirely normal, self-authored story
+  // through the standard review flow — that story must still go through
+  // "to be published" like any other. Checked the same way in
+  // signContractAndPublishStory (kekere-contracts.ts), which is the other
+  // half of this same branch, so the copy sent here always matches what
+  // actually happens on signing. In practice this is always false here:
+  // a genuinely ADMIN_AUTHORED story is created directly at
+  // PENDING_CONTRACT (see writers/[writerId]/stories/route.ts) and never
+  // passes through SUBMITTED/finalizeContract at all.
+  const isOnboarded = story.sourceType === "ADMIN_AUTHORED";
 
   const template = await prisma.kekereContractTemplate.findFirst({
     where: { contractType: "PUBLISHING" },

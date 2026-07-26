@@ -31,7 +31,7 @@ const schema = z.object({
 });
 
 export const POST = withAuth(
-  async (request) => {
+  async (request, session) => {
     const raw = await request.json().catch(() => null);
     const parsed = schema.safeParse(raw);
 
@@ -59,20 +59,21 @@ export const POST = withAuth(
 
     const writer = await prisma.user.findUnique({
       where: { id: writerId },
-      select: { name: true, email: true, createdByAdminId: true },
+      select: { name: true, email: true },
     });
 
     if (!writer) {
       return NextResponse.json({ error: "Writer not found" }, { status: 404 });
     }
 
-    // This route creates a story for an arbitrary existing writerId, so the
-    // signer isn't necessarily onboarded/admin-created — only writers with
-    // createdByAdminId set skip the ACCEPTED "to be published" queue and go
-    // straight to PUBLISHED on signing (see signContractAndPublishStory in
-    // kekere-contracts.ts). Checked the same way here so the copy sent below
-    // always matches what actually happens when this writer signs.
-    const isOnboarded = writer.createdByAdminId != null;
+    // This route is itself an admin-direct-authoring tool (the admin pastes
+    // in the story and its metadata on the writer's behalf, same as the
+    // Onboarded Writers story form) — the story it creates is always
+    // sourceType ADMIN_AUTHORED below, so it always skips the ACCEPTED "to
+    // be published" queue and goes straight to PUBLISHED on signing (see
+    // signContractAndPublishStory in kekere-contracts.ts, which decides that
+    // from the story's own sourceType, not the writer's account history).
+    const isOnboarded = true;
 
     const template = await prisma.kekereContractTemplate.findFirst({
       where: { contractType: "PUBLISHING" },
@@ -138,6 +139,8 @@ export const POST = withAuth(
           readingTime,
           status: "PENDING_CONTRACT",
           isDraft: false,
+          sourceType: "ADMIN_AUTHORED",
+          authoredByAdminId: session.user.id,
           tags: tagRecords.length > 0
             ? { create: tagRecords.map((t) => ({ tagId: t.id })) }
             : undefined,
