@@ -63,6 +63,16 @@ export async function recordReadingActivity(userId: string): Promise<void> {
 
       await tx.readingActivity.create({ data: { userId, date: today } });
 
+      // Today is now on the board, so any "your streak lapses tonight" opener
+      // Kemi queued earlier is no longer true. Cleared here rather than being
+      // filtered at delivery time so the unread dot goes out too — a dot that
+      // survives the thing it was about is worse than no dot. Deleted through
+      // tx directly instead of calling into kekere-kemi-nudges, which imports
+      // isStreakAtRisk from this module.
+      await tx.kemiNudge.deleteMany({
+        where: { userId, kind: "STREAK_SAVE", deliveredAt: null },
+      });
+
       const streak = await computeCurrentStreakTx(tx, userId, today);
       const milestone = milestoneAt(streak);
       if (!milestone) return null;
@@ -103,6 +113,31 @@ async function notifyStreakReward(userId: string, milestone: StreakMilestone): P
     body: `You've read ${milestone.days} days in a row. ${milestone.reward} cowries have been added to your wallet.`,
     link: "/kekere/wallet",
   });
+}
+
+/**
+ * Whether this reader has a live streak that ends tonight unless they read.
+ *
+ * True means: yesterday counted (so there IS a run to lose) and today doesn't
+ * yet. A reader with no streak at all has nothing at risk and gets nothing —
+ * "you could start a streak today" is an advert, not a nudge.
+ *
+ * Deliberately not built on getStreakStats, which reads the account's entire
+ * activity history to compute a length. Nothing here needs the length, only
+ * the two most recent days, so this is two rows off the (userId, date) unique
+ * index — cheap enough to sit behind the unread-dot poll.
+ */
+export async function isStreakAtRisk(userId: string): Promise<boolean> {
+  const today = toUtcDateOnly(new Date());
+  const yesterday = addDays(today, -1);
+
+  const rows = await prisma.readingActivity.findMany({
+    where: { userId, date: { in: [today, yesterday] } },
+    select: { date: true },
+  });
+
+  const dates = new Set(rows.map((r) => isoDate(r.date)));
+  return dates.has(isoDate(yesterday)) && !dates.has(isoDate(today));
 }
 
 export interface StreakStats {

@@ -91,12 +91,97 @@ export function formatCatalogForPrompt(catalog: KemiCatalogEntry[]): string {
     .join("\n");
 }
 
+/** Writers with something published, and the bio they wrote themselves.
+ *  Separate from the catalog rather than repeated on every story line: a bio
+ *  duplicated across an author's whole backlist would cost real prompt space
+ *  for no extra information, and the catalog already names the author of each
+ *  story, which is what lets Kemi answer "what else has she written". */
+export interface KemiWriter {
+  name: string;
+  bio: string | null;
+}
+
+const MAX_BIO_CHARS = 240;
+
+export async function getKemiWriters(): Promise<KemiWriter[]> {
+  const writers = await prisma.user.findMany({
+    where: { stories: { some: { status: "PUBLISHED", slug: { not: null } } } },
+    select: { name: true, bio: true },
+    orderBy: { name: "asc" },
+  });
+
+  return writers.map((w) => {
+    const bio = (w.bio ?? "").trim();
+    return {
+      name: w.name,
+      bio: bio ? (bio.length > MAX_BIO_CHARS ? `${bio.slice(0, MAX_BIO_CHARS).trimEnd()}…` : bio) : null,
+    };
+  });
+}
+
+export function formatWritersForPrompt(writers: KemiWriter[]): string {
+  const withBio = writers.filter((w) => w.bio);
+  if (withBio.length === 0) {
+    return "(No writer bios available — if asked about a writer, say you only know their stories, not their story.)";
+  }
+  return withBio.map((w) => `- ${w.name}: ${w.bio}`).join("\n");
+}
+
+/** Competitions a reader can actually act on right now. Kekere runs these
+ *  already; Kemi simply had no idea they existed, so the one feature with a
+ *  deadline attached was the one she could never mention. */
+export interface KemiCompetition {
+  title: string;
+  theme: string;
+  slug: string;
+  deadline: Date;
+  status: "OPEN" | "UPCOMING";
+}
+
+export async function getKemiCompetitions(): Promise<KemiCompetition[]> {
+  const rows = await prisma.competition.findMany({
+    where: { status: { in: ["OPEN", "UPCOMING"] } },
+    select: { title: true, theme: true, slug: true, deadline: true, status: true },
+    orderBy: { deadline: "asc" },
+    take: 5,
+  });
+  return rows.map((r) => ({
+    title: r.title,
+    theme: r.theme,
+    slug: r.slug,
+    deadline: r.deadline,
+    status: r.status as "OPEN" | "UPCOMING",
+  }));
+}
+
+export function formatCompetitionsForPrompt(competitions: KemiCompetition[]): string {
+  if (competitions.length === 0) {
+    return "(Nothing running right now. Don't bring competitions up at all — there's nothing to point at.)";
+  }
+  return competitions
+    .map((c) => {
+      const when = c.deadline.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+      const state = c.status === "OPEN" ? `open now, entries close ${when}` : `not open yet, opens toward ${when}`;
+      return `- "${c.title}" — theme: ${c.theme}. ${state}. Reader can find it at /kekere/competitions/${c.slug}.`;
+    })
+    .join("\n");
+}
+
+/** A story this reader started and hasn't finished — the one thing Kemi can
+ *  usefully re-orient them on. */
+export interface KemiInProgressStory {
+  slug: string;
+  title: string;
+  percent: number;
+}
+
 export interface KemiReaderContext {
   topGenre: string | null;
   topCategoryTitles: string[];
   recentlyReadSlugs: string[];
   freeReadAvailable: boolean;
   cowrieBalance: number;
+  inProgress: KemiInProgressStory | null;
 }
 
 /** Everything Kemi is told about THIS reader — taste signal, what they've
@@ -104,14 +189,23 @@ export interface KemiReaderContext {
  *  cowrie situation (so she knows whether to lean on the free-read hook or
  *  just recommend). */
 export async function getKemiReaderContext(userId: string): Promise<KemiReaderContext> {
-  const [categoryScores, topGenre, wallet, freeReadAvailable, completions, unlocks] = await Promise.all([
-    getUserCategoryScores(userId),
-    getTopGenre(userId),
-    getWalletForUser(userId),
-    hasFreeReadAvailable(userId),
-    prisma.storyCompletion.findMany({ where: { userId }, select: { story: { select: { slug: true } } } }),
-    prisma.storyUnlock.findMany({ where: { userId }, select: { story: { select: { slug: true } } } }),
-  ]);
+  const [categoryScores, topGenre, wallet, freeReadAvailable, completions, unlocks, progressRows] =
+    await Promise.all([
+      getUserCategoryScores(userId),
+      getTopGenre(userId),
+      getWalletForUser(userId),
+      hasFreeReadAvailable(userId),
+      prisma.storyCompletion.findMany({ where: { userId }, select: { storyId: true, story: { select: { slug: true } } } }),
+      prisma.storyUnlock.findMany({ where: { userId }, select: { story: { select: { slug: true } } } }),
+      // Genuinely mid-read only: barely-started (a stray tap) and
+      // all-but-finished both make a "where you left off" offer feel wrong.
+      prisma.storyReadingProgress.findMany({
+        where: { userId, scrollFraction: { gt: 0.05, lt: 0.95 } },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: { storyId: true, scrollFraction: true, story: { select: { slug: true, title: true, status: true } } },
+      }),
+    ]);
 
   const topCategoryTitles = Array.from(categoryScores.entries())
     .sort((a, b) => b[1] - a[1])
@@ -127,13 +221,64 @@ export async function getKemiReaderContext(userId: string): Promise<KemiReaderCo
     ),
   );
 
+  // A story can carry progress and a completion at once (they finished it on
+  // a later pass), and one that's since been unpublished shouldn't be offered
+  // back — so both are filtered out before taking the most recent survivor.
+  const completedIds = new Set(completions.map((c) => c.storyId));
+  const resumable = progressRows.find(
+    (p) => !completedIds.has(p.storyId) && p.story.status === "PUBLISHED" && p.story.slug,
+  );
+
   return {
     topGenre,
     topCategoryTitles,
     recentlyReadSlugs,
     freeReadAvailable,
     cowrieBalance: wallet?.spendingBalance ?? 0,
+    inProgress: resumable
+      ? {
+          slug: resumable.story.slug!,
+          title: resumable.story.title,
+          percent: Math.round(resumable.scrollFraction * 100),
+        }
+      : null,
   };
+}
+
+/**
+ * A short story this reader hasn't touched, leaning toward their taste —
+ * what Kemi attaches to a streak-save opener.
+ *
+ * "Short" is the whole point: the nudge exists because the day is nearly over,
+ * so the pick has to be one they can plausibly finish tonight. Taste is the
+ * tie-break, not the sort — a perfect-fit 20-minute story is the wrong answer
+ * to this particular question.
+ */
+export async function pickQuickRead(userId: string): Promise<{ slug: string; title: string } | null> {
+  const [topGenre, completions, unlocks] = await Promise.all([
+    getTopGenre(userId),
+    prisma.storyCompletion.findMany({ where: { userId }, select: { storyId: true } }),
+    prisma.storyUnlock.findMany({ where: { userId }, select: { storyId: true } }),
+  ]);
+
+  const seen = Array.from(new Set([...completions, ...unlocks].map((r) => r.storyId)));
+
+  const candidates = await prisma.story.findMany({
+    where: {
+      status: "PUBLISHED",
+      slug: { not: null },
+      isAdult: false,
+      ...(seen.length > 0 ? { id: { notIn: seen } } : {}),
+    },
+    select: { slug: true, title: true, genre: true, readingTime: true },
+    orderBy: { readingTime: "asc" },
+    take: 12,
+  });
+  if (candidates.length === 0) return null;
+
+  const onTaste = topGenre ? candidates.find((c) => c.genre === topGenre) : undefined;
+  const pick = onTaste ?? candidates[0];
+  return { slug: pick.slug!, title: pick.title };
 }
 
 export function formatReaderContextForPrompt(ctx: KemiReaderContext): string {
@@ -157,6 +302,12 @@ export function formatReaderContextForPrompt(ctx: KemiReaderContext): string {
       ? "They still have their free first read available and haven't used it yet — a great, low-pressure nudge if they haven't unlocked anything."
       : `Their cowrie balance is ${ctx.cowrieBalance}.`,
   );
+
+  if (ctx.inProgress) {
+    lines.push(
+      `They're part-way through "${ctx.inProgress.title}" (${ctx.inProgress.slug}) — about ${ctx.inProgress.percent}% in, paused, not finished. If they ask where they left off or want help picking it back up, see "Getting them back into a story" below.`,
+    );
+  }
 
   return lines.join("\n");
 }

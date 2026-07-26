@@ -1234,6 +1234,15 @@ enum KemiNudgeKind {
   FIRST_STORY_FINISHED
   DRAFT_STARTED
   STORY_PUBLISHED
+  // A running streak that lapses at midnight if they don't read today. Unlike
+  // the others this isn't recorded at the moment of an event — nothing
+  // "happens" when a streak is about to break — so it's materialised lazily
+  // by ensureStreakSaveNudge the next time the reader's client asks whether
+  // Kemi has anything waiting.
+  STREAK_SAVE
+  // Someone this reader follows just published. Created in the same fan-out
+  // that sends the follow notification and email.
+  FOLLOWED_WRITER_PUBLISHED
 }
 
 // A moment worth Kemi speaking up about, recorded when it happens and turned
@@ -1252,6 +1261,10 @@ model KemiNudge {
   kind        KemiNudgeKind
   storyTitle  String?
   storySlug   String?
+  // Snapshotted for the same reason as the title: FOLLOWED_WRITER_PUBLISHED
+  // names the writer in its opener, and that line must still read correctly
+  // if the account is renamed or removed before the reader opens the chat.
+  writerName  String?
   createdAt   DateTime      @default(now())
   deliveredAt DateTime?
 

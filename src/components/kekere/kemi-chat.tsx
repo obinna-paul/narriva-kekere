@@ -31,6 +31,13 @@ const KEMI_AVATAR = "/kekere/kemi-avatar.png";
 
 const NUDGE_POLL_INTERVAL_MS = 60000;
 
+// Mirrors SESSION_IDLE_MS in the conversation route, which is the authority —
+// it decides whether to hand back a fresh sessionId, and this side simply
+// knows when it's worth asking again. Kept here so a panel left mounted on a
+// backgrounded tab for half a day doesn't reopen into yesterday's thread just
+// because it already hydrated once.
+const SESSION_IDLE_MS = 3 * 60 * 60 * 1000;
+
 // A rotating pool rather than one fixed set — the same 4 chips every single
 // time a reader opens Kemi would start to feel like decoration, not real
 // options. Rotates once a day, same idea as the feed's Editor's Pick
@@ -118,6 +125,9 @@ export function KemiChat({
   const [unreadCount, setUnreadCount] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [askedWhyFor, setAskedWhyFor] = useState<string[]>([]);
+  // When this reader was last actually talking to Kemi, so reopening after a
+  // long gap re-checks with the server instead of trusting a stale hydrate.
+  const lastActivityRef = useRef(Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const quickStarts = useRef(buildQuickStarts(topGenre)).current;
@@ -199,14 +209,26 @@ export function KemiChat({
 
     // The transcript lives server-side and always has; it was simply never
     // read back, so every close wiped the conversation. Load it once per
-    // mount, then fall back to a fresh greeting only for a genuinely empty
-    // history.
-    if (hydrated) return;
+    // mount — and again after a long gap, since the server retires a cold
+    // conversation and hands back a new sessionId, which this component has
+    // to adopt or it would keep writing into the retired one.
+    const idle = Date.now() - lastActivityRef.current > SESSION_IDLE_MS;
+    if (hydrated && !idle) return;
     setHydrated(true);
+    lastActivityRef.current = Date.now();
+
     try {
       const res = await fetch(`/api/kekere/kemi/conversation?sessionId=${encodeURIComponent(sessionId.current)}`);
       if (res.ok) {
         const data = await res.json();
+        if (data.sessionId && data.sessionId !== sessionId.current) {
+          sessionId.current = data.sessionId;
+          try {
+            localStorage.setItem("kemi-sid", data.sessionId);
+          } catch {
+            // Private mode — the ref alone still carries this session.
+          }
+        }
         const restored: KemiMessage[] = data.messages ?? [];
         if (restored.length > 0) {
           setMessages(restored);
@@ -217,13 +239,21 @@ export function KemiChat({
       // Fall through to the greeting — a lost transcript shouldn't leave
       // the reader staring at an empty panel.
     }
-    setMessages((prev) => (prev.length === 0 ? [{ role: "kemi", text: pickGreeting() }] : prev));
+
+    // Nothing to restore: either a genuinely new reader or a conversation the
+    // server just aged out. Set outright rather than preserving whatever's in
+    // state — after a reset, the stale transcript is precisely what shouldn't
+    // survive — and let go of which pitches have already been questioned,
+    // since none of them are on screen any more.
+    setAskedWhyFor([]);
+    setMessages([{ role: "kemi", text: pickGreeting() }]);
   }
 
   async function send(text: string, opts: { isWhyRequest?: boolean } = {}) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
+    lastActivityRef.current = Date.now();
     setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
     setInput("");
     setLoading(true);

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/middleware";
-import { countPendingKemiNudges } from "@/lib/data/kekere-kemi-nudges";
+import { countPendingKemiNudges, ensureStreakSaveNudge } from "@/lib/data/kekere-kemi-nudges";
 
 /**
  * How many unread openers Kemi has waiting — the only thing the "Ask Kemi"
@@ -16,6 +16,12 @@ import { countPendingKemiNudges } from "@/lib/data/kekere-kemi-nudges";
 export async function GET() {
   const session = await getCurrentSession();
   if (!session?.user?.id) return NextResponse.json({ pendingCount: 0 });
+
+  // A lapsing streak is the one opener with no event behind it to record it,
+  // so it's evaluated here — this poll is the closest thing to "the reader is
+  // around right now". Cheap by construction: it short-circuits on a
+  // once-per-day marker before it looks at anything else.
+  await ensureStreakSaveNudge(session.user.id);
 
   const pendingCount = await countPendingKemiNudges(session.user.id);
   return NextResponse.json({ pendingCount });

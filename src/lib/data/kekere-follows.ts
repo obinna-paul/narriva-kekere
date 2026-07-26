@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { createNotification } from "@/lib/notifications/create";
 import { getEmailRecipient, getEmailRecipientsBatch } from "@/lib/notifications/email-preferences";
 import { getWriterStatsBatch } from "@/lib/data/kekere-writer-profile";
+import { createKemiNudgesForUsers } from "@/lib/data/kekere-kemi-nudges";
 import { sendEmail } from "@/lib/email/send";
 import { renderWriterPublishedEmail, renderNewFollowerEmail } from "@/lib/email/templates";
 import { SITE_URL } from "@/content/decisions";
@@ -217,6 +218,19 @@ export async function notifyFollowersOfPublish(storyId: string): Promise<void> {
         body: `${story.author.name} just published "${story.title}."`,
         link: `/kekere/story/${storyPath}`,
       })),
+    });
+
+    // Kemi opens a conversation about it too. A notification is a fact filed
+    // in a list; this is someone bringing it to you — the reader followed
+    // this writer on purpose, so it's the most natural opener she has.
+    // Deliberately not gated on the email preference: that setting is about
+    // what lands in an inbox, and this never leaves the app.
+    await createKemiNudgesForUsers({
+      userIds: followers.map((f) => f.followerId),
+      kind: "FOLLOWED_WRITER_PUBLISHED",
+      storyTitle: story.title,
+      storySlug: story.slug,
+      writerName: story.author.name,
     });
 
     const recipients = await getEmailRecipientsBatch(followers.map((f) => f.followerId));

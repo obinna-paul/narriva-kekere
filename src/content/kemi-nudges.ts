@@ -17,14 +17,16 @@
  * hash-based pick lands anywhere across her range.
  *
  * Every line: one move only, no stacked question-plus-pitch, never a script.
- * {title} is substituted with the story's title.
+ * {title} is substituted with the story's title, {writer} with a writer's name.
  */
 
 export type KemiNudgeKind =
   | "STORY_COMPLETED"
   | "FIRST_STORY_FINISHED"
   | "DRAFT_STARTED"
-  | "STORY_PUBLISHED";
+  | "STORY_PUBLISHED"
+  | "STREAK_SAVE"
+  | "FOLLOWED_WRITER_PUBLISHED";
 
 /** A finished story is the single best moment to offer the next one — the
  *  reader is still inside the world of what they just read. */
@@ -85,11 +87,56 @@ const STORY_PUBLISHED_LINES = [
   "{title} is published. Somewhere out there, someone is about to read it for the first time.",
 ];
 
+/** Their streak lapses at midnight and they haven't read today. The tone that
+ *  matters here is *offering*, not nagging — the message arrives with a short
+ *  story already attached, so the line's whole job is to hand it over. Never
+ *  guilt, never a countdown, never "don't lose your progress": a reading
+ *  streak is meant to be a small pleasure, and the moment it starts making
+ *  someone feel watched it stops being one. {title} is the pick. */
+const STREAK_SAVE_LINES = [
+  // warm
+  "Your streak's still alive but only just — today's not on the board yet. Here's a short one if you want it: {title}.",
+  "You haven't read today and the day's getting on. {title} is a quick one, if you fancy keeping the run going.",
+  // cheeky
+  "Streak's hanging by a thread. I'm not judging. I am, however, handing you {title}, which is short.",
+  "Not to be that friend, but: nothing read today. {title} would sort that out in one sitting.",
+  // gentle
+  "No pressure at all — but if you'd like to keep the streak, {title} is a small, easy one.",
+  "There's still time today if you want it. {title} won't ask much of you.",
+  // book-obsessed
+  "Quick one before the day turns over: {title}. Short, and I think it'll get you.",
+  // energetic
+  "Still time to get today on the board — {title} is the fast way to do it.",
+  // flirty
+  "You've not read a thing today and I noticed, which says more about me than you. {title}? It's short.",
+];
+
+/** Someone they follow just published. The reader opted into hearing about
+ *  this writer specifically, so Kemi can lead with the name — it's the whole
+ *  reason the message is interesting. {writer} and {title}. */
+const FOLLOWED_WRITER_PUBLISHED_LINES = [
+  // energetic
+  "{writer} just published something new — {title}. You follow them, so I thought you'd want to know first.",
+  // warm
+  "New one from {writer}: {title}. Straight to you, since you follow them.",
+  // book-obsessed
+  "{writer} has a new story up. {title}. I've been waiting for this one.",
+  "Something new from {writer} — {title}. You already know whether you want it.",
+  // cheeky
+  "{writer} went and published again. {title}. I'll leave it right here.",
+  // gentle
+  "{writer} has published {title}. No rush — it'll keep.",
+  // flirty
+  "{writer} has something new out and I came straight to you with it. {title}.",
+];
+
 const POOLS: Record<KemiNudgeKind, string[]> = {
   STORY_COMPLETED: STORY_COMPLETED_LINES,
   FIRST_STORY_FINISHED: FIRST_STORY_FINISHED_LINES,
   DRAFT_STARTED: DRAFT_STARTED_LINES,
   STORY_PUBLISHED: STORY_PUBLISHED_LINES,
+  STREAK_SAVE: STREAK_SAVE_LINES,
+  FOLLOWED_WRITER_PUBLISHED: FOLLOWED_WRITER_PUBLISHED_LINES,
 };
 
 /**
@@ -101,15 +148,19 @@ export function renderKemiNudge(
   kind: KemiNudgeKind,
   storyTitle: string | null | undefined,
   seed: string,
+  writerName?: string | null,
 ): string {
   const pool = POOLS[kind] ?? POOLS.STORY_COMPLETED;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
   const line = pool[hash % pool.length];
 
-  // A title is expected but never guaranteed (the story could have been
-  // deleted between the event and delivery), so fall back to wording that
-  // still reads naturally rather than printing a hole where a title should be.
+  // Neither token is guaranteed at delivery time — the story could have been
+  // deleted, the writer's account closed — so both fall back to wording that
+  // still reads naturally rather than printing a hole where a name should be.
   const title = (storyTitle ?? "").trim();
-  return line.replace(/\{title\}/g, title || "that one");
+  const writer = (writerName ?? "").trim();
+  return line
+    .replace(/\{title\}/g, title || "that one")
+    .replace(/\{writer\}/g, writer || "a writer you follow");
 }
