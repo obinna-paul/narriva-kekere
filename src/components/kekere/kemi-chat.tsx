@@ -24,6 +24,8 @@ interface KemiMessage {
 
 const KEMI_AVATAR = "/kekere/kemi-avatar.png";
 
+const NUDGE_POLL_INTERVAL_MS = 60000;
+
 // A rotating pool rather than one fixed set — the same 4 chips every single
 // time a reader opens Kemi would start to feel like decoration, not real
 // options. Rotates once a day, same idea as the feed's Editor's Pick
@@ -37,6 +39,41 @@ const MOOD_CHIPS = [
   "Something heartwarming",
   "I want a twist",
 ];
+
+// Ways to push back on a pick. These are the READER's words, not Kemi's, so
+// they're written as the half-teasing, half-curious register people actually
+// fall into with her — a flat "Why this one?" every single time made the
+// affordance feel like a system button rather than part of the conversation.
+// Kept short: they render as a chip and send verbatim as a message.
+const WHY_CHIPS_SINGLE = [
+  "Why this one?",
+  "Sell it to me",
+  "Convince me",
+  "Go on, justify it",
+  "What made you pick this?",
+  "Hmm. Why?",
+  "Make your case",
+  "Why do you think I'll like it?",
+];
+
+const WHY_CHIPS_MULTI = [
+  "Why these?",
+  "Sell me on these",
+  "Make your case",
+  "What made you pick these?",
+  "Convince me",
+];
+
+/** Picks the pushback chip for a given recommendation. Seeded by the slug
+ *  signature so it stays put while that pitch is on screen — a chip whose
+ *  wording changed under the reader's thumb on every re-render would read as
+ *  a glitch, not personality. */
+function pickWhyChip(signature: string, count: number): string {
+  const pool = count > 1 ? WHY_CHIPS_MULTI : WHY_CHIPS_SINGLE;
+  let hash = 0;
+  for (let i = 0; i < signature.length; i++) hash = (hash * 31 + signature.charCodeAt(i)) >>> 0;
+  return pool[hash % pool.length];
+}
 
 /** Builds this reader's quick-start chips: a taste-based slot up front when
  *  we have one, then enough rotating mood chips to fill out to 4 total. */
@@ -73,6 +110,9 @@ export function KemiChat({
   const [messages, setMessages] = useState<KemiMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+  const [askedWhyFor, setAskedWhyFor] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const quickStarts = useRef(buildQuickStarts(topGenre)).current;
@@ -122,11 +162,57 @@ export function KemiChat({
     };
   }, [open]);
 
-  function handleOpen() {
-    setOpen(true);
-    if (messages.length === 0) {
-      setMessages([{ role: "kemi", text: pickGreeting() }]);
+  // Poll for openers Kemi has queued while the panel is closed. Cheap
+  // (a count, no content) and stops entirely while the panel is open, since
+  // opening it delivers everything pending anyway.
+  useEffect(() => {
+    if (!readerId || open) return;
+    let cancelled = false;
+    async function check() {
+      try {
+        const res = await fetch("/api/kekere/kemi/nudges");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setUnreadCount(data.pendingCount ?? 0);
+      } catch {
+        // Best-effort — a missing dot is a fine failure mode.
+      }
     }
+    check();
+    const interval = setInterval(check, NUDGE_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [readerId, open]);
+
+  async function handleOpen() {
+    setOpen(true);
+    // Opening is what delivers pending nudges, so the dot is spent the
+    // moment the panel is up — don't leave it glowing over an open chat.
+    setUnreadCount(0);
+
+    // The transcript lives server-side and always has; it was simply never
+    // read back, so every close wiped the conversation. Load it once per
+    // mount, then fall back to a fresh greeting only for a genuinely empty
+    // history.
+    if (hydrated) return;
+    setHydrated(true);
+    try {
+      const res = await fetch(`/api/kekere/kemi/conversation?sessionId=${encodeURIComponent(sessionId.current)}`);
+      if (res.ok) {
+        const data = await res.json();
+        const restored: KemiMessage[] = data.messages ?? [];
+        if (restored.length > 0) {
+          setMessages(restored);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to the greeting — a lost transcript shouldn't leave
+      // the reader staring at an empty panel.
+    }
+    setMessages((prev) => (prev.length === 0 ? [{ role: "kemi", text: pickGreeting() }] : prev));
   }
 
   async function send(text: string) {
@@ -176,26 +262,48 @@ export function KemiChat({
     router.push(`/kekere/story/${slug}`);
   }
 
-  // "Why this one?" is offered as a real, tappable follow-up rather than
+  // Pushback on a pick is offered as a real, tappable follow-up rather than
   // something a reader has to know they're allowed to ask. Only under the
   // NEWEST message, and only while it's still the last thing said — once
   // the reader moves on, the prompt goes with it instead of littering the
   // transcript with stale chips beside every past recommendation.
+  //
+  // Keyed by the set of stories being pitched, not by message position: when
+  // asked to justify a pick, Kemi frequently re-emits the same RECOMMEND line
+  // (her prompt tells her not to, but the model doesn't reliably obey), which
+  // renders the card a second time. Position-based tracking let that count as
+  // a brand-new recommendation and offered the chip again on a question the
+  // reader had just asked. Matching on the slugs makes re-pitching the same
+  // story a no-op no matter how the model phrases its reply.
   const lastMessage = messages[messages.length - 1];
-  const lastRecCount = lastMessage?.role === "kemi" ? lastMessage.recommendations?.length ?? 0 : 0;
-  const showWhyThisOne = !loading && lastRecCount > 0;
-  const whyChipLabel = lastRecCount > 1 ? "Why these?" : "Why this one?";
+  const lastRecs = lastMessage?.role === "kemi" ? lastMessage.recommendations ?? [] : [];
+  const recSignature = lastRecs.map((r) => r.slug).sort().join("|");
+  const showWhyThisOne = !loading && recSignature.length > 0 && !askedWhyFor.includes(recSignature);
+  const whyChipLabel = pickWhyChip(recSignature, lastRecs.length);
 
   return (
     <>
       <button
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}
-        aria-label="Ask Kemi for a story recommendation"
+        aria-label={
+          unreadCount > 0
+            ? "Ask Kemi — she has a new message for you"
+            : "Ask Kemi for a story recommendation"
+        }
         className="relative flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(199,93,44,0.35)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(199,93,44,0.55)]"
       >
         <span className="kemi-cta-halo" aria-hidden="true" />
         Ask Kemi
+        {unreadCount > 0 && (
+          // Unread marker for a message Kemi sent on her own. Count is
+          // deliberately not shown — she opens a conversation, she doesn't
+          // deliver a queue, and "3" would frame it as a backlog to clear.
+          <span
+            aria-hidden="true"
+            className="absolute -right-[3px] -top-[3px] h-[9px] w-[9px] rounded-full bg-[var(--color-primary)] ring-2 ring-white"
+          />
+        )}
       </button>
 
       {open &&
@@ -310,22 +418,17 @@ export function KemiChat({
                   ))}
 
                   {messages.length <= 1 && !loading && (
-                    <li className="flex flex-col gap-2 pt-1">
-                      <div className="flex flex-wrap gap-1.5">
-                        {quickStarts.map((chip) => (
-                          <button
-                            key={chip}
-                            type="button"
-                            onClick={() => send(chip)}
-                            className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                          >
-                            {chip}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-[11.5px] leading-snug text-[var(--color-ink-muted-2)]">
-                        Not sold on a pick? Ask her why she chose it.
-                      </p>
+                    <li className="flex flex-wrap gap-1.5 pt-1">
+                      {quickStarts.map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => send(chip)}
+                          className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                        >
+                          {chip}
+                        </button>
+                      ))}
                     </li>
                   )}
 
@@ -333,7 +436,10 @@ export function KemiChat({
                     <li className="flex pt-0.5">
                       <button
                         type="button"
-                        onClick={() => send(whyChipLabel)}
+                        onClick={() => {
+                          setAskedWhyFor((prev) => [...prev, recSignature]);
+                          send(whyChipLabel);
+                        }}
                         className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >
                         {whyChipLabel}

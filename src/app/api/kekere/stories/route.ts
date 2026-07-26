@@ -6,6 +6,7 @@ import type { StoryTier } from "@prisma/client";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { createStory, listStories } from "@/lib/data/kekere-stories";
+import { createKemiNudge } from "@/lib/data/kekere-kemi-nudges";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getFeatureFlag } from "@/lib/settings/get";
 import { isValidTiptapDoc, ensureParagraphIds, countWords, type TiptapDoc } from "@/lib/tiptap/doc-utils";
@@ -107,6 +108,15 @@ export const POST = withAuth(async (request, session) => {
   if (session.user.role === "READER") {
     await prisma.user.update({ where: { id: session.user.id }, data: { role: "WRITER" } });
   }
+
+  // Starting a draft is the lonely part of writing, so Kemi queues a note of
+  // encouragement for the next time they open her. Fire-and-forget: a writer
+  // must still get their new draft back even if this fails.
+  createKemiNudge({
+    userId: session.user.id,
+    kind: "DRAFT_STARTED",
+    storyTitle: story.title,
+  }).catch(console.error);
 
   return NextResponse.json({ story }, { status: 201 });
 });

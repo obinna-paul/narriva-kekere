@@ -145,6 +145,7 @@ model User {
   projectMessages      ProjectMessage[]
   nariConversations    NariConversation[]
   kemiConversations    KemiConversation[]
+  kemiNudges           KemiNudge[]
   kekereContracts      KekereContract[]
   notifications        Notification[]
   paragraphComments    ParagraphComment[]
@@ -1224,6 +1225,37 @@ model KemiConversation {
 
   @@index([userId])
   @@index([lastMessageAt])
+}
+
+// What prompted Kemi to reach out first. Each kind maps to its own pool of
+// opener lines in src/content/kemi-nudges.ts.
+enum KemiNudgeKind {
+  STORY_COMPLETED
+  FIRST_STORY_FINISHED
+  DRAFT_STARTED
+  STORY_PUBLISHED
+}
+
+// A moment worth Kemi speaking up about, recorded when it happens and turned
+// into a real chat message the next time the reader opens her.
+//
+// Deliberately holds no foreign key to Story: the story title/slug are
+// snapshotted at creation instead, so a nudge (and the message it becomes)
+// survives the story being deleted, and recording one never has to care about
+// cascade behaviour. At most one undelivered nudge exists per kind per user —
+// see createKemiNudge, which clears older undelivered ones of the same kind
+// rather than letting them pile into a backlog.
+model KemiNudge {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        KemiNudgeKind
+  storyTitle  String?
+  storySlug   String?
+  createdAt   DateTime      @default(now())
+  deliveredAt DateTime?
+
+  @@index([userId, deliveredAt])
 }
 
 model NariConversation {
