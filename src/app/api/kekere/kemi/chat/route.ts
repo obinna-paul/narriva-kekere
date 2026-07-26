@@ -11,6 +11,10 @@ import {
   formatCatalogForPrompt,
   getKemiReaderContext,
   formatReaderContextForPrompt,
+  getKemiWriters,
+  formatWritersForPrompt,
+  getKemiCompetitions,
+  formatCompetitionsForPrompt,
 } from "@/lib/data/kekere-kemi";
 import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 import { randomKemiAwayMessage } from "@/content/kemi-away-messages";
@@ -74,9 +78,11 @@ export async function POST(request: Request) {
   const history = priorMessages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
   const userEntry: MessageEntry = { role: "user", content: message, timestamp };
 
-  const [catalog, readerContext] = await Promise.all([
+  const [catalog, readerContext, writers, competitions] = await Promise.all([
     getKemiCatalog(),
     getKemiReaderContext(userId),
+    getKemiWriters(),
+    getKemiCompetitions(),
   ]);
 
   // Slugs already pitched earlier in this conversation — folded into the
@@ -90,7 +96,14 @@ export async function POST(request: Request) {
     readerContextText += `\nAlready suggested earlier in this conversation — don't repeat these unless the reader explicitly asks to revisit one: ${alreadySuggestedSlugs.join(", ")}.`;
   }
 
-  const ai = await askKemiAI(message, history, formatCatalogForPrompt(catalog), readerContextText);
+  const ai = await askKemiAI(
+    message,
+    history,
+    formatCatalogForPrompt(catalog),
+    readerContextText,
+    formatWritersForPrompt(writers),
+    formatCompetitionsForPrompt(competitions),
+  );
 
   if (!ai) {
     // Not persisted — this is a status message, not a real turn, and

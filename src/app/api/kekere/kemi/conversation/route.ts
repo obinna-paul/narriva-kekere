@@ -4,11 +4,29 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
-import { deliverKemiNudges, getKemiConversation } from "@/lib/data/kekere-kemi-nudges";
+import {
+  deliverKemiNudges,
+  ensureStreakSaveNudge,
+  getKemiConversation,
+} from "@/lib/data/kekere-kemi-nudges";
 import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
+import { generateUUID } from "@/lib/utils/uuid";
 import type { KemiRecommendation } from "@/app/api/kekere/kemi/chat/route";
 
 const querySchema = z.object({ sessionId: z.string().min(1) });
+
+/**
+ * How long a conversation stays warm. Come back inside this window and you
+ * pick up mid-thought; come back after it and Kemi starts fresh, greeting you
+ * the way she would the first time that day.
+ *
+ * A transcript that never resets is the wrong shape for what this actually is.
+ * Nobody wants yesterday morning's "what are you in the mood for?" sitting
+ * above tonight's question, and her greetings — the whole rotating,
+ * time-of-day-aware set of them — only ever get seen once per reader if the
+ * first conversation lasts forever.
+ */
+const SESSION_IDLE_MS = 3 * 60 * 60 * 1000;
 
 /**
  * The reader's transcript for this session, and the point at which any
@@ -34,10 +52,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
   }
 
+  // Opening the chat is the one moment worth checking whether a streak is
+  // about to lapse — the reader is right here and can still act on it.
+  await ensureStreakSaveNudge(userId);
+
+  // Age the session out BEFORE delivering anything into it. A stale session
+  // is retired rather than emptied: the old transcript stays on its own row
+  // (it's a real record of a real conversation) and a fresh sessionId takes
+  // over, which the client adopts from the response. Doing it server-side
+  // keeps the cutoff in one place and means pending nudges land in the new
+  // conversation rather than being appended under a stale one.
+  const sessionId = await resolveSessionId(userId, parsed.data.sessionId);
+
   // Deliver first, then read — so the response already contains anything
   // that was waiting rather than needing a second round trip to show it.
-  await deliverKemiNudges(userId, parsed.data.sessionId);
-  const stored = await getKemiConversation(userId, parsed.data.sessionId);
+  await deliverKemiNudges(userId, sessionId);
+  const stored = await getKemiConversation(userId, sessionId);
 
   // Story cards were never persisted, only the slugs behind them, so
   // rehydrate them here — otherwise a restored transcript would show Kemi's
@@ -81,5 +111,26 @@ export async function GET(request: Request) {
       .filter((r): r is KemiRecommendation => !!r),
   }));
 
-  return NextResponse.json({ messages });
+  return NextResponse.json({ messages, sessionId });
+}
+
+/**
+ * The session the client should be talking to: its own if that conversation
+ * is still warm, a brand-new one if it has gone cold (or belongs to somebody
+ * else — sessionIds come from the client, so an unowned one is retired the
+ * same way rather than trusted).
+ *
+ * An untouched or unknown sessionId is handed straight back; there's nothing
+ * stale about a conversation that hasn't started yet.
+ */
+async function resolveSessionId(userId: string, requested: string): Promise<string> {
+  const convo = await prisma.kemiConversation.findUnique({
+    where: { sessionId: requested },
+    select: { userId: true, lastMessageAt: true },
+  });
+  if (!convo) return requested;
+
+  const foreign = convo.userId !== userId;
+  const cold = Date.now() - convo.lastMessageAt.getTime() > SESSION_IDLE_MS;
+  return foreign || cold ? generateUUID() : requested;
 }

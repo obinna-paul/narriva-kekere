@@ -31,14 +31,16 @@ export async function askKemiAI(
   history: { role: "user" | "assistant"; content: string }[],
   catalogText: string,
   readerContextText: string,
+  writersText: string,
+  competitionsText: string,
 ): Promise<KemiAIResult | null> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
 
-  const system = KEMI_SYSTEM_PROMPT.replace("{READER_CONTEXT}", readerContextText).replace(
-    "{CATALOG}",
-    catalogText,
-  );
+  const system = KEMI_SYSTEM_PROMPT.replace("{READER_CONTEXT}", readerContextText)
+    .replace("{CATALOG}", catalogText)
+    .replace("{WRITERS}", writersText)
+    .replace("{COMPETITIONS}", competitionsText);
 
   const messages: GroqMessage[] = [{ role: "system", content: system }];
   for (const msg of history.slice(-10)) {
