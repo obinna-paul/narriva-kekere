@@ -45,7 +45,15 @@ export function ParagraphCommentIndicators({
 }: ParagraphCommentIndicatorsProps) {
   const panelOpenRef = useRef(panelOpen);
   useEffect(() => { panelOpenRef.current = panelOpen; }, [panelOpen]);
+  const selectedIdRef = useRef(selectedParagraphId);
+  useEffect(() => { selectedIdRef.current = selectedParagraphId; }, [selectedParagraphId]);
   const [badges, setBadges] = useState<BadgePosition[]>([]);
+  // Must outlive the listener effect below. A tap fires touchend AND click,
+  // and the click is suppressed by comparing against this timestamp — but
+  // selecting a paragraph re-renders the reader, which re-runs that effect.
+  // Held in the effect's own scope it was reset to 0 in between, so the
+  // click sailed through the guard and ran the handler a second time.
+  const lastTouchMsRef = useRef(0);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -79,29 +87,34 @@ export function ParagraphCommentIndicators({
     const container = containerRef.current;
     if (!container) return;
 
-    let lastTouchMs = 0;
+    // On mobile, starting a NEW highlight requires the comment panel to be
+    // open — otherwise every stray tap while scrolling would light a
+    // paragraph up. Clearing the one that's already highlighted is always
+    // allowed though: a reader who closed the panel with a paragraph still
+    // lit had no way back out, which is most of what made the highlight feel
+    // stuck to the page.
+    function select(id: string | undefined) {
+      if (!id) return;
+      const isMobile = window.innerWidth < 768;
+      if (isMobile && !panelOpenRef.current && id !== selectedIdRef.current) return;
+      onSelectParagraph(id);
+    }
 
     // touchend fires reliably on iOS inside contenteditable=false (click sometimes doesn't).
-    // On mobile, only select when the comment panel is open — prevents accidental
-    // paragraph highlights while the reader is scrolling normally.
     function handleTouchEnd(e: TouchEvent) {
-      lastTouchMs = Date.now();
-      const isMobile = window.innerWidth < 768;
-      if (isMobile && !panelOpenRef.current) return;
+      lastTouchMsRef.current = Date.now();
       const touch = e.changedTouches[0];
       const el = document
         .elementFromPoint(touch.clientX, touch.clientY)
         ?.closest<HTMLElement>("[data-paragraph-id]");
-      const id = el?.dataset.paragraphId;
-      if (id) onSelectParagraph(id);
+      select(el?.dataset.paragraphId);
     }
 
     // click fallback for desktop/pointer devices — skip if touchend already handled it.
     function handleClick(e: MouseEvent) {
-      if (Date.now() - lastTouchMs < 600) return;
+      if (Date.now() - lastTouchMsRef.current < 600) return;
       const target = (e.target as HTMLElement).closest<HTMLElement>("[data-paragraph-id]");
-      const id = target?.dataset.paragraphId;
-      if (id) onSelectParagraph(id);
+      select(target?.dataset.paragraphId);
     }
 
     container.addEventListener("touchend", handleTouchEnd, { passive: true });

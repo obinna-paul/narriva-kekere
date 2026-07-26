@@ -93,9 +93,15 @@ export function useParagraphComments(storyId: string, canFetch: boolean) {
   // accidental tap feel stuck to the page. Tapping the same paragraph again
   // is the gesture a reader already tries first, so it's the one that
   // undoes it.
-  function selectParagraph(paragraphId: string) {
+  //
+  // Stable identity matters here, not just for render cost: ParagraphComment-
+  // Indicators lists this in the dependency array of the effect that binds its
+  // touchend/click listeners. A fresh function each render tore that effect
+  // down and rebuilt it on every selection, wiping the scratch state it uses
+  // to tell a tap's touchend and click apart.
+  const selectParagraph = useCallback((paragraphId: string) => {
     setSelectedParagraphId((prev) => (prev === paragraphId ? null : paragraphId));
-  }
+  }, []);
 
   function openComments(paragraphId: string) {
     setSelectedParagraphId(paragraphId);
