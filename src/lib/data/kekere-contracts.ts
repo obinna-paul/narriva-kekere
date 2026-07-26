@@ -90,7 +90,8 @@ export async function signContractAndPublishStory(
     where: { id: contractId },
     include: {
       template: { select: { contractType: true } },
-      writer: { select: { name: true, email: true, createdByAdminId: true } },
+      writer: { select: { name: true, email: true } },
+      story: { select: { sourceType: true } },
     },
   });
 
@@ -143,7 +144,16 @@ export async function signContractAndPublishStory(
   }
 
   const linkedStoryId = contract.storyId;
-  const isOnboarded = contract.writer?.createdByAdminId != null;
+  // Whether signing publishes the story immediately or moves it into the
+  // ACCEPTED "to be published" queue depends on how THIS STORY was created
+  // (sourceType), not on whether the writer's account was ever set up by an
+  // admin — that account flag stays set forever, even after the writer goes
+  // on to submit and sign for entirely normal, editorially-reviewed stories
+  // of their own. Using the account-level flag here previously meant every
+  // subsequent story from an onboarded writer skipped the queue and
+  // published immediately on signing, no matter how it was actually
+  // reviewed.
+  const isOnboarded = contract.story?.sourceType === "ADMIN_AUTHORED";
 
   await withSlugRetry(() =>
     prisma.$transaction(async (tx) => {
