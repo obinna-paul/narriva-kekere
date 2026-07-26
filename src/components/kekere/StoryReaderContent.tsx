@@ -56,6 +56,33 @@ export function StoryReaderContent({ doc, highlights = [] }: StoryReaderContentP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, JSON.stringify(highlights)]);
 
+  // Marks the first paragraph that actually contains text so the drop cap
+  // lands on a real glyph. A body opening with an empty paragraph (a stray
+  // leading Enter, or one carried in by a Word import) otherwise puts the
+  // CSS :first-of-type cap on a paragraph with nothing to enlarge, and the
+  // story's real opening line renders flat — see globals.css.
+  //
+  // Re-applied on every transaction because ProseMirror owns this DOM and
+  // re-renders paragraphs when highlight decorations change, which would
+  // otherwise drop the class the first time a reader highlights something.
+  useEffect(() => {
+    if (!editor) return;
+    const apply = () => {
+      const root = editor.view?.dom;
+      if (!root) return;
+      const paragraphs = Array.from(root.querySelectorAll(":scope > p"));
+      const target = paragraphs.find((p) => (p.textContent ?? "").trim().length > 0);
+      for (const p of paragraphs) {
+        p.classList.toggle("story-drop-cap", p === target);
+      }
+    };
+    apply();
+    editor.on("transaction", apply);
+    return () => {
+      editor.off("transaction", apply);
+    };
+  }, [editor]);
+
   if (!editor) return null;
 
   return (

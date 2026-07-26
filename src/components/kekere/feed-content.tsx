@@ -419,29 +419,29 @@ export function FeedContent({
                       onError={(e) => { e.currentTarget.style.display = "none"; }}
                     />
                   )}
-                  <span className="absolute left-[9px] top-[9px] rounded-[20px] bg-[rgba(31,75,75,0.78)] px-2 py-[3px] text-[9.5px] font-semibold text-white">
-                    {story.genre.toUpperCase()}
-                  </span>
+                  {/* Genre and placement badges deliberately omitted here.
+                      The section heading already says these are winners, and
+                      the cover art is the whole point of this rail — stacking
+                      two more chips over it buried the artwork. Placement
+                      labelling (winner vs runner-up) is planned as its own
+                      treatment later rather than a badge on the cover. The
+                      mature-content badge stays: that one is a warning, not
+                      decoration. */}
                   {story.isAdult && <MatureBadge className="absolute right-[9px] top-[9px]" />}
-                  <span
-                    className="absolute bottom-[9px] left-[9px] flex items-center gap-1 rounded-[20px] px-[7px] py-[3px] text-[9.5px] font-semibold text-white"
-                    style={{
-                      background: story.placement === 1 || story.placement === null
-                        ? "rgba(199,93,44,0.9)"
-                        : "rgba(42,26,18,0.55)",
-                    }}
-                  >
-                    <span aria-hidden="true">
-                      {story.placement === 1 || story.placement === null ? "\u{1F3C6}" : "\u{1F3C5}"}
-                    </span>
-                    {story.placement === 1 ? "Winner" : story.placement === null ? "Champion" : "Runner-up"}
-                  </span>
                 </div>
                 <h3 className="mt-[10px] font-[family-name:var(--font-display)] text-base font-semibold leading-[1.2] text-[var(--color-ink)]">
                   {story.title}
                 </h3>
-                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] italic leading-[1.35] text-[var(--color-ink-muted)]">
-                  {story.hookLine}
+                <p className="mt-[7px] flex items-center gap-[5px] text-xs text-[var(--color-ink-muted-2)]">
+                  <span className="flex items-center gap-[3px] font-semibold text-[var(--color-primary)]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                    </svg>
+                    {story.cowrieCost}
+                  </span>
+                  <span>·</span>
+                  {story.readingTimeMinutes} min
                 </p>
                 {story.competitionTitle && (
                   <p className="mt-[7px] text-xs font-semibold text-[var(--color-primary)]">
