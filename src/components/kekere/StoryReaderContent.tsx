@@ -7,6 +7,58 @@ import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import { HIGHLIGHT_COLOR_BY_ID } from "@/content/highlight-colors";
 import type { HighlightSpan } from "@/lib/tiptap/reader-highlights";
 
+/**
+ * Zero-width Unicode formatting characters that carry no glyph: the
+ * left-to-right / right-to-left marks, zero-width space/non-joiner/joiner,
+ * word joiner, and BOM. Pasting from Word or Google Docs routinely drags
+ * these in — an LTR mark at the head of a paragraph is the usual souvenir.
+ */
+const INVISIBLE_LEADING = /^[​-‏⁠﻿]+/;
+
+/**
+ * Removes zero-width formatting characters from the very start of the
+ * story's opening paragraph.
+ *
+ * ::first-letter attaches to the first character, and one of these counts —
+ * so a paragraph beginning with an invisible LTR mark hands the drop cap to
+ * a glyph that draws nothing, and the story's real first letter renders at
+ * body size. Measured in Chromium: 23px against a 29px line, where a
+ * working cap is 62px.
+ *
+ * Deliberately narrow. Only the leading run, only on the first paragraph,
+ * and only characters that render as nothing — a writer's real spacing,
+ * blank paragraphs included, is left exactly as they wrote it, and the same
+ * marks appearing mid-sentence are left alone too.
+ */
+function stripLeadingInvisibles(doc: TiptapDoc): TiptapDoc {
+  const content = doc?.content;
+  if (!Array.isArray(content) || content.length === 0) return doc;
+
+  // The paragraph the drop cap will land on: the first one carrying real
+  // text. A blank paragraph ahead of it is the writer's own spacing and is
+  // left untouched.
+  const index = content.findIndex(
+    (node) =>
+      node?.type === "paragraph" &&
+      (node.content ?? []).some((child) => (child.text ?? "").trim().length > 0),
+  );
+  if (index === -1) return doc;
+
+  const para = content[index];
+  const first = para.content?.[0];
+  if (!first || first.type !== "text" || !INVISIBLE_LEADING.test(first.text)) return doc;
+
+  const nextContent = [...content];
+  nextContent[index] = {
+    ...para,
+    content: [
+      { ...first, text: first.text.replace(INVISIBLE_LEADING, "") },
+      ...(para.content ?? []).slice(1),
+    ],
+  };
+  return { ...doc, content: nextContent };
+}
+
 export interface StoryReaderContentProps {
   doc: TiptapDoc;
   /** A reader's own private highlights on this story — plain
@@ -33,7 +85,7 @@ export interface StoryReaderContentProps {
 export function StoryReaderContent({ doc, highlights = [] }: StoryReaderContentProps) {
   const editor = useEditor({
     extensions: createReaderExtensions(),
-    content: doc,
+    content: stripLeadingInvisibles(doc),
     editable: false,
     immediatelyRender: false,
   });
