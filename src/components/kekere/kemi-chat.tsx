@@ -20,6 +20,11 @@ interface KemiMessage {
   text: string;
   recommendations?: KemiRecommendation[];
   isAway?: boolean;
+  /** True when this reply was Kemi answering a "why did you pick this"
+   *  request. Such a reply is already a justification, so it never offers
+   *  the pushback chip again — even when she pivots to a different story
+   *  mid-answer, which otherwise reads as a fresh recommendation. */
+  isWhyAnswer?: boolean;
 }
 
 const KEMI_AVATAR = "/kekere/kemi-avatar.png";
@@ -215,7 +220,7 @@ export function KemiChat({
     setMessages((prev) => (prev.length === 0 ? [{ role: "kemi", text: pickGreeting() }] : prev));
   }
 
-  async function send(text: string) {
+  async function send(text: string, opts: { isWhyRequest?: boolean } = {}) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
 
@@ -241,7 +246,13 @@ export function KemiChat({
 
       setMessages((prev) => [
         ...prev,
-        { role: "kemi", text: data.answer, recommendations: data.recommendations, isAway: data.away },
+        {
+          role: "kemi",
+          text: data.answer,
+          recommendations: data.recommendations,
+          isAway: data.away,
+          isWhyAnswer: opts.isWhyRequest,
+        },
       ]);
     } catch {
       setMessages((prev) => [
@@ -275,10 +286,20 @@ export function KemiChat({
   // a brand-new recommendation and offered the chip again on a question the
   // reader had just asked. Matching on the slugs makes re-pitching the same
   // story a no-op no matter how the model phrases its reply.
+  //
+  // A reply that was itself an answer to "why" never offers the chip again,
+  // regardless of slugs. Kemi often pivots to a DIFFERENT story while
+  // justifying the first one, and that pivot is a legitimately new slug set
+  // — so the signature check alone would offer "why" on a message that was
+  // already a justification, asking her to justify a justification.
   const lastMessage = messages[messages.length - 1];
   const lastRecs = lastMessage?.role === "kemi" ? lastMessage.recommendations ?? [] : [];
   const recSignature = lastRecs.map((r) => r.slug).sort().join("|");
-  const showWhyThisOne = !loading && recSignature.length > 0 && !askedWhyFor.includes(recSignature);
+  const showWhyThisOne =
+    !loading &&
+    recSignature.length > 0 &&
+    !lastMessage?.isWhyAnswer &&
+    !askedWhyFor.includes(recSignature);
   const whyChipLabel = pickWhyChip(recSignature, lastRecs.length);
 
   return (
@@ -438,7 +459,7 @@ export function KemiChat({
                         type="button"
                         onClick={() => {
                           setAskedWhyFor((prev) => [...prev, recSignature]);
-                          send(whyChipLabel);
+                          send(whyChipLabel, { isWhyRequest: true });
                         }}
                         className="rounded-full border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >

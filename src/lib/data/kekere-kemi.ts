@@ -66,13 +66,27 @@ export async function getKemiCatalog(): Promise<KemiCatalogEntry[]> {
   }));
 }
 
+/** StoryTier is internal admin vocabulary — readers never see the words
+ *  "Standard", "Featured" or "Champion" anywhere in the app, so Kemi must
+ *  never say them either. What a reader actually recognises is the shelf a
+ *  story sits on: Champion stories are the ones in the Winners' Circle
+ *  (competition winners and shortlisted work), Featured ones are the
+ *  editor's picks. Translated here, at the point the catalog is written
+ *  into her prompt, so the internal name never reaches the model at all
+ *  rather than relying on an instruction not to repeat it. */
+function readerFacingTier(tier: KemiCatalogEntry["tier"]): string {
+  if (tier === "CHAMPION") return ", a winning story — it won or was shortlisted in a Kekere competition";
+  if (tier === "FEATURED") return ", an editor's pick";
+  return "";
+}
+
 export function formatCatalogForPrompt(catalog: KemiCatalogEntry[]): string {
   if (catalog.length === 0) return "(No stories are published yet — tell the reader to check back soon.)";
   return catalog
     .map((s) => {
       const tagPart = s.tags.length > 0 ? `, tags: ${s.tags.join(", ")}` : "";
       const adultPart = s.isAdult ? ", 18+" : "";
-      return `- [${s.slug}] "${s.title}" by ${s.authorName} — ${s.genre}${tagPart}. Hook: "${s.hookLine}". ${s.readingTime} min read, ${s.cowrieCost} cowries, ${s.tier} tier${adultPart}.`;
+      return `- [${s.slug}] "${s.title}" by ${s.authorName} — ${s.genre}${tagPart}. Hook: "${s.hookLine}". ${s.readingTime} min read, ${s.cowrieCost} cowries${readerFacingTier(s.tier)}${adultPart}.`;
     })
     .join("\n");
 }
