@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Send, MoreVertical, Flag } from "lucide-react";
+import { X, Send, MoreVertical, Flag, CornerDownRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import type { CommentDTO } from "@/components/kekere/use-paragraph-comments";
 
@@ -25,10 +25,97 @@ export interface CommentPanelProps {
   unlocked: boolean;
   posting: boolean;
   error: string | null;
-  onPost: (body: string) => Promise<boolean>;
+  onPost: (body: string, parentId?: string) => Promise<boolean>;
   pendingNewCount: number;
   onApplyPending: () => void;
   onReportComment: (commentId: string) => void;
+}
+
+/** One comment row — shared by top-level comments and their replies, since
+ * both look the same (name, time, body, options menu). Replies just render
+ * indented and never get their own "Reply" action, since threads here are
+ * deliberately one level deep. */
+function CommentRow({
+  comment,
+  isReply,
+  openMenuId,
+  setOpenMenuId,
+  onReportComment,
+  onReply,
+}: {
+  comment: CommentDTO;
+  isReply: boolean;
+  openMenuId: string | null;
+  setOpenMenuId: (id: string | null) => void;
+  onReportComment: (commentId: string) => void;
+  onReply?: () => void;
+}) {
+  const c = comment;
+  return (
+    <div className="group flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
+            {c.userDisplayName}
+          </span>
+          <span className="flex-none text-[11px] text-[var(--color-ink-muted-3)]">
+            {formatRelativeTime(c.createdAt)}
+          </span>
+        </div>
+        <div className="relative flex-none">
+          <button
+            type="button"
+            aria-label="Comment options"
+            onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+            className="text-[var(--color-ink-muted-3)] opacity-0 transition-opacity hover:text-[var(--color-ink)] focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <MoreVertical size={14} />
+          </button>
+          {openMenuId === c.id && (
+            <>
+              <button
+                type="button"
+                aria-hidden="true"
+                tabIndex={-1}
+                onClick={() => setOpenMenuId(null)}
+                className="fixed inset-0 z-40 cursor-default bg-none"
+                style={{ background: "none", border: "none" }}
+              />
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-1 w-[150px] rounded-[10px] border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-1 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpenMenuId(null);
+                    onReportComment(c.id);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                  style={{ background: "none", border: "none", cursor: "pointer" }}
+                >
+                  <Flag size={13} className="flex-none" />
+                  Report
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      <p className="text-[13.5px] leading-snug text-[var(--color-ink)]/85">{c.body}</p>
+      {!isReply && onReply && (
+        <button
+          type="button"
+          onClick={onReply}
+          className="self-start text-[12px] font-semibold text-[var(--color-ink-muted-2)] transition-colors hover:text-[var(--color-primary)]"
+          style={{ background: "none", border: "none", cursor: "pointer" }}
+        >
+          Reply
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function CommentPanel({
@@ -46,6 +133,8 @@ export function CommentPanel({
 }: CommentPanelProps) {
   const [draft, setDraft] = useState("");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
 
   if (!open) return null;
 
@@ -56,7 +145,18 @@ export function CommentPanel({
     if (ok) setDraft("");
   }
 
+  async function handlePostReply(parentId: string) {
+    const trimmed = replyDraft.trim();
+    if (!trimmed || trimmed.length > BODY_LIMIT) return;
+    const ok = await onPost(trimmed, parentId);
+    if (ok) {
+      setReplyDraft("");
+      setReplyingToId(null);
+    }
+  }
+
   const canPost = draft.trim().length > 0 && draft.length <= BODY_LIMIT;
+  const canPostReply = replyDraft.trim().length > 0 && replyDraft.length <= BODY_LIMIT;
 
   return (
     <>
@@ -111,58 +211,74 @@ export function CommentPanel({
           {selectedParagraphId && comments && comments.length > 0 && (
             <ul className="flex flex-col gap-4">
               {comments.map((c) => (
-                <li key={c.id} className="group flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-[13px] font-semibold text-[var(--color-ink)]">
-                        {c.userDisplayName}
-                      </span>
-                      <span className="flex-none text-[11px] text-[var(--color-ink-muted-3)]">
-                        {formatRelativeTime(c.createdAt)}
-                      </span>
-                    </div>
-                    <div className="relative flex-none">
-                      <button
-                        type="button"
-                        aria-label="Comment options"
-                        onClick={() => setOpenMenuId((id) => (id === c.id ? null : c.id))}
-                        className="text-[var(--color-ink-muted-3)] opacity-0 transition-opacity hover:text-[var(--color-ink)] focus-visible:opacity-100 group-hover:opacity-100"
-                      >
-                        <MoreVertical size={14} />
-                      </button>
-                      {openMenuId === c.id && (
-                        <>
-                          <button
-                            type="button"
-                            aria-hidden="true"
-                            tabIndex={-1}
-                            onClick={() => setOpenMenuId(null)}
-                            className="fixed inset-0 z-40 cursor-default bg-none"
-                            style={{ background: "none", border: "none" }}
+                <li key={c.id} className="flex flex-col gap-3">
+                  <CommentRow
+                    comment={c}
+                    isReply={false}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    onReportComment={onReportComment}
+                    onReply={() => {
+                      setReplyingToId(replyingToId === c.id ? null : c.id);
+                      setReplyDraft("");
+                    }}
+                  />
+
+                  {c.replies.length > 0 && (
+                    <ul className="flex flex-col gap-3 border-l-2 border-[var(--color-ink)]/[0.08] pl-3">
+                      {c.replies.map((r) => (
+                        <li key={r.id}>
+                          <CommentRow
+                            comment={r}
+                            isReply
+                            openMenuId={openMenuId}
+                            setOpenMenuId={setOpenMenuId}
+                            onReportComment={onReportComment}
                           />
-                          <div
-                            role="menu"
-                            className="absolute right-0 top-full z-50 mt-1 w-[150px] rounded-[10px] border border-[var(--color-ink)]/10 bg-[var(--color-bg)] p-1 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
-                          >
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                onReportComment(c.id);
-                              }}
-                              className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
-                              style={{ background: "none", border: "none", cursor: "pointer" }}
-                            >
-                              <Flag size={13} className="flex-none" />
-                              Report
-                            </button>
-                          </div>
-                        </>
-                      )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {replyingToId === c.id && (
+                    <div className="ml-3 flex flex-col gap-1.5 border-l-2 border-[var(--color-ink)]/[0.08] pl-3">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[var(--color-ink-muted-3)]">
+                        <CornerDownRight size={12} />
+                        Replying to {c.userDisplayName}
+                      </div>
+                      <textarea
+                        autoFocus
+                        value={replyDraft}
+                        onChange={(e) => setReplyDraft(e.target.value)}
+                        placeholder="Write a reply..."
+                        rows={2}
+                        maxLength={BODY_LIMIT + 50}
+                        className="w-full resize-none rounded-lg border border-[var(--color-ink)]/15 bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)] outline-none focus:border-[var(--color-primary)]"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReplyingToId(null);
+                            setReplyDraft("");
+                          }}
+                          className="rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted-2)] transition-colors hover:text-[var(--color-ink)]"
+                          style={{ background: "none", border: "none", cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canPostReply || posting}
+                          onClick={() => handlePostReply(c.id)}
+                          className="flex items-center gap-1.5 rounded-full bg-[var(--color-primary)] px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-40"
+                        >
+                          <Send size={12} />
+                          Reply
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[13.5px] leading-snug text-[var(--color-ink)]/85">{c.body}</p>
+                  )}
                 </li>
               ))}
             </ul>

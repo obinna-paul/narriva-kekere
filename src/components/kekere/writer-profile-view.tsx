@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { MapPin, Star, Quote, Users, BookOpen, Heart } from "lucide-react";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
+import { AvatarLightbox } from "@/components/kekere/AvatarLightbox";
 import type {
   PublicWriterProfile,
   WriterProfileStats,
@@ -246,6 +248,7 @@ export function WriterProfileView({
   viewerIsFollowing,
   isOwnProfile,
 }: WriterProfileViewProps) {
+  const [avatarExpanded, setAvatarExpanded] = useState(false);
   const initial = profile.name.trim().charAt(0).toUpperCase() || "?";
   const avatarUrl = profile.avatarUrl;
   const avatarColor = profile.avatarColor ?? "#C75D2C";
@@ -259,8 +262,16 @@ export function WriterProfileView({
       {/* HERO — avatar, name, meta, bio, socials, follow                  */}
       {/* ================================================================ */}
       <section className="px-[22px] pb-6 pt-[52px] text-center">
-        {/* Avatar — larger, with an outer glow ring */}
-        <div className="mx-auto flex h-[112px] w-[112px] items-center justify-center rounded-full p-[3px] shadow-[0_0_0_5px_rgba(199,93,44,0.06),0_4px_24px_rgba(42,26,18,0.1)]" style={{ background: avatarColor }}>
+        {/* Avatar — larger, with an outer glow ring. Tapping it (when there's
+            an actual photo, not just an initial) opens an enlarged view. */}
+        <button
+          type="button"
+          onClick={() => avatarUrl && setAvatarExpanded(true)}
+          aria-label={avatarUrl ? `View ${profile.name}'s profile picture` : undefined}
+          disabled={!avatarUrl}
+          className="mx-auto flex h-[112px] w-[112px] items-center justify-center rounded-full p-[3px] shadow-[0_0_0_5px_rgba(199,93,44,0.06),0_4px_24px_rgba(42,26,18,0.1)] disabled:cursor-default"
+          style={{ background: avatarColor, border: "none", cursor: avatarUrl ? "pointer" : "default" }}
+        >
           <div
             className="flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[38px] font-semibold text-white"
             style={{ background: `linear-gradient(135deg, #E08A4A, ${avatarColor})` }}
@@ -272,7 +283,15 @@ export function WriterProfileView({
               initial
             )}
           </div>
-        </div>
+        </button>
+
+        {avatarExpanded && avatarUrl && (
+          <AvatarLightbox
+            src={avatarUrl}
+            alt={`${profile.name}'s profile picture`}
+            onClose={() => setAvatarExpanded(false)}
+          />
+        )}
 
         {/* Name */}
         <h1 className="mt-5 font-[family-name:var(--font-display)] text-[28px] font-semibold leading-tight tracking-[-0.3px] text-[var(--color-ink)]">
