@@ -390,8 +390,7 @@ export function FeedContent({
       {/* 1. Winners' Circle */}
       {winnerStories.length > 0 && (
         <section className="py-2">
-          <h2 className="flex items-center gap-2 px-5 pb-[14px] text-[15px] font-semibold text-[var(--color-ink)]">
-            <span aria-hidden="true" className="text-2xl">&#127942;</span>
+          <h2 className="px-5 pb-[14px] text-[15px] font-semibold text-[var(--color-ink)]">
             Winners&apos; Circle
           </h2>
           <div
