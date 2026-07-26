@@ -6,6 +6,29 @@ import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { HIGHLIGHT_COLORS, type HighlightColorId } from "@/content/highlight-colors";
 
+/**
+ * Dismisses the toolbar on any pointerdown outside it — the toolbar's own
+ * lifecycle no longer depends on the live browser selection (see the
+ * removed collapse-clearing in useTextSelection), specifically so that
+ * tapping a color swatch is safe: the browser's native default action of
+ * collapsing the text selection on tap would otherwise race
+ * useTextSelection's debounced selectionchange handler and unmount this
+ * toolbar before onPick ever fires (calling preventDefault() on touchstart
+ * to block that collapse was tried and rejected — per spec, that also
+ * suppresses the compatibility click event mobile browsers dispatch after
+ * touchend, which is what onClick relies on here).
+ */
+function useDismissOnOutsidePointerDown(ref: React.RefObject<HTMLElement>, onDismiss: () => void) {
+  useEffect(() => {
+    function handler(e: PointerEvent) {
+      if (!ref.current?.contains(e.target as Node)) onDismiss();
+    }
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ref]);
+}
+
 const AUTO_DISMISS_MS = 6000;
 const TOOLBAR_H = 44;
 
@@ -27,6 +50,8 @@ export interface HighlightToolbarProps {
  * text-selection or existing-highlight rect. */
 export function HighlightToolbar({ rect, activeColorId, onPick, onRemove, onDismiss }: HighlightToolbarProps) {
   const dismissTimer = useRef<ReturnType<typeof setTimeout>>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  useDismissOnOutsidePointerDown(containerRef, onDismiss);
 
   function resetDismissTimer() {
     clearTimeout(dismissTimer.current);
@@ -48,8 +73,15 @@ export function HighlightToolbar({ rect, activeColorId, onPick, onRemove, onDism
 
   return createPortal(
     <div
+      ref={containerRef}
       className="fixed z-[65] flex items-center gap-1.5 rounded-full border border-[var(--color-ink)]/10 bg-[var(--color-bg)] px-3 py-2 shadow-[0_10px_30px_-10px_rgba(42,26,18,0.35)]"
       style={{ top, left }}
+      // Purely cosmetic on desktop now (keeps the native blue selection
+      // visible while picking a color) — no longer load-bearing for
+      // correctness, since the toolbar's own lifecycle (see
+      // useDismissOnOutsidePointerDown above) doesn't depend on the live
+      // selection surviving the click.
+      onMouseDown={(e) => e.preventDefault()}
       onMouseEnter={() => clearTimeout(dismissTimer.current)}
       onMouseLeave={resetDismissTimer}
       onTouchStart={() => {
