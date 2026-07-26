@@ -368,7 +368,12 @@ export function FeedContent({
               )}
             </div>
             <StorySearch onPreview={setPreviewStory} />
-            <KemiChat readerName={greetingPersonalization.name} readerId={greetingUserId} />
+            <KemiChat
+              readerName={greetingPersonalization.name}
+              readerId={greetingUserId}
+              topGenre={greetingPersonalization.topGenre}
+              firstReadFree={firstReadFree}
+            />
           </div>
           <Link
             href="/kekere/wallet"

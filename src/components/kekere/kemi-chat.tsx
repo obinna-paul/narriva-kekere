@@ -24,7 +24,39 @@ interface KemiMessage {
 
 const KEMI_AVATAR = "/kekere/kemi-avatar.png";
 
-const QUICK_STARTS = ["Surprise me", "Something funny", "I've got 10 minutes", "Make me cry"];
+// A rotating pool rather than one fixed set — the same 4 chips every single
+// time a reader opens Kemi would start to feel like decoration, not real
+// options. Rotates once a day, same idea as the feed's Editor's Pick
+// rotation (feed/page.tsx's `todaySeed`), so it's stable within a session
+// but not frozen forever.
+const MOOD_CHIPS = [
+  "Surprise me",
+  "Something funny",
+  "I've got 10 minutes",
+  "Make me cry",
+  "Something heartwarming",
+  "I want a twist",
+];
+
+/** Builds this reader's quick-start chips: one personalized slot up front
+ *  when we have a real signal for it, then enough rotating mood chips to
+ *  fill out to 4 total. Free-read takes priority over taste — converting a
+ *  brand-new reader's first read matters more than a taste callback they
+ *  can get to organically once they've actually read something. */
+function buildQuickStarts(topGenre: string | null, firstReadFree: boolean): string[] {
+  const personalized = firstReadFree
+    ? "Start me off with something free"
+    : topGenre
+      ? `More ${topGenre} please`
+      : null;
+
+  const daySeed = Math.floor(Date.now() / 86400000);
+  const offset = daySeed % MOOD_CHIPS.length;
+  const rotated = [...MOOD_CHIPS.slice(offset), ...MOOD_CHIPS.slice(0, offset)];
+  const rotatingSlots = personalized ? 3 : 4;
+
+  return personalized ? [personalized, ...rotated.slice(0, rotatingSlots)] : rotated.slice(0, rotatingSlots);
+}
 
 /**
  * Kemi's entry point and chat — the third way to find something to read,
@@ -34,7 +66,17 @@ const QUICK_STARTS = ["Surprise me", "Something funny", "I've got 10 minutes", "
  * as a story preview, so it follows the same sheet/backdrop convention as
  * StoryPreviewSheet rather than Narriva's lightweight coexisting NariWidget.
  */
-export function KemiChat({ readerName, readerId }: { readerName?: string; readerId?: string | null }) {
+export function KemiChat({
+  readerName,
+  readerId,
+  topGenre = null,
+  firstReadFree = false,
+}: {
+  readerName?: string;
+  readerId?: string | null;
+  topGenre?: string | null;
+  firstReadFree?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<KemiMessage[]>([]);
@@ -42,6 +84,7 @@ export function KemiChat({ readerName, readerId }: { readerName?: string; reader
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const quickStarts = useRef(buildQuickStarts(topGenre, firstReadFree)).current;
 
   const sessionId = useRef(
     typeof window !== "undefined" ? localStorage.getItem("kemi-sid") ?? generateUUID() : generateUUID(),
@@ -267,7 +310,7 @@ export function KemiChat({ readerName, readerId }: { readerName?: string; reader
 
                   {messages.length <= 1 && !loading && (
                     <li className="flex flex-wrap gap-1.5 pt-1">
-                      {QUICK_STARTS.map((chip) => (
+                      {quickStarts.map((chip) => (
                         <button
                           key={chip}
                           type="button"
