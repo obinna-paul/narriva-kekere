@@ -372,7 +372,6 @@ export function FeedContent({
               readerName={greetingPersonalization.name}
               readerId={greetingUserId}
               topGenre={greetingPersonalization.topGenre}
-              firstReadFree={firstReadFree}
             />
           </div>
           <Link

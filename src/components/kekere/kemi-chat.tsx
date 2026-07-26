@@ -38,17 +38,10 @@ const MOOD_CHIPS = [
   "I want a twist",
 ];
 
-/** Builds this reader's quick-start chips: one personalized slot up front
- *  when we have a real signal for it, then enough rotating mood chips to
- *  fill out to 4 total. Free-read takes priority over taste — converting a
- *  brand-new reader's first read matters more than a taste callback they
- *  can get to organically once they've actually read something. */
-function buildQuickStarts(topGenre: string | null, firstReadFree: boolean): string[] {
-  const personalized = firstReadFree
-    ? "Start me off with something free"
-    : topGenre
-      ? `More ${topGenre} please`
-      : null;
+/** Builds this reader's quick-start chips: a taste-based slot up front when
+ *  we have one, then enough rotating mood chips to fill out to 4 total. */
+function buildQuickStarts(topGenre: string | null): string[] {
+  const personalized = topGenre ? `More ${topGenre} please` : null;
 
   const daySeed = Math.floor(Date.now() / 86400000);
   const offset = daySeed % MOOD_CHIPS.length;
@@ -70,12 +63,10 @@ export function KemiChat({
   readerName,
   readerId,
   topGenre = null,
-  firstReadFree = false,
 }: {
   readerName?: string;
   readerId?: string | null;
   topGenre?: string | null;
-  firstReadFree?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -84,7 +75,7 @@ export function KemiChat({
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const quickStarts = useRef(buildQuickStarts(topGenre, firstReadFree)).current;
+  const quickStarts = useRef(buildQuickStarts(topGenre)).current;
 
   const sessionId = useRef(
     typeof window !== "undefined" ? localStorage.getItem("kemi-sid") ?? generateUUID() : generateUUID(),
