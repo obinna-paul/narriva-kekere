@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile/verify";
-import { ensureReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
+import { getOrCreateReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
 import { getFeatureFlag } from "@/lib/settings/get";
 import { createAndSendOtp } from "@/lib/auth/verify-email";
 
@@ -49,40 +49,61 @@ export async function POST(request: Request) {
   const hashedPassword = await bcrypt.hash(password, 12);
 
   try {
-    // A placeholder account (created by an admin for pre-launch onboarding,
-    // e.g. a writer who declined their publishing offer before ever signing
-    // up) sits on this email with no password. Rather than let the unique
-    // email constraint block a genuine signup with a confusing "account
-    // already exists" error, adopt that row into a real account — same
-    // outcome as prisma.user.create below, just reusing the existing id.
-    const placeholder = await prisma.user.findUnique({
+    // An existing row on this email can mean one of two harmless things
+    // instead of a real conflict: (1) a placeholder account (created by an
+    // admin for pre-launch onboarding, e.g. a writer who declined their
+    // publishing offer before ever signing up) with no password, or (2) an
+    // earlier signup that never completed email verification. Rather than
+    // let the unique email constraint block a genuine signup with a
+    // confusing "account already exists" error, adopt/resume that row into
+    // a real account — same outcome as prisma.user.create below, just
+    // reusing the existing id.
+    const existing = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, accountStatus: true, password: true },
+      select: { id: true, accountStatus: true, password: true, emailVerified: true },
     });
 
-    const user = placeholder && placeholder.accountStatus === "UNCLAIMED" && !placeholder.password
-      ? await prisma.user.update({
-          where: { id: placeholder.id },
-          data: {
-            name,
-            password: hashedPassword,
-            termsAcceptedAt: new Date(),
-            accountStatus: "CLAIMED",
-            claimToken: null,
-            claimTokenExpiresAt: null,
-          },
-          select: { id: true, email: true, name: true, role: true },
-        })
-      : await prisma.user.create({
-          data: {
-            email,
-            name,
-            password: hashedPassword,
-            termsAcceptedAt: new Date(),
-            wallet: { create: {} },
-          },
-          select: { id: true, email: true, name: true, role: true },
-        });
+    let user;
+    if (existing && existing.accountStatus === "UNCLAIMED" && !existing.password) {
+      user = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          name,
+          password: hashedPassword,
+          termsAcceptedAt: new Date(),
+          accountStatus: "CLAIMED",
+          claimToken: null,
+          claimTokenExpiresAt: null,
+        },
+        select: { id: true, email: true, name: true, role: true },
+      });
+    } else if (existing && !existing.emailVerified) {
+      // An earlier signup on this email never got verified — the OTP
+      // expired, the inbox wasn't reachable, whatever the reason, the
+      // account never became usable. The unique email constraint used to
+      // make this a permanent dead end ("account already exists" on every
+      // retry, with the row never actually reachable since the original
+      // OTP is long expired and there was no way back to request a new
+      // one). Resume it instead: overwrite name/password with whatever was
+      // just submitted (they may not remember the original) and fall
+      // through to the same OTP-send/response path as a brand-new signup.
+      user = await prisma.user.update({
+        where: { id: existing.id },
+        data: { name, password: hashedPassword, termsAcceptedAt: new Date() },
+        select: { id: true, email: true, name: true, role: true },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          password: hashedPassword,
+          termsAcceptedAt: new Date(),
+          wallet: { create: {} },
+        },
+        select: { id: true, email: true, name: true, role: true },
+      });
+    }
 
     // The placeholder path above doesn't create a wallet inline like the
     // fresh-user path does — ensure one exists either way (upsert is a
@@ -91,7 +112,12 @@ export async function POST(request: Request) {
 
     await createAndSendOtp(user.id, user.email, user.name);
 
-    const newReferralCode = await ensureReferralCodeForUser(user.id);
+    // get-or-create, not a blind create — the resumed-unverified-account
+    // path above can hit this a second time for the same user (their first,
+    // never-verified signup attempt already ran this), and ReferralCode.userId
+    // is unique, so a blind create would throw and get mis-reported as
+    // "account already exists" by the catch block below.
+    const newReferralCode = await getOrCreateReferralCodeForUser(user.id);
     // Kept in sync with ReferralCode.code so the existing wallet-page
     // "Your referral code" display (which still reads this legacy column)
     // doesn't regress now that code generation/lookup has moved to the
