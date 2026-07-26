@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { nextSlugForTitle } from "@/lib/data/kekere-slugs";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { createNotification } from "@/lib/notifications/create";
+import { createKemiNudge } from "@/lib/data/kekere-kemi-nudges";
 import { sendEmail } from "@/lib/email/send";
 import { renderStoryLiveEmail } from "@/lib/email/templates";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
@@ -52,6 +53,17 @@ export const PUT = withAuth(
 
     // Fire-and-forget notifications
     notifyFollowersOfPublish(id).catch(console.error);
+
+    // The notification and email below are the formal announcement; this is
+    // Kemi reacting like a person who's been following the work. Different
+    // channel, different register — she says it in chat, warmly, next time
+    // the writer opens her.
+    createKemiNudge({
+      userId: story.authorId,
+      kind: "STORY_PUBLISHED",
+      storyTitle: story.title,
+      storySlug: slug,
+    }).catch(console.error);
 
     createNotification({
       userId: story.authorId,

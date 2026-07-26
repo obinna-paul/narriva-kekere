@@ -6,11 +6,12 @@ import { prisma } from "@/lib/db/prisma";
 import { isStoryUnlocked } from "@/lib/data/kekere-stories";
 import { recalculateCompletionRate } from "@/lib/data/kekere-progress";
 import { recordReadingActivity } from "@/lib/data/kekere-streaks";
+import { createKemiNudge } from "@/lib/data/kekere-kemi-nudges";
 
 export const POST = withAuth(async (_request, session, { params }: { params: { id: string } }) => {
   const story = await prisma.story.findUnique({
     where: { id: params.id },
-    select: { id: true, cowrieCost: true, authorId: true },
+    select: { id: true, cowrieCost: true, authorId: true, title: true, slug: true },
   });
   if (!story) {
     return NextResponse.json({ error: "Story not found" }, { status: 404 });
@@ -41,6 +42,27 @@ export const POST = withAuth(async (_request, session, { params }: { params: { i
   // today's activity only on a genuinely new completion.
   if (!alreadyCompleted) {
     await recordReadingActivity(session.user.id);
+
+    // The best moment to offer the next read is the second this one ends,
+    // so Kemi queues a "how'd that land?" opener here rather than waiting to
+    // be found. Gated on a genuinely new completion for the same reason the
+    // streak is — re-finishing a story shouldn't make her ask again. The
+    // author is skipped: "how'd that land?" is a strange thing to ask
+    // someone about their own story.
+    if (story.authorId !== session.user.id) {
+      // A reader's very first finished story only happens once, and deserves
+      // a different message from their fiftieth — counted before this one
+      // was written, so 0 here means this is the first.
+      const priorCompletions = await prisma.storyCompletion.count({
+        where: { userId: session.user.id, storyId: { not: params.id } },
+      });
+      createKemiNudge({
+        userId: session.user.id,
+        kind: priorCompletions === 0 ? "FIRST_STORY_FINISHED" : "STORY_COMPLETED",
+        storyTitle: story.title,
+        storySlug: story.slug,
+      }).catch(console.error);
+    }
   }
 
   // fire-and-forget — don't block the response
