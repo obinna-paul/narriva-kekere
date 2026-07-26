@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderStorySubmittedEmail } from "@/lib/email/templates";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { generateUUID } from "@/lib/utils/uuid";
 import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
 
 export class StoryNotFoundError extends Error {
@@ -328,7 +329,38 @@ export async function getStoryForReader(
 
   const unlocked = await isStoryUnlockedFor(story, userId);
   const firstReadFree = !unlocked && (await hasFreeReadAvailable(userId));
-  const body = story.body as unknown as TiptapDoc;
+  let body = story.body as unknown as TiptapDoc;
+
+  // A story saved before paragraph ids existed (or whose id was otherwise
+  // never persisted) would leave the reader's Tiptap editor to mint a fresh
+  // random id for that paragraph on every single page load — since that id
+  // is random, it can never independently match what the server validates a
+  // highlight/comment against, so every attempt on that paragraph fails.
+  // Backfilling and persisting it here, once, the first time it's read,
+  // keeps the id stable across loads so client and server agree from then on.
+  //
+  // Deliberately plain JSON manipulation rather than doc-utils.ts's
+  // ensureParagraphIds (which round-trips through Tiptap/ProseMirror's
+  // Schema/Node/Extension classes) — this function is reachable from a
+  // Server Component (the story page), and pulling that machinery into the
+  // Server Component's module graph broke React's RSC serialization of the
+  // page's props entirely (a generic "Only plain objects... Classes...  not
+  // supported" error), even though the resulting body was itself confirmed
+  // to be plain, JSON-safe data. Route handlers (where ensureParagraphIds is
+  // otherwise used) don't have this constraint.
+  if (body.content?.some((p) => p.type === "paragraph" && !p.attrs?.id)) {
+    body = {
+      ...body,
+      content: body.content.map((p) =>
+        p.type === "paragraph" && !p.attrs?.id ? { ...p, attrs: { ...p.attrs, id: generateUUID() } } : p
+      ),
+    };
+    await prisma.story.update({
+      where: { id: story.id },
+      data: { body: body as unknown as Prisma.InputJsonValue },
+    });
+  }
+
   return { ...story, unlocked, firstReadFree, body: unlocked ? body : previewFraction(body) };
 }
 
