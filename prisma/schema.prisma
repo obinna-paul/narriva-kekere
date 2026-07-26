@@ -589,8 +589,17 @@ model ParagraphComment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // A reply to another comment on the same paragraph — one level deep only
+  // (enforced in kekere-comments.ts by rejecting a reply whose parent
+  // already has a parentId of its own), so this never needs to recurse.
+  // Nullable because most comments are top-level.
+  parentId String?
+  parent   ParagraphComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  ParagraphComment[] @relation("CommentReplies")
+
   @@index([storyId, paragraphId])
   @@index([storyId, createdAt])
+  @@index([parentId])
 }
 
 enum EditorialCommentStatus {

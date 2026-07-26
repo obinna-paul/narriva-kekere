@@ -9,6 +9,8 @@ import {
   getCommentsByParagraph,
   createParagraphComment,
   InvalidParagraphError,
+  CommentNotFoundError,
+  ReplyDepthError,
 } from "@/lib/data/kekere-comments";
 
 const RATE_LIMIT = { limit: 10, windowMs: 60 * 60 * 1000 }; // 10 comments / user / story / hour
@@ -28,6 +30,7 @@ export const GET = withAuth(
 const createCommentSchema = z.object({
   paragraphId: z.string().min(1),
   body: z.string().min(1).max(500),
+  parentId: z.string().min(1).optional(),
 });
 
 export const POST = withAuth(
@@ -60,11 +63,18 @@ export const POST = withAuth(
         userId: session.user.id,
         paragraphId: parsed.data.paragraphId,
         body: parsed.data.body,
+        parentId: parsed.data.parentId,
       });
       return NextResponse.json({ success: true, comment }, { status: 201 });
     } catch (error) {
       if (error instanceof InvalidParagraphError) {
         return NextResponse.json({ error: "invalid_paragraph" }, { status: 400 });
+      }
+      if (error instanceof CommentNotFoundError) {
+        return NextResponse.json({ error: "parent_not_found" }, { status: 404 });
+      }
+      if (error instanceof ReplyDepthError) {
+        return NextResponse.json({ error: "reply_depth" }, { status: 400 });
       }
       throw error;
     }
