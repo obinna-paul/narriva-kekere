@@ -86,8 +86,15 @@ export function useParagraphComments(storyId: string, canFetch: boolean) {
   // the header toggle button or explicitly opening comments does that
   // (see openComments below), so closed-panel reacting via the floating
   // picker stays reachable.
+  //
+  // Tapping the paragraph that's already selected clears it. Selecting used
+  // to be one-way: the teal highlight went on and the only ways back out
+  // were to pick a different paragraph or leave the story, which made an
+  // accidental tap feel stuck to the page. Tapping the same paragraph again
+  // is the gesture a reader already tries first, so it's the one that
+  // undoes it.
   function selectParagraph(paragraphId: string) {
-    setSelectedParagraphId(paragraphId);
+    setSelectedParagraphId((prev) => (prev === paragraphId ? null : paragraphId));
   }
 
   function openComments(paragraphId: string) {
