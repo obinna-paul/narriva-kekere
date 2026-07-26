@@ -5,12 +5,13 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { verifyStoryAccess } from "@/lib/data/kekere-comments";
 import {
-  getReactionsByParagraph,
-  setParagraphReaction,
+  getHighlightsForUser,
+  createHighlight,
   InvalidParagraphError,
-  InvalidEmojiError,
-} from "@/lib/data/kekere-reactions";
-import { ALLOWED_REACTION_EMOJIS } from "@/lib/tiptap/reaction-emojis";
+  InvalidColorError,
+  InvalidRangeError,
+} from "@/lib/data/kekere-highlights";
+import { HIGHLIGHT_COLOR_IDS } from "@/content/highlight-colors";
 
 export const GET = withAuth(
   async (_request, session, { params }: { params: { id: string } }) => {
@@ -19,14 +20,17 @@ export const GET = withAuth(
       return NextResponse.json({ error: "story_locked" }, { status: 403 });
     }
 
-    const grouped = await getReactionsByParagraph(params.id, session.user.id);
-    return NextResponse.json(grouped);
+    const highlights = await getHighlightsForUser(params.id, session.user.id);
+    return NextResponse.json({ highlights });
   }
 );
 
-const setReactionSchema = z.object({
+const createHighlightSchema = z.object({
   paragraphId: z.string().min(1),
-  emoji: z.enum(ALLOWED_REACTION_EMOJIS),
+  startOffset: z.number().int().min(0),
+  endOffset: z.number().int().min(1),
+  color: z.enum(HIGHLIGHT_COLOR_IDS),
+  text: z.string().min(1).max(2000),
 });
 
 export const POST = withAuth(
@@ -37,7 +41,7 @@ export const POST = withAuth(
     }
 
     const body = await request.json().catch(() => null);
-    const parsed = setReactionSchema.safeParse(body);
+    const parsed = createHighlightSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
@@ -46,19 +50,25 @@ export const POST = withAuth(
     }
 
     try {
-      await setParagraphReaction({
+      const highlight = await createHighlight({
         storyId: params.id,
         userId: session.user.id,
         paragraphId: parsed.data.paragraphId,
-        emoji: parsed.data.emoji,
+        startOffset: parsed.data.startOffset,
+        endOffset: parsed.data.endOffset,
+        color: parsed.data.color,
+        text: parsed.data.text,
       });
-      return NextResponse.json({ success: true, emoji: parsed.data.emoji, paragraphId: parsed.data.paragraphId });
+      return NextResponse.json(highlight, { status: 201 });
     } catch (error) {
       if (error instanceof InvalidParagraphError) {
         return NextResponse.json({ error: "invalid_paragraph" }, { status: 400 });
       }
-      if (error instanceof InvalidEmojiError) {
-        return NextResponse.json({ error: "invalid_emoji" }, { status: 400 });
+      if (error instanceof InvalidColorError) {
+        return NextResponse.json({ error: "invalid_color" }, { status: 400 });
+      }
+      if (error instanceof InvalidRangeError) {
+        return NextResponse.json({ error: "invalid_range" }, { status: 400 });
       }
       throw error;
     }

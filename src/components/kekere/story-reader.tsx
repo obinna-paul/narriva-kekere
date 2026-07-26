@@ -12,9 +12,10 @@ import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
 import { CommentPanel } from "@/components/kekere/CommentPanel";
 import { useParagraphComments } from "@/components/kekere/use-paragraph-comments";
-import { useParagraphReactions } from "@/components/kekere/use-paragraph-reactions";
-import { EmojiFloat } from "@/components/kekere/EmojiFloat";
-import { FloatingEmojiPicker } from "@/components/kekere/FloatingEmojiPicker";
+import { useHighlights } from "@/components/kekere/use-highlights";
+import { useTextSelection } from "@/components/kekere/use-text-selection";
+import { HighlightToolbar } from "@/components/kekere/HighlightToolbar";
+import type { HighlightColorId } from "@/content/highlight-colors";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
 import type { MockStory } from "@/content/mock/kekere-stories";
@@ -327,10 +328,57 @@ export function StoryReader({
   const commentCounts = Object.fromEntries(
     Object.entries(comments.commentsByParagraph).map(([id, g]) => [id, g.count])
   );
-  const reactions = useParagraphReactions(story.id, unlocked);
-  const selectedReaction = comments.selectedParagraphId
-    ? reactions.reactionsByParagraph[comments.selectedParagraphId]?.userReaction ?? null
-    : null;
+  const highlights = useHighlights(story.id, unlocked);
+  // Creating a new highlight is scoped to scroll mode only — swipe mode's
+  // CSS-column layout makes selection handling significantly harder (a
+  // selection can visually span a column break), and nothing in the
+  // feature request needs it there. Previously-made highlights still
+  // *render* in swipe mode (StoryReaderContent's decorations are agnostic
+  // to which mode passed them in), just aren't creatable from it.
+  const { pendingSelection, clearPendingSelection } = useTextSelection(
+    contentRef,
+    unlocked && readingMode === "scroll"
+  );
+  const [tappedHighlight, setTappedHighlight] = useState<{ id: string; rect: DOMRect; color: string } | null>(null);
+
+  // Detects a tap/click on an existing highlighted span (data-highlight-id,
+  // set by the ReaderHighlights Tiptap extension's decorations) to open the
+  // same floating toolbar in recolor/remove mode. Coexists with
+  // ParagraphCommentIndicators' own click listener on the same container —
+  // both fire on the same click, which just means tapping a highlighted
+  // word also selects its paragraph for commenting, an existing harmless
+  // side effect of any click in this area today.
+  useEffect(() => {
+    if (!(unlocked && readingMode === "scroll")) return;
+    const container = contentRef.current;
+    if (!container) return;
+
+    function handleClick(e: MouseEvent) {
+      const target = (e.target as HTMLElement).closest<HTMLElement>("[data-highlight-id]");
+      if (!target) return;
+      const id = target.dataset.highlightId;
+      if (!id) return;
+      const match = highlights.highlights.find((h) => h.id === id);
+      clearPendingSelection();
+      setTappedHighlight({ id, rect: target.getBoundingClientRect(), color: match?.color ?? "yellow" });
+    }
+
+    container.addEventListener("click", handleClick);
+    return () => container.removeEventListener("click", handleClick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlocked, readingMode, highlights.highlights]);
+
+  async function createHighlightFromSelection(color: HighlightColorId) {
+    if (!pendingSelection) return;
+    await highlights.addHighlight({
+      paragraphId: pendingSelection.paragraphId,
+      startOffset: pendingSelection.startOffset,
+      endOffset: pendingSelection.endOffset,
+      color,
+      text: pendingSelection.text,
+    });
+    clearPendingSelection();
+  }
 
   const hideTimer = useRef<ReturnType<typeof setTimeout>>();
   // While the ambient-sound dropdown is open, the chrome (which the
@@ -1296,7 +1344,13 @@ export function StoryReader({
 
         <div
           style={{
-            userSelect: "none",
+            // Selection stays blocked everywhere else (locked paywall
+            // content, swipe mode's own column layout) — only scroll mode,
+            // unlocked, allows it, since that's the only place highlighting
+            // is wired up. Copy/context-menu stay blocked unconditionally
+            // either way: a reader can select and highlight text, but still
+            // can't copy it out to the clipboard.
+            userSelect: unlocked && readingMode === "scroll" ? "text" : "none",
             filter: contentHidden ? "blur(24px)" : undefined,
             transition: "filter 150ms ease",
           }}
@@ -1319,7 +1373,7 @@ export function StoryReader({
                     style={{ columnWidth: columnPx ? `${columnPx}px` : undefined }}
                   >
                     <div style={{ breakInside: "avoid" }}>{titleBlock}</div>
-                    {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
+                    {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} highlights={highlights.highlights} />}
                     <div className="pt-[30px] text-center" style={{ breakInside: "avoid" }}>
                       <button
                         type="button"
@@ -1369,7 +1423,7 @@ export function StoryReader({
             ) : (
             <div className="flex flex-col">
               <div ref={contentRef} className="relative">
-                {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} />}
+                {story.bodyDoc && <StoryReaderContent doc={story.bodyDoc} highlights={highlights.highlights} />}
                 <ParagraphCommentIndicators
                   containerRef={contentRef}
                   commentCounts={commentCounts}
@@ -1378,17 +1432,29 @@ export function StoryReader({
                   onSelectParagraph={comments.selectParagraph}
                   onOpenComments={comments.openComments}
                 />
-                <EmojiFloat containerRef={contentRef} reactionsByParagraph={reactions.reactionsByParagraph} />
               </div>
 
-              {comments.selectedParagraphId && !comments.panelOpen && (
-                <FloatingEmojiPicker
-                  containerRef={contentRef}
-                  paragraphId={comments.selectedParagraphId}
-                  userReaction={selectedReaction}
-                  onSelect={(emoji) => reactions.setReaction(comments.selectedParagraphId!, emoji)}
-                  onRemove={() => reactions.removeReaction(comments.selectedParagraphId!)}
-                  onDismiss={comments.deselect}
+              {pendingSelection && !tappedHighlight && (
+                <HighlightToolbar
+                  rect={pendingSelection.rect}
+                  onPick={createHighlightFromSelection}
+                  onDismiss={clearPendingSelection}
+                />
+              )}
+
+              {tappedHighlight && (
+                <HighlightToolbar
+                  rect={tappedHighlight.rect}
+                  activeColorId={tappedHighlight.color}
+                  onPick={(color) => {
+                    highlights.recolorHighlight(tappedHighlight.id, color);
+                    setTappedHighlight(null);
+                  }}
+                  onRemove={() => {
+                    highlights.removeHighlight(tappedHighlight.id);
+                    setTappedHighlight(null);
+                  }}
+                  onDismiss={() => setTappedHighlight(null)}
                 />
               )}
 
@@ -1492,9 +1558,6 @@ export function StoryReader({
           onPost={comments.postComment}
           pendingNewCount={comments.pendingNewCount}
           onApplyPending={comments.applyPending}
-          userReaction={selectedReaction}
-          onSelectEmoji={(emoji) => reactions.setReaction(comments.selectedParagraphId!, emoji)}
-          onRemoveEmoji={() => reactions.removeReaction(comments.selectedParagraphId!)}
           onReportComment={(commentId) => openReport("PARAGRAPH_COMMENT", commentId)}
         />
       )}
