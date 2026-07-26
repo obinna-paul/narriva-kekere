@@ -1,6 +1,71 @@
 import { prisma } from "@/lib/db/prisma";
-import { extractParagraphIds, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { paragraphPlainText, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import { isHighlightColorId } from "@/content/highlight-colors";
+
+interface HighlightAnchor {
+  paragraphId: string;
+  startOffset: number;
+  endOffset: number;
+}
+
+/**
+ * Works out which paragraph a highlight actually belongs to, and where in it.
+ *
+ * The obvious implementation — trust the client's paragraphId and reject
+ * anything we don't recognise — turned out to be too brittle to ship: a
+ * paragraph id can legitimately differ between what the reader's editor is
+ * showing and what's stored (content saved before paragraph ids existed gets
+ * a fresh random id minted client-side on every load; a story re-imported or
+ * re-saved can come back with regenerated ids). Every one of those cases
+ * produced a hard rejection, which the reader could only render as the
+ * highlight silently vanishing a moment after it appeared.
+ *
+ * So the id is treated as a hint, not a requirement, and the highlighted text
+ * itself is the real anchor — falling back to locating the paragraph that
+ * actually contains it and re-deriving the offsets from the stored copy. The
+ * anchor returned is always expressed in the server's own ids/offsets, so
+ * what gets persisted lines up with what the reader will be sent next load.
+ */
+function resolveHighlightAnchor(
+  doc: TiptapDoc,
+  requested: HighlightAnchor,
+  text: string
+): HighlightAnchor | null {
+  const paragraphs = (doc?.content ?? []).filter(
+    (node) => node.type === "paragraph" && typeof node.attrs?.id === "string"
+  );
+
+  // 1. The id is known and the offsets still frame the same text — the
+  //    overwhelmingly common case, and the only one that needs no repair.
+  const named = paragraphs.find((node) => node.attrs?.id === requested.paragraphId);
+  if (named && paragraphPlainText(named).slice(requested.startOffset, requested.endOffset) === text) {
+    return requested;
+  }
+
+  // 2. Some paragraph holds exactly this text at exactly these offsets —
+  //    i.e. only the id drifted. Keep the offsets, adopt the stored id.
+  const sameOffsets = paragraphs.find(
+    (node) => paragraphPlainText(node).slice(requested.startOffset, requested.endOffset) === text
+  );
+  if (sameOffsets?.attrs?.id) {
+    return { ...requested, paragraphId: sameOffsets.attrs.id };
+  }
+
+  // 3. The text is in there somewhere but at a different position (the
+  //    stored copy differs slightly — a normalised space, an edited word
+  //    earlier in the paragraph). Re-derive the offsets from where it
+  //    actually sits. Deliberately first-match: a phrase repeated across
+  //    paragraphs is ambiguous, and landing the reader's own private
+  //    highlight on the first occurrence beats refusing to save it.
+  for (const node of paragraphs) {
+    const index = paragraphPlainText(node).indexOf(text);
+    if (index !== -1 && node.attrs?.id) {
+      return { paragraphId: node.attrs.id, startOffset: index, endOffset: index + text.length };
+    }
+  }
+
+  return null;
+}
 
 export class InvalidParagraphError extends Error {
   constructor() {
@@ -73,16 +138,20 @@ export async function createHighlight(input: CreateHighlightInput): Promise<High
   });
   if (!story) throw new InvalidParagraphError();
 
-  const validIds = extractParagraphIds(story.body as unknown as TiptapDoc);
-  if (!validIds.has(input.paragraphId)) throw new InvalidParagraphError();
+  const anchor = resolveHighlightAnchor(
+    story.body as unknown as TiptapDoc,
+    { paragraphId: input.paragraphId, startOffset: input.startOffset, endOffset: input.endOffset },
+    input.text
+  );
+  if (!anchor) throw new InvalidParagraphError();
 
   return prisma.highlight.create({
     data: {
       storyId: input.storyId,
       userId: input.userId,
-      paragraphId: input.paragraphId,
-      startOffset: input.startOffset,
-      endOffset: input.endOffset,
+      paragraphId: anchor.paragraphId,
+      startOffset: anchor.startOffset,
+      endOffset: anchor.endOffset,
       color: input.color,
       text: input.text.slice(0, 2000),
     },

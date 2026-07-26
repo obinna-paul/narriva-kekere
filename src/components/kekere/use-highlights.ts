@@ -44,9 +44,16 @@ export function useHighlights(storyId: string, canFetch: boolean) {
     void fetchHighlights();
   }, [fetchHighlights]);
 
+  /** Set when a highlight action failed, so the reader can say so rather
+   * than just silently dropping the highlight back out of the page — an
+   * optimistic add that rolls back is otherwise indistinguishable from the
+   * feature quietly not working. Cleared on the next successful action. */
+  const [error, setError] = useState<string | null>(null);
+
   async function addHighlight(input: NewHighlightInput): Promise<boolean> {
     const tempId = `optimistic-${Date.now()}`;
     setHighlights((prev) => [...prev, { id: tempId, ...input }]);
+    setError(null);
 
     try {
       const res = await fetch(`/api/kekere/stories/${storyId}/highlights`, {
@@ -54,12 +61,20 @@ export function useHighlights(storyId: string, canFetch: boolean) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error("failed");
+      if (!res.ok) {
+        const detail = await res
+          .json()
+          .then((d) => (typeof d?.error === "string" ? d.error : null))
+          .catch(() => null);
+        throw new Error(detail ? `${res.status} ${detail}` : `${res.status}`);
+      }
       const created: HighlightRecord = await res.json();
       setHighlights((prev) => prev.map((h) => (h.id === tempId ? created : h)));
       return true;
-    } catch {
+    } catch (e) {
       setHighlights((prev) => prev.filter((h) => h.id !== tempId));
+      const reason = e instanceof Error && e.message ? e.message : "network";
+      setError(`Couldn't save that highlight (${reason}).`);
       return false;
     }
   }
@@ -100,5 +115,5 @@ export function useHighlights(storyId: string, canFetch: boolean) {
     }
   }
 
-  return { highlights, addHighlight, recolorHighlight, removeHighlight };
+  return { highlights, error, clearError: () => setError(null), addHighlight, recolorHighlight, removeHighlight };
 }

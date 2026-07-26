@@ -13,6 +13,9 @@ export interface HighlightSpan {
    * style since the color varies per-span and can't be a single Tailwind
    * class the way kekere-search-match's fixed color can. */
   color: string;
+  /** The highlighted text itself, used to re-find the span when the
+   * paragraph id or offsets no longer line up — see buildDecorations. */
+  text?: string;
 }
 
 interface HighlightsPluginState {
@@ -30,49 +33,88 @@ export const readerHighlightsPluginKey = new PluginKey<HighlightsPluginState>("r
  * a bold run splits "hello **world**" into two text nodes) — this walks
  * each paragraph's children once to build that offset->position table.
  */
-function buildDecorations(doc: ProseMirrorNode, highlights: HighlightSpan[]): DecorationSet {
-  if (highlights.length === 0) return DecorationSet.empty;
+interface TextBlock {
+  id: string | undefined;
+  text: string;
+  /** positions[n] is the document position of the block's nth character. */
+  positions: number[];
+}
 
-  const byParagraph = new Map<string, HighlightSpan[]>();
-  for (const h of highlights) {
-    const list = byParagraph.get(h.paragraphId) ?? [];
-    list.push(h);
-    byParagraph.set(h.paragraphId, list);
-  }
-  if (byParagraph.size === 0) return DecorationSet.empty;
-
-  const decorations: Decoration[] = [];
-
+function collectTextBlocks(doc: ProseMirrorNode): TextBlock[] {
+  const blocks: TextBlock[] = [];
   doc.descendants((node, pos) => {
     if (!node.isTextblock) return true;
-    const paragraphId = node.attrs.id as string | undefined;
-    const spans = paragraphId ? byParagraph.get(paragraphId) : undefined;
-    if (!spans) return false;
-
     const positions: number[] = [];
+    let text = "";
     node.forEach((child, childOffset) => {
       if (child.isText && child.text) {
         const base = pos + 1 + childOffset;
         for (let i = 0; i < child.text.length; i++) positions.push(base + i);
+        text += child.text;
       }
     });
-
-    for (const span of spans) {
-      const from = positions[span.startOffset];
-      // positions[endOffset - 1] is the last highlighted character's own
-      // position; Decoration.inline's `to` is exclusive, hence +1.
-      const to = positions[span.endOffset - 1];
-      if (from === undefined || to === undefined) continue; // stale offset (paragraph text since edited) — skip rather than render garbage
-      decorations.push(
-        Decoration.inline(from, to + 1, {
-          class: "reader-highlight",
-          style: `background-color:${span.color}`,
-          "data-highlight-id": span.id,
-        })
-      );
-    }
+    blocks.push({ id: node.attrs.id as string | undefined, text, positions });
     return false; // paragraphs don't nest
   });
+  return blocks;
+}
+
+/**
+ * Locates a highlight in the rendered document. Mirrors the server's
+ * resolveHighlightAnchor (kekere-highlights.ts) deliberately: the paragraph
+ * id is a hint, and the highlighted text is what actually pins the span
+ * down. Anchoring on the id alone meant that any drift between the id the
+ * reader is rendering and the id the highlight was stored against produced
+ * no decoration at all — the highlight simply not appearing, with nothing
+ * to distinguish it from a save that failed.
+ */
+function locateSpan(blocks: TextBlock[], span: HighlightSpan): { block: TextBlock; start: number; end: number } | null {
+  const byId = blocks.find((b) => b.id === span.paragraphId);
+  if (byId && byId.text.slice(span.startOffset, span.endOffset) === span.text) {
+    return { block: byId, start: span.startOffset, end: span.endOffset };
+  }
+
+  // Nothing to re-anchor against (a record stored before `text` was kept, or
+  // an empty one) — the id is all there is, so trust it and its offsets.
+  if (!span.text) {
+    return byId ? { block: byId, start: span.startOffset, end: span.endOffset } : null;
+  }
+
+  const sameOffsets = blocks.find((b) => b.text.slice(span.startOffset, span.endOffset) === span.text);
+  if (sameOffsets) return { block: sameOffsets, start: span.startOffset, end: span.endOffset };
+
+  for (const block of blocks) {
+    const index = block.text.indexOf(span.text);
+    if (index !== -1) return { block, start: index, end: index + span.text.length };
+  }
+
+  return null;
+}
+
+function buildDecorations(doc: ProseMirrorNode, highlights: HighlightSpan[]): DecorationSet {
+  if (highlights.length === 0) return DecorationSet.empty;
+
+  const blocks = collectTextBlocks(doc);
+  const decorations: Decoration[] = [];
+
+  for (const span of highlights) {
+    const located = locateSpan(blocks, span);
+    if (!located) continue; // genuinely gone (the text was edited away) — skip rather than render garbage
+
+    const from = located.block.positions[located.start];
+    // positions[end - 1] is the last highlighted character's own position;
+    // Decoration.inline's `to` is exclusive, hence +1.
+    const to = located.block.positions[located.end - 1];
+    if (from === undefined || to === undefined) continue;
+
+    decorations.push(
+      Decoration.inline(from, to + 1, {
+        class: "reader-highlight",
+        style: `background-color:${span.color}`,
+        "data-highlight-id": span.id,
+      })
+    );
+  }
 
   return DecorationSet.create(doc, decorations);
 }
