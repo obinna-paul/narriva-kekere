@@ -283,7 +283,7 @@ export function KemiChat({
                                     &ldquo;{rec.hookLine}&rdquo;
                                   </p>
                                   <p className="mt-1 text-[11px] font-medium text-[var(--color-primary)]">
-                                    {rec.cowrieCost === 0 ? "Free" : `${rec.cowrieCost} cowries`} · {rec.readingTime} min
+                                    {rec.cowrieCost} cowries · {rec.readingTime} min
                                   </p>
                                 </div>
                                 <ChevronRight
