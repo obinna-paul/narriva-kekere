@@ -42,6 +42,17 @@ function closestParagraph(node: Node): HTMLElement | null {
  * multiple paragraphs ("a sentence, line, or word"), and supporting it would
  * add real complexity — a different paragraphId per span, at minimum — for
  * a case nobody asked for.
+ *
+ * Deliberately does NOT clear pendingSelection just because the live browser
+ * selection collapses. Tapping a color swatch on the resulting toolbar is
+ * itself a tap outside the selected text, which makes the browser collapse
+ * the selection as its own default behavior — if that collapse nulled
+ * pendingSelection, it would race the click and could unmount the toolbar
+ * before onPick ever fires, silently dropping the highlight. Once set,
+ * pendingSelection instead only changes when a *new* non-collapsed selection
+ * appears, or is cleared explicitly via clearPendingSelection() (the
+ * toolbar's own outside-tap/dismiss/auto-timeout handling, or after the
+ * highlight is created).
  */
 export function useTextSelection(containerRef: React.RefObject<HTMLElement>, active: boolean) {
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
@@ -57,21 +68,21 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement>, act
     function evaluate() {
       const container = containerRef.current;
       const selection = window.getSelection();
+      // A collapsed/empty selection is not reported as "nothing to
+      // highlight" here — see the doc comment above for why an existing
+      // pendingSelection deliberately survives this instead of being cleared.
       if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
-        setPendingSelection(null);
         return;
       }
 
       const range = selection.getRangeAt(0);
       if (!container.contains(range.commonAncestorContainer)) {
-        setPendingSelection(null);
         return;
       }
 
       const startEl = closestParagraph(range.startContainer);
       const paragraphId = startEl?.dataset.paragraphId;
       if (!startEl || !paragraphId) {
-        setPendingSelection(null);
         return;
       }
 
@@ -82,7 +93,6 @@ export function useTextSelection(containerRef: React.RefObject<HTMLElement>, act
         endEl === startEl ? textOffsetInElement(startEl, range.endContainer, range.endOffset) : paragraphTextLength;
 
       if (endOffset <= startOffset) {
-        setPendingSelection(null);
         return;
       }
 
