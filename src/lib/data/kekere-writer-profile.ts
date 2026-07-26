@@ -2,7 +2,7 @@ import type { StoryTier } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getRatingSummaryByStory, getWriterRatingSummary, type RatingSummary } from "@/lib/data/kekere-ratings";
 import { MIN_COMING_SOON_WORD_COUNT } from "@/content/kekere-coming-soon";
-import { storyCoverUrl, userAvatarUrl } from "@/lib/storage/cloudinary-urls";
+import { storyCoverUrl, userAvatarUrl, userAvatarLightboxUrl } from "@/lib/storage/cloudinary-urls";
 
 export { MIN_COMING_SOON_WORD_COUNT };
 
@@ -18,6 +18,9 @@ export interface PublicWriterProfile {
   // userAvatarUrl(avatar) itself would build a URL with an empty cloud
   // name and every image would 404. See cloudinary-urls.ts's doc comment.
   avatarUrl: string | null;
+  // Same source image, cropped larger — used by the profile-picture lightbox
+  // so enlarging the photo doesn't upscale the small hero-circle thumbnail.
+  avatarUrlLarge: string | null;
   socialLinks: { label: string; href: string }[];
   memberSince: Date;
   kekereUsername: string | null;
@@ -130,6 +133,7 @@ export async function getPublicWriterProfile(identifier: string): Promise<Public
       avatarColor: user.avatarColor,
       avatar: user.avatar,
       avatarUrl: user.avatar ? userAvatarUrl(user.avatar) : null,
+      avatarUrlLarge: user.avatar ? userAvatarLightboxUrl(user.avatar) : null,
       socialLinks: (user.socialLinks as { label: string; href: string }[] | null) ?? [],
       memberSince: user.createdAt,
       kekereUsername: user.kekereUsername,

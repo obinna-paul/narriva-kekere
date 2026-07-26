@@ -287,7 +287,7 @@ export function WriterProfileView({
 
         {avatarExpanded && avatarUrl && (
           <AvatarLightbox
-            src={avatarUrl}
+            src={profile.avatarUrlLarge ?? avatarUrl}
             alt={`${profile.name}'s profile picture`}
             onClose={() => setAvatarExpanded(false)}
           />

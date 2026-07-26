@@ -103,6 +103,11 @@ const READER_THEME_ORDER: ReaderTheme[] = ["white", "cream", "dark"];
 export interface StoryReaderProps {
   story: MockStory;
   isLoggedIn: boolean;
+  /** The logged-in reader's own id — null when logged out. Only used to
+   * tell whether a given comment is theirs (shows a Delete option instead
+   * of just Report). Not the same as isOwnStory, which is about the story's
+   * author, not the comment's. */
+  viewerId?: string | null;
   initialUnlocked: boolean;
   initialBalance: number;
   initialSaved: boolean;
@@ -141,6 +146,7 @@ export interface StoryReaderProps {
 export function StoryReader({
   story,
   isLoggedIn,
+  viewerId = null,
   initialUnlocked,
   initialBalance,
   initialSaved,
@@ -1570,6 +1576,8 @@ export function StoryReader({
           pendingNewCount={comments.pendingNewCount}
           onApplyPending={comments.applyPending}
           onReportComment={(commentId) => openReport("PARAGRAPH_COMMENT", commentId)}
+          currentUserId={viewerId}
+          onDeleteComment={comments.deleteComment}
         />
       )}
 

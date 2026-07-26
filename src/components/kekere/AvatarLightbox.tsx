@@ -33,7 +33,7 @@ export function AvatarLightbox({ src, alt, onClose }: AvatarLightboxProps) {
       <img
         src={src}
         alt={alt}
-        className="max-h-[80vh] max-w-[90vw] rounded-2xl object-contain shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)]"
+        className="max-h-[92vh] max-w-[96vw] rounded-2xl object-contain shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)]"
         onClick={(e) => e.stopPropagation()}
       />
     </div>
