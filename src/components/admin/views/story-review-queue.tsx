@@ -889,15 +889,21 @@ export function StoryReviewQueue() {
 
   const requiresWriterApproval = queueTab === "publishing" && (hasEdits || commentCount > 0);
 
-  // A story in CHANGES_PROPOSED is sitting with the writer: they have to
-  // accept or push back on the edits before anything else can happen to it.
-  // It used to sit in "To Be Published" looking like work, and its buttons
-  // pointed at the Story Review endpoints (both stage-2 branches require
-  // ACCEPTED), which could only ever 400. Split out so the pile reflects
-  // what's actually actionable — but still listed, because a story a writer
-  // has forgotten about needs to be visible somewhere to be chased.
-  const withWriter = queue.filter((s) => s.status === "CHANGES_PROPOSED");
-  const actionable = queue.filter((s) => s.status !== "CHANGES_PROPOSED");
+  // Each tab has one status that means "the ball is in the writer's court,
+  // not mine": CHANGES_PROPOSED in To Be Published (they're reviewing tracked
+  // edits), REVISIONS_REQUESTED in Story Review (they're rewriting after
+  // feedback). Both used to sit in the flat pile looking exactly like fresh
+  // work, which is precisely the confusion this exists to remove — a story
+  // sent back for revisions and a story that just landed read identically,
+  // so there was no way to tell "have I already read this" from "is this
+  // new". Split out into its own group, but still listed, not hidden —
+  // an admin can still reject outright from here if a writer goes quiet.
+  const secondaryStatus = queueTab === "publishing" ? "CHANGES_PROPOSED" : "REVISIONS_REQUESTED";
+  const withWriter = queue.filter((s) => s.status === secondaryStatus);
+  const actionable = queue.filter((s) => s.status !== secondaryStatus);
+  // Only CHANGES_PROPOSED locks out the decision panel entirely — every
+  // action there needs status ACCEPTED first. REVISIONS_REQUESTED keeps the
+  // full panel: reject, or send another round of notes, both still legal.
   const awaitingWriter = selected?.status === "CHANGES_PROPOSED";
   // The detail fetch doesn't carry lastActivityAt; the queue row does.
   const sentToWriterAgo = relativeTime(queue.find((s) => s.id === selectedId)?.lastActivityAt);
@@ -948,8 +954,11 @@ export function StoryReviewQueue() {
           </div>
         ) : (
           [
-            // Only the publishing tab is split. Story Review has one pile and
-            // a heading over a single group would be noise.
+            // The primary pile only gets an explicit label in the publishing
+            // tab, where "Ready to publish" distinguishes it from "With the
+            // writer" below. Story Review's primary pile stays unlabeled —
+            // it's the default, top-of-list group; only the secondary one
+            // needs a heading, because it's the exception.
             ...(queueTab === "publishing"
               ? [{ key: "ready", label: "Ready to publish", items: actionable }]
               : [{ key: "all", label: null, items: actionable }]),
@@ -990,7 +999,11 @@ export function StoryReviewQueue() {
                   {s.tier}
                 </span>
                 <span className={cn("text-[10px]", selectedId === s.id ? "text-white/50" : "text-[#9AA0A8]")}>
-                  {s.status === "CHANGES_PROPOSED"
+                  {/* lastActivityAt, not submittedAt, for a story sitting with
+                      the writer — submittedAt is the original submission date
+                      and would read as stale, exactly the ambiguity this
+                      split exists to remove. */}
+                  {s.status === secondaryStatus
                     ? `sent ${relativeTime(s.lastActivityAt)}`
                     : relativeTime(s.submittedAt)}
                 </span>
