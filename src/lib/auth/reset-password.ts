@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderResetPasswordEmail } from "@/lib/email/templates";
 import { KEKERE_GENERAL_FROM } from "@/lib/constants";
+import { publicUrl } from "@/lib/urls";
 
 const RESET_EXPIRY_MINUTES = 60;
 
@@ -32,8 +33,7 @@ export async function createPasswordReset(email: string): Promise<void> {
     },
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
-  const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+  const resetUrl = publicUrl(`/reset-password?token=${token}`);
 
   const html = await renderResetPasswordEmail({
     name: user.name,

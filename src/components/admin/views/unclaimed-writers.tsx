@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, RefreshCw, Mail, Plus, Trash2, UserX } from "lucide-react";
+import { RefreshCw, Mail, Plus, Trash2, UserX } from "lucide-react";
 
 interface OnboardedWriter {
   id: string;
@@ -80,42 +80,86 @@ export function UnclaimedWriters() {
     }
   }
 
-  async function copyClaimLink(writerId: string) {
-    setCopiedId(writerId);
+  /**
+   * Sends the writer their invitation AND puts that same link on the
+   * clipboard, in one request.
+   *
+   * There used to be two buttons doing this separately, and because a claim
+   * token is stored hashed only one can ever be live — so copying the link
+   * silently killed the one already sitting in the writer's inbox, and vice
+   * versa. Whichever they clicked second told them the link was invalid. One
+   * action means the link you're holding is always the link they were sent.
+   */
+  async function sendInvite(writerId: string) {
+    setSendingId(writerId);
+    setError(null);
+    setCopiedId(null);
     try {
-      const res = await fetch(`/api/admin/kekere/writers/${writerId}/regenerate-claim`, { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        await navigator.clipboard.writeText(data.claimUrl);
+      const res = await fetch(`/api/admin/kekere/writers/${writerId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sendEmail: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Couldn't send the invite.");
+        return;
       }
+      const data = await res.json();
+      // Clipboard access can be refused (permissions, insecure origin). The
+      // email has already gone either way, so that's a partial success worth
+      // saying out loud rather than a failure.
+      try {
+        await navigator.clipboard.writeText(data.actionUrl);
+        setCopiedId(writerId);
+      } catch {
+        setError("Emailed — but couldn't copy to your clipboard. Use “New link only” if you need to share it by hand.");
+      }
+      setSentId(writerId);
+      setTimeout(() => {
+        setSentId((id) => (id === writerId ? null : id));
+        setCopiedId((id) => (id === writerId ? null : id));
+      }, 3000);
       await fetchWriters();
     } catch {
-      // ignore
-    }
-    setCopiedId(null);
-  }
-
-  async function regenerateLink(writerId: string) {
-    const res = await fetch(`/api/admin/kekere/writers/${writerId}/regenerate-claim`, { method: "POST" });
-    if (res.ok) {
-      await fetchWriters();
+      setError("Network error while sending the invite.");
+    } finally {
+      setSendingId(null);
     }
   }
 
-  async function sendEmail(writerId: string) {
+  /** A fresh link with no email — for sharing by hand. Confirmed, because it
+   *  kills any link already sent. */
+  async function newLinkOnly(writerId: string, name: string) {
+    if (!window.confirm(
+      `Generate a new link for ${name}?\n\nOnly one link can be active at a time, so this immediately stops any link you've already sent them from working — including one in an email they haven't opened yet.\n\nThe new link will be copied to your clipboard.`
+    )) {
+      return;
+    }
     setSendingId(writerId);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/kekere/writers/${writerId}/resend-email`, { method: "POST" });
-      if (res.ok) {
-        setSentId(writerId);
-        setTimeout(() => setSentId((id) => (id === writerId ? null : id)), 2500);
-      } else {
+      const res = await fetch(`/api/admin/kekere/writers/${writerId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sendEmail: false }),
+      });
+      if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Couldn't send the email.");
+        setError(data.error ?? "Couldn't generate a link.");
+        return;
       }
+      const data = await res.json();
+      try {
+        await navigator.clipboard.writeText(data.actionUrl);
+        setCopiedId(writerId);
+        setTimeout(() => setCopiedId((id) => (id === writerId ? null : id)), 3000);
+      } catch {
+        window.prompt("Copy this link:", data.actionUrl);
+      }
+      await fetchWriters();
     } catch {
-      setError("Network error while sending the email.");
+      setError("Network error while generating the link.");
     } finally {
       setSendingId(null);
     }
@@ -195,8 +239,9 @@ export function UnclaimedWriters() {
         <div>
           <h1 className="text-[18px] font-bold text-[#15171C]">Onboarded Writers</h1>
           <p className="mt-1 text-[13px] text-[#7C828C]">
-            Writers whose accounts and stories were created by an admin. Unclaimed ones can be
-            sent a claim link; any onboarded story can be deleted here.
+            Writers whose accounts and stories were created by an admin. Any onboarded story can
+            be deleted here. Only one invite link works at a time — sending a new one stops the
+            previous link from working.
           </p>
         </div>
         <button
@@ -315,41 +360,42 @@ export function UnclaimedWriters() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {/* Send email — the deliberate step after saving a story.
-                          Only meaningful while a contract is pending (i.e. the
-                          story hasn't been signed/published yet). Works for both
-                          new (claim link) and existing (in-app contract) writers. */}
+                      {/* Send invite — the deliberate step after saving a
+                          story. Emails the writer AND copies that same link,
+                          so the two can never be different tokens. Only
+                          meaningful while a contract is pending (i.e. the
+                          story hasn't been signed/published yet). Works for
+                          both new (claim link) and existing (in-app contract)
+                          writers. */}
                       {w.storyId && w.storyStatus === "PENDING_CONTRACT" && (
                         <button
                           type="button"
-                          onClick={() => sendEmail(w.id)}
+                          onClick={() => sendInvite(w.id)}
                           disabled={sendingId === w.id}
                           className="inline-flex items-center gap-1 rounded-[7px] bg-[#C75D2C] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#B0531E] disabled:opacity-50"
-                          title="Email the writer their publishing agreement invitation"
+                          title="Email the writer their publishing agreement and copy the same link to your clipboard"
                         >
                           <Mail size={12} />
-                          {sendingId === w.id ? "Sending…" : sentId === w.id ? "Sent ✓" : "Send email"}
+                          {sendingId === w.id
+                            ? "Sending…"
+                            : sentId === w.id
+                              ? copiedId === w.id
+                                ? "Sent + copied ✓"
+                                : "Sent ✓"
+                              : "Send invite"}
                         </button>
                       )}
                       {w.accountStatus === "UNCLAIMED" && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => copyClaimLink(w.id)}
-                            className="inline-flex items-center gap-1 rounded-[7px] bg-[#F0F2F5] px-2.5 py-1.5 text-[11px] font-medium text-[#15171C] hover:bg-[#E4E7EB]"
-                          >
-                            <Copy size={12} />
-                            {copiedId === w.id ? "Copied" : "Copy link"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => regenerateLink(w.id)}
-                            className="rounded-[7px] p-1.5 text-[#7C828C] hover:bg-[#F0F2F5] hover:text-[#15171C]"
-                            title="Regenerate link"
-                          >
-                            <RefreshCw size={13} />
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() => newLinkOnly(w.id, w.name)}
+                          disabled={sendingId === w.id}
+                          className="inline-flex items-center gap-1 rounded-[7px] bg-[#F0F2F5] px-2.5 py-1.5 text-[11px] font-medium text-[#15171C] hover:bg-[#E4E7EB] disabled:opacity-50"
+                          title="Generate a fresh link to share by hand — this invalidates any link already sent"
+                        >
+                          <RefreshCw size={12} />
+                          New link only
+                        </button>
                       )}
                       {w.storyId && (
                         <button

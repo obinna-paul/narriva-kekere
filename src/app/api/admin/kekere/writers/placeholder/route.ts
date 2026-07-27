@@ -6,6 +6,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { ensureReferralCodeForUser } from "@/lib/data/kekere-referrals";
+import { publicUrl } from "@/lib/urls";
 
 const CLAIM_TOKEN_EXPIRY_DAYS = 120;
 
@@ -76,8 +77,7 @@ export const POST = withAuth(async (request, session) => {
     });
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
-  const claimUrl = `${baseUrl}/kekere/claim/${token}`;
+  const claimUrl = publicUrl(`/kekere/claim/${token}`);
 
   return NextResponse.json({
     userId: user.id,

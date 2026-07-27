@@ -9,6 +9,7 @@ import { sendEmail } from "@/lib/email/send";
 import { renderContractOfferEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { publicUrl } from "@/lib/urls";
 import type { KekereContractStatus } from "@prisma/client";
 
 export const GET = withAuth(
@@ -124,7 +125,7 @@ export const POST = withAuth(
       },
     });
 
-    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${contract.id}`;
+    const contractUrl = publicUrl(`/kekere/profile/contracts/${contract.id}`);
     const html = await renderContractOfferEmail({
       writerName: writer.name,
       contractUrl,
