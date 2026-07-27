@@ -33,6 +33,30 @@ function thumbnailPattern(seed: string): string {
   return patterns[i % patterns.length];
 }
 
+/**
+ * Shared by every horizontally-scrolling row on the feed. All of them use
+ * `px-5` (20px) and `scroll-snap-align: start` cards, and all of them need
+ * scroll-padding-left to match that padding.
+ *
+ * scrollPaddingLeft is what tells the mandatory scroll-snap algorithm where
+ * the "start" of the scrollport really is. Without it, padding alone doesn't
+ * count for scroll-snap-align purposes — the browser snaps the first card
+ * flush against the container's raw edge the moment the row has enough cards
+ * to actually overflow, which eats the left gutter and leaves the first cover
+ * clipped against the screen edge (confirmed via a live repro: the container's
+ * own scrollLeft rested at exactly 20px — its padding-left amount — instead of
+ * 0, on load, with no user interaction).
+ *
+ * This lived inline on StoryRow when it was first diagnosed for "Now
+ * trending", which left Winners' Circle and Continue reading with the same
+ * bug and no hint that a fix already existed. Hoisted so the three cannot
+ * disagree, and so a fourth row gets it by default.
+ */
+const SNAP_ROW_STYLE: React.CSSProperties = {
+  scrollSnapType: "x mandatory",
+  scrollPaddingLeft: "20px",
+};
+
 function RowCard({
   story,
   badge,
@@ -128,20 +152,7 @@ function StoryRow({
       </h2>
       <div
         className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
-        // scrollPaddingLeft (distinct from the px-5 padding above) tells the
-        // mandatory scroll-snap algorithm where the "start" of the scrollport
-        // really is. Without it, `padding` alone doesn't count for
-        // scroll-snap-align purposes — the browser instead snaps the first
-        // scroll-snap-align:start card flush against the container's raw
-        // edge the moment the row has enough cards to actually overflow,
-        // which visually eats the left padding and leaves the first card
-        // flush against the screen edge (confirmed via a live repro: the
-        // container's own scrollLeft rested at exactly 20px — its
-        // padding-left amount — instead of 0, on load, with no user
-        // interaction). Matching scroll-padding-left to padding-left keeps
-        // them in agreement, so scrollLeft: 0 is itself a valid snap
-        // position.
-        style={{ scrollSnapType: "x mandatory", scrollPaddingLeft: "20px" }}
+        style={SNAP_ROW_STYLE}
       >
         {stories.map((story) => (
           <RowCard key={story.id} story={story} readProgress={readingProgress?.[story.id]} onPreview={onPreview} />
@@ -395,7 +406,7 @@ export function FeedContent({
           </h2>
           <div
             className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
-            style={{ scrollSnapType: "x mandatory" }}
+            style={SNAP_ROW_STYLE}
           >
             {winnerStories.map((story) => (
               <Link
@@ -507,7 +518,7 @@ export function FeedContent({
           </div>
           <div
             className="scrollx flex gap-[14px] overflow-x-auto px-5 pb-1"
-            style={{ scrollSnapType: "x mandatory" }}
+            style={SNAP_ROW_STYLE}
           >
             {inProgressStories.map((story) => (
               <RowCard key={story.id} story={story} badge="Continue" readProgress={readingProgress?.[story.id]} onPreview={setPreviewStory} />
