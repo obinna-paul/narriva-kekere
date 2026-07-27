@@ -658,38 +658,48 @@ export async function getFeedTagRows(
       categoriesInOrder.push(category);
     }
   }
+  if (categoriesInOrder.length === 0) return [];
 
-  const allSlugsNeeded = Array.from(new Set(categoriesInOrder.flatMap((c) => c.tagSlugs)));
-  const tags = await prisma.tag.findMany({
-    where: { slug: { in: allSlugsNeeded } },
-    select: { id: true, slug: true },
-  });
-  const tagIdBySlug = new Map(tags.map((t) => [t.slug, t.id]));
+  // Four queries, whatever the category count. This used to run one
+  // storyTag lookup plus a two-query ranking PER category — fine while the
+  // feed covered nine of them, but every tag now has a row, and the old
+  // shape would have turned that into the better part of eighty queries on
+  // the app's most-visited page. Grouping in memory is the difference
+  // between "every story is findable" costing nothing and costing the feed.
+  const [taggedRows, allTags] = await Promise.all([
+    prisma.storyTag.findMany({
+      where: { story: { status: "PUBLISHED" } },
+      select: { storyId: true, tagId: true },
+    }),
+    prisma.tag.findMany({ select: { id: true, slug: true } }),
+  ]);
+  if (taggedRows.length === 0) return [];
 
-  // Pull a wider candidate pool than we'll actually show, so ranking by
-  // popularity has something real to sort — a plain `take: limit` with no
-  // orderBy was returning whatever order Postgres happened to hand back.
-  const CANDIDATE_MULTIPLIER = 5;
+  const slugByTagId = new Map(allTags.map((t) => [t.id, t.slug]));
+  const storyIdsByTagSlug = new Map<string, string[]>();
+  for (const row of taggedRows) {
+    const slug = slugByTagId.get(row.tagId);
+    if (!slug) continue;
+    const bucket = storyIdsByTagSlug.get(slug);
+    if (bucket) bucket.push(row.storyId);
+    else storyIdsByTagSlug.set(slug, [row.storyId]);
+  }
 
-  const results = await Promise.all(
-    categoriesInOrder.map(async (category) => {
-      const tagIds = category.tagSlugs
-        .map((slug) => tagIdBySlug.get(slug))
-        .filter((id): id is string => !!id);
-      if (tagIds.length === 0) return { slug: category.slug, storyIds: [] as string[] };
+  // Ranked once over every tagged story, then sliced per category — the
+  // ordering is identical to ranking each row separately, because the
+  // comparison only ever looks at a story's own unlocks and publish date.
+  const everyStoryId = Array.from(new Set(taggedRows.map((r) => r.storyId)));
+  const ranked = await rankStoryIdsByRecentPopularity(everyStoryId, everyStoryId.length);
 
-      const rows = await prisma.storyTag.findMany({
-        where: { tagId: { in: tagIds }, story: { status: "PUBLISHED" } },
-        select: { storyId: true },
-        take: limit * CANDIDATE_MULTIPLIER,
-      });
-      const candidateIds = Array.from(new Set(rows.map((r) => r.storyId)));
-      const storyIds = await rankStoryIdsByRecentPopularity(candidateIds, limit);
-      return { slug: category.slug, storyIds };
+  return categoriesInOrder
+    .map((category) => {
+      const members = new Set(
+        category.tagSlugs.flatMap((slug) => storyIdsByTagSlug.get(slug) ?? []),
+      );
+      if (members.size === 0) return { slug: category.slug, storyIds: [] as string[] };
+      return { slug: category.slug, storyIds: ranked.filter((id) => members.has(id)).slice(0, limit) };
     })
-  );
-
-  return results.filter((r) => r.storyIds.length > 0);
+    .filter((r) => r.storyIds.length > 0);
 }
 
 /** Fetch full story rows for a set of IDs, preserving the given order. */
