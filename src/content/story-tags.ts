@@ -157,51 +157,68 @@ export interface TagCategory {
  * just stand alone as their own single-tag category (see categoryForTag).
  */
 export const TAG_CATEGORIES: readonly TagCategory[] = [
-  {
-    slug: "dark-creepy-psychological",
-    title: "Read alone at night. We dare you",
-    tagSlugs: ["dark", "creepy", "psychological"],
-  },
-  {
-    slug: "thriller-tense",
-    title: "Your pulse won't thank you",
-    tagSlugs: ["thriller", "tense"],
-  },
-  {
-    slug: "grief-heartbreak",
-    title: "Loss doesn't knock before it enters",
-    tagSlugs: ["grief", "heartbreak"],
-  },
-  {
-    slug: "revenge-justice",
-    title: "Somebody's going to pay for this",
-    tagSlugs: ["revenge", "justice"],
-  },
-  {
-    slug: "power-politics",
-    title: "Power plays and dirty hands",
-    tagSlugs: ["power", "politics"],
-  },
-  {
-    slug: "family-parenthood",
-    title: "Blood, chosen and otherwise",
-    tagSlugs: ["family", "parenthood"],
-  },
-  {
-    slug: "campus-coming-of-age",
-    title: "Growing up is a full-body experience",
-    tagSlugs: ["campus", "coming-of-age"],
-  },
-  {
-    slug: "quick-read-binge-worthy",
-    title: "You said five minutes. It's been two hours.",
-    tagSlugs: ["quick-read", "binge-worthy"],
-  },
-  {
-    slug: "money-class",
-    title: "Different wallets, different rules",
-    tagSlugs: ["money", "class"],
-  },
+  // ── Tone you're in the mood for ──────────────────────────────────────
+  { slug: "dark-creepy-psychological", title: "Read alone at night. We dare you",
+    tagSlugs: ["dark", "creepy", "psychological"] },
+  { slug: "thriller-tense", title: "Your pulse won't thank you",
+    tagSlugs: ["thriller", "tense"] },
+  { slug: "funny-satire-absurdist", title: "Laugh now, explain later",
+    tagSlugs: ["funny", "satire", "absurdist"] },
+  { slug: "heartwarming-redemption", title: "Stories that hug you back",
+    tagSlugs: ["heartwarming", "redemption"] },
+  { slug: "melancholy-tragic", title: "The ache that doesn't want fixing",
+    tagSlugs: ["melancholy", "tragic"] },
+
+  // ── The heart of it ──────────────────────────────────────────────────
+  { slug: "romance-slow-burn", title: "Fall for someone who isn't real (yet)",
+    tagSlugs: ["romance", "slow-burn"] },
+  // Kept on its own, never folded into romance: this row is gated behind a
+  // content warning and its heading has to earn that on its own.
+  { slug: "erotic", title: "18+ — proceed knowingly", tagSlugs: ["erotic"] },
+  { slug: "grief-heartbreak", title: "Loss doesn't knock before it enters",
+    tagSlugs: ["grief", "heartbreak"] },
+  { slug: "trauma-survival", title: "What they carried out of it",
+    tagSlugs: ["trauma", "survival"] },
+  { slug: "friendship-betrayal", title: "Ride or die — until they aren't",
+    tagSlugs: ["friendship", "betrayal"] },
+  { slug: "family-parenthood", title: "Blood, chosen and otherwise",
+    tagSlugs: ["family", "parenthood"] },
+  { slug: "identity-race-gender", title: "Who you are, and who they think you are",
+    tagSlugs: ["identity", "race", "gender"] },
+  { slug: "religion", title: "Faith, doubt, and everything between", tagSlugs: ["religion"] },
+
+  // ── Somebody's going to answer for something ─────────────────────────
+  { slug: "revenge-justice-rage", title: "Somebody's going to pay for this",
+    tagSlugs: ["revenge", "justice", "rage"] },
+  { slug: "crime-killer-con-artist", title: "Someone's going to get caught",
+    tagSlugs: ["crime", "killer", "con-artist"] },
+  { slug: "mystery-twist-ending", title: "Everyone's lying. Find out why.",
+    tagSlugs: ["mystery", "twist-ending"] },
+  { slug: "antihero-outsider", title: "Not the hero. But close.",
+    tagSlugs: ["antihero", "outsider"] },
+
+  // ── Money, work, and who's holding the rope ──────────────────────────
+  { slug: "power-politics", title: "Power plays and dirty hands",
+    tagSlugs: ["power", "politics"] },
+  { slug: "money-class", title: "Different wallets, different rules",
+    tagSlugs: ["money", "class"] },
+  { slug: "workplace-ambition", title: "Hungry, and counting the cost",
+    tagSlugs: ["workplace", "ambition"] },
+
+  // ── Where and when ───────────────────────────────────────────────────
+  { slug: "city-village", title: "Concrete, red earth, and everything between",
+    tagSlugs: ["city", "village"] },
+  { slug: "diaspora", title: "Between two worlds", tagSlugs: ["diaspora"] },
+  { slug: "speculative-historical", title: "Somewhere that isn't here and now",
+    tagSlugs: ["speculative", "historical"] },
+  { slug: "campus-coming-of-age", title: "Growing up is a full-body experience",
+    tagSlugs: ["campus", "coming-of-age"] },
+
+  // ── How it reads ─────────────────────────────────────────────────────
+  { slug: "literary-poetic-thought-provoking", title: "Prose that stays with you",
+    tagSlugs: ["literary", "poetic", "thought-provoking"] },
+  { slug: "quick-read-binge-worthy", title: "You said five minutes. It's been two hours.",
+    tagSlugs: ["quick-read", "binge-worthy"] },
 ];
 
 const CATEGORY_BY_TAG_SLUG: Readonly<Record<string, TagCategory>> = Object.fromEntries(
@@ -227,22 +244,20 @@ export function resolveCategoryBySlug(slug: string): TagCategory | null {
   return TAG_CATEGORIES.find((c) => c.slug === slug) ?? null;
 }
 
-/** Tags that should appear as feed rows, in the order they appear on the feed */
-export const FEED_TAG_ORDER: readonly StoryTagSlug[] = [
-  "funny",
-  "romance",
-  "diaspora",
-  "thriller",
-  "creepy",
-  "heartbreak",
-  "psychological",
-  "literary",
-  "dark",
-  "crime",
-  "erotic",
-  "coming-of-age",
-  "twist-ending",
-  "satire",
-  "tragic",
-  "binge-worthy",
-];
+/**
+ * Every tag, in the order its category should appear on the feed.
+ *
+ * This used to be a hand-picked list of sixteen, which meant thirty-nine
+ * selectable tags could never produce a feed row at all — a story tagged
+ * only "trauma" was invisible no matter what, because trending filters out
+ * anything under three unlocks and nobody can unlock what they can't see.
+ *
+ * Derived from TAG_CATEGORIES so the two can't drift: adding a tag to a
+ * category is enough to give it a home. getFeedTagRows collapses these to
+ * one row per category and drops any row with no stories, so listing every
+ * tag costs nothing on a small library and scales on its own as the
+ * catalogue fills out.
+ */
+export const FEED_TAG_ORDER: readonly StoryTagSlug[] = TAG_CATEGORIES.flatMap(
+  (category) => category.tagSlugs,
+) as readonly StoryTagSlug[];
