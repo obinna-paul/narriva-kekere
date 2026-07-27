@@ -68,6 +68,12 @@ export const GET = withAuth(
             ? Math.floor((now - s.submittedAt.getTime()) / 86400000)
             : null,
           status: s.status,
+          // For a story sitting in CHANGES_PROPOSED this is when it went to
+          // the writer: the status change was the last write, and nothing
+          // touches the row again until they respond. Used only to show how
+          // long it has been waiting, so a proxy is worth more than a new
+          // column and the migration to go with it.
+          lastActivityAt: s.updatedAt.toISOString(),
           previousPublishedCount: stats.publishedCount,
           previousRejectionCount: stats.rejectedCount,
           plagiarismFlagged: s.plagiarismFlagged,
