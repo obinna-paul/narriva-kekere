@@ -213,6 +213,23 @@ export async function getReaderNotes(readerId: string): Promise<SentNote[]> {
  *  instead of true unseen-state. */
 export async function getRecentNoteReply(readerId: string, withinDays = 14): Promise<{ writerName: string } | null> {
   const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000);
+
+  // "You've got a reply waiting" has to actually be waiting. Existence of a
+  // recent reply isn't the same thing — a reader who opened it an hour ago
+  // was still being told it was waiting for them, every visit, for a
+  // fortnight. The unread NOTE_REPLIED notification is the right signal: it's
+  // the same thing the reader dismissed, so the greeting stops the moment
+  // they act on it, by exactly the gesture they already made.
+  //
+  // Checked first, and on its own composite index — the common case (nothing
+  // unread) now costs one indexed lookup and skips the Note query entirely,
+  // which is cheaper than what this used to do unconditionally.
+  const unread = await prisma.notification.findFirst({
+    where: { userId: readerId, type: "NOTE_REPLIED", read: false, createdAt: { gte: since } },
+    select: { id: true },
+  });
+  if (!unread) return null;
+
   const note = await prisma.note.findFirst({
     where: { fromUserId: readerId, replyBody: { not: null }, repliedAt: { gte: since } },
     orderBy: { repliedAt: "desc" },

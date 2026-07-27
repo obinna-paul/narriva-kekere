@@ -159,9 +159,19 @@ export async function getFollowingWriters(followerId: string): Promise<FollowedW
 
 /** The most recent published story from anyone this reader follows, within
  *  the recency window — powers the "new from a writer you follow" feed
- *  greeting. Queried directly against Story rather than the notification
- *  fan-out table, so it stays correct even if a notification was dismissed
- *  or never generated (e.g. a follow created after the story went live). */
+ *  greeting.
+ *
+ *  Still queried against Story rather than the notification fan-out table,
+ *  for the original reason: a follow created AFTER a story went live never
+ *  produced a notification, and that story is genuinely news to the reader.
+ *
+ *  But "stays correct even if a notification was dismissed" was wrong, and
+ *  the greeting inherited the mistake — it kept announcing a story for a
+ *  fortnight after the reader had opened the notification about it. So the
+ *  fan-out table now gets a say, narrowly: it can only ever silence a claim,
+ *  never make one. If notifications about this exist and the reader has
+ *  worked through all of them, the news has landed. If none exist at all,
+ *  nothing is suppressed and the original case still holds. */
 export async function getLatestFollowedWriterStory(
   userId: string,
   withinDays = 14
@@ -179,8 +189,16 @@ export async function getLatestFollowedWriterStory(
     orderBy: { publishedAt: "desc" },
     select: { id: true, title: true, author: { select: { name: true } } },
   });
+  if (!story) return null;
 
-  return story ? { storyId: story.id, writerName: story.author.name, storyTitle: story.title } : null;
+  // Only paid for when there's actually something to announce.
+  const notices = await prisma.notification.findMany({
+    where: { userId, type: "WRITER_PUBLISHED", createdAt: { gte: since } },
+    select: { read: true },
+  });
+  if (notices.length > 0 && notices.every((n) => n.read)) return null;
+
+  return { storyId: story.id, writerName: story.author.name, storyTitle: story.title };
 }
 
 /**
