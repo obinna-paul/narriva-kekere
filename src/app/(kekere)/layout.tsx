@@ -4,6 +4,7 @@ import { PwaRegister } from "@/components/kekere/pwa-register";
 import { InstallPrompt } from "@/components/kekere/install-prompt";
 import { JsonLd } from "@/components/seo/json-ld";
 import { webSiteSchema } from "@/lib/seo/schema";
+import { KekerePulseProvider } from "@/components/kekere/pulse-provider";
 
 const DESCRIPTION = "Small stories. Big feelings. African fiction, read in the time it takes to wait for a bus.";
 
@@ -58,7 +59,10 @@ export default function KekereLayout({
       <JsonLd data={webSiteSchema("kekere")} />
       <PwaRegister />
       <InstallPrompt />
-      {children}
+      {/* One poll for the notification badge and Kemi's unread dot together —
+          they used to run separate 60s intervals. Sits at the layout so both
+          the nav and the feed read the same numbers. */}
+      <KekerePulseProvider>{children}</KekerePulseProvider>
     </div>
   );
 }
