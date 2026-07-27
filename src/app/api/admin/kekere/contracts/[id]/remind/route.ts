@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderContractReminderEmail } from "@/lib/email/templates";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { publicUrl } from "@/lib/urls";
 
 export const POST = withAuth(
   async (_request, _session, { params }) => {
@@ -41,7 +42,7 @@ export const POST = withAuth(
     }
 
     const sentDate = contract.sentAt.toISOString().split("T")[0];
-    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/profile/contracts/${id}`;
+    const contractUrl = publicUrl(`/kekere/profile/contracts/${id}`);
     const html = await renderContractReminderEmail({
       writerName: contract.writer.name,
       sentDate,

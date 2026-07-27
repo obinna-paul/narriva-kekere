@@ -11,6 +11,7 @@ import { createNotification } from "@/lib/notifications/create";
 import { plainTextToDoc } from "@/lib/tiptap/doc-utils";
 import { countWords } from "@/lib/tiptap/doc-utils";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { publicUrl } from "@/lib/urls";
 
 const schema = z.object({
   writerId: z.string().min(1),
@@ -164,7 +165,7 @@ export const POST = withAuth(
 
     // /kekere/contracts is the real, only contracts-inbox page — there is no
     // /kekere/profile/contracts route.
-    const contractUrl = `${process.env.NEXTAUTH_URL ?? "https://narriva.pro"}/kekere/contracts`;
+    const contractUrl = publicUrl("/kekere/contracts");
     const acceptedHtml = await renderStoryAcceptedEmail({
       writerName: writer.name,
       storyTitle: title,

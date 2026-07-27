@@ -9,6 +9,7 @@ import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { uploadPortalFile } from "@/lib/storage/r2";
 import { SUPPORT_EMAIL, KEKERE_SUBMISSIONS_EMAIL, KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
 import { nextSlugForTitle, withSlugRetry } from "@/lib/data/kekere-slugs";
+import { publicUrl } from "@/lib/urls";
 import type { Prisma } from "@prisma/client";
 
 export interface CreateContractParams {
@@ -203,16 +204,15 @@ export async function signContractAndPublishStory(
 
   const signedDateStr = signedAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "https://narriva.pro";
   // Only an onboarded writer's story is actually live at this point — for
   // everyone else the story is now in the ACCEPTED "to be published" queue,
   // so the email/CTA must point at the contracts inbox, not a story page
   // that doesn't exist publicly yet.
   const storyUrl = linkedStoryId
     ? isOnboarded
-      ? `${baseUrl}/kekere/story/${storySlug ?? linkedStoryId}`
-      : `${baseUrl}/kekere/contracts`
-    : `${baseUrl}/kekere`;
+      ? publicUrl(`/kekere/story/${storySlug ?? linkedStoryId}`)
+      : publicUrl("/kekere/contracts")
+    : publicUrl("/kekere");
 
   const signedHtml = linkedStoryId
     ? await renderContractSignedEmail({
