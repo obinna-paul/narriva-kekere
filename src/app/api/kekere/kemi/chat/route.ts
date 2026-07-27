@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** Kemi's model call can legitimately take a while. Declared explicitly so a
+ *  slow Groq response ends in her graceful "away" message (the fetch below
+ *  gives up at 20s) rather than the platform killing the function first and
+ *  handing the reader a raw gateway error. */
+export const maxDuration = 30;
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
@@ -18,11 +24,20 @@ import {
 } from "@/lib/data/kekere-kemi";
 import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 import { randomKemiAwayMessage } from "@/content/kemi-away-messages";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const chatSchema = z.object({
   message: z.string().min(1).max(500),
   sessionId: z.string().min(1),
 });
+
+/** Kemi is the only reader-facing feature that spends a shared, finite
+ *  resource: Groq's quota is per-ACCOUNT, not per-user. Without a ceiling one
+ *  enthusiastic reader can exhaust it and take Kemi offline for everyone —
+ *  and the failure is invisible, because she just starts saying she's away.
+ *  30 messages in 10 minutes is far more than a real conversation needs and
+ *  far less than it takes to do damage. */
+const RATE_LIMIT = { limit: 30, windowMs: 10 * 60 * 1000 };
 
 interface MessageEntry {
   role: "user" | "assistant";
@@ -60,6 +75,23 @@ export async function POST(request: Request) {
     );
   }
   const { message, sessionId } = parsed.data;
+
+  // Answered in Kemi's own voice rather than as a bare 429 — she's a person
+  // to the reader, and a status code here would break that harder than
+  // anything else in the app. Not persisted, same as the away message: this
+  // isn't a turn in the conversation.
+  const rateLimit = await checkRateLimit(`kemi-chat:${userId}`, RATE_LIMIT);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        answer: "Okay, you've properly worn me out — give me a few minutes to catch my breath and come back?",
+        away: true,
+        recommendations: [],
+      },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   const timestamp = new Date().toISOString();
 
   const existing = await prisma.kemiConversation.findUnique({

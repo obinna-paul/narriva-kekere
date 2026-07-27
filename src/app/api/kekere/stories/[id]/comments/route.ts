@@ -49,7 +49,7 @@ export const POST = withAuth(
       );
     }
 
-    const rateLimit = checkRateLimit(`comment:${session.user.id}:${params.id}`, RATE_LIMIT);
+    const rateLimit = await checkRateLimit(`comment:${session.user.id}:${params.id}`, RATE_LIMIT);
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { error: "rate_limited", message: "Too many comments — try again later." },

@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** Kemi's hookline suggestion allows 30s for the model. Declared explicitly so a slow model response ends in this route's
+ *  own fallback rather than the platform killing the function first and
+ *  returning a raw gateway error. */
+export const maxDuration = 40;
+
+
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -15,7 +21,7 @@ const RATE_LIMIT = { limit: 10, windowMs: 5 * 60 * 1000 };
  * writer decides whether to accept the suggestion via the normal story
  * PUT endpoint. */
 export const POST = withAuth(async (_request, session, { params }: { params: { id: string } }) => {
-  const rateLimit = checkRateLimit(`kemi-hookline:${session.user.id}`, RATE_LIMIT);
+  const rateLimit = await checkRateLimit(`kemi-hookline:${session.user.id}`, RATE_LIMIT);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },

@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/cron/maintenance",
+      "schedule": "20 3 * * *"
+    },
+    {
+      "path": "/api/admin/cron/expire-contracts",
+      "schedule": "40 3 * * *"
+    }
+  ]
+}
