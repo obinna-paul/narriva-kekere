@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ChevronLeft, ArrowRight, Star, BookOpen, Heart, Sparkles, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
+// A client component on purpose — it carries an onError fallback, which a
+// Server Component cannot pass to a DOM element. See the file for why.
+import { StoryCoverThumb } from "@/components/kekere/story-cover-thumb";
 import type {
   WriterOverview,
   WriterEarningsSummary,
@@ -130,20 +132,6 @@ function AreaSparkline({ data, color, gradientId }: { data: number[]; color: str
       <path d={areaPath} fill={`url(#${gradientId})`} />
       <polyline points={linePoints} fill="none" stroke={color} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-function StoryCoverThumb({ coverColor, coverImageRef }: { coverColor: string; coverImageRef: string | null }) {
-  return (
-    <div
-      className="relative h-[58px] w-[44px] flex-none overflow-hidden rounded-[8px] shadow-[0_2px_8px_rgba(42,26,18,0.15)]"
-      style={{ backgroundColor: coverColor }}
-    >
-      {coverImageRef && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={storyCoverUrl(coverImageRef)} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-      )}
-    </div>
   );
 }
 
