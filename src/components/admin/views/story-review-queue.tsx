@@ -9,6 +9,7 @@ import { StoryEditor, type StoryEditorHandle } from "@/components/kekere/StoryEd
 import { isValidTiptapDoc, docParagraphsToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 import type { SaveStatus } from "@/lib/tiptap/save-status";
 import { ReviewEditorialComments } from "@/components/admin/views/review-editorial-comments";
+import { KemiStorySummary } from "@/components/admin/views/kemi-story-summary";
 
 interface QueueStory {
   id: string;
@@ -1114,7 +1115,13 @@ export function StoryReviewQueue() {
                 working copy) when editing, or the comment-annotated
                 read view otherwise. */}
             {queueTab === "submitted" ? (
-              <ReadOnlyStoryBody doc={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC} />
+              <>
+                {/* Story Review only. By To Be Published the editor has
+                    already read it to decide, and the text is changing under
+                    them there, which would make a cached summary wrong. */}
+                <KemiStorySummary key={selected.id} storyId={selected.id} />
+                <ReadOnlyStoryBody doc={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC} />
+              </>
             ) : editingContent ? (
               <div style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}>
                 <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Story body</label>
