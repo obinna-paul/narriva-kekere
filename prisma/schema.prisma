@@ -8,6 +8,16 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // DATABASE_URL points at Neon's POOLED endpoint (the `-pooler` host). Every
+  // serverless invocation opens its own Prisma pool, so a direct connection
+  // per instance exhausts Postgres' connection limit long before traffic
+  // becomes interesting — and it fails as a hard "too many connections"
+  // across the whole app rather than as a slowdown.
+  //
+  // DIRECT_URL is the same database WITHOUT the pooler. Migrations and
+  // introspection need a real session (advisory locks, DDL), which PgBouncer
+  // in transaction mode can't give them, so Prisma uses this one for those.
+  directUrl = env("DIRECT_URL")
 }
 
 // Shared across Narriva and Kekere — one account, one login, both brands.
@@ -550,6 +560,12 @@ model Story {
   notes              Note[]
 
   @@index([authorId])
+  // Almost every read in the app filters status = PUBLISHED and orders by
+  // publishedAt — the feed alone does it several times per render. Neither
+  // column was indexed, so all of them were sequential scans of the whole
+  // table. Fine at a handful of stories; not something to discover at a
+  // thousand.
+  @@index([status, publishedAt])
 }
 
 // Story tagging system — tags are admin-assigned at publish time.
@@ -1269,6 +1285,28 @@ model KemiNudge {
   deliveredAt DateTime?
 
   @@index([userId, deliveredAt])
+}
+
+// One fixed window per rate-limit key. Replaces a process-local Map, which
+// silently stopped limiting anything the moment this ran on more than one
+// instance: every serverless invocation got its own empty Map, so the real
+// ceiling was the configured limit times however many instances happened to
+// be warm, and it reset on every deploy.
+//
+// Postgres rather than Redis on purpose — the database is already here, a
+// limiter write is one upsert on a primary key, and the alternative is a new
+// service, new credentials and a new network hop for something that has to
+// be up for the app to work at all.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  // When the current window closes. A row whose resetAt has passed is treated
+  // as absent and reused in place, so keys are never deleted on the hot path.
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  // Lets the nightly sweep drop long-abandoned keys cheaply.
+  @@index([resetAt])
 }
 
 model NariConversation {

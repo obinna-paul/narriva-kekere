@@ -267,9 +267,16 @@ export function KemiChat({
       const data = await res.json();
 
       if (!res.ok) {
+        // Some failures still speak in Kemi's voice — being rate limited is
+        // her saying she needs a minute, not a system error. Use whatever she
+        // sent before falling back to the generic apology.
         setMessages((prev) => [
           ...prev,
-          { role: "kemi", text: "Hmm, something hiccuped on my end. Try again in a moment?", isAway: true },
+          {
+            role: "kemi",
+            text: data?.answer ?? "Hmm, something hiccuped on my end. Try again in a moment?",
+            isAway: true,
+          },
         ]);
         return;
       }

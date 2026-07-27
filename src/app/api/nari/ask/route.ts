@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** Nari's reply (20s) plus conversation-intelligence extraction (30s). Declared explicitly so a slow model response ends in this route's
+ *  own fallback rather than the platform killing the function first and
+ *  returning a raw gateway error. */
+export const maxDuration = 40;
+
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentSession } from "@/lib/auth/middleware";

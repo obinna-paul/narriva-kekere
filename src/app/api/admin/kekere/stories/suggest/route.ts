@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** Hookline/tag suggestion allows 15s for the model. Declared explicitly so a slow model response ends in this route's
+ *  own fallback rather than the platform killing the function first and
+ *  returning a raw gateway error. */
+export const maxDuration = 30;
+
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";

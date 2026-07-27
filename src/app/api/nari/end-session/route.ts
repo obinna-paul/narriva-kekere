@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** End-of-session extraction allows 30s for the model. Declared explicitly so a slow model response ends in this route's
+ *  own fallback rather than the platform killing the function first and
+ *  returning a raw gateway error. */
+export const maxDuration = 40;
+
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";

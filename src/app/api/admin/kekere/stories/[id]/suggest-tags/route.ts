@@ -1,5 +1,11 @@
 export const dynamic = "force-dynamic";
 
+/** Tag suggestion allows 25s for the model. Declared explicitly so a slow model response ends in this route's
+ *  own fallback rather than the platform killing the function first and
+ *  returning a raw gateway error. */
+export const maxDuration = 40;
+
+
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";

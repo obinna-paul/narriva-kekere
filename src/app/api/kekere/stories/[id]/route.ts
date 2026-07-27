@@ -44,7 +44,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const session = await getCurrentSession();
 
   const rateLimitKey = session?.user?.id ?? `ip:${getClientIp(request)}`;
-  const rateLimit = checkRateLimit(`story-content:${rateLimitKey}`, RATE_LIMIT);
+  const rateLimit = await checkRateLimit(`story-content:${rateLimitKey}`, RATE_LIMIT);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests" },
