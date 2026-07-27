@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, Send, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { generateUUID } from "@/lib/utils/uuid";
+import { useKekerePulse } from "@/components/kekere/pulse-provider";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import type { KemiRecommendation } from "@/app/api/kekere/kemi/chat/route";
 import {
@@ -28,8 +29,6 @@ interface KemiMessage {
 }
 
 const KEMI_AVATAR = "/kekere/kemi-avatar.png";
-
-const NUDGE_POLL_INTERVAL_MS = 60000;
 
 // Mirrors SESSION_IDLE_MS in the conversation route, which is the authority —
 // it decides whether to hand back a fresh sessionId, and this side simply
@@ -118,11 +117,14 @@ export function KemiChat({
   topGenre?: string | null;
 }) {
   const router = useRouter();
+  // The unread dot rides on the shared chrome poll rather than its own 60s
+  // interval — it's the same question the notification badge asks, so it's
+  // the same request.
+  const { pendingKemiNudges: unreadCount, setPendingKemiNudges } = useKekerePulse();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<KemiMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [askedWhyFor, setAskedWhyFor] = useState<string[]>([]);
   // When this reader was last actually talking to Kemi, so reopening after a
@@ -177,35 +179,12 @@ export function KemiChat({
     };
   }, [open]);
 
-  // Poll for openers Kemi has queued while the panel is closed. Cheap
-  // (a count, no content) and stops entirely while the panel is open, since
-  // opening it delivers everything pending anyway.
-  useEffect(() => {
-    if (!readerId || open) return;
-    let cancelled = false;
-    async function check() {
-      try {
-        const res = await fetch("/api/kekere/kemi/nudges");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setUnreadCount(data.pendingCount ?? 0);
-      } catch {
-        // Best-effort — a missing dot is a fine failure mode.
-      }
-    }
-    check();
-    const interval = setInterval(check, NUDGE_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [readerId, open]);
 
   async function handleOpen() {
     setOpen(true);
     // Opening is what delivers pending nudges, so the dot is spent the
     // moment the panel is up — don't leave it glowing over an open chat.
-    setUnreadCount(0);
+    setPendingKemiNudges(0);
 
     // The transcript lives server-side and always has; it was simply never
     // read back, so every close wiped the conversation. Load it once per

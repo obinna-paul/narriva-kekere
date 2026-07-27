@@ -4,8 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-
-const POLL_INTERVAL_MS = 60000;
+import { useKekerePulse } from "@/components/kekere/pulse-provider";
 
 type NotificationType =
   | "STORY_SUBMITTED"
@@ -76,7 +75,11 @@ export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    unreadNotifications: unreadCount,
+    adjustUnreadNotifications,
+    setUnreadNotifications,
+  } = useKekerePulse();
   // Swipe-to-dismiss state (mobile, pointer events)
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragDx, setDragDx] = useState(0);
@@ -88,27 +91,25 @@ export function NotificationBell() {
       if (!res.ok) return;
       const data = await res.json();
       setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
+      setUnreadNotifications(data.unreadCount);
     } catch {
-      // Best-effort poll — stale badge is acceptable until next tick.
+      // Best-effort — the drawer keeps whatever it last showed.
     }
-  }, []);
+  }, [setUnreadNotifications]);
 
+  // Loaded when the drawer opens, not on a timer. The badge only ever needed
+  // a number, and this endpoint returns thirty full notification rows — so
+  // polling it every 60 seconds was fetching a list nobody was looking at.
+  // The count comes from the shared pulse instead.
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, POLL_INTERVAL_MS);
-    window.addEventListener("focus", fetchNotifications);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", fetchNotifications);
-    };
-  }, [fetchNotifications]);
+    if (open) fetchNotifications();
+  }, [open, fetchNotifications]);
 
   async function handleSelect(n: Notification) {
     if (dragId) return; // ignore tap if mid-swipe
     setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
     if (!n.read) {
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      adjustUnreadNotifications(-1);
       fetch(`/api/kekere/notifications/${n.id}/read`, { method: "PUT" }).catch(() => {});
     }
     setOpen(false);
@@ -117,14 +118,14 @@ export function NotificationBell() {
 
   function handleDismiss(id: string) {
     const n = notifications.find((x) => x.id === id);
-    if (n && !n.read) setUnreadCount((prev) => Math.max(0, prev - 1));
+    if (n && !n.read) adjustUnreadNotifications(-1);
     setNotifications((prev) => prev.filter((x) => x.id !== id));
     fetch(`/api/kekere/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   }
 
   async function handleMarkAllRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
+    setUnreadNotifications(0);
     try {
       await fetch("/api/kekere/notifications/read-all", { method: "PUT" });
     } catch {
