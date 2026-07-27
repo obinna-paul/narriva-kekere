@@ -21,6 +21,10 @@ interface QueueStory {
   submittedAt: string;
   moderationNotes: string | null;
   plagiarismFlagged: boolean;
+  status: string;
+  /** Last write to the row. For a CHANGES_PROPOSED story that's when it went
+   *  to the writer, which is what "waiting since" is measured from. */
+  lastActivityAt: string;
 }
 
 interface StoryDetail extends QueueStory {
@@ -41,8 +45,15 @@ const TIER_COLORS: Record<string, string> = {
   CHAMPION: "bg-[rgba(107,33,168,0.12)] text-[#6B21A8]",
 };
 
-function relativeTime(iso: string) {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+function relativeTime(iso: string | null | undefined) {
+  // Returns null rather than "NaNd ago" for a missing or unparseable value —
+  // callers render nothing instead of nonsense. (The detail endpoint doesn't
+  // carry every timestamp the queue list does, which is exactly how a NaN
+  // reached the screen once.)
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const diff = (Date.now() - t) / 1000;
   if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
   return `${Math.round(diff / 86400)}d ago`;
@@ -877,6 +888,19 @@ export function StoryReviewQueue() {
 
   const requiresWriterApproval = queueTab === "publishing" && (hasEdits || commentCount > 0);
 
+  // A story in CHANGES_PROPOSED is sitting with the writer: they have to
+  // accept or push back on the edits before anything else can happen to it.
+  // It used to sit in "To Be Published" looking like work, and its buttons
+  // pointed at the Story Review endpoints (both stage-2 branches require
+  // ACCEPTED), which could only ever 400. Split out so the pile reflects
+  // what's actually actionable — but still listed, because a story a writer
+  // has forgotten about needs to be visible somewhere to be chased.
+  const withWriter = queue.filter((s) => s.status === "CHANGES_PROPOSED");
+  const actionable = queue.filter((s) => s.status !== "CHANGES_PROPOSED");
+  const awaitingWriter = selected?.status === "CHANGES_PROPOSED";
+  // The detail fetch doesn't carry lastActivityAt; the queue row does.
+  const sentToWriterAgo = relativeTime(queue.find((s) => s.id === selectedId)?.lastActivityAt);
+
   return (
     <div className="overflow-x-auto">
     <div className="relative flex h-[calc(100vh-130px)] min-w-[900px] gap-4">
@@ -913,7 +937,7 @@ export function StoryReviewQueue() {
           >
             To Be Published
           </button>
-          <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{queue.length}</span>
+          <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{actionable.length}</span>
         </div>
 
         {queue.length === 0 ? (
@@ -922,7 +946,23 @@ export function StoryReviewQueue() {
             <p className="mt-1 text-[12px] text-[#9AA0A8]">No stories awaiting review.</p>
           </div>
         ) : (
-          queue.map((s) => (
+          [
+            // Only the publishing tab is split. Story Review has one pile and
+            // a heading over a single group would be noise.
+            ...(queueTab === "publishing"
+              ? [{ key: "ready", label: "Ready to publish", items: actionable }]
+              : [{ key: "all", label: null, items: actionable }]),
+            ...(withWriter.length > 0
+              ? [{ key: "with-writer", label: "With the writer", items: withWriter }]
+              : []),
+          ].map((group) => (
+            <div key={group.key} className="contents">
+              {group.label && group.items.length > 0 && (
+                <p className="mt-2 px-1 text-[10px] font-bold uppercase tracking-[0.07em] text-[#9AA0A8] first:mt-0">
+                  {group.label} · {group.items.length}
+                </p>
+              )}
+              {group.items.map((s) => (
             <button
               key={s.id}
               type="button"
@@ -948,9 +988,15 @@ export function StoryReviewQueue() {
                 )}>
                   {s.tier}
                 </span>
-                <span className={cn("text-[10px]", selectedId === s.id ? "text-white/50" : "text-[#9AA0A8]")}>{relativeTime(s.submittedAt)}</span>
+                <span className={cn("text-[10px]", selectedId === s.id ? "text-white/50" : "text-[#9AA0A8]")}>
+                  {s.status === "CHANGES_PROPOSED"
+                    ? `sent ${relativeTime(s.lastActivityAt)}`
+                    : relativeTime(s.submittedAt)}
+                </span>
               </div>
             </button>
+              ))}
+            </div>
           ))
         )}
       </div>
@@ -981,7 +1027,7 @@ export function StoryReviewQueue() {
               </div>
 
               {/* Row 2 — action toolbar (To Be Published only — Story Review is read-only) */}
-              {queueTab === "publishing" && (
+              {queueTab === "publishing" && !awaitingWriter && (
                 <div className="mt-3 flex items-center gap-2">
                   {hasEdits && (
                     <span className="rounded-full bg-[rgba(199,93,44,0.1)] px-2 py-0.5 text-[10px] font-semibold text-[#C75D2C]">
@@ -1120,7 +1166,23 @@ export function StoryReviewQueue() {
 
       {/* Right pane — decision */}
       <div className="w-[300px] flex-none overflow-y-auto">
-        {selected ? (
+        {selected && awaitingWriter ? (
+          /* No controls at all. Every action here needs status ACCEPTED, so
+             the only thing a button could do is fail — and the honest answer
+             to "what do I do with this?" is "wait, or go and nudge them". */
+          <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-6">
+            <p className="text-[13px] font-semibold text-[#1A1C20]">With the writer</p>
+            <p className="mt-2 text-[12px] leading-[1.55] text-[#8B919A]">
+              Your edits went to {selected.authorName}{sentToWriterAgo ? ` ${sentToWriterAgo}` : ""}. Nothing
+              can move until they accept them or ask for changes — it comes back here either way.
+            </p>
+            {selected.editWriterNote && (
+              <p className="mt-3 rounded-[8px] bg-[rgba(192,57,43,0.06)] px-3 py-2 text-[12px] text-[#C0392B]">
+                They&rsquo;ve already replied — reload the queue.
+              </p>
+            )}
+          </div>
+        ) : selected ? (
           <DecisionPanel
             key={selected.id}
             story={selected}
