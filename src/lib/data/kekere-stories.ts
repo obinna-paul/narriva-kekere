@@ -6,6 +6,7 @@ import { categoryForTag, resolveCategoryBySlug, type TagCategory } from "@/conte
 import { sendEmail } from "@/lib/email/send";
 import { renderStorySubmittedEmail } from "@/lib/email/templates";
 import { KEKERE_SUBMISSIONS_FROM } from "@/lib/constants";
+import { getRatingSummaryByStory } from "@/lib/data/kekere-ratings";
 import type { TiptapDoc } from "@/lib/tiptap/doc-utils";
 import { generateUUID } from "@/lib/utils/uuid";
 import type { Prisma, Story, StoryStatus, StoryTier, Tag } from "@prisma/client";
@@ -639,15 +640,158 @@ export async function rankStoryIdsByRecentPopularity(storyIds: string[], limit: 
     .slice(0, limit);
 }
 
+// --- Daily-rotated, blended feed ranking ------------------------------
+
+const NEWNESS_WINDOW_DAYS = 21;
+// A story's average rating is shrunk toward this neutral prior in
+// proportion to how few ratings it has — one 5-star rating shouldn't
+// outrank a story with fifty, and one 1-star shouldn't sink a story nobody's
+// really weighed in on yet. RATING_PRIOR_WEIGHT is "how many real ratings it
+// takes to outweigh the prior" — small on purpose, since most stories here
+// will have few ratings and a prior that's too strong would just flatten
+// this signal into noise.
+const RATING_PRIOR = 3.5;
+const RATING_PRIOR_WEIGHT = 3;
+
+const FEED_ROTATION_WEIGHTS = {
+  popularity: 0.3,
+  newness: 0.15,
+  rating: 0.2,
+  preference: 0.2,
+  randomness: 0.15,
+} as const;
+
+/** Deterministic string → [0, 1). FNV-1a, 32-bit. Not a security or
+ *  statistical primitive — just enough spread that "which of these
+ *  otherwise-similar stories gets today's spotlight" doesn't always land on
+ *  the same one, while staying identical for the same (day, reader, story)
+ *  triple across every request. */
+function seededUnitInterval(key: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) / 0xffffffff;
+}
+
+/** Min-max normalize to [0, 1]. A constant input (every value tied,
+ *  including the common case of a single-element array) returns 0.5 for
+ *  every entry rather than dividing by zero — a signal that isn't
+ *  differentiating anything contributes nothing to the ordering, which is
+ *  exactly what should happen when e.g. no story in the set has any
+ *  ratings yet. */
+function normalize(values: number[]): number[] {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max === min) return values.map(() => 0.5);
+  return values.map((v) => (v - min) / (max - min));
+}
+
+export interface FeedRotationOptions {
+  /** Per-story raw affinity weight — typically a reader's category score
+   *  (kekere-taste.ts) applied to that story's own tags. Omit for a row
+   *  that isn't personalized (a logged-out reader, or a section like
+   *  Winner's Circle that's deliberately the same "best of" set for
+   *  everyone) — every story then gets the same neutral value after
+   *  normalizing, so the term is present in the blend but doesn't move the
+   *  ordering. */
+  preferenceScores?: Map<string, number>;
+  /** Identifies "this reader, today" — e.g. `${userId ?? "anon"}:${utcDayNumber}`.
+   *  This is the entire rotation mechanism: nothing is stored anywhere, the
+   *  randomness term is just a pure function of this key plus each story's
+   *  id, so it's identical across every request today and different again
+   *  tomorrow, without a cron job or a cache table. */
+  rotationKey: string;
+}
+
+/**
+ * Ranks stories by a blended score — recent popularity, how new it is, how
+ * well it's rated, this reader's taste, and a daily-rotating random nudge —
+ * rather than one hard signal alone. This is the feed's row ranker; the
+ * older rankStoryIdsByRecentPopularity above is kept for
+ * kekere-taste.ts's signature row, which wants "purely popular within an
+ * already-personalized category" on purpose, not a second layer of taste
+ * weighting on top of the category pick it already made.
+ */
+export async function rankStoriesBlended(
+  storyIds: string[],
+  limit: number,
+  options: FeedRotationOptions
+): Promise<string[]> {
+  if (storyIds.length === 0) return [];
+
+  const windowStart = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const [unlockCounts, stories, ratings] = await Promise.all([
+    prisma.storyUnlock.groupBy({
+      by: ["storyId"],
+      where: { storyId: { in: storyIds }, unlockedAt: { gte: windowStart } },
+      _count: { storyId: true },
+    }),
+    prisma.story.findMany({ where: { id: { in: storyIds } }, select: { id: true, publishedAt: true } }),
+    getRatingSummaryByStory(storyIds),
+  ]);
+
+  const unlockByStory = new Map(unlockCounts.map((u) => [u.storyId, u._count.storyId]));
+  const publishedByStory = new Map(stories.map((s) => [s.id, s.publishedAt?.getTime() ?? 0]));
+  const now = Date.now();
+
+  const popularityRaw = storyIds.map((id) => unlockByStory.get(id) ?? 0);
+  const newnessRaw = storyIds.map((id) => {
+    const publishedAt = publishedByStory.get(id) ?? 0;
+    if (!publishedAt) return 0;
+    const ageDays = (now - publishedAt) / (24 * 60 * 60 * 1000);
+    return Math.max(0, 1 - ageDays / NEWNESS_WINDOW_DAYS);
+  });
+  const ratingRaw = storyIds.map((id) => {
+    const summary = ratings.get(id);
+    if (!summary || summary.average === null) return RATING_PRIOR;
+    return (
+      (summary.average * summary.count + RATING_PRIOR * RATING_PRIOR_WEIGHT) /
+      (summary.count + RATING_PRIOR_WEIGHT)
+    );
+  });
+  const preferenceRaw = storyIds.map((id) => options.preferenceScores?.get(id) ?? 0);
+  const randomRaw = storyIds.map((id) => seededUnitInterval(`${options.rotationKey}:${id}`));
+
+  const popularity = normalize(popularityRaw);
+  const newness = normalize(newnessRaw);
+  const rating = normalize(ratingRaw);
+  const preference = normalize(preferenceRaw);
+  const randomness = normalize(randomRaw);
+
+  return storyIds
+    .map((id, i) => ({
+      id,
+      score:
+        FEED_ROTATION_WEIGHTS.popularity * popularity[i] +
+        FEED_ROTATION_WEIGHTS.newness * newness[i] +
+        FEED_ROTATION_WEIGHTS.rating * rating[i] +
+        FEED_ROTATION_WEIGHTS.preference * preference[i] +
+        FEED_ROTATION_WEIGHTS.randomness * randomness[i],
+    }))
+    .sort((a, b) => b.score - a.score) // stable — ties (e.g. two brand-new, unrated, unlocked stories) keep storyIds' original relative order
+    .slice(0, limit)
+    .map((s) => s.id);
+}
+
 /** Stories grouped by category, for the tag rows on the feed. Multiple
  *  requested tag slugs that share an explicit category (see
  *  categoryForTag/TAG_CATEGORIES in story-tags.ts — e.g. dark, creepy, and
  *  psychological) collapse into a single combined row instead of one row
  *  each. Returns only categories that have at least one published story, in
- *  the order their first member tag appears in the input list. */
+ *  the order their first member tag appears in the input list.
+ *
+ *  Within each row, story order comes from rankStoriesBlended — see
+ *  FeedRotationOptions above. `rotation.categoryScores`, if given, is a
+ *  reader's per-category affinity (kekere-taste.ts); it's turned into a
+ *  per-story score here (a story's preference weight is the highest score
+ *  among its own categories, not a sum — matching any one category the
+ *  reader loves earns full credit, having two doesn't earn double). */
 export async function getFeedTagRows(
   tagSlugs: readonly string[],
-  limit = 8
+  limit = 8,
+  rotation?: { categoryScores?: Map<string, number>; rotationKey: string }
 ): Promise<Array<{ slug: string; storyIds: string[] }>> {
   const categoriesInOrder: TagCategory[] = [];
   const seenCategorySlugs = new Set<string>();
@@ -677,19 +821,40 @@ export async function getFeedTagRows(
 
   const slugByTagId = new Map(allTags.map((t) => [t.id, t.slug]));
   const storyIdsByTagSlug = new Map<string, string[]>();
+  const categorySlugsByStoryId = new Map<string, Set<string>>();
   for (const row of taggedRows) {
     const slug = slugByTagId.get(row.tagId);
     if (!slug) continue;
     const bucket = storyIdsByTagSlug.get(slug);
     if (bucket) bucket.push(row.storyId);
     else storyIdsByTagSlug.set(slug, [row.storyId]);
+
+    const categorySlug = categoryForTag(slug).slug;
+    const set = categorySlugsByStoryId.get(row.storyId);
+    if (set) set.add(categorySlug);
+    else categorySlugsByStoryId.set(row.storyId, new Set([categorySlug]));
   }
 
-  // Ranked once over every tagged story, then sliced per category — the
-  // ordering is identical to ranking each row separately, because the
-  // comparison only ever looks at a story's own unlocks and publish date.
   const everyStoryId = Array.from(new Set(taggedRows.map((r) => r.storyId)));
-  const ranked = await rankStoryIdsByRecentPopularity(everyStoryId, everyStoryId.length);
+
+  const preferenceScores = rotation?.categoryScores
+    ? new Map(
+        everyStoryId.map((id) => {
+          const categories = categorySlugsByStoryId.get(id);
+          if (!categories) return [id, 0];
+          const scores = Array.from(categories).map((c) => rotation.categoryScores!.get(c) ?? 0);
+          return [id, Math.max(0, ...scores)];
+        }),
+      )
+    : undefined;
+
+  // Ranked once over every tagged story, then sliced per category — the
+  // ordering is identical to ranking each row separately, because every
+  // signal in the blend only ever looks at a story's own data.
+  const ranked = await rankStoriesBlended(everyStoryId, everyStoryId.length, {
+    preferenceScores,
+    rotationKey: rotation?.rotationKey ?? "anon",
+  });
 
   return categoriesInOrder
     .map((category) => {

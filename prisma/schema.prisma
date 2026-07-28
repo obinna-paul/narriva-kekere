@@ -122,6 +122,16 @@ model User {
   // that section on other opted-in writers' profiles. Off by default.
   crossPromotionEnabled  Boolean  @default(false)
 
+  // Explicit reader tag preferences ("Preferences" in the profile) —
+  // StoryTagSlug values from content/story-tags.ts, not a relation to Tag,
+  // since the picker's universe is the fixed editorial tag list, not
+  // whatever happens to exist in the Tag table. Empty means "never set
+  // explicitly": the feed falls back to purely inferred taste
+  // (kekere-taste.ts) and the Preferences page shows the auto-detected
+  // summary instead of a blank picker. Once saved (even to the same tags
+  // auto-detection would have picked), this always wins over inference.
+  preferredTagSlugs String[] @default([])
+
   // Set on every successful sign-in (see authorize() in auth/options.ts) —
   // the only real signal of account activity. updatedAt moves on any
   // profile/admin edit too, so it isn't a substitute for this.

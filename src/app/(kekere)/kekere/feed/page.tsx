@@ -11,8 +11,10 @@ import {
   getStoriesByIds,
   hasFreeReadAvailable,
   countPublishedStoriesSince,
+  rankStoriesBlended,
 } from "@/lib/data/kekere-stories";
 import { getPersonalizedTagOrder, getSignatureRow, getTopGenre } from "@/lib/data/kekere-taste";
+import { getUserTagPreferences } from "@/lib/data/kekere-preferences";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
 import { getAllWinners } from "@/lib/data/kekere-competitions";
 import { getReadingProgressBatch } from "@/lib/data/kekere-progress";
@@ -22,7 +24,7 @@ import { getLatestFollowedWriterStory } from "@/lib/data/kekere-follows";
 import { getRecentNoteReply } from "@/lib/data/kekere-notes";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
-import { FEED_TAG_ORDER, resolveCategoryBySlug, type StoryTagSlug } from "@/content/story-tags";
+import { FEED_TAG_ORDER, resolveCategoryBySlug } from "@/content/story-tags";
 import { getFeedGreeting, type GreetingPersonalization } from "@/content/kekere-feed-greetings";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
@@ -54,6 +56,12 @@ export default async function KekereFeedPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
+  // Daily rotation key: stable for a given reader across a whole day (so the
+  // order doesn't shuffle on every reload), different for every reader (so
+  // two readers don't see the same spotlight story), and different again
+  // tomorrow — same todaySeed idiom Editor's Pick already uses below.
+  const rotationKey = `${userId ?? "anon"}:${Math.floor(Date.now() / 86400000)}`;
+
   // Fetch all sections in parallel
   const [
     trendingData,
@@ -62,7 +70,7 @@ export default async function KekereFeedPage() {
     wallet,
     inProgress,
     recommended,
-    tagOrder,
+    tagPreferences,
     signatureRowMeta,
     firstReadFree,
     profile,
@@ -78,7 +86,9 @@ export default async function KekereFeedPage() {
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getInProgressStories(userId) : Promise.resolve([]),
     userId ? getRecommendedStories(userId, 12) : Promise.resolve([]),
-    userId ? getPersonalizedTagOrder(userId, FEED_TAG_ORDER) : Promise.resolve<StoryTagSlug[]>([...FEED_TAG_ORDER]),
+    userId
+      ? getUserTagPreferences(userId)
+      : Promise.resolve({ explicit: [], autoDetected: [], categoryScores: new Map<string, number>() }),
     userId ? getSignatureRow(userId, 8) : Promise.resolve(null),
     hasFreeReadAvailable(userId),
     userId ? getKekereUserProfile(userId) : Promise.resolve(null),
@@ -88,6 +98,10 @@ export default async function KekereFeedPage() {
     userId ? getLatestFollowedWriterStory(userId) : Promise.resolve(null),
     userId ? getRecentNoteReply(userId) : Promise.resolve(null),
   ]);
+
+  // Pure/synchronous now that categoryScores is already in hand — see
+  // getPersonalizedTagOrder's doc comment in kekere-taste.ts.
+  const tagOrder = getPersonalizedTagOrder(FEED_TAG_ORDER, tagPreferences.categoryScores, tagPreferences.explicit);
 
   // "New stories since you left" needs a second query keyed off the
   // lastLoginAt fetched above — lastLoginAt only updates on sign-in, not on
@@ -123,12 +137,29 @@ export default async function KekereFeedPage() {
   };
   const greeting = userId && profile?.name ? getFeedGreeting(userId, greetingPersonalization) : "Welcome.";
 
-  // Tag rows and the signature row both depend on the (possibly
-  // personalized) tag order resolved above, so they run as a second stage.
-  const [tagRows, signatureStories] = await Promise.all([
-    getFeedTagRows(tagOrder, 8),
+  // Winner's Circle mixes two fundamentally different kinds of entries:
+  // real competition placements (earned 1st/2nd/3rd — never randomized) and
+  // admin-designated CHAMPION-tier stories with no competition attached
+  // (placement === null — fine to rotate like any other pool). Only the
+  // second group gets daily rotation; competition winners keep their earned
+  // order and stay first, exactly as getAllWinners() returns them.
+  const competitionWinners = winners.filter((w) => w.placement !== null);
+  const championWinners = winners.filter((w) => w.placement === null);
+
+  // Tag rows, the signature row, and Winner's Circle rotation all depend on
+  // state resolved above, so they run as a second stage.
+  const [tagRows, signatureStories, rotatedChampionIds] = await Promise.all([
+    getFeedTagRows(tagOrder, 8, { categoryScores: tagPreferences.categoryScores, rotationKey }),
     signatureRowMeta ? getStoriesByIds(signatureRowMeta.storyIds) : Promise.resolve([]),
+    championWinners.length > 0
+      ? rankStoriesBlended(championWinners.map((w) => w.story.id), championWinners.length, { rotationKey })
+      : Promise.resolve<string[]>([]),
   ]);
+  const championWinnersById = new Map(championWinners.map((w) => [w.story.id, w]));
+  const rotatedChampionWinners = rotatedChampionIds
+    .map((id) => championWinnersById.get(id))
+    .filter((w): w is (typeof championWinners)[number] => w !== undefined);
+  const orderedWinners = [...competitionWinners, ...rotatedChampionWinners];
 
   // Fetch story data for all tag rows in parallel
   const tagStoryMaps = await Promise.all(
@@ -146,7 +177,7 @@ export default async function KekereFeedPage() {
     ? editorsPickPool[todaySeed % editorsPickPool.length]
     : null;
 
-  const winnerStories: WinnerStory[] = winners.map((w) => ({
+  const winnerStories: WinnerStory[] = orderedWinners.map((w) => ({
     ...toFeedStoryData(w.story),
     placement: w.placement,
     competitionTitle: w.competitionTitle,

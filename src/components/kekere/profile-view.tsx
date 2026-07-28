@@ -16,6 +16,7 @@ import {
   BarChart3,
   RefreshCw,
   Check,
+  Sliders,
 } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
@@ -974,6 +975,12 @@ export function ProfileView(props: ProfileViewProps) {
                   </>
                 )}
                 <ListRow href="/kekere/library" icon={<BookOpen size={15} />} tone="primary" label="My library" />
+                <ListRow
+                  href="/kekere/preferences"
+                  icon={<Sliders size={15} />}
+                  tone="primary"
+                  label="Preferences"
+                />
                 <ListRow
                   href="/kekere/notes"
                   icon={<Mail size={15} />}
