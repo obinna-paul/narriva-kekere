@@ -1,8 +1,22 @@
 import { Children, cloneElement, isValidElement } from "react";
+import { cn } from "@/lib/utils/cn";
 
 export interface LegalLayoutProps {
   title: string;
-  lastUpdated: string;
+  /** Optional — a document without a meaningful revision history (the
+   * writer content guide, for instance) can omit this rather than fake a
+   * date. The five legal documents that use this layout all still pass one. */
+  lastUpdated?: string;
+  /** The small uppercase label above the title — "Legal" for the five
+   * documents this layout was built for. Anything reusing the same
+   * sticky-TOC-plus-article treatment for non-legal prose (the writer
+   * content guide) supplies its own so the page doesn't mislabel itself. */
+  eyebrow?: string;
+  /** A single italic lead-in line below the title, above any `notice` —
+   * for a one-sentence framing that isn't a warning banner and doesn't
+   * belong inside the first section (the content guide's "before you
+   * start writing" line). Left out by every legal document. */
+  intro?: string;
   /** Shown as a highlighted banner above the content — used for the
    * lawyer-review notice on Privacy/Terms and the "this is not the contract"
    * notice on the Publishing Agreement placeholder. Same visual treatment
@@ -25,7 +39,7 @@ function slugify(heading: string): string {
  * (`#slugified-heading`) and the same slug backs its TOC anchor — so none of
  * the five documents that use this layout need to declare section ids by hand.
  */
-export function LegalLayout({ title, lastUpdated, notice, children }: LegalLayoutProps) {
+export function LegalLayout({ title, lastUpdated, eyebrow = "Legal", intro, notice, children }: LegalLayoutProps) {
   const sections = Children.toArray(children)
     .filter(isValidElement)
     .map((child) => {
@@ -54,12 +68,19 @@ export function LegalLayout({ title, lastUpdated, notice, children }: LegalLayou
 
       <article>
         <div className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-[var(--color-accent-text)]">
-          Legal
+          {eyebrow}
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-[42px] font-medium tracking-[-0.02em] text-[var(--color-ink)]">
           {title}
         </h1>
-        <p className="mt-3 text-sm text-[var(--color-muted-3)]">Last updated {lastUpdated}</p>
+        {lastUpdated && (
+          <p className="mt-3 text-sm text-[var(--color-muted-3)]">Last updated {lastUpdated}</p>
+        )}
+        {intro && (
+          <p className={cn("text-[17px] italic leading-[1.6] text-[var(--color-muted)]", lastUpdated ? "mt-5" : "mt-4")}>
+            {intro}
+          </p>
+        )}
 
         {notice && (
           <div className="mt-[30px] rounded-md border border-[#E8D9A0] bg-[#FBF3D9] px-[26px] py-[22px]">

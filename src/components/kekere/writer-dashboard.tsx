@@ -155,9 +155,22 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
         <h1 className="mb-1 font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#2A1A12]">
           Your stories
         </h1>
-        <p className="mb-8 text-[14px] text-[rgba(42,26,18,.55)]">
-          Pick up where you left off, or start something new.
-        </p>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+          <p className="text-[14px] text-[rgba(42,26,18,.55)]">
+            Pick up where you left off, or start something new.
+          </p>
+          {/* The other place a writer would look for the guide later — not
+              just the moment they start a fresh draft. */}
+          <a
+            href="/kekere/content-guide"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#C75D2C] hover:underline"
+          >
+            <FileText size={12} />
+            See our content guide
+          </a>
+        </div>
 
         {/* Loading skeleton */}
         {stories === null && !error && (
