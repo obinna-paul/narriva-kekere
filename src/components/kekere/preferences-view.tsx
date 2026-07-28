@@ -82,7 +82,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
             onClick={() => setMode("picker")}
             className="text-left text-[13.5px] font-semibold text-[var(--color-primary)] underline underline-offset-2"
           >
-            Did she get it wrong?
+            Did she get it wrong? Tell her what you actually prefer
           </button>
         </div>
       ) : (
