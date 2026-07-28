@@ -336,10 +336,15 @@ export function KemiChat({
           // Unread marker for a message Kemi sent on her own. Count is
           // deliberately not shown — she opens a conversation, she doesn't
           // deliver a queue, and "3" would frame it as a backlog to clear.
-          <span
-            aria-hidden="true"
-            className="absolute -right-[3px] -top-[3px] h-[9px] w-[9px] rounded-full bg-[var(--color-primary)] ring-2 ring-white"
-          />
+          // Two layers: a soft ring that pings outward a few times to catch
+          // the eye when it first appears, then settles (kemi-nudge-ping
+          // stops itself after a fixed number of iterations rather than
+          // looping forever), and the dot itself, which pops in with a
+          // little spring rather than just snapping into existence.
+          <span aria-hidden="true" className="absolute -right-[2px] -top-[2px] flex h-[11px] w-[11px]">
+            <span className="kemi-nudge-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-primary)]" />
+            <span className="kemi-nudge-dot relative inline-flex h-full w-full rounded-full ring-2 ring-white" />
+          </span>
         )}
       </button>
 
