@@ -739,20 +739,6 @@ export function WriterEditor({
           </p>
         )}
 
-        {/* New tab, not a route change — a writer's in-progress draft is
-            autosaved, but there's no reason to make them find their place
-            again to go check a rule. */}
-        <a
-          href="/kekere/content-guide"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-3 inline-flex items-center gap-1.5 text-[12px] font-medium text-[var(--color-primary)] hover:underline"
-          data-writer-chrome
-        >
-          <FileText size={12} />
-          See our content guide
-        </a>
-
         <fieldset disabled={!isEditable} className="contents">
           {/* Field 1 — Title */}
           <div className="mb-5 rounded-[14px] border border-[rgba(42,26,18,0.10)] bg-white px-4 py-3.5">
