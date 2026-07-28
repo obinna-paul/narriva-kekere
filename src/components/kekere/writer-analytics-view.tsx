@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ArrowRight, Star, BookOpen, Heart, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ChevronLeft, ArrowRight, Star, BookOpen, Heart, TrendingUp, Users } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 // A client component on purpose — it carries an onError fallback, which a
 // Server Component cannot pass to a DOM element. See the file for why.
@@ -307,7 +307,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
         <SectionLabel>Your stories</SectionLabel>
         {stories.length === 0 ? (
           <EmptyState
-            icon={<Sparkles size={20} />}
+            icon={<BookOpen size={20} />}
             title="No published stories yet"
             note="Once a story goes live, its reads, completion rate, ratings, and tips will show up here."
           />

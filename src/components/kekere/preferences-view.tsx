@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { TAG_BY_SLUG } from "@/content/story-tags";
 import { TagPreferencePicker } from "@/components/kekere/tag-preference-picker";
 
@@ -62,9 +62,8 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
       {mode === "summary" ? (
         <div className="flex flex-col gap-5">
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <div className="mb-3 flex items-center gap-2 text-[var(--color-primary)]">
-              <Sparkles size={16} />
-              <span className="text-[13px] font-semibold">We think you prefer stories with these tags:</span>
+            <div className="mb-3 text-[var(--color-primary)]">
+              <span className="text-[13px] font-semibold">Kemi thinks you prefer stories with these tags.</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {initialAutoDetected.map((slug) => (
@@ -83,7 +82,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
             onClick={() => setMode("picker")}
             className="text-left text-[13.5px] font-semibold text-[var(--color-primary)] underline underline-offset-2"
           >
-            Did we get it wrong? Edit your preferences
+            Did she get it wrong? Tell her what you actually prefer
           </button>
         </div>
       ) : (
