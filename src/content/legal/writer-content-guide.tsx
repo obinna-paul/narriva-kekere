@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { LegalLayout, LegalSection, LegalList } from "@/components/legal/legal-layout";
 
 /**
@@ -6,23 +7,35 @@ import { LegalLayout, LegalSection, LegalList } from "@/components/legal/legal-l
  * purpose: this doesn't change often enough to justify a CMS or an
  * admin-editable content table, and a hardcoded page is trivial to edit and
  * redeploy the rare times it does.
+ *
+ * The copy lives here once, as data, so the full page (WriterContentGuide,
+ * below) and the popup (ContentGuideModal) can never drift apart — a section
+ * added or reworded for one automatically appears in the other.
  */
-export function WriterContentGuide() {
-  return (
-    <LegalLayout
-      title="Kekere's Story Guidelines"
-      eyebrow="Writer Guide"
-      intro="Before you start writing, a quick read — this is the difference between a story that sails through review and one that gets sent back with notes."
-    >
-      <LegalSection heading="Length">
-        <p>
-          Stories should be between 1,000 and 10,000 words. There&apos;s no bonus for length — a
-          tightly written 1,500-word story beats a padded 9,000-word one every time. Write the
-          story at the length it actually needs.
-        </p>
-      </LegalSection>
+export const GUIDE_TITLE = "Kekere's Story Guidelines";
+export const GUIDE_INTRO =
+  "Before you start writing, a quick read — this is the difference between a story that sails through review and one that gets sent back with notes.";
 
-      <LegalSection heading="What We're Looking For">
+export interface GuideSection {
+  heading: string;
+  content: ReactNode;
+}
+
+export const GUIDE_SECTIONS: GuideSection[] = [
+  {
+    heading: "Length",
+    content: (
+      <p>
+        Stories should be between 1,000 and 10,000 words. There&apos;s no bonus for length — a
+        tightly written 1,500-word story beats a padded 9,000-word one every time. Write the
+        story at the length it actually needs.
+      </p>
+    ),
+  },
+  {
+    heading: "What We're Looking For",
+    content: (
+      <>
         <p>
           We want stories, not fragments. A beginning, a middle, and an end — even if the ending
           is quiet, or leaves something unresolved on purpose. What we&apos;re really asking for
@@ -35,9 +48,13 @@ export function WriterContentGuide() {
           it&apos;s the craft: is this interesting? Is it well written? Would a stranger, reading
           it on their phone on a bus, want to know what happens next?
         </p>
-      </LegalSection>
-
-      <LegalSection heading="What We Don't Publish">
+      </>
+    ),
+  },
+  {
+    heading: "What We Don't Publish",
+    content: (
+      <>
         <p>A few things fall outside what we&apos;re building here:</p>
         <LegalList
           items={[
@@ -47,9 +64,13 @@ export function WriterContentGuide() {
             "Essays, memoir, or other nonfiction. We're fiction only.",
           ]}
         />
-      </LegalSection>
-
-      <LegalSection heading="Our Policy on AI">
+      </>
+    ),
+  },
+  {
+    heading: "Our Policy on AI",
+    content: (
+      <>
         <p>
           Kekere pays real writers for real craft, and that only works if the stories on the
           platform are actually written by the people submitting them.
@@ -72,25 +93,45 @@ export function WriterContentGuide() {
           violate this policy will be rejected, and repeat violations may result in the loss of
           your ability to submit to Kekere.
         </p>
-      </LegalSection>
+      </>
+    ),
+  },
+  {
+    heading: "A Few Ground Rules",
+    content: (
+      <p>
+        Kekere allows mature themes and content, including work tagged as explicit — we&apos;re
+        not asking you to write safe. But there are hard lines regardless of genre or tag: no
+        content that sexualizes minors, promotes real-world violence or hatred against real
+        people or groups, or otherwise breaks Nigerian or applicable law. Stories that cross
+        these lines are rejected outright, no exceptions.
+      </p>
+    ),
+  },
+  {
+    heading: "Last thing",
+    content: (
+      <p>
+        None of this is about making things harder. It&apos;s about keeping Kekere a place
+        readers can trust and writers can be proud to be published on. If you&apos;ve got a
+        story that does what a good story should do, we want to read it.
+      </p>
+    ),
+  },
+];
 
-      <LegalSection heading="A Few Ground Rules">
-        <p>
-          Kekere allows mature themes and content, including work tagged as explicit — we&apos;re
-          not asking you to write safe. But there are hard lines regardless of genre or tag: no
-          content that sexualizes minors, promotes real-world violence or hatred against real
-          people or groups, or otherwise breaks Nigerian or applicable law. Stories that cross
-          these lines are rejected outright, no exceptions.
-        </p>
-      </LegalSection>
-
-      <LegalSection heading="Last thing">
-        <p>
-          None of this is about making things harder. It&apos;s about keeping Kekere a place
-          readers can trust and writers can be proud to be published on. If you&apos;ve got a
-          story that does what a good story should do, we want to read it.
-        </p>
-      </LegalSection>
+/** The full page at /kekere/content-guide — sticky table of contents,
+ * shareable/bookmarkable URL. Not the primary way a writer reaches this
+ * content anymore (see ContentGuideModal), but kept as a real page rather
+ * than deleted: a direct link still works if one ever gets shared. */
+export function WriterContentGuide() {
+  return (
+    <LegalLayout title={GUIDE_TITLE} eyebrow="Writer Guide" intro={GUIDE_INTRO}>
+      {GUIDE_SECTIONS.map((s) => (
+        <LegalSection key={s.heading} heading={s.heading}>
+          {s.content}
+        </LegalSection>
+      ))}
     </LegalLayout>
   );
 }
