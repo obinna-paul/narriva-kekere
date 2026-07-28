@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, PenLine } from "lucide-react";
 import { TAG_BY_SLUG } from "@/content/story-tags";
 import { TagPreferencePicker } from "@/components/kekere/tag-preference-picker";
 
@@ -68,8 +68,8 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
       </div>
 
       {mode === "summary" ? (
-        <div className="flex flex-col gap-5">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <div className="p-4">
             <div className="mb-3 text-[var(--color-primary)]">
               <span className="text-[13px] font-semibold">Kemi thinks you prefer stories with these tags.</span>
             </div>
@@ -88,9 +88,16 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
           <button
             type="button"
             onClick={() => setMode("picker")}
-            className="text-left text-[13.5px] font-semibold text-[var(--color-primary)] underline underline-offset-2"
+            className="flex w-full items-center gap-3 border-t border-[var(--color-border)] px-4 py-3.5 text-left transition-colors hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]"
           >
-            Did she get it wrong? Tell her what you actually prefer
+            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]">
+              <PenLine size={14} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13px] font-semibold text-[var(--color-ink)]">Did she get it wrong?</span>
+              <span className="block text-[12px] text-[var(--color-ink-muted-2)]">Tell her what you actually prefer</span>
+            </span>
+            <ChevronRight size={16} className="flex-none text-[var(--color-ink-muted-3)]" />
           </button>
         </div>
       ) : (
