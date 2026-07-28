@@ -40,7 +40,7 @@ export async function suggestHookline(title: string, draftPlainText: string): Pr
   }
 
   // Kekere stories range from ~800 to 15,000 words (roughly 4,000–90,000
-  // chars of plain text). llama-3.3-70b-versatile has a 128K-token context
+  // chars of plain text). openai/gpt-oss-120b has a 128K-token context
   // window — even the longest Kekere draft fits comfortably. Send the full
   // text so Kemi sees every detail, every paragraph, every word.
   const fullText = draftPlainText;
@@ -76,13 +76,14 @@ async function tryGroqCall(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
+        reasoning_effort: "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Title: ${title}\n\nDraft:\n${draftText}` },
         ],
         temperature: 0.7,
-        max_tokens: 200,
+        max_tokens: 280,
       }),
       signal: AbortSignal.timeout(30000),
     });

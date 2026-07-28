@@ -150,9 +150,11 @@ No markdown fences. No commentary. JSON only.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         temperature: 0.2,
-        max_tokens: 500,
+        max_tokens: 700,
+        reasoning_effort: "low",
+        response_format: { type: "json_object" },
         messages: [{ role: "user", content: prompt }],
       }),
       signal: AbortSignal.timeout(25000),

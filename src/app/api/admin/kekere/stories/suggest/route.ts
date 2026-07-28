@@ -130,14 +130,15 @@ export const POST = withAuth(async (request) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
+        reasoning_effort: "low",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Title: ${title}\n\nStory text:\n${truncated}${avoidSection}` },
         ],
         // Nudge more variety on a regenerate request than the first pass.
         temperature: avoidSection ? 0.95 : 0.75,
-        max_tokens: 240,
+        max_tokens: 350,
       }),
       signal: AbortSignal.timeout(15000),
     });

@@ -17,7 +17,7 @@ interface NariResponse {
 }
 
 /**
- * Calls Groq API with Llama 3.3 70B (free tier, no credit card).
+ * Calls Groq API with openai/gpt-oss-120b (free tier, no credit card).
  * Falls back to null if the API key is not configured or the call fails.
  */
 export async function askNariAI(
@@ -48,10 +48,11 @@ export async function askNariAI(
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
+          reasoning_effort: "low",
           messages,
           temperature: 0.7,
-          max_tokens: 600,
+          max_tokens: 750,
         }),
         signal: AbortSignal.timeout(20000),
       },
