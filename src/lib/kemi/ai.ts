@@ -20,7 +20,7 @@ export interface KemiAIResult {
 const RECOMMEND_LINE = /\n?RECOMMEND:\s*(.*?)\s*$/i;
 
 /**
- * Calls Groq API with Llama 3.3 70B (free tier, no credit card) using
+ * Calls Groq API with openai/gpt-oss-120b (free tier, no credit card) using
  * Kemi's own system prompt, catalog, and reader context. Returns null on
  * any failure (missing key, network error, non-2xx, empty content) so the
  * caller can fall back to a fun "Kemi's away" message instead of a raw
@@ -56,10 +56,11 @@ export async function askKemiAI(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
+        reasoning_effort: "low",
         messages,
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 650,
       }),
       signal: AbortSignal.timeout(20000),
     });

@@ -158,13 +158,15 @@ async function callGroqExtraction(transcript: string): Promise<ExtractionResult>
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
+      reasoning_effort: "low",
+      response_format: { type: "json_object" },
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
         { role: "user", content: EXTRACTION_USER_PREFIX + " " + transcript },
       ],
       temperature: 0.3,
-      max_tokens: 1024,
+      max_tokens: 1400,
     }),
     signal: AbortSignal.timeout(30_000),
   });
@@ -178,7 +180,10 @@ async function callGroqExtraction(transcript: string): Promise<ExtractionResult>
 
   if (!text) throw new Error("Empty Groq response");
 
-  const parsed = JSON.parse(text) as Record<string, unknown>;
+  // Defensive: json_object mode keeps `content` itself valid JSON, but strip
+  // markdown fences anyway in case the model wraps it despite the mode.
+  const cleaned = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  const parsed = JSON.parse(cleaned) as Record<string, unknown>;
 
   return sanitize(parsed);
 }
