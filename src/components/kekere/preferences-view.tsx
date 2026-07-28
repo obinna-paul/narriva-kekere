@@ -16,12 +16,14 @@ function tagLabel(slug: string): string {
 }
 
 export function PreferencesView({ initialExplicit, initialAutoDetected }: PreferencesViewProps) {
-  // Summary mode ("we think you prefer...") only makes sense when there's
-  // something inferred and the reader has never explicitly overridden it —
-  // once they've saved a pick, even one identical to what we'd have
-  // inferred, they always land straight in the editable picker from then on.
+  // Summary mode ("Kemi thinks you prefer...") is always the entry point,
+  // even for a reader who's already saved explicit preferences — it's
+  // Kemi's current read on their taste, not a one-time cold-start prompt,
+  // so it stays the front door on every visit. Editing is only reachable by
+  // clicking through. The one exception: with nothing inferred yet, there's
+  // nothing for the summary to say, so a reader lands straight in the picker.
   const [mode, setMode] = useState<"summary" | "picker">(
-    initialExplicit.length === 0 && initialAutoDetected.length > 0 ? "summary" : "picker"
+    initialAutoDetected.length > 0 ? "summary" : "picker"
   );
   const [selected, setSelected] = useState<string[]>(
     initialExplicit.length > 0 ? initialExplicit : initialAutoDetected
