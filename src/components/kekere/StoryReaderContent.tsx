@@ -40,7 +40,7 @@ function stripLeadingInvisibles(doc: TiptapDoc): TiptapDoc {
   const index = content.findIndex(
     (node) =>
       node?.type === "paragraph" &&
-      (node.content ?? []).some((child) => (child.text ?? "").trim().length > 0),
+      (node.content ?? []).some((child) => child.type === "text" && child.text.trim().length > 0),
   );
   if (index === -1) return doc;
 
