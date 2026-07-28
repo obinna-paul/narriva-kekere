@@ -1,5 +1,5 @@
 import { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
-import type { TiptapDoc, TiptapParagraphNode, TiptapTextNode } from "./doc-utils";
+import type { TiptapDoc, TiptapInlineNode, TiptapParagraphNode } from "./doc-utils";
 
 const ALIGNMENT: Record<string, (typeof AlignmentType)[keyof typeof AlignmentType]> = {
   left: AlignmentType.LEFT,
@@ -7,7 +7,14 @@ const ALIGNMENT: Record<string, (typeof AlignmentType)[keyof typeof AlignmentTyp
   right: AlignmentType.RIGHT,
 };
 
-function toTextRun(node: TiptapTextNode): TextRun {
+/** Used to crash here on a hardBreak (Shift+Enter) node — took only
+ * TiptapTextNode and read node.text with nothing to fall back on. A writer
+ * exporting a story with a manual line break to Word got a 500 instead of a
+ * document. docx's TextRun supports `break: 1` for exactly this — a line
+ * break within the same paragraph, the .docx equivalent of the <br/> the
+ * HTML renderer emits for the same node in doc-utils.ts. */
+function toTextRun(node: TiptapInlineNode): TextRun {
+  if (node.type !== "text") return new TextRun({ break: 1 });
   const marks = new Set((node.marks ?? []).map((m) => m.type));
   return new TextRun({
     text: node.text,

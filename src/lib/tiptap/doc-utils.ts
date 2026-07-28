@@ -19,10 +19,23 @@ export interface TiptapTextNode {
   marks?: TiptapMark[];
 }
 
+/** A Shift+Enter line break inside a paragraph — StarterKit's default
+ * hardBreak node, never explicitly disabled in editor-config.ts (only
+ * heading/codeBlock/blockquote/etc. are turned off there), so a writer can
+ * and does produce these. It carries no `text` field, which is exactly what
+ * broke the old TiptapParagraphNode["content"] type below: that type
+ * claimed every child was a TiptapTextNode, so code written against it read
+ * `.text` unconditionally and crashed the moment a real hardBreak showed up. */
+export interface TiptapHardBreakNode {
+  type: "hardBreak";
+}
+
+export type TiptapInlineNode = TiptapTextNode | TiptapHardBreakNode;
+
 export interface TiptapParagraphNode {
   type: "paragraph";
   attrs?: { id?: string; textAlign?: "left" | "center" | "right" };
-  content?: TiptapTextNode[];
+  content?: TiptapInlineNode[];
 }
 
 export interface TiptapDoc {
@@ -65,9 +78,13 @@ export function ensureParagraphIds(doc: TiptapDoc): TiptapDoc {
 
 /** The exact character sequence a paragraph's offsets are measured against —
  * the server-side counterpart to reading `element.textContent` in the DOM.
- * Exported because highlight anchoring re-derives offsets from it. */
+ * Exported because highlight anchoring re-derives offsets from it.
+ *
+ * A hardBreak node contributes nothing here — offsets are measured against
+ * `element.textContent`, and a <br> has none, so a real newline would
+ * desync every offset after it. */
 export function paragraphPlainText(node: TiptapParagraphNode): string {
-  return (node.content ?? []).map((t) => t.text).join("");
+  return (node.content ?? []).map((t) => (t.type === "text" ? t.text : "")).join("");
 }
 
 /** Every paragraph id actually present in a doc — used to validate that a
@@ -132,7 +149,20 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function textNodeToHtml(node: TiptapTextNode): string {
+/** Renders one child of a paragraph's `content` array to HTML. This is the
+ * function that actually crashed on a real story: it used to be typed as
+ * taking a TiptapTextNode and called `escapeHtml(node.text)` unconditionally,
+ * which is exactly what threw "Cannot read properties of undefined (reading
+ * 'replace')" the moment a paragraph held a hardBreak (Shift+Enter) node —
+ * StarterKit's default, never disabled in editor-config.ts, so writers can
+ * and do produce them. Handling every TiptapInlineNode variant here, rather
+ * than only the "text" case, is what makes that impossible again: a hardBreak
+ * renders as a real <br/>, matching what the live Tiptap editor already does
+ * with the same node — this brings the hand-rolled serializer used outside
+ * the editor (admin read views, the writer's diff screen) into agreement
+ * with it, rather than just guarding against the crash. */
+function inlineNodeToHtml(node: TiptapInlineNode): string {
+  if (node.type !== "text") return "<br/>";
   const marks = node.marks ?? [];
   return marks.reduce((html, mark) => {
     const tags = MARK_TAGS[mark.type];
@@ -147,7 +177,7 @@ function textNodeToHtml(node: TiptapTextNode): string {
 export function docToHtml(doc: TiptapDoc): string {
   return (doc?.content ?? [])
     .map((node) => {
-      const inner = (node.content ?? []).map(textNodeToHtml).join("");
+      const inner = (node.content ?? []).map(inlineNodeToHtml).join("");
       const id = node.attrs?.id;
       return `<p${id ? ` data-paragraph-id="${id}"` : ""}>${inner}</p>`;
     })
@@ -168,7 +198,7 @@ export interface ParagraphHtml {
 export function docParagraphsToHtml(doc: TiptapDoc): ParagraphHtml[] {
   return (doc?.content ?? []).map((node) => ({
     id: node.attrs?.id ?? "",
-    html: (node.content ?? []).map(textNodeToHtml).join(""),
+    html: (node.content ?? []).map(inlineNodeToHtml).join(""),
     textAlign: node.attrs?.textAlign,
   }));
 }
@@ -205,7 +235,7 @@ export function truncateDocToFraction(doc: TiptapDoc, fraction = 0.1): TiptapDoc
     // boundary and stop. Keep the marks of whichever text node we cut
     // inside (good enough fidelity for a teaser).
     const remaining = targetLength - consumed;
-    const truncated = truncateTextNodesTo(node.content ?? [], remaining);
+    const truncated = truncateInlineNodesTo(node.content ?? [], remaining);
     content.push({ ...node, content: truncated });
     consumed = targetLength;
     break;
@@ -214,12 +244,23 @@ export function truncateDocToFraction(doc: TiptapDoc, fraction = 0.1): TiptapDoc
   return { type: "doc", content };
 }
 
-function truncateTextNodesTo(nodes: TiptapTextNode[], maxLength: number): TiptapTextNode[] {
-  const result: TiptapTextNode[] = [];
+/** This is the paywall teaser shown to every reader who hasn't unlocked a
+ * story — used to be typed as taking only text nodes and read `.text`
+ * unconditionally on each one, which crashed on a paragraph containing a
+ * hardBreak (Shift+Enter) exactly the way inlineNodeToHtml did above, just
+ * server-side instead of in the browser. */
+function truncateInlineNodesTo(nodes: TiptapInlineNode[], maxLength: number): TiptapInlineNode[] {
+  const result: TiptapInlineNode[] = [];
   let used = 0;
 
   for (const node of nodes) {
     if (used >= maxLength) break;
+    if (node.type !== "text") {
+      // Costs nothing against the character budget — same convention as
+      // paragraphPlainText — so it always fits and is carried through as-is.
+      result.push(node);
+      continue;
+    }
     const room = maxLength - used;
     if (node.text.length <= room) {
       result.push(node);
@@ -234,9 +275,16 @@ function truncateTextNodesTo(nodes: TiptapTextNode[], maxLength: number): Tiptap
     used = maxLength;
   }
 
-  if (result.length > 0) {
-    const last = result[result.length - 1];
-    result[result.length - 1] = { ...last, text: last.text + "…" };
+  // Ellipsis goes on the last real text node, walking back past any
+  // trailing hardBreak — appending to one directly used to silently
+  // produce the literal string "undefined…" instead of throwing, which
+  // is its own flavor of this same bug, just invisible instead of loud.
+  for (let i = result.length - 1; i >= 0; i--) {
+    const node = result[i];
+    if (node.type === "text") {
+      result[i] = { ...node, text: node.text + "…" };
+      break;
+    }
   }
 
   return result;
