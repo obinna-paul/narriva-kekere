@@ -16,18 +16,24 @@ function tagLabel(slug: string): string {
 }
 
 export function PreferencesView({ initialExplicit, initialAutoDetected }: PreferencesViewProps) {
+  // "Kemi's belief" about the reader's taste, single-sourced: once they've
+  // corrected her by saving explicit picks, that correction IS what she
+  // thinks — auto-detection only speaks for her before she's ever been
+  // corrected. Both the summary card and the picker's pre-fill read from
+  // this same list, so editing really is editing her memory, not a
+  // separate, parallel "your real preferences" record that can drift from
+  // what the summary claims she believes.
+  const kemiBelief = initialExplicit.length > 0 ? initialExplicit : initialAutoDetected;
+
   // Summary mode ("Kemi thinks you prefer...") is always the entry point,
   // even for a reader who's already saved explicit preferences — it's
-  // Kemi's current read on their taste, not a one-time cold-start prompt,
-  // so it stays the front door on every visit. Editing is only reachable by
-  // clicking through. The one exception: with nothing inferred yet, there's
-  // nothing for the summary to say, so a reader lands straight in the picker.
-  const [mode, setMode] = useState<"summary" | "picker">(
-    initialAutoDetected.length > 0 ? "summary" : "picker"
-  );
-  const [selected, setSelected] = useState<string[]>(
-    initialExplicit.length > 0 ? initialExplicit : initialAutoDetected
-  );
+  // Kemi's current belief, not a one-time cold-start prompt, so it stays
+  // the front door on every visit. Editing is only reachable by clicking
+  // through. The one exception: with no belief at all yet (never read
+  // anything, never saved anything), there's nothing for the summary to
+  // say, so a reader lands straight in the picker.
+  const [mode, setMode] = useState<"summary" | "picker">(kemiBelief.length > 0 ? "summary" : "picker");
+  const [selected, setSelected] = useState<string[]>(kemiBelief);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -68,7 +74,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
               <span className="text-[13px] font-semibold">Kemi thinks you prefer stories with these tags.</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {initialAutoDetected.map((slug) => (
+              {kemiBelief.map((slug) => (
                 <span
                   key={slug}
                   className="rounded-full border border-[rgba(42,26,18,0.16)] bg-white px-3.5 py-[7px] text-[13px] font-medium text-[var(--color-ink)]"
