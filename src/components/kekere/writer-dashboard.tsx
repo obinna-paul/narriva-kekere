@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PenLine, Clock, CheckCircle2, AlertCircle, Eye, FileText, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { ContentGuideModal } from "@/components/kekere/content-guide-modal";
 import type { StoryStatus } from "@prisma/client";
 
 // Dates arrive as ISO strings over the wire (JSON serialization)
@@ -159,17 +160,7 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
           <p className="text-[14px] text-[rgba(42,26,18,.55)]">
             Pick up where you left off, or start something new.
           </p>
-          {/* The other place a writer would look for the guide later — not
-              just the moment they start a fresh draft. */}
-          <a
-            href="/kekere/content-guide"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#C75D2C] hover:underline"
-          >
-            <FileText size={12} />
-            See our content guide
-          </a>
+          <ContentGuideModal />
         </div>
 
         {/* Loading skeleton */}
