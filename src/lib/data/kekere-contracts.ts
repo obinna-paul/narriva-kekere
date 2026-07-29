@@ -206,12 +206,13 @@ export async function signContractAndPublishStory(
 
   // Only an onboarded writer's story is actually live at this point — for
   // everyone else the story is now in the ACCEPTED "to be published" queue,
-  // so the email/CTA must point at the contracts inbox, not a story page
-  // that doesn't exist publicly yet.
+  // so the email/CTA must point at the writer dashboard (which shows the
+  // real per-story status, e.g. "To be published"), not a story page that
+  // doesn't exist publicly yet.
   const storyUrl = linkedStoryId
     ? isOnboarded
       ? publicUrl(`/kekere/story/${storySlug ?? linkedStoryId}`)
-      : publicUrl("/kekere/contracts")
+      : publicUrl("/kekere/write")
     : publicUrl("/kekere");
 
   const signedHtml = linkedStoryId
@@ -258,7 +259,7 @@ export async function signContractAndPublishStory(
         : "Your contract is signed and your story is in the publishing queue. We'll let you know when it's ready."
       : "Your contract has been signed.",
     link: linkedStoryId
-      ? isOnboarded ? `/kekere/story/${storySlug ?? linkedStoryId}` : "/kekere/contracts"
+      ? isOnboarded ? `/kekere/story/${storySlug ?? linkedStoryId}` : "/kekere/write"
       : "/kekere/contracts",
   });
 
