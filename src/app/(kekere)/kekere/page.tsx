@@ -46,52 +46,28 @@ const PILLARS = [
   },
 ];
 
-const HERO_CARDS = [
-  {
-    genre: "SPECULATIVE",
-    title: "Small Gods of Balogun",
-    hook: "Every stall has a spirit. Mama Risi sells them back to you.",
-    cost: "15 cowries · 7 min",
-    bg: "conic-gradient(from 30deg,#1F4B4B,#2E6A5E,#1F4B4B,#143838,#1F4B4B)",
-    col: 0,
-    animation: "7s",
-    rotate: "1.5deg",
-    bright: false,
-  },
-  {
-    genre: "HISTORICAL",
-    title: "Cowrie",
-    hook: "Sold for a string of shells, she chose to remember the price.",
-    cost: "10 cowries · 8 min",
-    bg: "conic-gradient(#C75D2C 0 25%,#E2A565 0 50%,#C75D2C 0 75%,#E2A565 0)",
-    col: 0,
-    animation: "",
-    rotate: "-2deg",
-    bright: false,
-  },
-  {
-    genre: "LOVE",
-    title: "The Last Bus to Yaba",
-    hook: "She missed it on purpose. He didn't.",
-    cost: "12 cowries · 4 min",
-    bg: "radial-gradient(circle at 32% 28%,#F0B878,#C75D2C 52%,#7A3415)",
-    col: 1,
-    animation: "8s",
-    rotate: "2.5deg",
-    bright: true,
-  },
-  {
-    genre: "SATIRE",
-    title: "Letters to NEPA",
-    hook: "He wrote the power company every day for a year.",
-    cost: "6 cowries · 4 min",
-    bg: "repeating-linear-gradient(0deg,#2A1A12 0 6px,#3A2418 6px 12px)",
-    col: 1,
-    animation: "",
-    rotate: "-1.5deg",
-    bright: false,
-  },
+// Visual scaffolding for the 4 hero cards — kept separate from story content
+// so real trending stories can be dropped into the same layout/animation.
+const HERO_CARD_LAYOUT = [
+  { col: 0, animation: "7s", rotate: "1.5deg", bright: false },
+  { col: 0, animation: "", rotate: "-2deg", bright: false },
+  { col: 1, animation: "8s", rotate: "2.5deg", bright: true },
+  { col: 1, animation: "", rotate: "-1.5deg", bright: false },
+] as const;
+
+const HERO_CARD_PATTERNS = [
+  "conic-gradient(from 30deg,#1F4B4B,#2E6A5E,#1F4B4B,#143838,#1F4B4B)",
+  "conic-gradient(#C75D2C 0 25%,#E2A565 0 50%,#C75D2C 0 75%,#E2A565 0)",
+  "radial-gradient(circle at 32% 28%,#F0B878,#C75D2C 52%,#7A3415)",
+  "repeating-linear-gradient(0deg,#2A1A12 0 6px,#3A2418 6px 12px)",
 ];
+
+function heroCardBg(story: MockStory, index: number): string {
+  if (story.coverImageUrl) {
+    return `url("${story.coverImageUrl}") center/cover no-repeat`;
+  }
+  return HERO_CARD_PATTERNS[index % HERO_CARD_PATTERNS.length];
+}
 
 function daysUntil(date: Date): number {
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -109,11 +85,20 @@ function thumbnailPattern(seed: string): string {
   return patterns[i % patterns.length];
 }
 
+type HeroCardData = (typeof HERO_CARD_LAYOUT)[number] & {
+  id: string;
+  genre: string;
+  title: string;
+  hook: string;
+  cost: string;
+  bg: string;
+};
+
 function HeroCard({
   card,
   offset,
 }: {
-  card: (typeof HERO_CARDS)[number];
+  card: HeroCardData;
   offset: boolean;
 }) {
   return (
@@ -183,11 +168,25 @@ export default async function KekereLandingPage() {
 
   const [stats, stories, competitions] = await Promise.all([
     getKekereLandingStats(),
-    listStories({ sort: "trending", pageSize: 5 }),
+    listStories({ sort: "trending", pageSize: 9 }),
     listCompetitions({ status: ["OPEN", "JUDGING"] }),
   ]);
 
-  const featuredStories = stories.stories.map((s) => toFeedStoryData(s));
+  const trendingStories = stories.stories.map((s) => toFeedStoryData(s));
+  const heroStories = trendingStories.slice(0, 4);
+  const heroCards: HeroCardData[] = heroStories.map((story, i) => ({
+    ...HERO_CARD_LAYOUT[i],
+    id: story.id,
+    genre: story.genre.toUpperCase(),
+    title: story.title,
+    hook: story.hookLine,
+    cost: `${story.cowrieCost} cowries · ${story.readingTimeMinutes} min`,
+    bg: heroCardBg(story, i),
+  }));
+  const featuredStories =
+    trendingStories.length > heroStories.length
+      ? trendingStories.slice(4)
+      : trendingStories;
   const competition = competitions[0] ?? null;
 
   return (
@@ -280,32 +279,36 @@ export default async function KekereLandingPage() {
               </p>
             </div>
 
-            <div className="min-w-[300px] flex-[1_1_420px] justify-center hidden md:flex">
-              <div className="flex w-full max-w-[440px] gap-4" style={{ transform: "rotate(-2deg)" }}>
-                {[0, 1].map((col) => (
-                  <div
-                    key={col}
-                    className="flex flex-1 flex-col gap-4"
-                    style={{ marginTop: col === 1 ? 38 : 0 }}
-                  >
-                    {HERO_CARDS.filter((c) => c.col === col).map((card) => (
-                      <HeroCard
-                        key={card.title}
-                        card={card}
-                        offset={col === 1}
-                      />
-                    ))}
-                    {col === 1 && (
-                      <div className="py-1 text-center">
-                        <span className="text-xs font-semibold text-[rgba(245,235,221,0.55)]">
-                          + {Math.max(0, stats.storyCount - 4)} more stories
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {heroCards.length > 0 && (
+              <div className="min-w-[300px] flex-[1_1_420px] justify-center hidden md:flex">
+                <div className="flex w-full max-w-[440px] gap-4" style={{ transform: "rotate(-2deg)" }}>
+                  {[0, 1].map((col) => (
+                    <div
+                      key={col}
+                      className="flex flex-1 flex-col gap-4"
+                      style={{ marginTop: col === 1 ? 38 : 0 }}
+                    >
+                      {heroCards
+                        .filter((c) => c.col === col)
+                        .map((card) => (
+                          <HeroCard
+                            key={card.id}
+                            card={card}
+                            offset={col === 1}
+                          />
+                        ))}
+                      {col === 1 && (
+                        <div className="py-1 text-center">
+                          <span className="text-xs font-semibold text-[rgba(245,235,221,0.55)]">
+                            + {Math.max(0, stats.storyCount - heroCards.length)} more stories
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="relative z-[2] pb-[22px] text-center text-xl text-[rgba(245,235,221,0.4)]">
