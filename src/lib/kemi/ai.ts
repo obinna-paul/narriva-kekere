@@ -60,16 +60,26 @@ export async function askKemiAI(
         reasoning_effort: "low",
         messages,
         temperature: 0.8,
-        max_tokens: 650,
+        // gpt-oss-120b spends part of this budget on its own reasoning
+        // before the visible reply — too tight a cap makes it plausible for
+        // reasoning alone to exhaust max_tokens and leave `content` empty,
+        // which reads to a reader as Kemi randomly going "away" mid-chat.
+        max_tokens: 900,
       }),
       signal: AbortSignal.timeout(20000),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("Kemi Groq call failed:", res.status, await res.text().catch(() => "<no body>"));
+      return null;
+    }
 
     const json = await res.json();
     const raw = json.choices?.[0]?.message?.content as string | undefined;
-    if (!raw) return null;
+    if (!raw) {
+      console.error("Kemi Groq call returned no content:", JSON.stringify(json));
+      return null;
+    }
 
     const match = raw.match(RECOMMEND_LINE);
     if (!match) return { reply: raw.trim(), recommendedSlugs: [] };
