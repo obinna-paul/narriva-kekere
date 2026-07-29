@@ -70,14 +70,22 @@ export async function askKemiAI(
     });
 
     if (!res.ok) {
-      console.error("Kemi Groq call failed:", res.status, await res.text().catch(() => "<no body>"));
+      // Status + Groq's own error type/code only — never the raw response
+      // body. Some upstream validation errors echo the offending request
+      // back in the body, and that's the reader's actual conversation; with
+      // real users on the app now, that content has no business sitting in
+      // a server log.
+      const errJson = await res.json().catch(() => null);
+      console.error("Kemi Groq call failed:", res.status, errJson?.error?.type, errJson?.error?.code);
       return null;
     }
 
     const json = await res.json();
     const raw = json.choices?.[0]?.message?.content as string | undefined;
     if (!raw) {
-      console.error("Kemi Groq call returned no content:", JSON.stringify(json));
+      // Same reasoning — log the shape of the failure (why there's no
+      // content), not the response itself.
+      console.error("Kemi Groq call returned no content:", json.choices?.[0]?.finish_reason, json.usage);
       return null;
     }
 
