@@ -396,17 +396,50 @@ export function KemiChat({
 
               {/* Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
-                <ul className="flex flex-col gap-3">
-                  {messages.map((message, i) => (
-                    <li key={i} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                <ul className="flex flex-col gap-[3px]">
+                  {messages.map((message, i) => {
+                    // Consecutive messages from the same sender group together
+                    // (WhatsApp/iMessage-style) — tight spacing and a tucked-in
+                    // corner within a group, a full gap and full rounding where
+                    // the sender changes. Without this every message reads as
+                    // one continuous paragraph broken only by line spacing.
+                    const isFirstInGroup = i === 0 || messages[i - 1].role !== message.role;
+                    const isLastInGroup =
+                      i === messages.length - 1 || messages[i + 1].role !== message.role;
+                    const isUser = message.role === "user";
+
+                    return (
+                    <li
+                      key={i}
+                      className={cn(
+                        "flex",
+                        isFirstInGroup && i !== 0 && "mt-2.5",
+                        isUser ? "justify-end" : "justify-start",
+                      )}
+                    >
                       <div
                         className={cn(
-                          "max-w-[86%] rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed",
-                          message.role === "user"
-                            ? "bg-[var(--color-primary)] text-white"
+                          "max-w-[86%] px-3.5 py-2.5 text-[14px] leading-relaxed",
+                          isUser
+                            ? cn(
+                                "bg-[var(--color-primary)] text-white shadow-[0_2px_6px_-2px_rgba(199,93,44,0.45)]",
+                                "rounded-2xl",
+                                !isFirstInGroup && "rounded-tr-md",
+                                !isLastInGroup && "rounded-br-md",
+                              )
                             : message.isAway
-                              ? "bg-[var(--color-primary)]/8 italic text-[var(--color-ink-muted)]"
-                              : "bg-[var(--color-ink)]/[0.06] text-[var(--color-ink)]",
+                              ? cn(
+                                  "bg-[var(--color-primary)]/[0.1] italic text-[var(--color-ink-muted)] ring-1 ring-[var(--color-primary)]/15",
+                                  "rounded-2xl",
+                                  !isFirstInGroup && "rounded-tl-md",
+                                  !isLastInGroup && "rounded-bl-md",
+                                )
+                              : cn(
+                                  "bg-white text-[var(--color-ink)] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]",
+                                  "rounded-2xl",
+                                  !isFirstInGroup && "rounded-tl-md",
+                                  !isLastInGroup && "rounded-bl-md",
+                                ),
                         )}
                       >
                         <p className="whitespace-pre-wrap">{message.text}</p>
@@ -457,10 +490,11 @@ export function KemiChat({
                         )}
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
 
                   {messages.length <= 1 && !loading && (
-                    <li className="flex flex-wrap gap-1.5 pt-1">
+                    <li className="mt-2.5 flex flex-wrap gap-1.5">
                       {quickStarts.map((chip) => (
                         <button
                           key={chip}
@@ -475,7 +509,7 @@ export function KemiChat({
                   )}
 
                   {showWhyThisOne && (
-                    <li className="flex pt-0.5">
+                    <li className="mt-2.5 flex">
                       <button
                         type="button"
                         onClick={() => {
@@ -490,8 +524,8 @@ export function KemiChat({
                   )}
 
                   {loading && (
-                    <li className="flex justify-start" aria-label="Kemi is typing">
-                      <div className="flex items-center gap-1 rounded-2xl bg-[var(--color-ink)]/[0.06] px-4 py-3">
+                    <li className="mt-2.5 flex justify-start" aria-label="Kemi is typing">
+                      <div className="flex items-center gap-1 rounded-2xl bg-white px-4 py-3 shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]">
                         <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "0ms" }} />
                         <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "150ms" }} />
                         <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "300ms" }} />
