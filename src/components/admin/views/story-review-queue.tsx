@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { ImageIcon, Pencil, ShieldAlert, Sparkles, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ImageIcon, Pencil, Search, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -644,6 +644,17 @@ export function StoryReviewQueue() {
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [queueTab, setQueueTab] = useState<"submitted" | "publishing">("submitted");
 
+  // Queue search/filter/sort — client-side, since a story review pile of
+  // even a few hundred is trivial to filter in-browser and this avoids a
+  // new paginated endpoint. Reset whenever the tab changes so a filter set
+  // in "Story Queue" doesn't silently hide everything after switching to
+  // "To Be Published".
+  const [searchQuery, setSearchQuery] = useState("");
+  const [genreFilter, setGenreFilter] = useState<string>("all");
+  const [tierFilter, setTierFilter] = useState<string>("all");
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"oldest" | "newest">("oldest");
+
   // Admin editing state — reset when a new story is selected. Only relevant
   // in the "publishing" (To Be Published) tab — Story Review never edits.
   const [editingContent, setEditingContent] = useState(false);
@@ -718,6 +729,16 @@ export function StoryReviewQueue() {
   }, [queueTab]);
 
   useEffect(() => { loadQueue(); }, [loadQueue]);
+
+  // A filter set in one tab shouldn't silently hide everything after
+  // switching to the other — each tab starts from a clean search/filter.
+  useEffect(() => {
+    setSearchQuery("");
+    setGenreFilter("all");
+    setTierFilter("all");
+    setFlaggedOnly(false);
+    setSortOrder("oldest");
+  }, [queueTab]);
 
   async function selectStory(id: string) {
     setSelectedId(id);
@@ -869,11 +890,35 @@ export function StoryReviewQueue() {
     }
   }
 
+  // Distinct genres actually present in the current tab's queue — always
+  // an accurate, non-stale filter list without hand-maintaining one.
+  const genreOptions = useMemo(
+    () => Array.from(new Set(queue.map((s) => s.genre))).sort(),
+    [queue],
+  );
+
+  const filteredQueue = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = queue;
+    if (q) {
+      list = list.filter(
+        (s) => s.title.toLowerCase().includes(q) || s.authorName.toLowerCase().includes(q),
+      );
+    }
+    if (genreFilter !== "all") list = list.filter((s) => s.genre === genreFilter);
+    if (tierFilter !== "all") list = list.filter((s) => s.tier === tierFilter);
+    if (flaggedOnly) list = list.filter((s) => s.plagiarismFlagged);
+    return list;
+  }, [queue, searchQuery, genreFilter, tierFilter, flaggedOnly]);
+
+  const isFiltering =
+    searchQuery.trim() !== "" || genreFilter !== "all" || tierFilter !== "all" || flaggedOnly;
+
   if (loading) {
     return (
       <div className="overflow-x-auto">
-        <div className="flex min-w-[900px] gap-4">
-          <div className="w-[200px] flex-none space-y-2">
+        <div className="flex min-w-[960px] gap-4">
+          <div className="w-[260px] flex-none space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-[90px] animate-pulse rounded-[11px] bg-[rgba(20,22,26,0.06)]" />
             ))}
@@ -899,8 +944,18 @@ export function StoryReviewQueue() {
   // new". Split out into its own group, but still listed, not hidden —
   // an admin can still reject outright from here if a writer goes quiet.
   const secondaryStatus = queueTab === "publishing" ? "CHANGES_PROPOSED" : "REVISIONS_REQUESTED";
-  const withWriter = queue.filter((s) => s.status === secondaryStatus);
-  const actionable = queue.filter((s) => s.status !== secondaryStatus);
+  // Sorted by whichever timestamp that group's row actually displays — a
+  // "with the writer" card shows "sent Xd ago" (lastActivityAt), so that's
+  // what oldest/newest should sort against there, not the original
+  // submission date.
+  const sortRows = (rows: QueueStory[], key: (s: QueueStory) => string) =>
+    [...rows].sort((a, b) => {
+      const at = new Date(key(a)).getTime();
+      const bt = new Date(key(b)).getTime();
+      return sortOrder === "oldest" ? at - bt : bt - at;
+    });
+  const withWriter = sortRows(filteredQueue.filter((s) => s.status === secondaryStatus), (s) => s.lastActivityAt);
+  const actionable = sortRows(filteredQueue.filter((s) => s.status !== secondaryStatus), (s) => s.submittedAt);
   // Only CHANGES_PROPOSED locks out the decision panel entirely — every
   // action there needs status ACCEPTED first. REVISIONS_REQUESTED keeps the
   // full panel: reject, or send another round of notes, both still legal.
@@ -910,7 +965,7 @@ export function StoryReviewQueue() {
 
   return (
     <div className="overflow-x-auto">
-    <div className="relative flex h-[calc(100vh-130px)] min-w-[900px] gap-4">
+    <div className="relative flex h-[calc(100vh-130px)] min-w-[960px] gap-4">
       {/* Toast */}
       {toast && (
         <div className={cn(
@@ -922,7 +977,7 @@ export function StoryReviewQueue() {
       )}
 
       {/* Left pane — queue list */}
-      <div className="flex w-[200px] flex-none flex-col gap-2 overflow-y-auto">
+      <div className="flex w-[260px] flex-none flex-col gap-2 overflow-y-auto">
         <div className="mb-1 flex items-center gap-1">
           <button
             type="button"
@@ -944,13 +999,82 @@ export function StoryReviewQueue() {
           >
             To Be Published
           </button>
-          <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{actionable.length}</span>
+          <span className="ml-auto rounded-full bg-[#C75D2C] px-2 py-0.5 text-[10px] font-bold text-white">{actionable.length + withWriter.length}</span>
         </div>
+
+        {queue.length > 0 && (
+          <div className="mb-1 flex flex-col gap-1.5">
+            <div className="relative">
+              <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#B0B6BE]" aria-hidden="true" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search title or writer…"
+                className="w-full rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-white py-1.5 pl-7 pr-2.5 text-[12px] text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#C75D2C]/40"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={genreFilter}
+                onChange={(e) => setGenreFilter(e.target.value)}
+                className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
+              >
+                <option value="all">All genres</option>
+                {genreOptions.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+              <select
+                value={tierFilter}
+                onChange={(e) => setTierFilter(e.target.value)}
+                className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
+              >
+                <option value="all">All tiers</option>
+                <option value="STANDARD">Standard</option>
+                <option value="FEATURED">Featured</option>
+                <option value="CHAMPION">Champion</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setFlaggedOnly((v) => !v)}
+                className={cn(
+                  "rounded-full px-2 py-1 text-[10px] font-semibold transition-colors",
+                  flaggedOnly ? "bg-[#C0392B] text-white" : "border border-[rgba(20,22,26,0.12)] text-[#646B73] hover:border-[rgba(20,22,26,0.24)]",
+                )}
+              >
+                ⚠ Flagged
+              </button>
+              <button
+                type="button"
+                onClick={() => setSortOrder((o) => (o === "oldest" ? "newest" : "oldest"))}
+                title="Toggle sort order"
+                className="ml-auto rounded-full border border-[rgba(20,22,26,0.12)] px-2 py-1 text-[10px] font-semibold text-[#646B73] hover:border-[rgba(20,22,26,0.24)]"
+              >
+                {sortOrder === "oldest" ? "Oldest first" : "Newest first"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-4 py-10 text-center">
             <p className="text-[13px] font-semibold text-[#1A1C20]">Queue is clear</p>
             <p className="mt-1 text-[12px] text-[#9AA0A8]">No stories awaiting review.</p>
+          </div>
+        ) : isFiltering && actionable.length === 0 && withWriter.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-4 py-10 text-center">
+            <p className="text-[13px] font-semibold text-[#1A1C20]">No matches</p>
+            <p className="mt-1 text-[12px] text-[#9AA0A8]">Try a different search, or clear your filters.</p>
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(""); setGenreFilter("all"); setTierFilter("all"); setFlaggedOnly(false); }}
+              className="mt-3 rounded-[7px] border border-[rgba(20,22,26,0.15)] px-3 py-1.5 text-[11px] font-semibold text-[#646B73] hover:border-[rgba(20,22,26,0.3)]"
+            >
+              Clear filters
+            </button>
           </div>
         ) : (
           [
