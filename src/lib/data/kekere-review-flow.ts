@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type StoryStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderStoryAcceptedEmail, renderPostContractEditsEmail } from "@/lib/email/templates";
@@ -7,7 +7,7 @@ import { KEKERE_SUBMISSIONS_FROM, SUPPORT_EMAIL } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
 import { SITE_URL } from "@/content/decisions";
 import { countWords, type TiptapDoc } from "@/lib/tiptap/doc-utils";
-import { listEditorialComments, type EditorialCommentDTO } from "@/lib/data/kekere-editorial-comments";
+import { listEditorialComments, createWriterComment, type EditorialCommentDTO } from "@/lib/data/kekere-editorial-comments";
 import { WRITER_EARNINGS_RATE } from "@/content/decisions";
 
 /**
@@ -357,13 +357,23 @@ export interface WriterReview {
   isPostContract: boolean;
 }
 
+export type WriterReviewResult =
+  | { kind: "ok"; review: WriterReview }
+  /** The story doesn't exist, or isn't this writer's — don't leak which. */
+  | { kind: "not_found" }
+  /** It's their story, but nothing is (or is still) awaiting their review —
+   * most commonly because they already submitted their decision on this
+   * exact round and are revisiting a stale link/email/notification. Distinct
+   * from not_found so the page can say something accurate instead of acting
+   * like the story never existed. */
+  | { kind: "already_handled"; status: StoryStatus };
+
 /**
  * Everything the writer's review screen needs — the original vs proposed text
  * (for the diff), the editorial comments, the admin's cover note, and the
- * pending terms. Returns null if the story isn't theirs or isn't awaiting
- * their approval.
+ * pending terms.
  */
-export async function getWriterReview(storyId: string, writerId: string): Promise<WriterReview | null> {
+export async function getWriterReview(storyId: string, writerId: string): Promise<WriterReviewResult> {
   const story = await prisma.story.findUnique({
     where: { id: storyId },
     select: {
@@ -379,7 +389,8 @@ export async function getWriterReview(storyId: string, writerId: string): Promis
       cowrieCost: true,
     },
   });
-  if (!story || story.authorId !== writerId || story.status !== "CHANGES_PROPOSED") return null;
+  if (!story || story.authorId !== writerId) return { kind: "not_found" };
+  if (story.status !== "CHANGES_PROPOSED") return { kind: "already_handled", status: story.status };
 
   const originalBody = story.body as unknown as TiptapDoc;
   const editedBody = (story.editedBody ?? story.body) as unknown as TiptapDoc;
@@ -390,19 +401,22 @@ export async function getWriterReview(storyId: string, writerId: string): Promis
   ]);
 
   return {
-    storyId: story.id,
-    title: story.title,
-    originalHookLine: story.hookLine,
-    editedHookLine,
-    hookLineChanged: editedHookLine !== story.hookLine,
-    originalBody,
-    editedBody,
-    bodyChanged: JSON.stringify(originalBody) !== JSON.stringify(editedBody),
-    comments,
-    summaryNote: story.editSummaryNote,
-    cowrieCost: story.cowrieCost,
-    writerSharePercent: Math.round(WRITER_EARNINGS_RATE * 100),
-    isPostContract,
+    kind: "ok",
+    review: {
+      storyId: story.id,
+      title: story.title,
+      originalHookLine: story.hookLine,
+      editedHookLine,
+      hookLineChanged: editedHookLine !== story.hookLine,
+      originalBody,
+      editedBody,
+      bodyChanged: JSON.stringify(originalBody) !== JSON.stringify(editedBody),
+      comments,
+      summaryNote: story.editSummaryNote,
+      cowrieCost: story.cowrieCost,
+      writerSharePercent: Math.round(WRITER_EARNINGS_RATE * 100),
+      isPostContract,
+    },
   };
 }
 
@@ -467,6 +481,10 @@ export interface SubmitReviewInput {
   decisions: Record<string, "accept" | "reject">;
   /** commentId → { resolved, reply } */
   commentDecisions: Record<string, { resolved?: boolean; reply?: string }>;
+  /** New comments the writer originated during this review, anchored to any
+   * paragraph in the working copy — not a reply to an existing editor
+   * comment, their own note. */
+  newComments?: { paragraphId: string; body: string }[];
   /** Optional overall note to the editor when sending back. */
   note?: string;
 }
@@ -522,12 +540,28 @@ export async function submitWriterReview(
     });
   }
 
+  // A writer can originate their own comment on any paragraph in the working
+  // copy, not just reply to one an editor already left — this always sends
+  // the review back for the editor to see it (nothing to silently apply).
+  let hasNewComment = false;
+  for (const nc of input.newComments ?? []) {
+    const body = nc.body.trim();
+    if (!body) continue;
+    try {
+      await createWriterComment(storyId, nc.paragraphId, body);
+      hasNewComment = true;
+    } catch {
+      // Stale paragraph id (the doc changed under them) — skip it rather
+      // than fail the writer's whole submission over one bad anchor.
+    }
+  }
+
   const { merged, fullyAccepted } = mergeReviewedBody(original, edited, input.decisions);
 
   // Full acceptance with nothing to discuss → promote. Stage 1 (first pass,
   // contract not yet signed) goes to the contract; stage 2 (contract already
   // signed) goes straight back to ACCEPTED — no new contract needed.
-  if (fullyAccepted && !hasReply) {
+  if (fullyAccepted && !hasReply && !hasNewComment) {
     await prisma.editorialComment.updateMany({ where: { storyId, status: "OPEN" }, data: { status: "RESOLVED" } });
     if (postContract) {
       await promotePostContractEdits(storyId);
@@ -568,7 +602,7 @@ export async function submitWriterReview(
   await sendEmail({
     to: SUPPORT_EMAIL,
     subject: `${story.author.name} reviewed your edits on "${story.title}"`,
-    body: `Writer: ${story.author.name} (${story.author.email})\nStory: ${story.title} (${storyId})\n\n${input.note?.trim() ? `Their note:\n${input.note.trim()}\n\n` : ""}They accepted some changes and kept some of their own${hasReply ? ", and replied to your inline comments" : ""}. The story is back in the ${postContract ? "To Be Published" : "review"} queue with their choices merged in — open it to see what stands and reconcile.`,
+    body: `Writer: ${story.author.name} (${story.author.email})\nStory: ${story.title} (${storyId})\n\n${input.note?.trim() ? `Their note:\n${input.note.trim()}\n\n` : ""}They accepted some changes and kept some of their own${hasReply ? ", replied to your inline comments" : ""}${hasNewComment ? ", and left their own comments for you" : ""}. The story is back in the ${postContract ? "To Be Published" : "review"} queue with their choices merged in — open it to see what stands and reconcile.`,
   });
 
   return { outcome: "returned" };

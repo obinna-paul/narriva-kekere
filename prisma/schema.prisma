@@ -634,9 +634,18 @@ enum EditorialCommentStatus {
   RESOLVED
 }
 
+// Who originated an EditorialComment — an editor's "look at this line" note,
+// or a writer's own note added while reviewing proposed edits (a writer can
+// speak up about anything, not just reply to a note already aimed at them).
+enum EditorialCommentAuthor {
+  EDITOR
+  WRITER
+}
+
 // A private admin↔writer editorial note anchored to a specific paragraph of a
-// story under review — the reviewer's "look at this line" markers. Distinct
-// from ParagraphComment (the public reader-facing margin notes): different
+// story under review — the reviewer's "look at this line" markers, or the
+// writer's own comment added from their review screen. Distinct from
+// ParagraphComment (the public reader-facing margin notes): different
 // audience, different lifecycle (these are resolved once addressed and never
 // shown to readers). Anchors the same way — a paragraph attrs.id from the
 // story's Tiptap doc (the editorial working copy, editedBody ?? body) — but
@@ -646,13 +655,18 @@ model EditorialComment {
   storyId       String
   story         Story                  @relation(fields: [storyId], references: [id], onDelete: Cascade)
   paragraphId   String
+  authorRole    EditorialCommentAuthor @default(EDITOR)
   // No relation — the author is an admin; stored for audit only, same
-  // convention as Story.authoredByAdminId / Report.resolvedByAdminId.
-  authorAdminId String
+  // convention as Story.authoredByAdminId / Report.resolvedByAdminId. Null
+  // when authorRole is WRITER (the author is always the story's own writer,
+  // already known via Story.authorId — no need to duplicate it here).
+  authorAdminId String?
   body          String
   status        EditorialCommentStatus @default(OPEN)
   // The writer's reply from their review screen — when set, the story goes
-  // back to the editor to reconcile rather than straight to contract.
+  // back to the editor to reconcile rather than straight to contract. Only
+  // meaningful on an EDITOR-authored comment; a WRITER-authored comment has
+  // nothing to reply to (it *is* the writer's word).
   writerReply   String?
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt

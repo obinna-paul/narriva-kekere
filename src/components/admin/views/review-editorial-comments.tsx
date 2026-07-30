@@ -8,7 +8,8 @@ import { docParagraphsToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
 interface EditorialComment {
   id: string;
   paragraphId: string;
-  authorAdminId: string;
+  authorRole: "EDITOR" | "WRITER";
+  authorAdminId: string | null;
   body: string;
   status: "OPEN" | "RESOLVED";
   writerReply: string | null;
@@ -161,9 +162,16 @@ export function ReviewEditorialComments({ storyId, doc, onCountChange }: Props) 
                           "rounded-[8px] border px-2.5 py-2 text-[13px]",
                           c.status === "RESOLVED"
                             ? "border-[rgba(20,22,26,0.08)] bg-[rgba(20,22,26,0.02)] text-[#9AA0A8] line-through"
-                            : "border-[rgba(20,22,26,0.1)] bg-white text-[#1A1C20]",
+                            : c.authorRole === "WRITER"
+                              ? "border-[rgba(31,138,91,0.25)] bg-[rgba(31,138,91,0.04)] text-[#1A1C20]"
+                              : "border-[rgba(20,22,26,0.1)] bg-white text-[#1A1C20]",
                         )}
                       >
+                        {c.authorRole === "WRITER" && c.status !== "RESOLVED" && (
+                          <span className="mb-1 inline-block rounded-full bg-[rgba(31,138,91,0.12)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#1F8A5B] no-underline">
+                            From writer
+                          </span>
+                        )}
                         <p className="whitespace-pre-wrap no-underline">{c.body}</p>
                         {c.writerReply && (
                           <div className="mt-1.5 flex items-start gap-1.5 rounded-[6px] bg-[rgba(20,22,26,0.04)] px-2 py-1.5 text-[12px] text-[#4A372C] no-underline">
