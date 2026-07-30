@@ -179,7 +179,9 @@ export async function signContractAndPublishStory(
           where: { id: linkedStoryId, status: "PENDING_CONTRACT" },
           data: isOnboarded
             ? { status: "PUBLISHED", isDraft: false, publishedAt: signedAt, ...(slug ? { slug } : {}) }
-            : { status: "ACCEPTED" },
+            // Freshly entering To Be Published — any "opened" mark from when
+            // it sat in Story Review doesn't carry over to this queue.
+            : { status: "ACCEPTED", lastOpenedByAdminId: null, lastOpenedByAdminAt: null },
         });
       }
     })

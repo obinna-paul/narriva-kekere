@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 
 export const GET = withAuth(
-  async (_request, _session, { params }) => {
+  async (_request, session, { params }) => {
     const { id } = params as { id: string };
 
     const story = await prisma.story.findUnique({
@@ -26,6 +26,15 @@ export const GET = withAuth(
     if (!story) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
     }
+
+    // Marks this story as "opened" for the queue list — fire-and-forget,
+    // never worth failing the read over.
+    void prisma.story
+      .update({
+        where: { id },
+        data: { lastOpenedByAdminId: session.user.id, lastOpenedByAdminAt: new Date() },
+      })
+      .catch(() => {});
 
     const [publishedCount, rejectedCount, revisionsCount] = await Promise.all([
       prisma.story.count({

@@ -42,6 +42,14 @@ export const GET = withAuth(
       authorStats.set(s.authorId, entry);
     });
 
+    const storyIds = stories.map((s) => s.id);
+    const commentStats = await prisma.editorialComment.groupBy({
+      by: ["storyId"],
+      where: { storyId: { in: storyIds }, status: "OPEN" },
+      _count: true,
+    });
+    const openCommentCountByStory = new Map(commentStats.map((c) => [c.storyId, c._count]));
+
     const now = Date.now();
 
     return NextResponse.json({
@@ -77,6 +85,15 @@ export const GET = withAuth(
           previousPublishedCount: stats.publishedCount,
           previousRejectionCount: stats.rejectedCount,
           plagiarismFlagged: s.plagiarismFlagged,
+          // Whether an admin has opened this exact version of the story —
+          // cleared back to false at every point it becomes newly actionable
+          // (submitted, resubmitted, writer sends edits back, contract
+          // signed) so it never falsely reads as "already seen".
+          opened: s.lastOpenedByAdminAt != null,
+          // A working copy exists in the To Be Published editor that hasn't
+          // been sent to the writer yet.
+          hasEdits: s.editLastSavedAt != null,
+          openCommentCount: openCommentCountByStory.get(s.id) ?? 0,
         };
       }),
     });
