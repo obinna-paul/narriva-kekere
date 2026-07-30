@@ -428,11 +428,19 @@ export async function getWriterReview(storyId: string, writerId: string): Promis
  * (the editor deleted a paragraph the writer wants kept) re-inserts the
  * original paragraph after its nearest surviving predecessor. Decisions
  * default to "accept" when a paragraph id is absent.
+ *
+ * @param paragraphEdits — paragraphId → the writer's own rewritten inline
+ * content. Applied last, so a writer's tweak wins over whichever version their
+ * accept/reject choice would otherwise have landed on — their edit *is* the
+ * decision. Ends up in editedBody, which is what the editor's tracked-changes
+ * view diffs against the original, so the editor sees the writer's wording
+ * marked up exactly like their own edits were.
  */
 export function mergeReviewedBody(
   original: TiptapDoc,
   edited: TiptapDoc,
   decisions: Record<string, "accept" | "reject">,
+  paragraphEdits: Record<string, TiptapInlineNode[]> = {},
 ): { merged: TiptapDoc; fullyAccepted: boolean } {
   const origById = new Map((original.content ?? []).filter((n) => n.attrs?.id).map((n) => [n.attrs!.id as string, n]));
   const editedIds = new Set((edited.content ?? []).filter((n) => n.attrs?.id).map((n) => n.attrs!.id as string));
@@ -473,7 +481,19 @@ export function mergeReviewedBody(
     content.splice(insertAt, 0, node);
   }
 
-  return { merged: { type: "doc", content }, fullyAccepted };
+  // Apply the writer's own rewrites last so they win over whatever their
+  // accept/reject choice left in place. An edit is itself a departure from
+  // what the editor proposed, so it also means this can't be a clean
+  // "accepted everything" submission.
+  const withEdits = content.map((node) => {
+    const id = node.attrs?.id;
+    const writerContent = id ? paragraphEdits[id] : undefined;
+    if (!writerContent) return node;
+    fullyAccepted = false;
+    return { ...node, content: writerContent };
+  });
+
+  return { merged: { type: "doc", content: withEdits }, fullyAccepted };
 }
 
 export interface SubmitReviewInput {
@@ -485,6 +505,9 @@ export interface SubmitReviewInput {
    * paragraph in the working copy — not a reply to an existing editor
    * comment, their own note. */
   newComments?: { paragraphId: string; body: string }[];
+  /** paragraphId → the writer's own rewritten inline content. See
+   * mergeReviewedBody. */
+  paragraphEdits?: Record<string, TiptapInlineNode[]>;
   /** Optional overall note to the editor when sending back. */
   note?: string;
 }
@@ -556,7 +579,7 @@ export async function submitWriterReview(
     }
   }
 
-  const { merged, fullyAccepted } = mergeReviewedBody(original, edited, input.decisions);
+  const { merged, fullyAccepted } = mergeReviewedBody(original, edited, input.decisions, input.paragraphEdits ?? {});
 
   // Full acceptance with nothing to discuss → promote. Stage 1 (first pass,
   // contract not yet signed) goes to the contract; stage 2 (contract already

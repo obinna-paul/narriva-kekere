@@ -14,6 +14,26 @@ const schema = z.object({
     .array(z.object({ paragraphId: z.string().min(1), body: z.string().min(1).max(2000) }))
     .max(50)
     .default([]),
+  paragraphEdits: z
+    .record(
+      z.string(),
+      z
+        .array(
+          z.union([
+            z.object({
+              type: z.literal("text"),
+              text: z.string(),
+              marks: z
+                .array(z.object({ type: z.enum(["bold", "italic", "underline", "strike"]) }))
+                .max(4)
+                .optional(),
+            }),
+            z.object({ type: z.literal("hardBreak") }),
+          ]),
+        )
+        .max(2000),
+    )
+    .default({}),
   note: z.string().max(2000).optional(),
 });
 

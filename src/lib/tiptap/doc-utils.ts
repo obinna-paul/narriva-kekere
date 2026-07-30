@@ -289,3 +289,64 @@ function truncateInlineNodesTo(nodes: TiptapInlineNode[], maxLength: number): Ti
 
   return result;
 }
+
+const TAG_MARKS: Record<string, string> = {
+  STRONG: "bold",
+  B: "bold",
+  EM: "italic",
+  I: "italic",
+  U: "underline",
+  S: "strike",
+  STRIKE: "strike",
+  DEL: "strike",
+};
+
+/**
+ * The inverse of inlineNodeToHtml — turns the HTML a contentEditable surface
+ * produced back into Tiptap inline nodes, keeping bold/italic/underline/strike
+ * and dropping everything else. Used by the writer's review screen, where a
+ * writer can tweak a paragraph inline and we need their result as real doc
+ * nodes rather than a blob of markup.
+ *
+ * Security note: this is a whitelist, not a sanitizer pass — only text nodes,
+ * <br>, and the four marks in TAG_MARKS survive. Anything a paste dragged in
+ * (scripts, styles, attributes, arbitrary elements) is discarded by
+ * construction rather than filtered, since nothing but the recognised shapes
+ * is ever emitted. Browser-only: it needs a real DOM to parse with.
+ */
+export function htmlToInlineNodes(html: string): TiptapInlineNode[] {
+  if (typeof document === "undefined") return [];
+  const container = document.createElement("div");
+  container.innerHTML = html;
+
+  const nodes: TiptapInlineNode[] = [];
+  const walk = (node: Node, marks: string[]) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? "";
+      if (!text) return;
+      const last = nodes[nodes.length - 1];
+      const sorted = [...marks].sort();
+      if (last?.type === "text" && JSON.stringify((last.marks ?? []).map((m) => m.type)) === JSON.stringify(sorted)) {
+        last.text += text;
+        return;
+      }
+      nodes.push({
+        type: "text",
+        text,
+        ...(sorted.length ? { marks: sorted.map((type) => ({ type })) } : {}),
+      });
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const el = node as Element;
+    if (el.tagName === "BR") {
+      nodes.push({ type: "hardBreak" });
+      return;
+    }
+    const mark = TAG_MARKS[el.tagName];
+    const nextMarks = mark && !marks.includes(mark) ? [...marks, mark] : marks;
+    el.childNodes.forEach((child) => walk(child, nextMarks));
+  };
+  container.childNodes.forEach((child) => walk(child, []));
+  return nodes;
+}
