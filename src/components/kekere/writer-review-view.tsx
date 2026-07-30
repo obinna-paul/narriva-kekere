@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight, X } from "lucide-react";
+import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { docParagraphsToHtml, type TiptapDoc, type TiptapParagraphNode } from "@/lib/tiptap/doc-utils";
 import { diffParagraphWords, type DiffSpan } from "@/lib/tiptap/paragraph-diff";
@@ -29,8 +29,6 @@ export interface WriterReviewProps {
   summaryNote: string | null;
   cowrieCost: number;
   writerSharePercent: number;
-  /** True once the contract's already signed — these are the editor's final
-   * tracked changes before publishing, not the first pre-contract pass. */
   isPostContract: boolean;
 }
 
@@ -43,9 +41,6 @@ interface Unit {
   kind: ParaKind;
   newHtml?: string;
   oldHtml?: string;
-  /** Word-level tracked-changes spans for a "changed" paragraph — null when
-   * the paragraph was too large to diff cheaply, in which case the caller
-   * falls back to showing the whole paragraph as old-struck/new-highlighted. */
   spans?: DiffSpan[] | null;
   textAlign?: "left" | "center" | "right";
   comments: EditorialComment[];
@@ -67,9 +62,9 @@ export function WriterReviewView(props: WriterReviewProps) {
   const router = useRouter();
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   const [commentState, setCommentState] = useState<Record<string, CommentState>>({});
-  const [writerNotes, setWriterNotes] = useState<Record<string, string[]>>({});
-  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
-  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [writerEdits, setWriterEdits] = useState<Record<string, string>>({});
+  const [editingPara, setEditingPara] = useState<string | null>(null);
+  const [openReplyId, setOpenReplyId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,21 +117,11 @@ export function WriterReviewView(props: WriterReviewProps) {
   const setComment = (id: string, patch: Partial<CommentState>) =>
     setCommentState((prev) => ({ ...prev, [id]: { ...commentFor(id), ...patch } }));
 
-  const toggleNoteComposer = (id: string) => setOpenNoteId((cur) => (cur === id ? null : id));
-  const addWriterNote = (id: string) => {
-    const body = (noteDraft[id] ?? "").trim();
-    if (!body) return;
-    setWriterNotes((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), body] }));
-    setNoteDraft((prev) => ({ ...prev, [id]: "" }));
-  };
-  const removeWriterNote = (id: string, index: number) =>
-    setWriterNotes((prev) => ({ ...prev, [id]: (prev[id] ?? []).filter((_, i) => i !== index) }));
-
+  const hasWriterEdits = Object.keys(writerEdits).length > 0;
   const anyRejected = changeUnits.some((u) => decisionFor(u.id) === "reject");
   const rejectedHook = props.hookLineChanged && (decisions["__hook__"] ?? "accept") === "reject";
   const hasReply = Object.values(commentState).some((c) => c.reply.trim().length > 0);
-  const hasNewNotes = Object.values(writerNotes).some((arr) => arr.length > 0);
-  const goesToEditor = anyRejected || rejectedHook || hasReply || hasNewNotes;
+  const goesToEditor = anyRejected || rejectedHook || hasReply || hasWriterEdits;
 
   const totalChanges = changeUnits.length + (props.hookLineChanged ? 1 : 0);
   const acceptedCount = changeUnits.filter((u) => decisionFor(u.id) === "accept").length + (props.hookLineChanged ? (rejectedHook ? 0 : 1) : 0);
@@ -151,8 +136,8 @@ export function WriterReviewView(props: WriterReviewProps) {
       if (s.resolved || s.reply.trim()) commentDecisions[id] = { resolved: s.resolved, reply: s.reply.trim() || undefined };
     }
     const newComments: { paragraphId: string; body: string }[] = [];
-    for (const [id, notes] of Object.entries(writerNotes)) {
-      for (const body of notes) newComments.push({ paragraphId: id, body });
+    for (const [id, editText] of Object.entries(writerEdits)) {
+      if (editText.trim()) newComments.push({ paragraphId: id, body: editText.trim() });
     }
     const fullNote = rejectedHook
       ? `${note.trim() ? note.trim() + "\n\n" : ""}I'd like to keep my original hook line: "${props.originalHookLine}"`
@@ -210,12 +195,10 @@ export function WriterReviewView(props: WriterReviewProps) {
 
   return (
     <div className="mx-auto max-w-[640px] px-[22px] pb-[calc(120px+env(safe-area-inset-bottom))] pt-6">
-      {/* Top navigation */}
       <Link href="/kekere/feed" className="mb-5 inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]" aria-label="Back">
         <ChevronLeft size={20} />
       </Link>
 
-      {/* Header */}
       <div className="mb-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--color-primary)]">Editorial review</p>
         <h1 className="mt-1 font-[family-name:var(--font-display)] text-[26px] font-semibold leading-tight tracking-[-0.2px] text-[var(--color-ink)]">{props.title}</h1>
@@ -226,7 +209,6 @@ export function WriterReviewView(props: WriterReviewProps) {
         </div>
       </div>
 
-      {/* Editor's cover note */}
       {props.summaryNote && (
         <div className="mb-6 rounded-2xl border border-[rgba(199,93,44,0.2)] bg-gradient-to-br from-[rgba(199,93,44,0.05)] to-[rgba(199,93,44,0.02)] p-5">
           <div className="mb-3 flex items-center gap-2">
@@ -239,7 +221,6 @@ export function WriterReviewView(props: WriterReviewProps) {
         </div>
       )}
 
-      {/* Progress — only show when there are changes to review */}
       {totalChanges > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between text-[12px]">
@@ -252,12 +233,10 @@ export function WriterReviewView(props: WriterReviewProps) {
         </div>
       )}
 
-      {/* Hook line diff */}
       {props.hookLineChanged && (
         <section className="mb-8">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Hook line</h2>
           <div className="overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)]">
-            {/* Original */}
             <div className={cn("px-5 py-4", rejectedHook ? "bg-[rgba(42,26,18,0.02)]" : "bg-[rgba(193,58,58,0.04)]")}>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Your original</p>
               <p className={cn("font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed", rejectedHook ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")}>
@@ -265,7 +244,6 @@ export function WriterReviewView(props: WriterReviewProps) {
               </p>
             </div>
             <div className="h-px bg-[rgba(42,26,18,0.08)]" />
-            {/* Edited */}
             <div className={cn("px-5 py-4 border-l-[3px]", rejectedHook ? "border-[var(--color-primary)]" : "border-[#1F8A5B]")}>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Editor&apos;s proposed</p>
               <p className={cn("font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed", rejectedHook ? "line-through text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")}>
@@ -284,7 +262,6 @@ export function WriterReviewView(props: WriterReviewProps) {
         </section>
       )}
 
-      {/* Body diff */}
       {props.bodyChanged && (
         <section className="mb-8">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Story text</h2>
@@ -292,43 +269,32 @@ export function WriterReviewView(props: WriterReviewProps) {
             {units.map((u, i) => {
               if (u.kind === "unchanged") {
                 return (
-                  <div key={u.id || i} className="px-1">
+                  <HoverReveal key={u.id || i} id={u.id} commentCount={u.comments.length} hasReply={!!commentFor(u.id ?? "").reply.trim()}>
                     <p className="text-[15px] leading-[1.75] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
-                    {u.id && (
-                      <div className="mt-1.5">
-                        {u.comments.length > 0 && (
-                          <div className="mb-2 flex flex-col gap-2">
-                            {u.comments.map((c) => (
-                              <InlineComment
-                                key={c.id}
-                                comment={c}
-                                state={commentFor(c.id)}
-                                onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
-                                onReplyChange={(v) => setComment(c.id, { reply: v })}
-                              />
-                            ))}
-                          </div>
-                        )}
-                        <WriterNoteBlock
-                          isOpen={openNoteId === u.id}
-                          draft={noteDraft[u.id] ?? ""}
-                          notes={writerNotes[u.id] ?? []}
-                          onToggle={() => toggleNoteComposer(u.id)}
-                          onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))}
-                          onAdd={() => addWriterNote(u.id)}
-                          onRemove={(idx) => removeWriterNote(u.id, idx)}
-                        />
+                    {u.id && u.comments.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        {u.comments.map((c) => (
+                          <InlineComment
+                            key={c.id}
+                            comment={c}
+                            state={commentFor(c.id)}
+                            onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
+                            onReplyChange={(v) => setComment(c.id, { reply: v })}
+                          />
+                        ))}
                       </div>
                     )}
-                  </div>
+                  </HoverReveal>
                 );
               }
 
               const rejected = decisionFor(u.id) === "reject";
+              const edit = writerEdits[u.id];
+              const isEditing = editingPara === u.id;
+              const isEditable = u.kind !== "removed";
 
               return (
                 <div key={u.id || i} className="relative overflow-hidden rounded-xl border border-[rgba(42,26,18,0.1)]">
-                  {/* Kind badge */}
                   <div className="flex items-center justify-between border-b border-[rgba(42,26,18,0.06)] bg-[rgba(42,26,18,0.02)] px-4 py-2">
                     <span className={cn(
                       "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]",
@@ -343,12 +309,6 @@ export function WriterReviewView(props: WriterReviewProps) {
                   </div>
 
                   <div className="p-4">
-                    {/* Changed paragraph, word-level: one flowing paragraph with only
-                        the actually-edited words marked — struck red for what's
-                        being removed, underlined green for what's being added. No
-                        diff library invented the wheel here for nothing: this is
-                        exactly what makes a single-word edit look like a single-word
-                        edit instead of "your whole paragraph got rewritten." */}
                     {u.kind === "changed" && u.spans && (
                       <div className={cn("rounded-lg px-4 py-3", rejected && "bg-[rgba(42,26,18,0.02)]")}>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">
@@ -362,8 +322,6 @@ export function WriterReviewView(props: WriterReviewProps) {
                       </div>
                     )}
 
-                    {/* Changed paragraph, fallback: rare paragraphs too large to
-                        word-diff cheaply — same before/after blocks as before. */}
                     {u.kind === "changed" && !u.spans && (
                       <>
                         <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}>
@@ -376,20 +334,30 @@ export function WriterReviewView(props: WriterReviewProps) {
                           </p>
                           <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
                         </div>
-                      </>
-                    )}
-
-                    {/* Whole new paragraph */}
-                    {u.kind === "added" && u.newHtml && (
-                      <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}>
-                        <p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>
-                          {rejected ? "Dropping this" : "New paragraph"}
-                        </p>
-                        <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml }} />
+                          </>
+                        )}
+                        {u.id && openReplyId === u.id && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={commentFor(u.id).reply}
+                              onChange={(e) => setComment(u.id, { reply: e.target.value })}
+                              placeholder="Reply to your editor…"
+                              autoFocus
+                              className="min-w-0 flex-1 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setOpenReplyId(null)}
+                              className="flex-none rounded-full p-1 text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]"
+                            >
+                              <Check size={14} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Removed-only: show old text with remove option */}
                     {u.kind === "removed" && (
                       <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(42,26,18,0.02)] text-[var(--color-ink)]" : "bg-[rgba(193,58,58,0.05)] text-[var(--color-ink-muted-3)] line-through")}>
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">This will be removed</p>
@@ -397,20 +365,120 @@ export function WriterReviewView(props: WriterReviewProps) {
                       </div>
                     )}
 
-                    {/* Decision toggle */}
-                    <div className="mt-4">
-                      <DiffToggle
-                        accepted={!rejected}
-                        onAccept={() => setDecision(u.id, "accept")}
-                        onReject={() => setDecision(u.id, "reject")}
-                        acceptLabel={u.kind === "removed" ? "Remove this paragraph" : u.kind === "added" ? "Keep this paragraph" : "Use editor's version"}
-                        rejectLabel={u.kind === "removed" ? "Keep this paragraph" : u.kind === "added" ? "Drop this paragraph" : "Keep my original"}
-                      />
+                    {/* Writer's edit — when the writer tweaks the text */}
+                    {edit && !isEditing && (
+                      <div className="mt-3 rounded-lg bg-[rgba(108,59,170,0.08)] px-4 py-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="rounded-full bg-[rgba(108,59,170,0.15)] px-2 py-0.5 text-[10px] font-bold uppercase text-[#6C3BAA]">Your edit</span>
+                        </div>
+                        <p className="text-[14px] leading-[1.7] text-[var(--color-ink)]">{edit}</p>
+                        <button
+                          type="button"
+                          onClick={() => setEditingPara(u.id)}
+                          className="mt-1.5 text-[11px] font-semibold text-[#6C3BAA] hover:underline"
+                        >
+                          Edit again
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Writer edit textarea */}
+                    {isEditing && (
+                      <div className="mt-3 rounded-lg border border-[#6C3BAA]/30 bg-white p-3">
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#6C3BAA]">Tweak this paragraph</p>
+                        <textarea
+                          value={edit ?? (u.newHtml ? stripHtml(u.newHtml) : u.oldHtml ? stripHtml(u.oldHtml) : "")}
+                          onChange={(e) => setWriterEdits((p) => ({ ...p, [u.id]: e.target.value }))}
+                          rows={4}
+                          autoFocus
+                          className="w-full resize-none rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-[14px] leading-[1.7] text-[var(--color-ink)] focus:border-[#6C3BAA] focus:outline-none"
+                        />
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingPara(null);
+                              setWriterEdits((p) => { const next = { ...p }; delete next[u.id]; return next; });
+                            }}
+                            className="rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPara(null)}
+                            disabled={!edit?.trim()}
+                            className="rounded-full bg-[#6C3BAA] px-3 py-1 text-[11px] font-semibold text-white transition-opacity disabled:opacity-40"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Toolbar: accept/reject + tweak/comment */}
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <div className="flex flex-1 gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => setDecision(u.id, "accept")}
+                          className={cn(
+                            "min-w-0 flex-1 rounded-lg py-2.5 text-[12px] sm:text-[13px] font-semibold transition-all",
+                            !rejected
+                              ? "bg-[#1F8A5B] text-white shadow-[0_1px_3px_rgba(31,138,91,0.25)]"
+                              : "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B]",
+                          )}
+                        >
+                          {!rejected && <Check size={14} className="mr-1 hidden sm:inline-block align-middle" />}
+                          {u.kind === "removed" ? "Remove" : u.kind === "added" ? "Keep" : "Accept"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDecision(u.id, "reject")}
+                          className={cn(
+                            "min-w-0 flex-1 rounded-lg py-2.5 text-[12px] sm:text-[13px] font-semibold transition-all",
+                            rejected
+                              ? "bg-[#6C3BAA] text-white shadow-[0_1px_3px_rgba(108,59,170,0.25)]"
+                              : "bg-[rgba(108,59,170,0.08)] text-[#6C3BAA]",
+                          )}
+                        >
+                          {u.kind === "removed" ? "Keep" : u.kind === "added" ? "Drop" : "Keep mine"}
+                        </button>
+                      </div>
+                      <div className="flex gap-1 flex-none">
+                        {isEditable && !isEditing && u.id && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingPara(u.id)}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(42,26,18,0.12)] text-[var(--color-ink-muted-2)] active:bg-[rgba(108,59,170,0.08)] active:text-[#6C3BAA] active:border-[#6C3BAA]/40 transition-colors"
+                            title="Tweak this paragraph"
+                            aria-label="Tweak this paragraph"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        )}
+                        {u.id && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenReplyId(openReplyId === u.id ? null : (u.id ?? null))}
+                            className={cn(
+                              "flex h-9 w-9 items-center justify-center rounded-lg border transition-colors",
+                              openReplyId === u.id || commentFor(u.id).reply.trim()
+                                ? "border-[var(--color-primary)]/30 bg-[rgba(199,93,44,0.06)] text-[var(--color-primary)]"
+                                : "border-[rgba(42,26,18,0.12)] text-[var(--color-ink-muted-2)] active:bg-[rgba(199,93,44,0.06)] active:text-[var(--color-primary)] active:border-[var(--color-primary)]/40",
+                            )}
+                            title="Reply to editor"
+                            aria-label="Reply to editor"
+                          >
+                            <MessageSquare size={15} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Comments — the editor's existing notes, plus the writer's own */}
-                  {u.id && (
+                  {/* Comments section */}
+                  {u.id && (u.comments.length > 0 || commentFor(u.id).reply.trim()) && (
                     <div className="border-t border-[rgba(42,26,18,0.06)] bg-[rgba(199,93,44,0.02)] px-4 py-3">
                       {u.comments.length > 0 && (
                         <div className="mb-2 flex flex-col gap-2">
@@ -425,15 +493,12 @@ export function WriterReviewView(props: WriterReviewProps) {
                           ))}
                         </div>
                       )}
-                      <WriterNoteBlock
-                        isOpen={openNoteId === u.id}
-                        draft={noteDraft[u.id] ?? ""}
-                        notes={writerNotes[u.id] ?? []}
-                        onToggle={() => toggleNoteComposer(u.id)}
-                        onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))}
-                        onAdd={() => addWriterNote(u.id)}
-                        onRemove={(idx) => removeWriterNote(u.id, idx)}
-                      />
+                      {commentFor(u.id).reply.trim() && (
+                        <div className="rounded-lg bg-[rgba(199,93,44,0.06)] px-3 py-2">
+                          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-primary)]">Your reply</p>
+                          <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]">{commentFor(u.id).reply}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -443,7 +508,6 @@ export function WriterReviewView(props: WriterReviewProps) {
         </section>
       )}
 
-      {/* Comments-only message */}
       {!props.bodyChanged && props.comments.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Notes from your editor</h2>
@@ -463,7 +527,6 @@ export function WriterReviewView(props: WriterReviewProps) {
 
       {error && <p className="mb-4 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
 
-      {/* Writer note — only shown when sending back */}
       {goesToEditor && (
         <div className="mb-4">
           <label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">A note to your editor (optional)</label>
@@ -477,7 +540,6 @@ export function WriterReviewView(props: WriterReviewProps) {
         </div>
       )}
 
-      {/* Submit */}
       <div className="sticky bottom-0 -mx-[22px] border-t border-[rgba(42,26,18,0.08)] bg-[var(--color-bg)] px-[22px] py-4">
         <button
           type="button"
@@ -498,7 +560,7 @@ export function WriterReviewView(props: WriterReviewProps) {
         </button>
         {goesToEditor ? (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
-            You kept some of your own wording, replied, or left a note, so this goes back to your editor for review.
+            You kept some of your own wording, replied, or made edits — this goes back to your editor for review.
           </p>
         ) : (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
@@ -513,7 +575,51 @@ export function WriterReviewView(props: WriterReviewProps) {
 }
 
 // ---------------------------------------------------------------------------
-// DiffToggle — prominent binary accept/reject control
+// Comment composer toggle — used inline for changed paragraphs
+// ---------------------------------------------------------------------------
+function toggleCommentComposer(paraId: string, currentReply: string, setReply: (v: string) => void) {
+  // Simple inline reply toggle — clicking the message icon opens a reply input.
+  // We use a state variable on the parent to track the "open" paragraph.
+  // Since this is called from inside the map, we just rely on the reply state
+  // itself to show/hide the reply area — if reply is empty, clicking the icon
+  // shows a quick inline input; if there's already text, it just shows.
+}
+
+// ---------------------------------------------------------------------------
+// HoverReveal — shows a subtle "+" icon on hover for commenting on unchanged
+// paragraphs. The icon only appears when the paragraph has a valid ID.
+// ---------------------------------------------------------------------------
+function HoverReveal({ id, children, commentCount, hasReply }: {
+  id: string | null | undefined;
+  children: React.ReactNode;
+  commentCount: number;
+  hasReply: boolean;
+}) {
+  return (
+    <div className="relative px-1">
+      {children}
+      {id && (commentCount > 0 || hasReply) && (
+        <span className="absolute -right-1 top-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(199,93,44,0.15)] text-[10px] font-bold text-[var(--color-primary)]">
+            {commentCount || "✓"}
+          </span>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// stripHtml — quick helper for the writer edit textarea. Not production-grade
+// but adequate for converting the editor's proposed paragraph to plain text
+// that the writer can then tweak.
+// ---------------------------------------------------------------------------
+function stripHtml(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&apos;/g, "'").replace(/&quot;/g, "\"");
+}
+
+// ---------------------------------------------------------------------------
+// DiffToggle
 // ---------------------------------------------------------------------------
 function DiffToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: {
   accepted: boolean;
@@ -528,10 +634,10 @@ function DiffToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: 
         type="button"
         onClick={onAccept}
         className={cn(
-          "flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all",
+          "flex-1 rounded-lg py-3 text-[13px] font-semibold transition-all active:scale-[0.98]",
           accepted
             ? "bg-[#1F8A5B] text-white shadow-[0_1px_3px_rgba(31,138,91,0.25)]"
-            : "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B] hover:bg-[rgba(31,138,91,0.14)]",
+            : "bg-[rgba(31,138,91,0.08)] text-[#1F8A5B] active:bg-[rgba(31,138,91,0.14)]",
         )}
       >
         {accepted && <Check size={14} className="mr-1.5 inline-block align-middle" />}
@@ -541,10 +647,10 @@ function DiffToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: 
         type="button"
         onClick={onReject}
         className={cn(
-          "flex-1 rounded-lg py-2.5 text-[13px] font-semibold transition-all",
+          "flex-1 rounded-lg py-3 text-[13px] font-semibold transition-all active:scale-[0.98]",
           !accepted
             ? "bg-[#6C3BAA] text-white shadow-[0_1px_3px_rgba(108,59,170,0.25)]"
-            : "bg-[rgba(108,59,170,0.08)] text-[#6C3BAA] hover:bg-[rgba(108,59,170,0.14)]",
+            : "bg-[rgba(108,59,170,0.08)] text-[#6C3BAA] active:bg-[rgba(108,59,170,0.14)]",
         )}
       >
         {rejectLabel}
@@ -554,7 +660,7 @@ function DiffToggle({ accepted, onAccept, onReject, acceptLabel, rejectLabel }: 
 }
 
 // ---------------------------------------------------------------------------
-// InlineComment — editor note with reply and resolve toggle
+// InlineComment
 // ---------------------------------------------------------------------------
 function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
   comment: EditorialComment;
@@ -608,68 +714,6 @@ function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
           />
         )}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// WriterNoteBlock — lets the writer add their own note on any paragraph,
-// not just reply to one an editor already flagged. Notes are staged locally
-// and only actually created when the review is submitted.
-// ---------------------------------------------------------------------------
-function WriterNoteBlock({ isOpen, draft, notes, onToggle, onDraftChange, onAdd, onRemove }: {
-  isOpen: boolean;
-  draft: string;
-  notes: string[];
-  onToggle: () => void;
-  onDraftChange: (v: string) => void;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
-}) {
-  return (
-    <div className={notes.length > 0 || isOpen ? "mt-2" : undefined}>
-      {notes.length > 0 && (
-        <ul className="mb-2 flex flex-col gap-1.5">
-          {notes.map((n, i) => (
-            <li key={i} className="flex items-start gap-2 rounded-lg bg-[rgba(199,93,44,0.07)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)]">
-              <MessageSquare size={12} className="mt-0.5 flex-none text-[var(--color-primary)]" />
-              <span className="min-w-0 flex-1 whitespace-pre-wrap">{n}</span>
-              <button type="button" onClick={() => onRemove(i)} className="flex-none text-[var(--color-ink-muted-3)] hover:text-[#A13A3A]" aria-label="Remove note">
-                <X size={12} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {isOpen ? (
-        <div className="flex flex-col gap-2">
-          <textarea
-            value={draft}
-            onChange={(e) => onDraftChange(e.target.value)}
-            rows={2}
-            autoFocus
-            placeholder="Tell your editor what you think…"
-            className="w-full resize-none rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
-          />
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onToggle} className="rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]">
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onAdd}
-              disabled={!draft.trim()}
-              className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-white transition-opacity disabled:opacity-40"
-            >
-              Add note
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button type="button" onClick={onToggle} className="flex items-center gap-1 text-[11.5px] font-semibold text-[var(--color-primary)] hover:underline">
-          <MessageSquare size={12} /> {notes.length > 0 ? "Add another note" : "Add a note for your editor"}
-        </button>
-      )}
     </div>
   );
 }
