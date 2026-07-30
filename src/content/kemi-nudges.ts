@@ -32,30 +32,30 @@ export type KemiNudgeKind =
  *  reader is still inside the world of what they just read. */
 const STORY_COMPLETED_LINES = [
   // warm
-  "So — how'd {title} land? Want more in that vein, or a total change of pace?",
-  "You finished {title}. Tell me honestly: more like that, or something completely different?",
+  "How was {title}? I want the honest reaction, not the polite one.",
+  "You just finished {title}. Tell me what you thought.",
   // book-obsessed
-  "{title}. God, that one. Did it get you too, or am I alone in this?",
-  "You just closed out {title} and I need to know what you thought. I have opinions and nowhere to put them.",
+  "{title}. That one got me a little. Did it get you too?",
+  "You closed out {title} and I need your thoughts immediately.",
   // cheeky
-  "{title}, done. What's the verdict — chase that same feeling, or shake it off with something new?",
-  "Well? {title}. Don't leave me hanging. Did it land?",
+  "{title}, done. And? Don't make me guess.",
+  "So. {title}. Was I right or was I right?",
   // flirty
-  "You and {title}, then. How was it? I'm told I have excellent taste, but you're the judge.",
+  "You and {title} just had a whole moment, huh. How was it?",
   // gentle
-  "You finished {title}. No rush — but when you're ready, I'd love to know how it sat with you.",
+  "You finished {title}. Whenever you feel like talking about it, I'm here.",
   // energetic
-  "That's {title} finished! Want its cousin, or something with a completely different temperature?",
+  "{title}, done! Want something in the same vein, or a total curveball next?",
 ];
 
 /** The very first story someone ever finishes on Kekere. Worth marking
  *  properly — this only ever happens once per reader. */
 const FIRST_STORY_FINISHED_LINES = [
-  "That's your first one finished. {title}. I know it's only the beginning but let me have this moment.",
-  "First story down — {title}. Welcome in, properly. What did you make of it?",
-  "You just finished your first Kekere story. {title}. How do you feel? Be honest.",
-  "{title} — your first. There's a specific kind of joy in handing someone their first one. Want another?",
-  "One down. {title}. I'd like to make a habit of this, if you'll let me.",
+  "That's your first one finished, {title}. Let me have this moment.",
+  "First story down. {title}. How do you feel?",
+  "You just finished your first Kekere story, {title}. What'd you think, honestly?",
+  "{title} — your first here. There's something nice about handing someone their first one. Want another?",
+  "One down, {title}. I could get used to this.",
 ];
 
 /** Fires when a writer starts a fresh draft. Encouragement, not applause —
@@ -63,28 +63,28 @@ const FIRST_STORY_FINISHED_LINES = [
  *  curious about the work rather than evaluative of it. */
 const DRAFT_STARTED_LINES = [
   // energetic
-  "Ooh, a new one. I saw you started something — what's it about?",
+  "Ooh, new draft. What's it about?",
   // warm
-  "New draft, I see. That's the hardest part done, the starting. How's it going?",
+  "Saw you started something new. How's it going so far?",
   // book-obsessed
-  "You've started something new. I'm nosy about these things: what's the shape of it?",
+  "You've started writing again. I'm nosy — what's it about?",
   // cheeky
-  "A blank page and you went for it anyway. Respect. What are you writing?",
-  "Caught you starting a fresh draft. Tell me nothing, tell me everything — either's fine.",
+  "Blank page, and you just went for it. Respect. What are you working on?",
+  "Caught you starting a new draft. Spill or don't, your call.",
   // gentle
-  "You've begun something. However it's going today, that counts. What's it about?",
+  "You've started something. However it's going today, that counts. What's it about?",
   // flirty
-  "A new draft from you? Now I'm interested. What are you working on?",
+  "A new draft from you? Now I'm curious. Tell me more.",
 ];
 
 /** The writer's story just went live. Genuine celebration — this is the
  *  moment months of work becomes something readers can actually find. */
 const STORY_PUBLISHED_LINES = [
-  "{title} is live. You did that. How does it feel?",
-  "It's out. {title} is on the shelf and readers can find it right now. Congratulations, seriously.",
-  "{title} just went live and I'm going to be insufferable about it. Well done, truly.",
-  "Your story is live. {title}. Take a second with that before you start worrying about the next one.",
-  "{title} is published. Somewhere out there, someone is about to read it for the first time.",
+  "{title} is live. You did that. How's it feel?",
+  "It's out — {title} is on the shelf, readers can find it right now. Congratulations, genuinely.",
+  "{title} just went live and I'm going to be insufferable about it. Well done.",
+  "Your story's live. {title}. Sit with that for a second before you start worrying about the next one.",
+  "{title} is published. Someone out there's about to read it for the first time.",
 ];
 
 /** Their streak lapses at midnight and they haven't read today. The tone that
@@ -95,20 +95,20 @@ const STORY_PUBLISHED_LINES = [
  *  someone feel watched it stops being one. {title} is the pick. */
 const STREAK_SAVE_LINES = [
   // warm
-  "Your streak's still alive but only just — today's not on the board yet. Here's a short one if you want it: {title}.",
-  "You haven't read today and the day's getting on. {title} is a quick one, if you fancy keeping the run going.",
+  "Your streak's still alive, barely — nothing read today yet. {title}'s short, if you want it.",
+  "You haven't read today and it's getting late. {title}'s quick, if you want to keep the run going.",
   // cheeky
-  "Streak's hanging by a thread. I'm not judging. I am, however, handing you {title}, which is short.",
-  "Not to be that friend, but: nothing read today. {title} would sort that out in one sitting.",
+  "Streak's hanging by a thread. Not judging. Just handing you {title}, which is short.",
+  "You haven't read anything today. {title} would fix that in one sitting.",
   // gentle
-  "No pressure at all — but if you'd like to keep the streak, {title} is a small, easy one.",
-  "There's still time today if you want it. {title} won't ask much of you.",
+  "No pressure — but if you want to keep the streak, {title}'s small and easy.",
+  "Still time today if you want it. {title} won't ask much of you.",
   // book-obsessed
-  "Quick one before the day turns over: {title}. Short, and I think it'll get you.",
+  "Quick one before the day's out: {title}. Short, and I think it'll get you.",
   // energetic
-  "Still time to get today on the board — {title} is the fast way to do it.",
+  "Still time to get today on the board. {title}'s the fast way.",
   // flirty
-  "You've not read a thing today and I noticed, which says more about me than you. {title}? It's short.",
+  "You haven't read a thing today, and I noticed. {title}? It's short.",
 ];
 
 /** Someone they follow just published. The reader opted into hearing about
@@ -116,18 +116,18 @@ const STREAK_SAVE_LINES = [
  *  reason the message is interesting. {writer} and {title}. */
 const FOLLOWED_WRITER_PUBLISHED_LINES = [
   // energetic
-  "{writer} just published something new — {title}. You follow them, so I thought you'd want to know first.",
+  "{writer} just published {title}. You follow them, thought you'd want to know first.",
   // warm
   "New one from {writer}: {title}. Straight to you, since you follow them.",
   // book-obsessed
-  "{writer} has a new story up. {title}. I've been waiting for this one.",
-  "Something new from {writer} — {title}. You already know whether you want it.",
+  "{writer} has a new story up, {title}. I've been waiting for this one.",
+  "Something new from {writer}: {title}. You already know if you want it.",
   // cheeky
   "{writer} went and published again. {title}. I'll leave it right here.",
   // gentle
-  "{writer} has published {title}. No rush — it'll keep.",
+  "{writer} published {title}. No rush, it'll keep.",
   // flirty
-  "{writer} has something new out and I came straight to you with it. {title}.",
+  "{writer} has something new out, and I came straight to you with it: {title}.",
 ];
 
 const POOLS: Record<KemiNudgeKind, string[]> = {

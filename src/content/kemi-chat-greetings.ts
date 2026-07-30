@@ -84,24 +84,20 @@ export function pickRandomKemiGreeting(
  * This is the largest pool because it's her most natural register.
  */
 const WARM_WELCOMING: readonly string[] = [
-  "Hey, I'm Kemi 👋 Tell me what you're in the mood for and I'll find you something perfect.",
-  "Hi {name}! I'm Kemi — your reading companion. What kind of story would make today better?",
-  "Hello, you. I'm Kemi. Describe a mood, any mood, and I'll match you to a story you'll love.",
+  "Hey, I'm Kemi. Tell me what you're in the mood for and I'll find you something good.",
+  "Hi {name}, I'm Kemi — your reading companion. What would make today better?",
+  "Hey. I'm Kemi. Give me a mood, any mood, and I'll match you to a story.",
   "Hey {name}, it's Kemi. I've been thinking about what you might like. What are you in the mood for?",
-  "Hi! I'm Kemi. I'm here to find you stories you'll devour. What kind of day are you having?",
-  "Welcome back, {name}. Kemi here. Tell me what kind of story you want — or just say surprise me.",
-  "Hey {name}, I'm Kemi. So good to see you. What are we reading today?",
-  "Hi there 👋 Kemi here. Whatever kind of day it's been, I've got a story for it. What mood?",
-  "{name}! It's Kemi. Come in, get comfortable. Tell me what you're in the mood for.",
-  "Hey, I'm Kemi. Some people are good at cooking, some at directions — I'm really, really good at finding stories. Mood?",
-  "Hi {name}, I'm Kemi. You look like someone who needs a good story right about now. Am I right?",
-  "Hello, I'm Kemi 👋 I know these stories inside and out. Tell me a mood and I'll find the one.",
-  "Hey {name}. Kemi here. Pull up a chair, tell me what kind of story you want today.",
-  "Hi! I'm Kemi. Finding people their next favourite story is literally my favourite thing. What are you in the mood for?",
-  "{name}, hi. It's Kemi. I was hoping you'd stop by. What kind of story are you feeling?",
-  "Welcome, welcome 👋 I'm Kemi, your personal story curator. Mood, please?",
-  "Hey {name}, I'm Kemi. You bring the mood, I'll bring the story. That's the deal. What are you feeling?",
-  "Hi, I'm Kemi. I've got one job and I love it: matching people to stories they can't put down. Mood?",
+  "Hi, I'm Kemi. I find people stories they can't put down. What kind of day are you having?",
+  "Welcome back, {name}. Kemi here. What are we reading today?",
+  "Hey {name}, I'm Kemi. Good to see you. What are we reading?",
+  "Hi there, Kemi here. Whatever kind of day it's been, I've probably got a story for it. Mood?",
+  "{name}! It's Kemi. Come in, get comfortable. What are you in the mood for?",
+  "Hey, I'm Kemi. Some people are good with directions. I'm good at finding stories. What's the mood?",
+  "Hi {name}, I'm Kemi. You look like you need a good story. Am I right?",
+  "Hello, I'm Kemi. I know this catalogue inside out. Give me a mood and I'll find the one.",
+  "Hey {name}. Kemi here. What kind of story do you want today?",
+  "Hi, I'm Kemi. Finding people their next favourite story is genuinely my favourite thing. What are you feeling?",
 ];
 
 /**
@@ -110,19 +106,16 @@ const WARM_WELCOMING: readonly string[] = [
  * crossing any lines. Always warm, never aggressive.
  */
 const CHARMING_FLIRTY: readonly string[] = [
-  "Well, hello there 👋 I'm Kemi. You're in luck — I've been told I have excellent taste. What are you in the mood for?",
-  "Hi {name}. It's Kemi. I was just thinking about what you might enjoy… What are you feeling today?",
-  "Hello, you. Kemi here. I'm a little bit psychic and a lot obsessed with finding the right story for the right person. Try me.",
+  "Hey, I'm Kemi. Apparently I have excellent taste. What are you in the mood for?",
+  "Hi {name}. It's Kemi. I was just thinking about what you might like. What are you feeling today?",
+  "Hey, Kemi here. I'm a little bit obsessed with finding the right story for the right person. Try me.",
   "Hey {name}, I'm Kemi. Don't tell the others, but you're my favourite person to recommend to. What mood?",
-  "Hi, I'm Kemi 👋 Charming, clever, and dangerously good at picking stories. What kind of story would make your day?",
-  "{name}! Kemi here. Looking for a story? I'm looking for an excuse to impress you. Win-win. What mood?",
-  "Hey {name}, it's Kemi. I don't mean to brag — actually, I absolutely do — but my recommendation record is spotless. Try me.",
-  "Hello, I'm Kemi. Some people flirt with words. I flirt with book recommendations. What are you in the mood for, {name}?",
-  "Hi {name} 👋 Kemi here. I've been looking forward to this. What kind of story can I find for my favourite reader?",
-  "Hello hello, Kemi at your service. I match people to stories — and I'm *very* good at it. What's the mood today?",
-  "{name}, hi. It's Kemi. I've got a feeling today's going to be a good reading day. What are you in the mood for?",
-  "Oh, you rang? It's Kemi 👋 Let's find you a story so good you forget what time it is. What mood are we chasing?",
-  "Hey {name}, I'm Kemi. You know what I love? That moment when someone reads a story I picked and it's *exactly* right. Let's do that. Mood?",
+  "Hi, I'm Kemi. Charming, and dangerously good at picking stories. What would make your day?",
+  "{name}! Kemi here. I'm looking for an excuse to impress you. What mood?",
+  "Hey {name}, it's Kemi. My recommendation record's pretty spotless. Try me.",
+  "Hi {name}, Kemi here. I've been looking forward to this. What can I find for you?",
+  "Hey, Kemi at your service. I'm good at matching people to stories. What's the mood today?",
+  "{name}, hi. It's Kemi. Feeling like today's a good reading day. What are you in the mood for?",
 ];
 
 /**
@@ -131,16 +124,14 @@ const CHARMING_FLIRTY: readonly string[] = [
  * in the catalogue, talks about stories like they're people she knows.
  */
 const BOOK_OBSESSED: readonly string[] = [
-  "Hi! I'm Kemi 👋 I've read everything in this catalogue — metaphorically speaking — and I have strong opinions. What mood?",
-  "Hey {name}, I'm Kemi. There's this story I've been dying to recommend to someone. Tell me what you're in the mood for first.",
-  "Kemi here. The short story format is *criminally* underrated — two minutes, a whole world, and a feeling that stays all day. What mood?",
-  "Hi {name}, I'm Kemi. I get genuinely excited about matching people to stories. Like, embarrassingly excited. What are you feeling?",
-  "Hello! Kemi here. I've got tragedy, comedy, horror, romance — all in beautiful bite-sized parcels. What's the craving today?",
-  "Hey {name}, it's Kemi. These stories are short but they hit SO hard. Some will wreck you, some will heal you. Which are we after?",
-  "Hi, I'm Kemi. A good short story is my favourite thing in the world — it's like a stranger saying something that stays with you forever. What mood?",
-  "Kemi here 👋 The best part of my day? Finding the exact right story for someone. Tell me what you want to feel, {name}.",
-  "Hey {name}, I'm Kemi. Small stories, enormous worlds. That's what we do here, and I'm obsessed. What kind of world today?",
-  "Hi! Kemi here. I just read something incredible and I need someone to share it with. Tell me your mood first — let me see if it fits.",
+  "Hi, I'm Kemi. I've basically read everything in this catalogue and I have opinions. What mood?",
+  "Hey {name}, I'm Kemi. There's a story I've been dying to recommend. What are you in the mood for first?",
+  "Kemi here. Short stories are underrated — two minutes, a whole world. What mood?",
+  "Hi {name}, I'm Kemi. I get genuinely excited matching people to stories. What are you feeling?",
+  "Hello, Kemi here. Tragedy, comedy, horror, romance — all bite-sized. What's the craving today?",
+  "Hey {name}, it's Kemi. These stories are short but they hit hard. Some will wreck you, some will heal you. Which are we after?",
+  "Hi, I'm Kemi. A good short story is my favourite thing in the world. What mood?",
+  "Hey {name}, I'm Kemi. Small stories, big worlds. That's the whole thing here. What kind of world today?",
 ];
 
 /**
@@ -149,16 +140,14 @@ const BOOK_OBSESSED: readonly string[] = [
  * Charming, not cutting. She's the friend who makes you laugh.
  */
 const CHEEKY_PLAYFUL: readonly string[] = [
-  "Kemi here 👋 I'd ask what you're in the mood for, but honestly — surprise ME first. Then I'll surprise you back.",
-  "Hi {name}, I'm Kemi. Warning: I have very strong opinions about what you should read, and I'm usually right. Mood?",
-  "Hey {name}! It's Kemi. Let's play a game: you tell me a mood, I find you a story. Loser… well, there's no loser. It's reading. Everyone wins. Mood?",
-  "Kemi here. Pop quiz, {name}: sad, spooky, sweet, or surprise me? You've got three seconds. Go.",
-  "Hi, I'm Kemi 👋 Look, I'm not saying I'm psychic. But I *am* saying I haven't missed yet. What's the mood?",
-  "Hey {name}, Kemi here. Be warned — I take story recommendations personally. If you don't love what I pick, I WILL try again. Mood?",
-  "Hello! It's Kemi. I was just thinking about you. (Okay, I think about all my readers. But right now? You specifically.) What mood?",
-  "Kemi here. Fair warning — I'm about to find your next obsession. The kind of story you'll think about in the shower. What mood?",
-  "Hey {name}, I'm Kemi. I've got stories for days and the confidence of someone who's never had a bad recommendation. Prove me wrong. Mood?",
-  "Hi {name}, it's Kemi. Let's skip the small talk. Dark and twisty, or light and lovely — which camp are you in today?",
+  "Kemi here. Surprise me first, then I'll surprise you back.",
+  "Hi {name}, I'm Kemi. Fair warning: I have strong opinions about what you should read. Mood?",
+  "Hey {name}! It's Kemi. Tell me a mood, I'll find you a story. Everyone wins.",
+  "Kemi here. Sad, spooky, sweet, or surprise me, {name}?",
+  "Hi, I'm Kemi. I'm not saying I'm psychic. I'm saying I haven't missed yet. What's the mood?",
+  "Hey {name}, Kemi here. I take recommendations personally. If you don't love it, I'll try again. Mood?",
+  "Hello! It's Kemi. I was thinking about you. What mood?",
+  "Hey {name}, I'm Kemi. Dark and twisty, or light and lovely today?",
 ];
 
 /**
@@ -167,16 +156,15 @@ const CHEEKY_PLAYFUL: readonly string[] = [
  * This is Kemi as the friend who notices when you're not okay.
  */
 const CURIOUS_GENTLE: readonly string[] = [
-  "Hi {name}, I'm Kemi. How are you doing today, actually? And what kind of story would make right now better?",
-  "Hey, it's Kemi. Before we dive into stories — how's your day been? No really, I want to know.",
-  "Hello {name}, I'm Kemi. Whatever kind of day it's been, there's a story out there for it. Tell me what you need.",
-  "Hey {name}. Kemi here. No rush, no wrong answer. Just tell me how you're feeling and I'll find the right story.",
-  "Hi, I'm Kemi 👋 I'm curious about you, {name}. Do you usually reach for comfort reads, or do you like to be challenged?",
-  "Hello, reader. Kemi here. Be honest — comfort or chaos? Both are on the menu, no judgment either way.",
-  "Hey {name}, I'm Kemi. Soft question: what's the last story that really got to you? And do you want more of that, or something completely different?",
-  "Hi {name}, it's Kemi. What kind of story does this version of you need right now? The tired version? The curious version? The escape-from-everything version?",
-  "Kemi here. Tell me something — when you read, are you trying to escape, or are you trying to feel seen?",
-  "Hey {name}, I'm Kemi. Take a breath. Now — what kind of story would make today feel a little bit better?",
+  "Hi {name}, I'm Kemi. How are you doing today, actually? And what would make right now better?",
+  "Hey, it's Kemi. Before stories — how's your day been? I actually want to know.",
+  "Hello {name}, I'm Kemi. Whatever kind of day it's been, there's probably a story for it. What do you need?",
+  "Hey {name}. Kemi here. No rush, no wrong answer. Tell me how you're feeling and I'll find something.",
+  "Hi, I'm Kemi. Do you usually reach for comfort reads, or do you like being challenged, {name}?",
+  "Hello, reader. Kemi here. Comfort or chaos? Both are on the menu.",
+  "Hey {name}, I'm Kemi. What's the last story that really got to you? Want more of that, or something different?",
+  "Hi {name}, it's Kemi. What does this version of you need right now?",
+  "Hey {name}, I'm Kemi. Take a breath. What kind of story would make today feel a little better?",
 ];
 
 /**
@@ -185,14 +173,13 @@ const CURIOUS_GENTLE: readonly string[] = [
  * This is her "I found something AMAZING" energy.
  */
 const ENERGETIC_BUBBLY: readonly string[] = [
-  "Hi hi hi! I'm Kemi 👋 I've got SO many good stories for you. Just tell me a mood and watch me work. What are you feeling?",
-  "{name}! Kemi here. I woke up excited about stories today — I don't know, it's just a good story day. What mood?",
-  "Hey {name}! It's Kemi. I'm in a ridiculously good mood and I want to share it — tell me what you want to read and let's GO.",
-  "Kemi here!! Today's catalogue is absolutely stacked and I cannot wait to show you. What kind of story are you in the mood for?",
-  "Hello! I'm Kemi 👋 You caught me at peak book-enthusiasm. I've got recommendations ready, I just need to know: what mood?",
-  "Hi {name}, it's Kemi! Quick — first word that comes to mind. Sad? Spooky? Romantic? Funny? Whatever it is, I've got a story for it.",
-  "Hey {name}! Kemi here. I'm practically vibrating with good story energy today. Tell me what you're in the mood for!",
-  "{name}! Kemi. Guess what — there's a new batch of stories and I've already picked my favourites. Want me to show you? Mood first.",
+  "Hi! I'm Kemi. I've got so many good stories for you. What are you feeling?",
+  "{name}! Kemi here. Today's just a good story day. What mood?",
+  "Hey {name}! It's Kemi. I'm in a great mood and I want to share it. What do you want to read?",
+  "Kemi here! Today's catalogue is stacked. What kind of story are you in the mood for?",
+  "Hi! I'm Kemi. You caught me at peak book-enthusiasm. What mood?",
+  "Hi {name}, it's Kemi! Quick, first word that comes to mind. I've probably got a story for it.",
+  "Hey {name}! Kemi here. I'm buzzing with story energy today. What are you in the mood for?",
 ];
 
 /**
@@ -202,33 +189,32 @@ const ENERGETIC_BUBBLY: readonly string[] = [
  */
 const TIME_OF_DAY: Partial<Record<GreetingTimeOfDay, readonly string[]>> = {
   morning: [
-    "Good morning, {name}! I'm Kemi. Fresh day, fresh story. What are you in the mood for?",
-    "Morning, {name} ☀️ Kemi here. Coffee in one hand, the perfect story in the other. What's the vibe today?",
-    "Good morning! I'm Kemi 👋 The stories are already awake and waiting. What kind of story would start your day right?",
-    "Rise and read, {name}. It's Kemi. Something quick with your breakfast, or something that stays with you all day?",
-    "Morning, reader. Kemi here. A new day, a blank page, and so many stories. Where do you want to start?",
+    "Good morning, {name}! I'm Kemi. What kind of story are you in the mood for?",
+    "Morning, {name}. Kemi here. Coffee in one hand, a good story in the other. What's the vibe today?",
+    "Good morning! I'm Kemi. What would start your day right?",
+    "Morning, {name}. It's Kemi. Something quick, or something that stays with you all day?",
+    "Morning, reader. Kemi here. So many stories, where do you want to start?",
   ],
   evening: [
-    "Evening, {name}. I'm Kemi. The day's winding down — what kind of story would you like to sink into?",
-    "Good evening! Kemi here. Something short and sweet, or do you want a story that lingers into the night?",
-    "Evening, {name}. It's Kemi. Cozy up — tell me a mood and I'll find the perfect story for tonight.",
-    "Good evening, reader. I'm Kemi 👋 Something romantic? Something haunting? Something hilarious? I'm listening.",
-    "The day's done. Now the real question: what are we reading? I'm Kemi — what's the mood tonight?",
+    "Evening, {name}. I'm Kemi. What kind of story would you like to sink into?",
+    "Good evening! Kemi here. Something short, or something that lingers into the night?",
+    "Evening, {name}. It's Kemi. Tell me a mood and I'll find something for tonight.",
+    "Good evening, reader. I'm Kemi. Romantic, haunting, hilarious? I'm listening.",
+    "The day's done. What are we reading? I'm Kemi — what's the mood tonight?",
   ],
 };
 
 const WEEKEND: readonly string[] = [
-  "Happy weekend, {name}! I'm Kemi. No plans, just plot. What kind of story are you in the mood for?",
-  "It's the weekend! Kemi here. The stories cleared their schedule — all they're waiting for is you. What mood?",
-  "Weekend vibes, {name}. I'm Kemi 👋 Slow mornings and good stories. What are you feeling?",
+  "Happy weekend, {name}! I'm Kemi. What kind of story are you in the mood for?",
+  "It's the weekend! Kemi here. What mood?",
+  "Weekend vibes, {name}. I'm Kemi. What are you feeling?",
 ];
 
 const LATE_NIGHT: readonly string[] = [
-  "Still up, {name}? It's Kemi. Perfect time for a story that keeps you turning pages. What are you in the mood for?",
-  "Night owl! I'm Kemi 👋 The best stories come alive when the world is quiet. What kind of story tonight?",
-  "Late night reader. I respect that. Kemi here — what are we reading in the quiet hours?",
-  "Can't sleep? I'm Kemi. Let's find you something worth staying up for. What mood?",
-  "Hey {name}, it's Kemi. Just one more story — famous last words, right? What kind are we after?",
+  "Still up, {name}? It's Kemi. What are you in the mood for?",
+  "Night owl. I'm Kemi. The best stories come alive when it's quiet. What kind of story tonight?",
+  "Late night reader. I respect that. Kemi here — what are we reading?",
+  "Can't sleep? I'm Kemi. Let's find you something worth staying up for.",
 ];
 
 /**
