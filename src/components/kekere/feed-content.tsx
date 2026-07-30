@@ -10,6 +10,7 @@ import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
 import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
+import { ChevronRight } from "lucide-react";
 import {
   buildGreetingPool,
   pickRandomGreeting,
@@ -470,30 +471,51 @@ export function FeedContent({
         <section className="px-5 py-[18px]">
           <Link
             href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`}
-            className="relative block h-[220px] overflow-hidden rounded-[18px]"
-            style={{ background: "radial-gradient(circle at 70% 20%,#E2A565,#C75D2C 45%,#5A2410)" }}
+            className="block overflow-hidden rounded-[20px] bg-white shadow-[0_16px_36px_-18px_rgba(42,26,18,0.4)] ring-1 ring-black/[0.04] transition-transform active:scale-[0.99]"
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(42,26,18,0.9)] to-[rgba(42,26,18,0.1)_60%]" />
-            {featuredStory.isAdult && <MatureBadge className="absolute right-4 top-4" />}
-            <div className="absolute bottom-5 left-5 right-5">
-              <span className="text-[10px] font-semibold tracking-[0.08em] text-[var(--color-sand-accent)]">
-                EDITOR&apos;S PICK
-              </span>
-              <h3 className="mt-2 font-[family-name:var(--font-display)] text-[25px] font-semibold leading-[1.12] text-white">
+            {/* Cover art sits in a fixed-aspect box — the text panel below
+                grows with the content instead of overlaying it, so a long
+                title or hookline never gets clipped or crowds the image. */}
+            <div
+              className="relative aspect-[16/9] w-full overflow-hidden"
+              style={{ background: featuredStory.coverImageUrl ? undefined : thumbnailPattern(featuredStory.id) }}
+            >
+              {featuredStory.coverImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={featuredStory.coverImageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+              {featuredStory.isAdult && <MatureBadge className="absolute right-4 top-4" />}
+            </div>
+            <div className="px-5 py-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--color-primary)]">
+                Editor&apos;s pick
+              </p>
+              <h3 className="mt-[6px] font-[family-name:var(--font-display)] text-[21px] font-semibold leading-[1.22] text-[var(--color-ink)]">
                 {featuredStory.title}
               </h3>
-              <p className="mt-[6px] text-[13.5px] italic text-[rgba(255,255,255,0.85)]">
+              <p className="mt-2 text-[14px] italic leading-[1.5] text-[var(--color-ink-muted)]">
                 {featuredStory.hookLine}
               </p>
-              <div className="mt-[14px] flex items-center gap-3">
-                <span className="rounded-lg bg-[var(--color-sand-accent)] px-[18px] py-[9px] text-[13px] font-semibold text-[#2A1A12]">
-                  ▶ Read
+              <p className="mt-2 text-[12px] font-medium text-[var(--color-ink-muted-2)]">
+                By {featuredStory.authorName}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="inline-flex items-center gap-[6px] rounded-full bg-[var(--color-primary)] px-[18px] py-[10px] text-[13px] font-semibold text-white">
+                  Read now
+                  <ChevronRight size={15} strokeWidth={2.5} aria-hidden="true" />
                 </span>
-                <span className="flex items-center gap-[5px] text-[12.5px] text-[rgba(255,255,255,0.8)]">
-                  <span className="flex items-center gap-[3px]">
+                <span className="flex items-center gap-[5px] text-[12.5px] font-medium text-[var(--color-ink-muted-2)]">
+                  <span className="flex items-center gap-[3px] font-semibold text-[var(--color-primary)]">
                     <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
-                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#E2A565" />
-                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="rgba(42,26,18,0.4)" strokeWidth="1.1" fill="none" />
+                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
                     </svg>
                     {featuredStory.cowrieCost}
                   </span>
