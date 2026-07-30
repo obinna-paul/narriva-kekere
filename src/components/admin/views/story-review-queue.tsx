@@ -27,6 +27,13 @@ interface QueueStory {
   /** Last write to the row. For a CHANGES_PROPOSED story that's when it went
    *  to the writer, which is what "waiting since" is measured from. */
   lastActivityAt: string;
+  /** Whether an admin has opened this exact version already — reset server-side
+   * whenever the story becomes newly actionable again (submitted, resubmitted,
+   * sent back by the writer, contract signed), so it's never stale. */
+  opened: boolean;
+  /** A working copy sits in the To Be Published editor, not yet sent to the writer. */
+  hasEdits: boolean;
+  openCommentCount: number;
 }
 
 interface StoryDetail extends QueueStory {
@@ -653,7 +660,9 @@ export function StoryReviewQueue() {
   const [searchQuery, setSearchQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [tierFilter, setTierFilter] = useState<string>("all");
+  const [wordCountFilter, setWordCountFilter] = useState<"all" | "short" | "medium" | "long">("all");
   const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [unopenedOnly, setUnopenedOnly] = useState(false);
   const [sortOrder, setSortOrder] = useState<"oldest" | "newest">("oldest");
 
   // Admin editing state — reset when a new story is selected. Only relevant
@@ -738,7 +747,9 @@ export function StoryReviewQueue() {
     setSearchQuery("");
     setGenreFilter("all");
     setTierFilter("all");
+    setWordCountFilter("all");
     setFlaggedOnly(false);
+    setUnopenedOnly(false);
     setSortOrder("oldest");
   }, [queueTab]);
 
@@ -911,12 +922,25 @@ export function StoryReviewQueue() {
     }
     if (genreFilter !== "all") list = list.filter((s) => s.genre === genreFilter);
     if (tierFilter !== "all") list = list.filter((s) => s.tier === tierFilter);
+    if (wordCountFilter !== "all") {
+      list = list.filter((s) => {
+        if (wordCountFilter === "short") return s.wordCount < 3000;
+        if (wordCountFilter === "medium") return s.wordCount >= 3000 && s.wordCount < 8000;
+        return s.wordCount >= 8000;
+      });
+    }
     if (flaggedOnly) list = list.filter((s) => s.plagiarismFlagged);
+    if (unopenedOnly) list = list.filter((s) => !s.opened);
     return list;
-  }, [queue, searchQuery, genreFilter, tierFilter, flaggedOnly]);
+  }, [queue, searchQuery, genreFilter, tierFilter, wordCountFilter, flaggedOnly, unopenedOnly]);
 
   const isFiltering =
-    searchQuery.trim() !== "" || genreFilter !== "all" || tierFilter !== "all" || flaggedOnly;
+    searchQuery.trim() !== "" ||
+    genreFilter !== "all" ||
+    tierFilter !== "all" ||
+    wordCountFilter !== "all" ||
+    flaggedOnly ||
+    unopenedOnly;
 
   if (loading) {
     return (
@@ -1018,38 +1042,66 @@ export function StoryReviewQueue() {
                 className="w-full rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-white py-1.5 pl-7 pr-2.5 text-[12px] text-[#1A1C20] placeholder:text-[#B0B6BE] focus:outline-none focus:ring-1 focus:ring-[#C75D2C]/40"
               />
             </div>
+            {/* Genre/tier only mean anything once a story has been accepted
+                and is headed toward publishing — a fresh submission has
+                neither decided yet, so filtering by them in Story Queue was
+                just noise. */}
+            {queueTab === "publishing" && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={genreFilter}
+                  onChange={(e) => setGenreFilter(e.target.value)}
+                  className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
+                >
+                  <option value="all">All genres</option>
+                  {genreOptions.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                <select
+                  value={tierFilter}
+                  onChange={(e) => setTierFilter(e.target.value)}
+                  className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
+                >
+                  <option value="all">All tiers</option>
+                  <option value="STANDARD">Standard</option>
+                  <option value="FEATURED">Featured</option>
+                  <option value="CHAMPION">Champion</option>
+                </select>
+              </div>
+            )}
+            <select
+              value={wordCountFilter}
+              onChange={(e) => setWordCountFilter(e.target.value as typeof wordCountFilter)}
+              className="w-full rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
+            >
+              <option value="all">Any length</option>
+              <option value="short">Short — under 3,000 words</option>
+              <option value="medium">Medium — 3,000–8,000 words</option>
+              <option value="long">Long — 8,000+ words</option>
+            </select>
             <div className="flex items-center gap-1.5">
-              <select
-                value={genreFilter}
-                onChange={(e) => setGenreFilter(e.target.value)}
-                className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
-              >
-                <option value="all">All genres</option>
-                {genreOptions.map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-              <select
-                value={tierFilter}
-                onChange={(e) => setTierFilter(e.target.value)}
-                className="min-w-0 flex-1 rounded-[7px] border border-[rgba(20,22,26,0.12)] bg-white px-1.5 py-1 text-[11px] text-[#1A1C20] focus:outline-none"
-              >
-                <option value="all">All tiers</option>
-                <option value="STANDARD">Standard</option>
-                <option value="FEATURED">Featured</option>
-                <option value="CHAMPION">Champion</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-1.5">
+              {queueTab === "submitted" && (
+                <button
+                  type="button"
+                  onClick={() => setFlaggedOnly((v) => !v)}
+                  className={cn(
+                    "rounded-full px-2 py-1 text-[10px] font-semibold transition-colors",
+                    flaggedOnly ? "bg-[#C0392B] text-white" : "border border-[rgba(20,22,26,0.12)] text-[#646B73] hover:border-[rgba(20,22,26,0.24)]",
+                  )}
+                >
+                  ⚠ Flagged
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setFlaggedOnly((v) => !v)}
+                onClick={() => setUnopenedOnly((v) => !v)}
                 className={cn(
                   "rounded-full px-2 py-1 text-[10px] font-semibold transition-colors",
-                  flaggedOnly ? "bg-[#C0392B] text-white" : "border border-[rgba(20,22,26,0.12)] text-[#646B73] hover:border-[rgba(20,22,26,0.24)]",
+                  unopenedOnly ? "bg-[#1A1C20] text-white" : "border border-[rgba(20,22,26,0.12)] text-[#646B73] hover:border-[rgba(20,22,26,0.24)]",
                 )}
               >
-                ⚠ Flagged
+                ● Unopened
               </button>
               <button
                 type="button"
@@ -1074,7 +1126,7 @@ export function StoryReviewQueue() {
             <p className="mt-1 text-[12px] text-[#9AA0A8]">Try a different search, or clear your filters.</p>
             <button
               type="button"
-              onClick={() => { setSearchQuery(""); setGenreFilter("all"); setTierFilter("all"); setFlaggedOnly(false); }}
+              onClick={() => { setSearchQuery(""); setGenreFilter("all"); setTierFilter("all"); setWordCountFilter("all"); setFlaggedOnly(false); setUnopenedOnly(false); }}
               className="mt-3 rounded-[7px] border border-[rgba(20,22,26,0.15)] px-3 py-1.5 text-[11px] font-semibold text-[#646B73] hover:border-[rgba(20,22,26,0.3)]"
             >
               Clear filters
@@ -1117,16 +1169,46 @@ export function StoryReviewQueue() {
               )}
               <p className={cn("line-clamp-1 text-[13px] font-semibold", selectedId === s.id ? "text-white" : "text-[#1A1C20]")}>{s.title}</p>
               <p className={cn("mt-0.5 text-[11px]", selectedId === s.id ? "text-white/60" : "text-[#8B919A]")}>
-                {s.authorName} · {s.genre}
+                {s.authorName} · {s.genre} · {s.wordCount.toLocaleString()} words
               </p>
-              <div className="mt-2 flex items-center gap-2">
-                <span className={cn(
-                  "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
-                  selectedId === s.id ? "bg-white/15 text-white" : (TIER_COLORS[s.tier] ?? TIER_COLORS.STANDARD)
-                )}>
-                  {s.tier}
-                </span>
-                <span className={cn("text-[10px]", selectedId === s.id ? "text-white/50" : "text-[#9AA0A8]")}>
+              {/* Status at a glance — whether I've already looked at this,
+                  and (To Be Published only) whether there's an edit or note
+                  sitting here not yet sent to the writer. Tier only shows
+                  once it's actually meaningful — post-acceptance. */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {queueTab === "publishing" && (
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+                    selectedId === s.id ? "bg-white/15 text-white" : (TIER_COLORS[s.tier] ?? TIER_COLORS.STANDARD)
+                  )}>
+                    {s.tier}
+                  </span>
+                )}
+                {!s.opened && (
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+                    selectedId === s.id ? "bg-white/15 text-white" : "bg-[rgba(199,93,44,0.14)] text-[#C75D2C]",
+                  )}>
+                    ● Unopened
+                  </span>
+                )}
+                {queueTab === "publishing" && s.status !== secondaryStatus && s.hasEdits && (
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+                    selectedId === s.id ? "bg-white/15 text-white" : "bg-[rgba(183,121,31,0.14)] text-[#B7791F]",
+                  )}>
+                    Editing
+                  </span>
+                )}
+                {queueTab === "publishing" && s.status !== secondaryStatus && s.openCommentCount > 0 && (
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+                    selectedId === s.id ? "bg-white/15 text-white" : "bg-[rgba(31,138,91,0.14)] text-[#1F8A5B]",
+                  )}>
+                    {s.openCommentCount} note{s.openCommentCount === 1 ? "" : "s"}
+                  </span>
+                )}
+                <span className={cn("ml-auto text-[10px]", selectedId === s.id ? "text-white/50" : "text-[#9AA0A8]")}>
                   {/* lastActivityAt, not submittedAt, for a story sitting with
                       the writer — submittedAt is the original submission date
                       and would read as stale, exactly the ambiguity this

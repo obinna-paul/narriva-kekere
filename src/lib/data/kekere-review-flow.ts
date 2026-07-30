@@ -582,6 +582,10 @@ export async function submitWriterReview(
       status: postContract ? "ACCEPTED" : "SUBMITTED",
       editWriterNote: input.note?.trim() || null,
       editSummaryNote: null,
+      // Bounced back to the admin with something to look at — whatever was
+      // "opened" before belonged to a version that no longer exists.
+      lastOpenedByAdminId: null,
+      lastOpenedByAdminAt: null,
       ...(changedFromOriginal
         ? {
             editedBody: merged as unknown as Prisma.InputJsonValue,

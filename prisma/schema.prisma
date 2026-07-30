@@ -509,6 +509,16 @@ model Story {
   moderationNotes   String?
   plagiarismFlagged Boolean @default(false)
   featured          Boolean @default(false)
+  // Set whenever an admin opens this story's detail view (Story Review or
+  // To Be Published) — lets the queue list distinguish "already looked at
+  // this" from "brand new" without opening it. No relation, same convention
+  // as authoredByAdminId — audit-only, not referenced. Compared against
+  // submittedAt/updatedAt by the queue, not cleared on its own: a story that
+  // comes back around (revisions resubmitted, writer sends edits back) gets
+  // a newer activity timestamp than this, so it reads as unopened again
+  // without needing separate reset logic at every status transition.
+  lastOpenedByAdminId String?
+  lastOpenedByAdminAt DateTime?
   // Set by an admin (Story Review or the onboarded-writers/All Stories
   // editors) or suggested by Nari — gates the reader behind an 18+
   // interstitial (see story-reader.tsx) and shows a mature-content badge

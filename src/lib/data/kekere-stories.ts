@@ -475,7 +475,11 @@ export async function submitStory(id: string, authorId: string): Promise<Story> 
 
   const updated = await prisma.story.update({
     where: { id },
-    data: { status: "SUBMITTED", submittedAt: new Date() },
+    // lastOpenedByAdminId/At reset here too — on a resubmission after
+    // REVISIONS_REQUESTED, an admin already opened this story once for the
+    // version they sent back for changes; the queue shouldn't carry that
+    // mark over onto the writer's new revision.
+    data: { status: "SUBMITTED", submittedAt: new Date(), lastOpenedByAdminId: null, lastOpenedByAdminAt: null },
     include: { author: { select: { name: true, email: true } } },
   });
 
