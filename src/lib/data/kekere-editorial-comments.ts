@@ -25,7 +25,8 @@ export class EditorialCommentNotFoundError extends Error {
 export interface EditorialCommentDTO {
   id: string;
   paragraphId: string;
-  authorAdminId: string;
+  authorRole: "EDITOR" | "WRITER";
+  authorAdminId: string | null;
   body: string;
   status: "OPEN" | "RESOLVED";
   writerReply: string | null;
@@ -36,7 +37,8 @@ export interface EditorialCommentDTO {
 function toDTO(c: {
   id: string;
   paragraphId: string;
-  authorAdminId: string;
+  authorRole: "EDITOR" | "WRITER";
+  authorAdminId: string | null;
   body: string;
   status: "OPEN" | "RESOLVED";
   writerReply: string | null;
@@ -46,6 +48,7 @@ function toDTO(c: {
   return {
     id: c.id,
     paragraphId: c.paragraphId,
+    authorRole: c.authorRole,
     authorAdminId: c.authorAdminId,
     body: c.body,
     status: c.status,
@@ -90,11 +93,27 @@ export async function createEditorialComment(input: CreateEditorialCommentInput)
     data: {
       storyId: input.storyId,
       paragraphId: input.paragraphId,
+      authorRole: "EDITOR",
       authorAdminId: input.authorAdminId,
       body: input.body,
     },
   });
   return toDTO(comment);
+}
+
+/** A writer's own comment, added from their review screen — anchored to any
+ * paragraph in the working copy they're reviewing, not just ones an editor
+ * already flagged. Used by submitWriterReview; not its own API route since
+ * it's always created as part of submitting a review, same as decisions and
+ * comment replies. */
+export async function createWriterComment(storyId: string, paragraphId: string, body: string): Promise<void> {
+  const validIds = await reviewParagraphIds(storyId);
+  if (!validIds || !validIds.has(paragraphId)) {
+    throw new EditorialCommentInvalidParagraphError();
+  }
+  await prisma.editorialComment.create({
+    data: { storyId, paragraphId, authorRole: "WRITER", body },
+  });
 }
 
 export async function setEditorialCommentStatus(

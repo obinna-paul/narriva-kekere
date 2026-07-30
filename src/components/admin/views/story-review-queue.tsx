@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ImageIcon, Pencil, Search, ShieldAlert, Sparkles, X } from "lucide-react";
+import { History, ImageIcon, Pencil, Search, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState } from "@/components/admin/admin-skeleton";
 import { TagPicker } from "@/components/admin/TagPicker";
@@ -10,6 +10,7 @@ import { isValidTiptapDoc, docParagraphsToHtml, type TiptapDoc } from "@/lib/tip
 import type { SaveStatus } from "@/lib/tiptap/save-status";
 import { ReviewEditorialComments } from "@/components/admin/views/review-editorial-comments";
 import { KemiStorySummary } from "@/components/admin/views/kemi-story-summary";
+import { TrackedChangesPreview } from "@/components/kekere/tracked-changes-preview";
 
 interface QueueStory {
   id: string;
@@ -658,6 +659,7 @@ export function StoryReviewQueue() {
   // Admin editing state — reset when a new story is selected. Only relevant
   // in the "publishing" (To Be Published) tab — Story Review never edits.
   const [editingContent, setEditingContent] = useState(false);
+  const [showTrackedChanges, setShowTrackedChanges] = useState(false);
   const [draftHookLine, setDraftHookLine] = useState("");
   const [coverImageRef, setCoverImageRef] = useState<string | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -744,6 +746,7 @@ export function StoryReviewQueue() {
     setSelectedId(id);
     setDetailLoading(true);
     setEditingContent(false);
+    setShowTrackedChanges(false);
     setSaveStatus({ kind: "idle" });
     setCommentCount(0);
     try {
@@ -804,6 +807,7 @@ export function StoryReviewQueue() {
       setEditingContent(false);
     } else {
       setEditingContent(true);
+      setShowTrackedChanges(false);
     }
   }
 
@@ -1202,6 +1206,21 @@ export function StoryReviewQueue() {
                       Revert to original
                     </button>
                   )}
+                  {hasEdits && !editingContent && (
+                    <button
+                      type="button"
+                      onClick={() => setShowTrackedChanges((v) => !v)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[11px] font-semibold transition-colors",
+                        showTrackedChanges
+                          ? "bg-[#1A1C20] text-white"
+                          : "border border-[rgba(20,22,26,0.15)] text-[#646B73] hover:border-[rgba(20,22,26,0.3)] hover:text-[#1A1C20]"
+                      )}
+                    >
+                      <History size={11} />
+                      {showTrackedChanges ? "Hide tracked changes" : "Tracked changes"}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={toggleEditing}
@@ -1259,6 +1278,12 @@ export function StoryReviewQueue() {
                 <KemiStorySummary key={selected.id} storyId={selected.id} />
                 <ReadOnlyStoryBody doc={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC} />
               </>
+            ) : showTrackedChanges ? (
+              <TrackedChangesPreview
+                key={selected.id}
+                original={editData?.originalBody ?? EMPTY_DOC}
+                edited={editData?.editedBody ?? editData?.originalBody ?? EMPTY_DOC}
+              />
             ) : editingContent ? (
               <div style={{ "--writer-header-h": ADMIN_TOP_BAR_HEIGHT } as CSSProperties}>
                 <label className="mb-2 block text-[10px] font-semibold uppercase tracking-[0.06em] text-[#9AA0A8]">Story body</label>

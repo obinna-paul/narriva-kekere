@@ -3,13 +3,15 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight } from "lucide-react";
+import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { docParagraphsToHtml, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { docParagraphsToHtml, type TiptapDoc, type TiptapParagraphNode } from "@/lib/tiptap/doc-utils";
+import { diffParagraphWords, type DiffSpan } from "@/lib/tiptap/paragraph-diff";
 
 interface EditorialComment {
   id: string;
   paragraphId: string;
+  authorRole: "EDITOR" | "WRITER";
   body: string;
   status: "OPEN" | "RESOLVED";
 }
@@ -41,14 +43,33 @@ interface Unit {
   kind: ParaKind;
   newHtml?: string;
   oldHtml?: string;
+  /** Word-level tracked-changes spans for a "changed" paragraph — null when
+   * the paragraph was too large to diff cheaply, in which case the caller
+   * falls back to showing the whole paragraph as old-struck/new-highlighted. */
+  spans?: DiffSpan[] | null;
   textAlign?: "left" | "center" | "right";
   comments: EditorialComment[];
+}
+
+function renderSpansToHtml(spans: DiffSpan[]): string {
+  return spans
+    .map((s) => {
+      if (s.kind === "equal") return s.html;
+      if (s.kind === "removed") {
+        return `<span style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${s.html}</span>`;
+      }
+      return `<span style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${s.html}</span>`;
+    })
+    .join("");
 }
 
 export function WriterReviewView(props: WriterReviewProps) {
   const router = useRouter();
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
   const [commentState, setCommentState] = useState<Record<string, CommentState>>({});
+  const [writerNotes, setWriterNotes] = useState<Record<string, string[]>>({});
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
+  const [openNoteId, setOpenNoteId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +79,16 @@ export function WriterReviewView(props: WriterReviewProps) {
   const originalParas = useMemo(() => docParagraphsToHtml(props.originalBody), [props.originalBody]);
   const origHtmlById = useMemo(() => new Map(originalParas.map((p) => [p.id, p.html])), [originalParas]);
   const editedIds = useMemo(() => new Set(editedParas.map((p) => p.id)), [editedParas]);
+  const origNodeById = useMemo(() => {
+    const m = new Map<string, TiptapParagraphNode>();
+    for (const n of props.originalBody.content ?? []) if (n.attrs?.id) m.set(n.attrs.id, n);
+    return m;
+  }, [props.originalBody]);
+  const editedNodeById = useMemo(() => {
+    const m = new Map<string, TiptapParagraphNode>();
+    for (const n of props.editedBody.content ?? []) if (n.attrs?.id) m.set(n.attrs.id, n);
+    return m;
+  }, [props.editedBody]);
   const commentsByPara = useMemo(() => {
     const m: Record<string, EditorialComment[]> = {};
     for (const c of props.comments) (m[c.paragraphId] ??= []).push(c);
@@ -68,7 +99,8 @@ export function WriterReviewView(props: WriterReviewProps) {
     const list: Unit[] = [];
     for (const p of editedParas) {
       const kind: ParaKind = !p.id || !origHtmlById.has(p.id) ? "added" : origHtmlById.get(p.id) !== p.html ? "changed" : "unchanged";
-      list.push({ id: p.id, kind, newHtml: p.html, oldHtml: p.id ? origHtmlById.get(p.id) : undefined, textAlign: p.textAlign, comments: p.id ? commentsByPara[p.id] ?? [] : [] });
+      const spans = kind === "changed" && p.id ? diffParagraphWords(origNodeById.get(p.id), editedNodeById.get(p.id)) : undefined;
+      list.push({ id: p.id, kind, newHtml: p.html, oldHtml: p.id ? origHtmlById.get(p.id) : undefined, spans, textAlign: p.textAlign, comments: p.id ? commentsByPara[p.id] ?? [] : [] });
     }
     originalParas.forEach((p, i) => {
       if (!p.id || editedIds.has(p.id) || !p.html.trim()) return;
@@ -80,7 +112,7 @@ export function WriterReviewView(props: WriterReviewProps) {
       list.splice(insertAt, 0, { id: p.id, kind: "removed", oldHtml: p.html, comments: commentsByPara[p.id] ?? [] });
     });
     return list;
-  }, [editedParas, originalParas, origHtmlById, editedIds, commentsByPara]);
+  }, [editedParas, originalParas, origHtmlById, editedIds, origNodeById, editedNodeById, commentsByPara]);
 
   const changeUnits = units.filter((u) => u.kind !== "unchanged");
 
@@ -90,10 +122,21 @@ export function WriterReviewView(props: WriterReviewProps) {
   const setComment = (id: string, patch: Partial<CommentState>) =>
     setCommentState((prev) => ({ ...prev, [id]: { ...commentFor(id), ...patch } }));
 
+  const toggleNoteComposer = (id: string) => setOpenNoteId((cur) => (cur === id ? null : id));
+  const addWriterNote = (id: string) => {
+    const body = (noteDraft[id] ?? "").trim();
+    if (!body) return;
+    setWriterNotes((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), body] }));
+    setNoteDraft((prev) => ({ ...prev, [id]: "" }));
+  };
+  const removeWriterNote = (id: string, index: number) =>
+    setWriterNotes((prev) => ({ ...prev, [id]: (prev[id] ?? []).filter((_, i) => i !== index) }));
+
   const anyRejected = changeUnits.some((u) => decisionFor(u.id) === "reject");
   const rejectedHook = props.hookLineChanged && (decisions["__hook__"] ?? "accept") === "reject";
   const hasReply = Object.values(commentState).some((c) => c.reply.trim().length > 0);
-  const goesToEditor = anyRejected || rejectedHook || hasReply;
+  const hasNewNotes = Object.values(writerNotes).some((arr) => arr.length > 0);
+  const goesToEditor = anyRejected || rejectedHook || hasReply || hasNewNotes;
 
   const totalChanges = changeUnits.length + (props.hookLineChanged ? 1 : 0);
   const acceptedCount = changeUnits.filter((u) => decisionFor(u.id) === "accept").length + (props.hookLineChanged ? (rejectedHook ? 0 : 1) : 0);
@@ -107,6 +150,10 @@ export function WriterReviewView(props: WriterReviewProps) {
     for (const [id, s] of Object.entries(commentState)) {
       if (s.resolved || s.reply.trim()) commentDecisions[id] = { resolved: s.resolved, reply: s.reply.trim() || undefined };
     }
+    const newComments: { paragraphId: string; body: string }[] = [];
+    for (const [id, notes] of Object.entries(writerNotes)) {
+      for (const body of notes) newComments.push({ paragraphId: id, body });
+    }
     const fullNote = rejectedHook
       ? `${note.trim() ? note.trim() + "\n\n" : ""}I'd like to keep my original hook line: "${props.originalHookLine}"`
       : note.trim();
@@ -115,7 +162,7 @@ export function WriterReviewView(props: WriterReviewProps) {
       const res = await fetch(`/api/kekere/stories/${props.storyId}/submit-review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decisions: paraDecisions, commentDecisions, note: fullNote || undefined }),
+        body: JSON.stringify({ decisions: paraDecisions, commentDecisions, newComments, note: fullNote || undefined }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
@@ -220,7 +267,7 @@ export function WriterReviewView(props: WriterReviewProps) {
             <div className="h-px bg-[rgba(42,26,18,0.08)]" />
             {/* Edited */}
             <div className={cn("px-5 py-4 border-l-[3px]", rejectedHook ? "border-[var(--color-primary)]" : "border-[#1F8A5B]")}>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Editor's proposed</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Editor&apos;s proposed</p>
               <p className={cn("font-[family-name:var(--font-display)] text-[16px] italic leading-relaxed", rejectedHook ? "line-through text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")}>
                 {props.editedHookLine || "—"}
               </p>
@@ -245,7 +292,35 @@ export function WriterReviewView(props: WriterReviewProps) {
             {units.map((u, i) => {
               if (u.kind === "unchanged") {
                 return (
-                  <p key={u.id || i} className="px-1 text-[15px] leading-[1.75] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
+                  <div key={u.id || i} className="px-1">
+                    <p className="text-[15px] leading-[1.75] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
+                    {u.id && (
+                      <div className="mt-1.5">
+                        {u.comments.length > 0 && (
+                          <div className="mb-2 flex flex-col gap-2">
+                            {u.comments.map((c) => (
+                              <InlineComment
+                                key={c.id}
+                                comment={c}
+                                state={commentFor(c.id)}
+                                onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
+                                onReplyChange={(v) => setComment(c.id, { reply: v })}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <WriterNoteBlock
+                          isOpen={openNoteId === u.id}
+                          draft={noteDraft[u.id] ?? ""}
+                          notes={writerNotes[u.id] ?? []}
+                          onToggle={() => toggleNoteComposer(u.id)}
+                          onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))}
+                          onAdd={() => addWriterNote(u.id)}
+                          onRemove={(idx) => removeWriterNote(u.id, idx)}
+                        />
+                      </div>
+                    )}
+                  </div>
                 );
               }
 
@@ -268,19 +343,47 @@ export function WriterReviewView(props: WriterReviewProps) {
                   </div>
 
                   <div className="p-4">
-                    {/* Old text */}
-                    {u.kind !== "added" && u.oldHtml && (
-                      <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}>
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Original</p>
-                        <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml }} />
+                    {/* Changed paragraph, word-level: one flowing paragraph with only
+                        the actually-edited words marked — struck red for what's
+                        being removed, underlined green for what's being added. No
+                        diff library invented the wheel here for nothing: this is
+                        exactly what makes a single-word edit look like a single-word
+                        edit instead of "your whole paragraph got rewritten." */}
+                    {u.kind === "changed" && u.spans && (
+                      <div className={cn("rounded-lg px-4 py-3", rejected && "bg-[rgba(42,26,18,0.02)]")}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">
+                          {rejected ? "Your original (kept)" : "Tracked changes"}
+                        </p>
+                        <p
+                          className="text-[14.5px] leading-[1.7] text-[var(--color-ink)]"
+                          style={{ textAlign: u.textAlign ?? "left" }}
+                          dangerouslySetInnerHTML={{ __html: rejected ? u.oldHtml || "" : renderSpansToHtml(u.spans) }}
+                        />
                       </div>
                     )}
 
-                    {/* New text */}
-                    {u.kind !== "removed" && u.newHtml && (
+                    {/* Changed paragraph, fallback: rare paragraphs too large to
+                        word-diff cheaply — same before/after blocks as before. */}
+                    {u.kind === "changed" && !u.spans && (
+                      <>
+                        <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}>
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Original</p>
+                          <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
+                        </div>
+                        <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}>
+                          <p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>
+                            {rejected ? "Keep mine instead" : "Editor's version"}
+                          </p>
+                          <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Whole new paragraph */}
+                    {u.kind === "added" && u.newHtml && (
                       <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}>
                         <p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>
-                          {rejected ? "Keep mine instead" : "Editor's version"}
+                          {rejected ? "Dropping this" : "New paragraph"}
                         </p>
                         <p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml }} />
                       </div>
@@ -306,18 +409,31 @@ export function WriterReviewView(props: WriterReviewProps) {
                     </div>
                   </div>
 
-                  {/* Inline comments */}
-                  {u.comments.length > 0 && (
+                  {/* Comments — the editor's existing notes, plus the writer's own */}
+                  {u.id && (
                     <div className="border-t border-[rgba(42,26,18,0.06)] bg-[rgba(199,93,44,0.02)] px-4 py-3">
-                      {u.comments.map((c) => (
-                        <InlineComment
-                          key={c.id}
-                          comment={c}
-                          state={commentFor(c.id)}
-                          onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
-                          onReplyChange={(v) => setComment(c.id, { reply: v })}
-                        />
-                      ))}
+                      {u.comments.length > 0 && (
+                        <div className="mb-2 flex flex-col gap-2">
+                          {u.comments.map((c) => (
+                            <InlineComment
+                              key={c.id}
+                              comment={c}
+                              state={commentFor(c.id)}
+                              onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })}
+                              onReplyChange={(v) => setComment(c.id, { reply: v })}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <WriterNoteBlock
+                        isOpen={openNoteId === u.id}
+                        draft={noteDraft[u.id] ?? ""}
+                        notes={writerNotes[u.id] ?? []}
+                        onToggle={() => toggleNoteComposer(u.id)}
+                        onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))}
+                        onAdd={() => addWriterNote(u.id)}
+                        onRemove={(idx) => removeWriterNote(u.id, idx)}
+                      />
                     </div>
                   )}
                 </div>
@@ -382,7 +498,7 @@ export function WriterReviewView(props: WriterReviewProps) {
         </button>
         {goesToEditor ? (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
-            You kept some of your own wording or left a reply, so this goes back to your editor for review.
+            You kept some of your own wording, replied, or left a note, so this goes back to your editor for review.
           </p>
         ) : (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">
@@ -446,6 +562,7 @@ function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
   onToggleResolved: () => void;
   onReplyChange: (v: string) => void;
 }) {
+  const fromWriter = comment.authorRole === "WRITER";
   return (
     <div className={cn(
       "rounded-xl border p-3 transition-colors",
@@ -456,6 +573,9 @@ function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
       <div className="flex items-start gap-2.5">
         <MessageSquare size={14} className={cn("mt-0.5 flex-none", state.resolved ? "text-[#1F8A5B]" : "text-[var(--color-primary)]")} />
         <div className="min-w-0 flex-1">
+          {fromWriter && (
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Your earlier note</p>
+          )}
           <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[var(--color-ink)]">{comment.body}</p>
           {state.reply.trim() && (
             <div className="mt-2 flex items-start gap-1.5 text-[12.5px] text-[var(--color-ink-muted)]">
@@ -478,14 +598,78 @@ function InlineComment({ comment, state, onToggleResolved, onReplyChange }: {
         >
           <Check size={11} /> {state.resolved ? "Resolved" : "Mark resolved"}
         </button>
-        <input
-          type="text"
-          value={state.reply}
-          onChange={(e) => onReplyChange(e.target.value)}
-          placeholder="Reply to your editor…"
-          className="min-w-0 flex-1 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1 text-[12.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
-        />
+        {!fromWriter && (
+          <input
+            type="text"
+            value={state.reply}
+            onChange={(e) => onReplyChange(e.target.value)}
+            placeholder="Reply to your editor…"
+            className="min-w-0 flex-1 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1 text-[12.5px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WriterNoteBlock — lets the writer add their own note on any paragraph,
+// not just reply to one an editor already flagged. Notes are staged locally
+// and only actually created when the review is submitted.
+// ---------------------------------------------------------------------------
+function WriterNoteBlock({ isOpen, draft, notes, onToggle, onDraftChange, onAdd, onRemove }: {
+  isOpen: boolean;
+  draft: string;
+  notes: string[];
+  onToggle: () => void;
+  onDraftChange: (v: string) => void;
+  onAdd: () => void;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <div className={notes.length > 0 || isOpen ? "mt-2" : undefined}>
+      {notes.length > 0 && (
+        <ul className="mb-2 flex flex-col gap-1.5">
+          {notes.map((n, i) => (
+            <li key={i} className="flex items-start gap-2 rounded-lg bg-[rgba(199,93,44,0.07)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)]">
+              <MessageSquare size={12} className="mt-0.5 flex-none text-[var(--color-primary)]" />
+              <span className="min-w-0 flex-1 whitespace-pre-wrap">{n}</span>
+              <button type="button" onClick={() => onRemove(i)} className="flex-none text-[var(--color-ink-muted-3)] hover:text-[#A13A3A]" aria-label="Remove note">
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {isOpen ? (
+        <div className="flex flex-col gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => onDraftChange(e.target.value)}
+            rows={2}
+            autoFocus
+            placeholder="Tell your editor what you think…"
+            className="w-full resize-none rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none"
+          />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onToggle} className="rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--color-ink-muted-2)] hover:text-[var(--color-ink)]">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={!draft.trim()}
+              className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-white transition-opacity disabled:opacity-40"
+            >
+              Add note
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={onToggle} className="flex items-center gap-1 text-[11.5px] font-semibold text-[var(--color-primary)] hover:underline">
+          <MessageSquare size={12} /> {notes.length > 0 ? "Add another note" : "Add a note for your editor"}
+        </button>
+      )}
     </div>
   );
 }

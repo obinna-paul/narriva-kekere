@@ -10,6 +10,10 @@ const schema = z.object({
   commentDecisions: z
     .record(z.string(), z.object({ resolved: z.boolean().optional(), reply: z.string().max(2000).optional() }))
     .default({}),
+  newComments: z
+    .array(z.object({ paragraphId: z.string().min(1), body: z.string().min(1).max(2000) }))
+    .max(50)
+    .default([]),
   note: z.string().max(2000).optional(),
 });
 
