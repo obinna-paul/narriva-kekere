@@ -12,6 +12,7 @@ import {
   hasFreeReadAvailable,
   countPublishedStoriesSince,
   rankStoriesBlended,
+  seededUnitInterval,
 } from "@/lib/data/kekere-stories";
 import { getPersonalizedTagOrder, getSignatureRow, getTopGenre } from "@/lib/data/kekere-taste";
 import { getUserTagPreferences } from "@/lib/data/kekere-preferences";
@@ -174,7 +175,7 @@ export default async function KekereFeedPage() {
   const editorsPickPool = editorsPickTierData.stories.map((s) => toFeedStoryData(s, true));
   const todaySeed = Math.floor(Date.now() / 86400000); // changes once per day
   const featuredStory = editorsPickPool.length > 0
-    ? editorsPickPool[todaySeed % editorsPickPool.length]
+    ? editorsPickPool[Math.floor(seededUnitInterval(String(todaySeed)) * editorsPickPool.length)]
     : null;
 
   const winnerStories: WinnerStory[] = orderedWinners.map((w) => ({

@@ -670,7 +670,7 @@ const FEED_ROTATION_WEIGHTS = {
  *  otherwise-similar stories gets today's spotlight" doesn't always land on
  *  the same one, while staying identical for the same (day, reader, story)
  *  triple across every request. */
-function seededUnitInterval(key: string): number {
+export function seededUnitInterval(key: string): number {
   let hash = 0x811c9dc5;
   for (let i = 0; i < key.length; i++) {
     hash ^= key.charCodeAt(i);
