@@ -129,11 +129,27 @@ export function WriterReviewView(props: WriterReviewProps) {
   const removeWriterNote = (id: string, index: number) =>
     setWriterNotes((prev) => ({ ...prev, [id]: (prev[id] ?? []).filter((_, i) => i !== index) }));
 
-  const saveWriterEdit = (id: string, html: string) => {
+  /** `baselineHtml` is what the paragraph reads as with no writer edit — the
+   * editor's proposed version, or the original for one they deleted. Compared
+   * against so that opening the editor and saving without really changing
+   * anything doesn't register as an edit: that would flip the whole review
+   * into "send back to the editor" and cost a round-trip over nothing. */
+  const saveWriterEdit = (id: string, html: string, baselineHtml: string) => {
+    setEditingParaId(null);
+    if (!id) return;
     const nodes = htmlToInlineNodes(html);
     const text = nodes.map((n) => (n.type === "text" ? n.text : "")).join("").trim();
-    setEditingParaId(null);
+    // Emptying a paragraph is almost certainly a mis-tap, not an intent to
+    // delete — rejecting the change is how text gets removed.
     if (!text) return;
+    // Compare parsed nodes, not raw markup: the browser normalises what it
+    // hands back from a contentEditable, so identical text can come out as a
+    // different HTML string.
+    if (JSON.stringify(nodes) === JSON.stringify(htmlToInlineNodes(baselineHtml))) {
+      // Typed all the way back to the editor's version — that's an undo.
+      revertWriterEdit(id);
+      return;
+    }
     setWriterEdits((prev) => ({ ...prev, [id]: { html, nodes } }));
   };
   const revertWriterEdit = (id: string) =>
@@ -167,7 +183,9 @@ export function WriterReviewView(props: WriterReviewProps) {
       const start = range.commonAncestorContainer;
       const el = start.nodeType === Node.ELEMENT_NODE ? (start as Element) : start.parentElement;
       const host = el?.closest("[data-para-id]") as HTMLElement | null;
-      if (!host || !container.contains(host) || host.isContentEditable) { setAnchor(null); return; }
+      // No id means nothing to anchor a comment or an edit to — both would be
+      // dropped server-side, so don't offer the toolbar at all.
+      if (!host || !host.dataset.paraId || !container.contains(host) || host.isContentEditable) { setAnchor(null); return; }
       const rect = range.getBoundingClientRect();
       const box = container.getBoundingClientRect();
       setAnchor({
@@ -293,7 +311,7 @@ export function WriterReviewView(props: WriterReviewProps) {
                 return (
                   <div key={u.id || i} className="px-1">
                     {editingParaId === u.id ? (
-                      <ParagraphEditor html={edit?.html ?? u.newHtml ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html)} onCancel={() => setEditingParaId(null)} />
+                      <ParagraphEditor html={edit?.html ?? u.newHtml ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, u.newHtml ?? "")} onCancel={() => setEditingParaId(null)} />
                     ) : (
                       <p data-para-id={u.id} className={cn("text-[15px] leading-[1.75] text-[var(--color-ink)]", edit && "rounded-md bg-[rgba(31,138,91,0.07)] px-2 py-1 ring-1 ring-[rgba(31,138,91,0.25)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: edit?.html ?? u.newHtml ?? "" }} />
                     )}
@@ -326,7 +344,7 @@ export function WriterReviewView(props: WriterReviewProps) {
                       </div>
                     )}
                     {editingParaId === u.id && (
-                      <div className="mb-3"><ParagraphEditor html={writerEdit?.html ?? (u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html)} onCancel={() => setEditingParaId(null)} /></div>
+                      <div className="mb-3"><ParagraphEditor html={writerEdit?.html ?? (u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, ((u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""))} onCancel={() => setEditingParaId(null)} /></div>
                     )}
 
                     {!writerEdit && editingParaId !== u.id && u.kind === "changed" && u.spans && (
@@ -427,6 +445,10 @@ function WriterNoteBlock({ isOpen, draft, notes, onClose, onDraftChange, onAdd, 
 
 function ParagraphEditor({ html, textAlign, onSave, onCancel }: { html: string; textAlign?: "left" | "center" | "right"; onSave: (html: string) => void; onCancel: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Seeded once, deliberately: re-running this on every `html` change would
+  // rewrite innerHTML mid-typing and throw the caret back to the end, which is
+  // the classic controlled-contentEditable cursor jump.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { const el = ref.current; if (!el) return; el.innerHTML = html; el.focus(); const range = document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(range); }, []);
   return (
     <div className="rounded-lg bg-[rgba(199,93,44,0.05)] p-3 ring-1 ring-[rgba(199,93,44,0.3)]">

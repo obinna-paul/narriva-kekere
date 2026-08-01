@@ -6,7 +6,7 @@ import { createNotification } from "@/lib/notifications/create";
 import { KEKERE_SUBMISSIONS_FROM, SUPPORT_EMAIL } from "@/lib/constants";
 import { renderContractBody } from "@/lib/contracts/render";
 import { SITE_URL } from "@/content/decisions";
-import { countWords, type TiptapDoc } from "@/lib/tiptap/doc-utils";
+import { countWords, type TiptapDoc, type TiptapInlineNode } from "@/lib/tiptap/doc-utils";
 import { listEditorialComments, createWriterComment, type EditorialCommentDTO } from "@/lib/data/kekere-editorial-comments";
 import { WRITER_EARNINGS_RATE } from "@/content/decisions";
 
@@ -469,7 +469,12 @@ export function mergeReviewedBody(
     const node = origList[i];
     const id = node.attrs!.id as string;
     if (editedIds.has(id)) continue; // not removed
-    if ((decisions[id] ?? "accept") === "accept") continue; // removal accepted → stays gone
+    // Rewriting a paragraph the editor deleted is itself a refusal of the
+    // deletion — the writer wants it, in their words. Without this the
+    // paragraph never re-enters `content`, so the rewrite below has nothing
+    // to attach to and their text is silently dropped on submit.
+    const rewritten = paragraphEdits[id] != null;
+    if (!rewritten && (decisions[id] ?? "accept") === "accept") continue; // removal accepted → stays gone
     fullyAccepted = false;
     // Find the nearest earlier original paragraph that survived into `content`.
     let insertAt = 0;
