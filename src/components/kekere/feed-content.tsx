@@ -10,7 +10,7 @@ import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
 import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
 import {
   buildGreetingPool,
   pickRandomGreeting,
@@ -230,8 +230,33 @@ export function FeedContent({
   const [tagOpen, setTagOpen] = useState(false);
   const [previewStory, setPreviewStory] = useState<MockStory | null>(null);
   const [greeting, setGreeting] = useState(initialGreeting);
+  const [featuredSaved, setFeaturedSaved] = useState(false);
+  const [featuredSaving, setFeaturedSaving] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Editor's Pick has its own explicit "Save for later" button (unlike the
+  // rest of the feed, which only saves through the preview sheet), so it
+  // needs its own optimistic toggle — same pattern as StoryPreviewSheet's.
+  async function toggleFeaturedSave() {
+    if (!featuredStory || featuredSaving) return;
+    setFeaturedSaving(true);
+    try {
+      if (featuredSaved) {
+        await fetch(`/api/kekere/saved/${featuredStory.id}`, { method: "DELETE" });
+        setFeaturedSaved(false);
+      } else {
+        await fetch("/api/kekere/saved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storyId: featuredStory.id }),
+        });
+        setFeaturedSaved(true);
+      }
+    } finally {
+      setFeaturedSaving(false);
+    }
+  }
 
   // The browser's own scroll restoration (returning to this tab after being
   // backgrounded, or a soft "back" navigation) can land the feed mid-scroll,
@@ -468,62 +493,48 @@ export function FeedContent({
 
       {/* 2. Editor's Pick — full cover on top at its native 3:4 (no crop),
           text panel below at full card width so a long title just wraps
-          instead of fighting for space in a cramped side column. The
-          "special" treatment is a corner ribbon across the cover rather
-          than an inverted dark panel — it stays in the same warm, white-card
-          language as the rest of the feed instead of breaking from it. */}
+          instead of fighting for space in a cramped side column. "Editor's
+          pick" is a flat label pinned to the cover itself rather than a
+          diagonal ribbon or an eyebrow line, and the two actions below are
+          square-cornered buttons — a deliberate contrast with the rounded
+          pills used everywhere else in the feed, so this card reads as the
+          one place a reader can act without leaving the feed. */}
       {featuredStory && (
         <section className="px-5 py-[18px]">
-          <Link
-            href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`}
-            className="block overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)] transition-transform active:scale-[0.99]"
-          >
-            <div
-              className="relative aspect-[3/4] w-full overflow-hidden"
-              style={{ background: featuredStory.coverImageUrl ? undefined : thumbnailPattern(featuredStory.id) }}
-            >
-              {featuredStory.coverImageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={featuredStory.coverImageUrl}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover object-center"
-                  loading="lazy"
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
-              {featuredStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
-              {/* Corner ribbon: the one deliberately non-generic flourish on
-                  this card. Confined to the image corner so it never
-                  competes with the title/hookline below, however long they
-                  run. */}
+          <div className="overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)]">
+            <Link href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`} className="block">
               <div
-                aria-hidden="true"
-                className="absolute -left-[38px] top-[20px] w-[150px] -rotate-45 bg-gradient-to-r from-[#C75D2C] to-[#E2895A] py-[6px] text-center shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
+                className="relative aspect-[3/4] w-full overflow-hidden"
+                style={{ background: featuredStory.coverImageUrl ? undefined : thumbnailPattern(featuredStory.id) }}
               >
-                <span className="flex items-center justify-center gap-[5px] text-[10px] font-bold uppercase tracking-[0.1em] text-white">
-                  <Sparkles size={10} strokeWidth={2.5} aria-hidden="true" /> Editor&apos;s pick
+                {featuredStory.coverImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={featuredStory.coverImageUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover object-center"
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
+                {featuredStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
+                <span className="absolute left-0 top-4 bg-[var(--color-primary)] px-3 py-[7px] text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                  Editor&apos;s pick
                 </span>
               </div>
-            </div>
 
-            <div className="px-5 py-5">
-              <h3 className="font-[family-name:var(--font-display)] text-[20px] font-semibold leading-[1.25] text-[var(--color-ink)]">
-                {featuredStory.title}
-              </h3>
-              <p className="mt-2 line-clamp-3 text-[14px] italic leading-[1.5] text-[var(--color-ink-muted)]">
-                {featuredStory.hookLine}
-              </p>
-              <p className="mt-2 text-[12px] font-medium text-[var(--color-ink-muted-2)]">
-                By {featuredStory.authorName}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="inline-flex items-center gap-[6px] rounded-full bg-[var(--color-primary)] px-[18px] py-[10px] text-[13px] font-semibold text-white">
-                  Read now
-                  <ChevronRight size={15} strokeWidth={2.5} aria-hidden="true" />
-                </span>
-                <span className="flex items-center gap-[5px] text-[12.5px] font-medium text-[var(--color-ink-muted-2)]">
+              <div className="px-5 pt-5">
+                <h3 className="font-[family-name:var(--font-display)] text-[20px] font-semibold leading-[1.25] text-[var(--color-ink)]">
+                  {featuredStory.title}
+                </h3>
+                <p className="mt-2 line-clamp-3 text-[14px] italic leading-[1.5] text-[var(--color-ink-muted)]">
+                  {featuredStory.hookLine}
+                </p>
+                <p className="mt-2 text-[12px] font-medium text-[var(--color-ink-muted-2)]">
+                  By {featuredStory.authorName}
+                </p>
+                <p className="mt-3 flex items-center gap-[5px] text-[12.5px] font-medium text-[var(--color-ink-muted-2)]">
                   <span className="flex items-center gap-[3px] font-semibold text-[var(--color-primary)]">
                     <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
                       <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
@@ -535,10 +546,33 @@ export function FeedContent({
                   {featuredStory.completionRate > 0 && (
                     <>{" · "}{Math.round(featuredStory.completionRate)}% finish</>
                   )}
-                </span>
+                </p>
               </div>
+            </Link>
+
+            <div className="flex gap-[10px] px-5 pb-5 pt-4">
+              <button
+                type="button"
+                onClick={toggleFeaturedSave}
+                disabled={featuredSaving}
+                className="flex flex-1 items-center justify-center gap-[6px] border-2 border-[rgba(42,26,18,0.15)] bg-transparent py-[12px] text-[13.5px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[rgba(42,26,18,0.3)] disabled:opacity-60"
+              >
+                {featuredSaved ? (
+                  <BookmarkCheck size={15} className="text-[var(--color-primary)]" />
+                ) : (
+                  <Bookmark size={15} />
+                )}
+                {featuredSaved ? "Saved" : "Save for later"}
+              </button>
+              <Link
+                href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`}
+                className="flex flex-1 items-center justify-center gap-[6px] bg-[var(--color-primary)] py-[12px] text-[13.5px] font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Read now
+                <ChevronRight size={15} strokeWidth={2.5} aria-hidden="true" />
+              </Link>
             </div>
-          </Link>
+          </div>
         </section>
       )}
 
