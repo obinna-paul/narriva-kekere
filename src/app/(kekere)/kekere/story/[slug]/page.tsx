@@ -89,9 +89,7 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
     // they get there — same reasoning as noteEligibility above.
     getNextStoryRecommendation(dbStory.id, userId ?? null),
   ]);
-  const nextStory = nextStoryPick
-    ? { ...toFeedStoryData(nextStoryPick.story), nextReadReason: nextStoryPick.reason }
-    : null;
+  const nextStory = nextStoryPick ? toFeedStoryData(nextStoryPick.story) : null;
 
   const canonicalPath = `/kekere/story/${dbStory.slug ?? dbStory.id}`;
 
