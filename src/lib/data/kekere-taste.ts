@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { categoryForTag, resolveCategoryBySlug, TAG_BY_SLUG } from "@/content/story-tags";
-import { rankStoryIdsByRecentPopularity } from "@/lib/data/kekere-stories";
+import { rankStoryIdsByRecentPopularity, rankStoriesBlended, getStoriesByIds, type StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 // How much each reading signal contributes to a story's weight before it's
 // rolled up into that story's tag categories. Completion is the strongest
@@ -210,4 +210,141 @@ export async function getSignatureRow(userId: string, limit = 8): Promise<Signat
   const label = TAG_BY_SLUG[category.tagSlugs[0]]?.label ?? category.title;
 
   return { slug: category.slug, title: `Because you love ${label}`, storyIds };
+}
+
+// Below this many tag-overlap candidates, blend in the freshest published
+// stories too — a niche or lightly-tagged story shouldn't leave the "next
+// read" pick starved down to one or two options.
+const MIN_NEXT_READ_CANDIDATES = 4;
+const NEXT_READ_CANDIDATE_POOL = 24;
+
+export interface NextStoryRecommendation {
+  story: StoryWithAuthor;
+  /** "tag-match" when the pick shares tags with the story just finished
+   *  (drives "Because you just read this" framing); "popular" when there
+   *  wasn't enough tag overlap and this is a freshness/popularity fallback
+   *  instead — kept distinct so the UI doesn't imply a connection that isn't
+   *  really there. */
+  reason: "tag-match" | "popular";
+}
+
+/**
+ * The single best "read this next" pick for a reader who just finished
+ * `finishedStoryId` — prompts them to keep reading immediately instead of
+ * leaving the finish screen as a dead end. Ranked by tag overlap with the
+ * story just finished (not the reader's aggregate taste — "just read a
+ * thriller" is a stronger signal than lifetime history for what to read in
+ * the next five minutes), blended with recency/popularity/rating and, for a
+ * logged-in reader, their taste profile, via the same ranker the feed rows
+ * use. Always excludes the story just finished and, for a logged-in reader,
+ * anything already completed or unlocked.
+ *
+ * Falls back to the freshest published stories when the finished story has
+ * no tags or too few tag-overlap candidates exist, so this practically never
+ * comes back null for an active catalog — a reader should see something to
+ * read next essentially every time. Mature content is excluded from the
+ * pool unless the story just finished was itself marked isAdult, so a
+ * G-rated finish doesn't surface an 18+ surprise on the way out.
+ */
+export async function getNextStoryRecommendation(
+  finishedStoryId: string,
+  userId: string | null,
+): Promise<NextStoryRecommendation | null> {
+  const finishedStory = await prisma.story.findUnique({
+    where: { id: finishedStoryId },
+    select: { isAdult: true },
+  });
+  if (!finishedStory) return null;
+  const matureFilter = finishedStory.isAdult ? {} : { isAdult: false };
+
+  const [finishedTagRows, completions, unlocks] = await Promise.all([
+    prisma.storyTag.findMany({ where: { storyId: finishedStoryId }, select: { tagId: true } }),
+    userId ? prisma.storyCompletion.findMany({ where: { userId }, select: { storyId: true } }) : Promise.resolve([]),
+    userId ? prisma.storyUnlock.findMany({ where: { userId }, select: { storyId: true } }) : Promise.resolve([]),
+  ]);
+
+  const excludeIds = new Set<string>([
+    finishedStoryId,
+    ...completions.map((c) => c.storyId),
+    ...unlocks.map((u) => u.storyId),
+  ]);
+  const tagIds = Array.from(new Set(finishedTagRows.map((t) => t.tagId)));
+
+  let reason: "tag-match" | "popular" = "popular";
+  let candidateIds: string[] = [];
+
+  if (tagIds.length > 0) {
+    const overlap = await prisma.storyTag.findMany({
+      where: {
+        tagId: { in: tagIds },
+        storyId: { notIn: Array.from(excludeIds) },
+        story: { status: "PUBLISHED", ...matureFilter },
+      },
+      select: { storyId: true },
+    });
+    const scoreMap = new Map<string, number>();
+    for (const o of overlap) scoreMap.set(o.storyId, (scoreMap.get(o.storyId) ?? 0) + 1);
+    candidateIds = Array.from(scoreMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, NEXT_READ_CANDIDATE_POOL)
+      .map(([id]) => id);
+    if (candidateIds.length > 0) reason = "tag-match";
+  }
+
+  if (candidateIds.length < MIN_NEXT_READ_CANDIDATES) {
+    const recent = await prisma.story.findMany({
+      where: {
+        status: "PUBLISHED",
+        ...matureFilter,
+        id: { notIn: Array.from(new Set([...Array.from(excludeIds), ...candidateIds])) },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: NEXT_READ_CANDIDATE_POOL,
+      select: { id: true },
+    });
+    candidateIds = Array.from(new Set([...candidateIds, ...recent.map((r) => r.id)]));
+  }
+
+  if (candidateIds.length === 0) return null;
+
+  // A logged-in reader's taste profile nudges the pick among the candidates
+  // above (same "highest of a story's own categories" rollup getFeedTagRows
+  // uses) — it never expands or replaces the candidate pool itself, so the
+  // pick always still relates to the story just finished when tag overlap
+  // exists.
+  let preferenceScores: Map<string, number> | undefined;
+  if (userId) {
+    const categoryScores = await getUserCategoryScores(userId);
+    if (categoryScores.size > 0) {
+      const candidateTagRows = await prisma.storyTag.findMany({
+        where: { storyId: { in: candidateIds } },
+        select: { storyId: true, tag: { select: { slug: true } } },
+      });
+      const categoriesByStory = new Map<string, Set<string>>();
+      for (const row of candidateTagRows) {
+        const categorySlug = categoryForTag(row.tag.slug).slug;
+        const set = categoriesByStory.get(row.storyId);
+        if (set) set.add(categorySlug);
+        else categoriesByStory.set(row.storyId, new Set([categorySlug]));
+      }
+      preferenceScores = new Map(
+        candidateIds.map((id) => {
+          const categories = categoriesByStory.get(id);
+          if (!categories) return [id, 0];
+          const scores = Array.from(categories).map((c) => categoryScores.get(c) ?? 0);
+          return [id, Math.max(0, ...scores)];
+        }),
+      );
+    }
+  }
+
+  const rankedIds = await rankStoriesBlended(candidateIds, 1, {
+    preferenceScores,
+    rotationKey: `${userId ?? "anon"}:next:${finishedStoryId}`,
+  });
+  if (rankedIds.length === 0) return null;
+
+  const stories = await getStoriesByIds(rankedIds);
+  const story = stories[0];
+  return story ? { story, reason } : null;
 }

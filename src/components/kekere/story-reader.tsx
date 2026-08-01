@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag, ShieldAlert, Rows3, GalleryHorizontal } from "lucide-react";
+import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, ArrowUpRight, ArrowRight, X, Star, Send, MapPin, PenLine, MoreVertical, Flag, ShieldAlert, Rows3, GalleryHorizontal, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
+import { MatureBadge } from "@/components/kekere/MatureBadge";
 import { ReportModal, type ReportTargetType } from "@/components/kekere/ReportModal";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
@@ -100,6 +101,24 @@ const READER_THEMES: Record<
 
 const READER_THEME_ORDER: ReaderTheme[] = ["white", "cream", "dark"];
 
+/** Same deterministic cover-fallback patterns as the feed (feed-content.tsx)
+ *  — kept as its own small copy rather than a shared import so the "Your
+ *  next read" card matches everywhere else in the app a cover-less story
+ *  shows up, without pulling a feed-scoped module into the reader. */
+function nextReadThumbnailPattern(seed: string): string {
+  const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const patterns = [
+    "repeating-linear-gradient(45deg,#C75D2C 0 14px,#A84A20 14px 28px)",
+    "conic-gradient(from 30deg,#1F4B4B,#2E6A5E,#1F4B4B,#143838,#1F4B4B)",
+    "radial-gradient(circle at 30% 30%,#E2A565,#C75D2C 45%,#7A3415)",
+    "linear-gradient(135deg,#1F4B4B 0 50%,#E2A565 50% 100%)",
+    "conic-gradient(#C75D2C 0 25%,#E2A565 0 50%,#C75D2C 0 75%,#E2A565 0)",
+    "repeating-linear-gradient(0deg,#2A1A12 0 7px,#3A2418 7px 14px)",
+    "repeating-radial-gradient(circle at 50% 50%,#E2A565 0 9px,#C75D2C 9px 18px)",
+  ];
+  return patterns[i % patterns.length];
+}
+
 export interface StoryReaderProps {
   story: MockStory;
   isLoggedIn: boolean;
@@ -141,6 +160,13 @@ export interface StoryReaderProps {
    * finish overlay's "Meet the writer" card. Not part of the shared story
    * author-include, so it's fetched separately and passed in. */
   authorCountry?: string | null;
+  /** Server-computed "read this next" pick (getNextStoryRecommendation) —
+   * shown as its own card on the finish overlay, right where a reader's
+   * momentum is highest. Null when no sensible pick exists (vanishingly
+   * rare — only an empty/near-empty catalog). Undefined is treated the same
+   * as null; kept optional so existing callers don't have to thread it
+   * through immediately. */
+  nextStory?: (MockStory & { nextReadReason: "tag-match" | "popular" }) | null;
 }
 
 export function StoryReader({
@@ -158,6 +184,7 @@ export function StoryReader({
   noteAlreadySent = false,
   referralCode = null,
   authorCountry = null,
+  nextStory = null,
 }: StoryReaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -1022,9 +1049,84 @@ export function StoryReader({
             )}
           </div>
 
+          {/* Your next read — the moment a reader's momentum is highest is
+              right here, so this is the strongest single prompt on the
+              screen: the whole card is one tap, and it ends in the same
+              bold CTA "Back to feed" used to own alone. That button now
+              reads as the quieter fallback beneath it, on purpose. */}
+          {nextStory && (
+            <div className="mt-7">
+              <h2 className="mb-2.5 flex items-center gap-1.5 px-0.5 text-[13px] font-semibold text-[#2A1A12]">
+                <BookOpen size={14} className="text-[#C75D2C]" /> Your next read
+              </h2>
+              <Link
+                href={`/kekere/story/${nextStory.slug ?? nextStory.id}`}
+                className="group block overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.55)] ring-1 ring-[rgba(199,93,44,0.18)] transition-transform active:scale-[0.99]"
+              >
+                <div
+                  className="relative aspect-[16/9] w-full overflow-hidden"
+                  style={{ background: nextStory.coverImageUrl ? undefined : nextReadThumbnailPattern(nextStory.id) }}
+                >
+                  {nextStory.coverImageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={nextStory.coverImageUrl}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-active:scale-[1.03]"
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+                  {nextStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
+                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.04em] text-[#C75D2C] shadow-sm">
+                    {nextStory.nextReadReason === "tag-match" ? "Because you just read this" : "Popular right now"}
+                  </span>
+                </div>
+
+                <div className="px-5 py-[18px]">
+                  <h3 className="font-[family-name:var(--font-display)] text-[19px] font-semibold leading-[1.25] text-[#2A1A12]">
+                    {nextStory.title}
+                  </h3>
+                  <p className="mt-1.5 line-clamp-2 text-[13.5px] italic leading-[1.5] text-[#6B5744]">
+                    {nextStory.hookLine}
+                  </p>
+                  <p className="mt-2 text-[11.5px] font-medium text-[#A08C7C]">By {nextStory.authorName}</p>
+
+                  <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px] font-medium text-[#8A7565]">
+                    <span className="flex items-center gap-1 font-semibold text-[#C75D2C]">
+                      <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+                        <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                        <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                      </svg>
+                      {nextStory.cowrieCost}
+                    </span>
+                    <span>·</span>
+                    <span>{nextStory.readingTimeMinutes} min</span>
+                    {nextStory.completionRate > 0 && (
+                      <>
+                        <span>·</span>
+                        <span>{Math.round(nextStory.completionRate)}% finish</span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-center gap-1.5 rounded-[13px] bg-[#C75D2C] py-3 text-[14px] font-semibold text-white transition-opacity group-hover:opacity-90">
+                    Start reading <ArrowRight size={15} />
+                  </div>
+                </div>
+              </Link>
+            </div>
+          )}
+
           <Link
             href="/kekere/feed"
-            className="mt-6 flex w-full items-center justify-center rounded-[13px] bg-[#C75D2C] py-3.5 text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+            className={cn(
+              "mt-6 flex w-full items-center justify-center rounded-[13px] py-3.5 text-[14px] font-semibold transition-opacity hover:opacity-90",
+              nextStory
+                ? "border border-[rgba(42,26,18,0.14)] text-[#2A1A12]"
+                : "bg-[#C75D2C] text-white",
+            )}
           >
             Back to feed
           </Link>
