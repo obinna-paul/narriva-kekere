@@ -25,14 +25,16 @@ interface Unit {
   textAlign?: "left" | "center" | "right";
 }
 
+/** Real <del>/<ins>, matching the writer's screen — the semantics assistive
+ * tech needs, and the same markup on both sides of the handoff. */
 function renderSpansToHtml(spans: DiffSpan[]): string {
   return spans
     .map((s) => {
       if (s.kind === "equal") return s.html;
       if (s.kind === "removed") {
-        return `<span style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${s.html}</span>`;
+        return `<del style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${s.html}</del>`;
       }
-      return `<span style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${s.html}</span>`;
+      return `<ins style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${s.html}</ins>`;
     })
     .join("");
 }

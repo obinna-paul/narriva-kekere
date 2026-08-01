@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, MessageSquare, Check, PencilLine, CornerDownRight, AlertCircle, ArrowRight, X, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
-import { docParagraphsToHtml, htmlToInlineNodes, type TiptapDoc, type TiptapInlineNode, type TiptapParagraphNode } from "@/lib/tiptap/doc-utils";
+import { docParagraphsToHtml, htmlToInlineNodes, inlineNodesToHtml, type TiptapDoc, type TiptapInlineNode, type TiptapParagraphNode } from "@/lib/tiptap/doc-utils";
 import { diffParagraphWords, type DiffSpan } from "@/lib/tiptap/paragraph-diff";
+import { mergeReviewedBody } from "@/lib/tiptap/merge-review";
 
 interface EditorialComment {
   id: string;
@@ -46,14 +47,25 @@ interface Unit {
   comments: EditorialComment[];
 }
 
+/**
+ * Renders word-level spans as real <del>/<ins> elements — the HTML the spec
+ * has for exactly this, and what assistive tech announces as deleted and
+ * inserted text. Styled <span>s look identical to a sighted reader and are
+ * silent to everyone else, which on a screen whose entire purpose is "here is
+ * what changed in your work" is the difference between usable and useless.
+ * The visually-hidden labels give screen-reader users the same boundaries the
+ * colour and strikethrough give sighted ones.
+ */
 function renderSpansToHtml(spans: DiffSpan[]): string {
+  const sr = (label: string) =>
+    `<span style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;"> ${label} </span>`;
   return spans
     .map((s) => {
       if (s.kind === "equal") return s.html;
       if (s.kind === "removed") {
-        return `<span style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${s.html}</span>`;
+        return `<del style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${sr("deleted:")}${s.html}</del>`;
       }
-      return `<span style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${s.html}</span>`;
+      return `<ins style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${sr("inserted:")}${s.html}</ins>`;
     })
     .join("");
 }
@@ -71,6 +83,12 @@ export function WriterReviewView(props: WriterReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<null | "contract" | "accepted_post_contract" | "returned">(null);
+  /** Word and Docs both offer this triad, and for the same reason: reading a
+   * marked-up diff tells you what changed, but only the clean text tells you
+   * whether the result actually reads well. */
+  const [viewMode, setViewMode] = useState<"tracked" | "final" | "original">("tracked");
+  const [confirmingAcceptAll, setConfirmingAcceptAll] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
 
   const editedParas = useMemo(() => docParagraphsToHtml(props.editedBody), [props.editedBody]);
   const originalParas = useMemo(() => docParagraphsToHtml(props.originalBody), [props.originalBody]);
@@ -150,7 +168,12 @@ export function WriterReviewView(props: WriterReviewProps) {
       revertWriterEdit(id);
       return;
     }
-    setWriterEdits((prev) => ({ ...prev, [id]: { html, nodes } }));
+    // Store the re-serialised nodes, never the contentEditable's raw innerHTML:
+    // this is rendered back through dangerouslySetInnerHTML, so anything a
+    // paste smuggled in (styles, handlers, elements) would otherwise be handed
+    // straight back to the DOM. Round-tripping means what's displayed is
+    // exactly what gets submitted.
+    setWriterEdits((prev) => ({ ...prev, [id]: { html: inlineNodesToHtml(nodes), nodes } }));
   };
   const revertWriterEdit = (id: string) =>
     setWriterEdits((prev) => {
@@ -159,12 +182,75 @@ export function WriterReviewView(props: WriterReviewProps) {
       return next;
     });
 
+  const acceptAll = () => setDecisions((prev) => {
+    const next = { ...prev };
+    for (const u of changeUnits) next[u.id] = "accept";
+    return next;
+  });
+  const rejectAll = () => setDecisions((prev) => {
+    const next = { ...prev };
+    for (const u of changeUnits) next[u.id] = "reject";
+    return next;
+  });
+
   const anyRejected = changeUnits.some((u) => decisionFor(u.id) === "reject");
   const rejectedHook = props.hookLineChanged && (decisions["__hook__"] ?? "accept") === "reject";
   const hasReply = Object.values(commentState).some((c) => c.reply.trim().length > 0);
   const hasNewNotes = Object.values(writerNotes).some((arr) => arr.length > 0);
   const hasWriterEdits = Object.keys(writerEdits).length > 0;
   const goesToEditor = anyRejected || rejectedHook || hasReply || hasNewNotes || hasWriterEdits;
+
+  // ---- Draft persistence ----
+  // Reviewing a novella-length story is not a one-sitting job, and every
+  // decision, note and rewrite lived only in React state: a backgrounded phone
+  // tab, a stray back-swipe or a refresh threw the lot away with no warning.
+  // Kept local rather than server-side because none of it is a commitment yet
+  // — nothing here is meant to reach the editor until Submit.
+  const draftKey = `kekere-review-draft-${props.storyId}`;
+  const dirty = goesToEditor || Object.keys(decisions).length > 0 || note.trim().length > 0;
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw) as Partial<{
+        decisions: Record<string, Decision>;
+        commentState: Record<string, CommentState>;
+        writerNotes: Record<string, string[]>;
+        writerEdits: Record<string, { html: string; nodes: TiptapInlineNode[] }>;
+        note: string;
+      }>;
+      if (d.decisions) setDecisions(d.decisions);
+      if (d.commentState) setCommentState(d.commentState);
+      if (d.writerNotes) setWriterNotes(d.writerNotes);
+      if (d.writerEdits) setWriterEdits(d.writerEdits);
+      if (d.note) setNote(d.note);
+      if (d.decisions || d.writerEdits || d.writerNotes || d.note) setRestoredDraft(true);
+    } catch {
+      // A corrupt or unreadable draft must never block the review itself.
+    }
+    // Restoring is a mount-time concern; re-running would fight live edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (done) return;
+    try {
+      if (!dirty) window.localStorage.removeItem(draftKey);
+      else window.localStorage.setItem(draftKey, JSON.stringify({ decisions, commentState, writerNotes, writerEdits, note }));
+    } catch {
+      // Private mode / quota — losing the draft is bad, breaking the page is worse.
+    }
+  }, [draftKey, dirty, decisions, commentState, writerNotes, writerEdits, note, done]);
+
+  // Belt and braces: the draft covers a reload, this covers the writer
+  // closing the tab believing they had already sent their review.
+  useEffect(() => {
+    if (!dirty || done) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty, done]);
 
   // ---- Selection-driven floating toolbar ----
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -188,15 +274,39 @@ export function WriterReviewView(props: WriterReviewProps) {
       if (!host || !host.dataset.paraId || !container.contains(host) || host.isContentEditable) { setAnchor(null); return; }
       const rect = range.getBoundingClientRect();
       const box = container.getBoundingClientRect();
+      // Clamped so a selection at either margin can't push the toolbar off
+      // the edge of a phone screen, where it becomes unreachable.
+      const half = 110;
       setAnchor({
         paragraphId: host.dataset.paraId ?? "",
         top: rect.top - box.top,
-        left: rect.left - box.left + rect.width / 2,
+        left: Math.min(Math.max(rect.left - box.left + rect.width / 2, half), Math.max(half, box.width - half)),
       });
     };
     document.addEventListener("selectionchange", onSelectionChange);
     return () => document.removeEventListener("selectionchange", onSelectionChange);
   }, []);
+
+  // Escape dismisses the toolbar — expected of anything that pops over content,
+  // and the only way to get rid of it without touching the page.
+  useEffect(() => {
+    if (!anchor) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clearAnchor(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [anchor, clearAnchor]);
+
+  /** The clean read-through, produced by the same merge the server runs on
+   * submit — so what the writer previews here is what they actually get,
+   * rather than a second implementation of the rules that can drift. */
+  const previewParas = useMemo(() => {
+    if (viewMode === "original") return docParagraphsToHtml(props.originalBody);
+    if (viewMode !== "final") return [];
+    const paragraphEdits: Record<string, TiptapInlineNode[]> = {};
+    for (const [id, edit] of Object.entries(writerEdits)) paragraphEdits[id] = edit.nodes;
+    const { merged } = mergeReviewedBody(props.originalBody, props.editedBody, decisions, paragraphEdits);
+    return docParagraphsToHtml(merged);
+  }, [viewMode, props.originalBody, props.editedBody, decisions, writerEdits]);
 
   const totalChanges = changeUnits.length + (props.hookLineChanged ? 1 : 0);
   const acceptedCount = changeUnits.filter((u) => decisionFor(u.id) === "accept").length + (props.hookLineChanged ? (rejectedHook ? 0 : 1) : 0);
@@ -231,6 +341,9 @@ export function WriterReviewView(props: WriterReviewProps) {
       const outcome: "contract" | "accepted_post_contract" | "returned" =
         data.outcome === "contract" || data.outcome === "accepted_post_contract" ? data.outcome : "returned";
       setDone(outcome);
+      // The review is with the editor now — a stale draft would otherwise
+      // reappear on this story and look like unsent work.
+      try { window.localStorage.removeItem(draftKey); } catch { /* nothing to clean up */ }
       setTimeout(() => router.push(outcome === "contract" ? "/kekere/contracts" : "/kekere/feed"), 1500);
     } catch { setError("Network error."); setBusy(false); }
   }
@@ -290,11 +403,56 @@ export function WriterReviewView(props: WriterReviewProps) {
       {props.bodyChanged && (
         <section className="mb-8">
           <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Story text</h2>
-          <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">Select any words to comment on them or rewrite them yourself.</p>
+
+          {/* View switcher — read the markup, or read the result. */}
+          <div role="group" aria-label="How to show the story text" className="mb-3 flex gap-1 rounded-full bg-[rgba(42,26,18,0.06)] p-1">
+            {([
+              ["tracked", "Tracked changes"],
+              ["final", "Final version"],
+              ["original", "My original"],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={viewMode === mode}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  "flex-1 rounded-full py-1.5 text-[11.5px] font-semibold transition-colors",
+                  viewMode === mode ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-ink-muted-2)]",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {viewMode === "tracked" && changeUnits.length > 1 && (
+            <div className="mb-3 flex items-center gap-2">
+              <button type="button" onClick={acceptAll} className="rounded-full bg-[rgba(31,138,91,0.1)] px-3 py-1.5 text-[11.5px] font-semibold text-[#1F8A5B]">
+                Accept all {changeUnits.length}
+              </button>
+              <button type="button" onClick={rejectAll} className="rounded-full bg-[rgba(108,59,170,0.1)] px-3 py-1.5 text-[11.5px] font-semibold text-[#6C3BAA]">
+                Keep all mine
+              </button>
+            </div>
+          )}
+
+          {viewMode === "tracked" && (
+            <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">Select any words to comment on them or rewrite them yourself.</p>
+          )}
+          {viewMode !== "tracked" && (
+            <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">
+              {viewMode === "final"
+                ? "How your story reads with the choices you've made so far. Switch back to make changes."
+                : "Your story exactly as you submitted it, before any edits."}
+            </p>
+          )}
           <div ref={bodyRef} className="relative flex flex-col gap-4">
             {/* Floating selection toolbar */}
             {anchor && (
               <div
+                role="toolbar"
+                aria-label="Actions for the selected text"
                 className="absolute z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-[#2A1A12] p-0.5 shadow-lg"
                 style={{ top: Math.max(0, anchor.top - 40), left: anchor.left }}
                 onMouseDown={(e) => e.preventDefault()}
@@ -304,7 +462,16 @@ export function WriterReviewView(props: WriterReviewProps) {
               </div>
             )}
 
-            {units.map((u, i) => {
+            {viewMode !== "tracked" &&
+              previewParas.map((p, i) =>
+                p.html.trim() ? (
+                  <p key={p.id || i} className="px-1 text-[15px] leading-[1.75] text-[var(--color-ink)]" style={{ textAlign: p.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: p.html }} />
+                ) : (
+                  <div key={p.id || i} className="h-2" />
+                ),
+              )}
+
+            {viewMode === "tracked" && units.map((u, i) => {
               if (u.kind === "unchanged") {
                 if (!u.newHtml?.trim()) return <div key={u.id || i} className="h-2" />;
                 const edit = u.id ? writerEdits[u.id] : undefined;
@@ -392,14 +559,44 @@ export function WriterReviewView(props: WriterReviewProps) {
         <section className="mb-8"><h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">Notes from your editor</h2><div className="rounded-2xl border border-[rgba(42,26,18,0.1)] bg-[rgba(199,93,44,0.02)] p-4">{props.comments.map((c) => <InlineComment key={c.id} comment={c} state={commentFor(c.id)} onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })} onReplyChange={(v) => setComment(c.id, { reply: v })} />)}</div></section>
       )}
 
-      {error && <p className="mb-4 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
+      {restoredDraft && !done && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-[rgba(199,93,44,0.2)] bg-[rgba(199,93,44,0.05)] px-4 py-3">
+          <Check size={14} className="mt-0.5 flex-none text-[var(--color-primary)]" />
+          <p className="text-[12.5px] leading-relaxed text-[var(--color-ink)]">
+            Picked up where you left off — your choices from last time are still here. Nothing has been sent to your editor yet.
+          </p>
+        </div>
+      )}
+
+      {error && <p role="alert" className="mb-4 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
 
       {goesToEditor && (
         <div className="mb-4"><label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">A note to your editor (optional)</label><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Explain why you kept certain changes…" className="w-full resize-none rounded-xl border border-[rgba(42,26,18,0.14)] bg-white px-4 py-3 text-[14px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/30" /></div>
       )}
 
       <div className="sticky bottom-0 -mx-[22px] border-t border-[rgba(42,26,18,0.08)] bg-[var(--color-bg)] px-[22px] py-4">
-        <button type="button" disabled={busy} onClick={submit} className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-[14px] text-[15px] font-semibold text-white transition-all disabled:opacity-50", goesToEditor ? "bg-[#6C3BAA] active:bg-[#5a2f8f]" : "bg-[#1F8A5B] active:bg-[#1a7a50]")}>{busy ? "Submitting…" : goesToEditor ? <><ArrowRight size={16} /> Send my review to the editor</> : <><ArrowRight size={16} /> Accept all changes</>}</button>
+        {/* Accepting everything is the one irreversible move here — it sends
+            the story forward to the contract or to publishing, with no undo.
+            Sending back to the editor is not, so it needs no confirmation. */}
+        {confirmingAcceptAll && !goesToEditor ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-center text-[12.5px] leading-relaxed text-[var(--color-ink)]">
+              {props.isPostContract
+                ? "Accept every change and send this version to be published?"
+                : "Accept every change and move this version forward to your publishing contract?"}
+            </p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setConfirmingAcceptAll(false)} className="flex-1 rounded-xl border border-[rgba(42,26,18,0.16)] py-[13px] text-[14px] font-semibold text-[var(--color-ink)]">
+                Not yet
+              </button>
+              <button type="button" disabled={busy} onClick={submit} className="flex-1 rounded-xl bg-[#1F8A5B] py-[13px] text-[14px] font-semibold text-white disabled:opacity-50">
+                {busy ? "Submitting…" : "Yes, accept all"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" disabled={busy} onClick={() => (goesToEditor ? submit() : setConfirmingAcceptAll(true))} className={cn("flex w-full items-center justify-center gap-2 rounded-xl py-[14px] text-[15px] font-semibold text-white transition-all disabled:opacity-50", goesToEditor ? "bg-[#6C3BAA] active:bg-[#5a2f8f]" : "bg-[#1F8A5B] active:bg-[#1a7a50]")}>{busy ? "Submitting…" : goesToEditor ? <><ArrowRight size={16} /> Send my review to the editor</> : <><ArrowRight size={16} /> Accept all changes</>}</button>
+        )}
         {goesToEditor ? (
           <p className="mt-2 text-center text-[11.5px] leading-relaxed text-[var(--color-ink-muted-2)]">{hasWriterEdits ? "You rewrote some of the text yourself — this goes back to your editor as tracked changes." : "You kept some of your own wording, replied, or left a note — this goes back to your editor for review."}</p>
         ) : (

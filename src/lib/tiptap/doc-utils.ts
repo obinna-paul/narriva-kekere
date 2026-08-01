@@ -184,6 +184,15 @@ export function docToHtml(doc: TiptapDoc): string {
     .join("\n");
 }
 
+/** Serialises inline nodes back to HTML — the safe way to render content that
+ * came out of a contentEditable. The nodes have already been through
+ * htmlToInlineNodes' whitelist, so round-tripping through here strips whatever
+ * a paste dragged in, rather than handing raw innerHTML to
+ * dangerouslySetInnerHTML and trusting it. */
+export function inlineNodesToHtml(nodes: TiptapInlineNode[]): string {
+  return nodes.map(inlineNodeToHtml).join("");
+}
+
 export interface ParagraphHtml {
   /** attrs.id, or "" if the paragraph has none (can't be commented on). */
   id: string;
