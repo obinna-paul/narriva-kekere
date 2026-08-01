@@ -466,75 +466,77 @@ export function FeedContent({
         </section>
       )}
 
-      {/* 2. Editor's Pick — a boutique "staff pick" treatment, deliberately
-          set apart from the plain white cards around it: a dark spotlight
-          panel with the cover shown at its native 3:4 (no crop into a
-          widescreen slice — every other cover in the app is framed at this
-          ratio, and this is the one place that wasn't). */}
+      {/* 2. Editor's Pick — full cover on top at its native 3:4 (no crop),
+          text panel below at full card width so a long title just wraps
+          instead of fighting for space in a cramped side column. The
+          "special" treatment is a corner ribbon across the cover rather
+          than an inverted dark panel — it stays in the same warm, white-card
+          language as the rest of the feed instead of breaking from it. */}
       {featuredStory && (
         <section className="px-5 py-[18px]">
           <Link
             href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`}
-            className="group relative block overflow-hidden rounded-[24px] bg-gradient-to-br from-[#2A1A12] via-[#3A2418] to-[#180F09] p-4 shadow-[0_22px_48px_-20px_rgba(20,10,5,0.6)] transition-transform active:scale-[0.99]"
+            className="block overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)] transition-transform active:scale-[0.99]"
           >
             <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -left-16 top-1/2 h-[240px] w-[240px] -translate-y-1/2 rounded-full bg-[#C75D2C] opacity-25 blur-[70px]"
-            />
-            <div className="relative flex gap-4">
+              className="relative aspect-[3/4] w-full overflow-hidden"
+              style={{ background: featuredStory.coverImageUrl ? undefined : thumbnailPattern(featuredStory.id) }}
+            >
+              {featuredStory.coverImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={featuredStory.coverImageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
+              {featuredStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
+              {/* Corner ribbon: the one deliberately non-generic flourish on
+                  this card. Confined to the image corner so it never
+                  competes with the title/hookline below, however long they
+                  run. */}
               <div
-                className="relative aspect-[3/4] w-[122px] flex-none overflow-hidden rounded-[14px] shadow-[0_14px_30px_-10px_rgba(0,0,0,0.65)] ring-1 ring-white/[0.08]"
-                style={{ background: featuredStory.coverImageUrl ? undefined : thumbnailPattern(featuredStory.id) }}
+                aria-hidden="true"
+                className="absolute -left-[38px] top-[20px] w-[150px] -rotate-45 bg-gradient-to-r from-[#C75D2C] to-[#E2895A] py-[6px] text-center shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
               >
-                {featuredStory.coverImageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={featuredStory.coverImageUrl}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover object-center"
-                    loading="lazy"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-white/[0.06]" />
-                {featuredStory.isAdult && <MatureBadge className="absolute right-2 top-2" />}
-              </div>
-
-              <div className="flex min-w-0 flex-1 flex-col justify-center">
-                <span className="inline-flex w-fit items-center gap-[5px] rounded-full bg-[#E2A565]/[0.14] px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.12em] text-[#E2A565]">
-                  <Sparkles size={11} strokeWidth={2.5} aria-hidden="true" /> Editor&apos;s pick
+                <span className="flex items-center justify-center gap-[5px] text-[10px] font-bold uppercase tracking-[0.1em] text-white">
+                  <Sparkles size={10} strokeWidth={2.5} aria-hidden="true" /> Editor&apos;s pick
                 </span>
-                <h3 className="mt-[9px] line-clamp-2 font-[family-name:var(--font-display)] text-[17px] font-semibold leading-[1.22] text-white">
-                  {featuredStory.title}
-                </h3>
-                <p className="mt-[6px] line-clamp-2 text-[12.5px] italic leading-[1.42] text-white/60">
-                  {featuredStory.hookLine}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-white/45">
-                  <span>By {featuredStory.authorName}</span>
-                  <span>·</span>
-                  <span className="flex items-center gap-1 font-semibold text-[#E2A565]">
-                    <svg width="9" height="9" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
-                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#E2A565" />
-                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#2A1A12" strokeWidth="1.1" fill="none" />
-                    </svg>
-                    {featuredStory.cowrieCost}
-                  </span>
-                  <span>·</span>
-                  <span>{featuredStory.readingTimeMinutes} min</span>
-                  {featuredStory.completionRate > 0 && (
-                    <>
-                      <span>·</span>
-                      <span>{Math.round(featuredStory.completionRate)}% finish</span>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
 
-            <div className="relative mt-4 flex items-center justify-center gap-[6px] rounded-[13px] bg-[#C75D2C] py-3 text-[14px] font-semibold text-white transition-opacity group-hover:opacity-90">
-              Read now
-              <ChevronRight size={15} strokeWidth={2.5} aria-hidden="true" />
+            <div className="px-5 py-5">
+              <h3 className="font-[family-name:var(--font-display)] text-[20px] font-semibold leading-[1.25] text-[var(--color-ink)]">
+                {featuredStory.title}
+              </h3>
+              <p className="mt-2 line-clamp-3 text-[14px] italic leading-[1.5] text-[var(--color-ink-muted)]">
+                {featuredStory.hookLine}
+              </p>
+              <p className="mt-2 text-[12px] font-medium text-[var(--color-ink-muted-2)]">
+                By {featuredStory.authorName}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="inline-flex items-center gap-[6px] rounded-full bg-[var(--color-primary)] px-[18px] py-[10px] text-[13px] font-semibold text-white">
+                  Read now
+                  <ChevronRight size={15} strokeWidth={2.5} aria-hidden="true" />
+                </span>
+                <span className="flex items-center gap-[5px] text-[12.5px] font-medium text-[var(--color-ink-muted-2)]">
+                  <span className="flex items-center gap-[3px] font-semibold text-[var(--color-primary)]">
+                    <svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true" className="flex-none">
+                      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                      <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                    </svg>
+                    {featuredStory.cowrieCost}
+                  </span>
+                  {" · "}{featuredStory.readingTimeMinutes} min
+                  {featuredStory.completionRate > 0 && (
+                    <>{" · "}{Math.round(featuredStory.completionRate)}% finish</>
+                  )}
+                </span>
+              </div>
             </div>
           </Link>
         </section>
