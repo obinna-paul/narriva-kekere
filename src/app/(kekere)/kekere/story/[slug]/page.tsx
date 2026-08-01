@@ -9,7 +9,8 @@ import { getStoryRating } from "@/lib/data/kekere-ratings";
 import { isFollowing } from "@/lib/data/kekere-follows";
 import { getNoteEligibilityForStory } from "@/lib/data/kekere-notes";
 import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
-import { toReaderStoryData } from "@/lib/adapters/kekere";
+import { getNextStoryRecommendation } from "@/lib/data/kekere-taste";
+import { toReaderStoryData, toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { storyCoverOgImageUrl } from "@/lib/storage/cloudinary";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -73,7 +74,7 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
   const dbStory = await getStoryForReader(resolved.story.id, userId);
   if (!dbStory) notFound();
 
-  const [saved, wallet, rating, following, noteEligibility, referralCode, authorExtra] = await Promise.all([
+  const [saved, wallet, rating, following, noteEligibility, referralCode, authorExtra, nextStoryPick] = await Promise.all([
     userId ? isStorySaved(userId, dbStory.id) : Promise.resolve(false),
     userId ? getWalletForUser(userId) : Promise.resolve(null),
     userId ? getStoryRating(userId, dbStory.id) : Promise.resolve(null),
@@ -83,7 +84,14 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
     // Country isn't part of the shared story author-include; grab it here so
     // the finish overlay's "Meet the writer" card reads like a real profile.
     prisma.user.findUnique({ where: { id: dbStory.author.id }, select: { country: true } }),
+    // Computed up front (before the reader has actually finished) so the
+    // finish overlay's "Your next read" card has zero latency the moment
+    // they get there — same reasoning as noteEligibility above.
+    getNextStoryRecommendation(dbStory.id, userId ?? null),
   ]);
+  const nextStory = nextStoryPick
+    ? { ...toFeedStoryData(nextStoryPick.story), nextReadReason: nextStoryPick.reason }
+    : null;
 
   const canonicalPath = `/kekere/story/${dbStory.slug ?? dbStory.id}`;
 
@@ -122,6 +130,7 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
         noteAlreadySent={noteEligibility.alreadySent}
         referralCode={referralCode}
         authorCountry={authorExtra?.country ?? null}
+        nextStory={nextStory}
       />
     </KekereTheme>
   );
