@@ -166,7 +166,7 @@ export interface StoryReaderProps {
    * rare — only an empty/near-empty catalog). Undefined is treated the same
    * as null; kept optional so existing callers don't have to thread it
    * through immediately. */
-  nextStory?: (MockStory & { nextReadReason: "tag-match" | "popular" }) | null;
+  nextStory?: MockStory | null;
 }
 
 export function StoryReader({
@@ -1064,7 +1064,7 @@ export function StoryReader({
                 className="group block overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.55)] ring-1 ring-[rgba(199,93,44,0.18)] transition-transform active:scale-[0.99]"
               >
                 <div
-                  className="relative aspect-[16/9] w-full overflow-hidden"
+                  className="relative aspect-[3/4] w-full overflow-hidden"
                   style={{ background: nextStory.coverImageUrl ? undefined : nextReadThumbnailPattern(nextStory.id) }}
                 >
                   {nextStory.coverImageUrl && (
@@ -1079,9 +1079,6 @@ export function StoryReader({
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
                   {nextStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
-                  <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-[5px] text-[10px] font-bold uppercase tracking-[0.04em] text-[#C75D2C] shadow-sm">
-                    {nextStory.nextReadReason === "tag-match" ? "Because you just read this" : "Popular right now"}
-                  </span>
                 </div>
 
                 <div className="px-5 py-[18px]">
