@@ -89,6 +89,10 @@ export function WriterReviewView(props: WriterReviewProps) {
   const [viewMode, setViewMode] = useState<"tracked" | "final" | "original">("tracked");
   const [confirmingAcceptAll, setConfirmingAcceptAll] = useState(false);
   const [restoredDraft, setRestoredDraft] = useState(false);
+  // In tracked view the unchanged bulk of the story collapses into slim
+  // dividers so the decisions aren't buried in a wall of text; a run stays
+  // open once the writer expands it (keyed by its index in the tracked list).
+  const [expandedRuns, setExpandedRuns] = useState<Record<number, boolean>>({});
 
   const editedParas = useMemo(() => docParagraphsToHtml(props.editedBody), [props.editedBody]);
   const originalParas = useMemo(() => docParagraphsToHtml(props.originalBody), [props.originalBody]);
@@ -364,6 +368,132 @@ export function WriterReviewView(props: WriterReviewProps) {
     );
   }
 
+  // Change number shown on each card ("Change 3 of 5"), stable in document
+  // order so it matches the reading flow rather than the click order.
+  const changeNumberById = new Map<string, number>();
+  changeUnits.forEach((u, i) => { if (u.id) changeNumberById.set(u.id, i + 1); });
+
+  // An unchanged paragraph only earns its own row when there's something to
+  // act on there — the writer rewrote it, it carries a comment, or a
+  // composer/editor is open on it. Everything else is quiet context that
+  // collapses into a run.
+  const needsAttention = (u: Unit) =>
+    !!(u.id && (writerEdits[u.id] || (writerNotes[u.id]?.length ?? 0) > 0 || openNoteId === u.id || editingParaId === u.id || u.comments.length > 0));
+
+  // Tracked view, reorganised: consecutive quiet unchanged paragraphs fold
+  // into a single collapsible "run", so what's left on screen is the changes
+  // themselves — the only things that actually need a decision.
+  type TrackedItem = { type: "run"; paras: Unit[] } | { type: "unit"; unit: Unit };
+  const trackedItems: TrackedItem[] = [];
+  {
+    let run: Unit[] = [];
+    const flush = () => { if (run.length) { trackedItems.push({ type: "run", paras: run }); run = []; } };
+    for (const u of units) {
+      if (u.kind === "unchanged") {
+        if (!u.newHtml?.trim()) continue; // blank spacer line — nothing to show
+        if (needsAttention(u)) { flush(); trackedItems.push({ type: "unit", unit: u }); }
+        else run.push(u);
+      } else {
+        flush();
+        trackedItems.push({ type: "unit", unit: u });
+      }
+    }
+    flush();
+  }
+
+  const commentSection = (u: Unit) =>
+    u.id && (u.comments.length > 0 || (writerNotes[u.id] ?? []).length > 0 || openNoteId === u.id) ? (
+      <div className="mt-2 flex flex-col gap-2">
+        {u.comments.map((c) => <InlineComment key={c.id} comment={c} state={commentFor(c.id)} onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })} onReplyChange={(v) => setComment(c.id, { reply: v })} />)}
+        <WriterNoteBlock isOpen={openNoteId === u.id} draft={noteDraft[u.id] ?? ""} notes={writerNotes[u.id] ?? []} onClose={() => setOpenNoteId(null)} onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))} onAdd={() => addWriterNote(u.id)} onRemove={(idx) => removeWriterNote(u.id, idx)} />
+      </div>
+    ) : null;
+
+  // A quiet, unchanged paragraph — read-only, but always offering the two
+  // things the writer can do to it (rewrite / comment) as explicit taps
+  // rather than a text-selection gesture that never fired on mobile.
+  const renderUnchanged = (u: Unit, keyHint?: string) => {
+    const edit = u.id ? writerEdits[u.id] : undefined;
+    return (
+      <div key={keyHint ?? u.id} className="px-1">
+        {editingParaId === u.id ? (
+          <ParagraphEditor html={edit?.html ?? u.newHtml ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, u.newHtml ?? "")} onCancel={() => setEditingParaId(null)} />
+        ) : (
+          <>
+            <p data-para-id={u.id} className={cn("text-[15px] leading-[1.75] text-[var(--color-ink)]", edit && "rounded-md bg-[rgba(31,138,91,0.07)] px-2 py-1 ring-1 ring-[rgba(31,138,91,0.25)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: edit?.html ?? u.newHtml ?? "" }} />
+            {edit ? <WriterEditBadge onRevert={() => revertWriterEdit(u.id)} /> : <ActionRow onRewrite={() => setEditingParaId(u.id)} onComment={() => { setOpenNoteId(u.id); }} />}
+          </>
+        )}
+        {commentSection(u)}
+      </div>
+    );
+  };
+
+  // A change card: type chip + "Change N of M" header, the diff itself, the
+  // accept / keep-mine decision, and — always — the rewrite/comment actions.
+  const renderChange = (u: Unit, keyHint?: string) => {
+    const rejected = decisionFor(u.id) === "reject";
+    const writerEdit = u.id ? writerEdits[u.id] : undefined;
+    const changeNo = u.id ? changeNumberById.get(u.id) : undefined;
+    return (
+      <div key={keyHint ?? u.id} className="relative overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white shadow-[0_1px_2px_rgba(42,26,18,0.04)]">
+        <div className="flex items-center justify-between border-b border-[rgba(42,26,18,0.06)] bg-[rgba(42,26,18,0.02)] px-4 py-2.5">
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]", u.kind === "added" ? "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]" : u.kind === "removed" ? "bg-[rgba(193,58,58,0.1)] text-[#A13A3A]" : "bg-[rgba(199,93,44,0.12)] text-[var(--color-primary)]")}><AlertCircle size={10} />{u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}</span>
+          {changeNo != null && <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Change {changeNo} of {changeUnits.length}</span>}
+        </div>
+
+        <div className="p-4">
+          {writerEdit && editingParaId !== u.id && (
+            <div className="mb-3 rounded-lg bg-[rgba(31,138,91,0.06)] px-4 py-3 ring-1 ring-[rgba(31,138,91,0.25)]">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#1F8A5B]">Your version</p>
+              <p data-para-id={u.id} className="text-[14.5px] leading-[1.7] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: writerEdit.html }} />
+            </div>
+          )}
+          {editingParaId === u.id && (
+            <div className="mb-3"><ParagraphEditor html={writerEdit?.html ?? (u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, ((u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""))} onCancel={() => setEditingParaId(null)} /></div>
+          )}
+
+          {!writerEdit && editingParaId !== u.id && u.kind === "changed" && u.spans && (
+            <div className={cn("rounded-lg px-4 py-3", rejected && "bg-[rgba(42,26,18,0.02)]")}>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">{rejected ? "Your original (kept)" : "Tracked changes"}</p>
+              <p data-para-id={u.id} className="text-[14.5px] leading-[1.7] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: rejected ? u.oldHtml || "" : renderSpansToHtml(u.spans) }} />
+            </div>
+          )}
+          {!writerEdit && editingParaId !== u.id && u.kind === "changed" && !u.spans && (
+            <>
+              <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Original</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} /></div>
+              <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}><p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>{rejected ? "Keep mine instead" : "Editor's version"}</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} /></div>
+            </>
+          )}
+          {!writerEdit && editingParaId !== u.id && u.kind === "added" && u.newHtml && (
+            <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}><p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>{rejected ? "Dropping this" : "New paragraph"}</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml }} /></div>
+          )}
+          {!writerEdit && editingParaId !== u.id && u.kind === "removed" && (
+            <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(42,26,18,0.02)] text-[var(--color-ink)]" : "bg-[rgba(193,58,58,0.05)] text-[var(--color-ink-muted-3)] line-through")}><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">This will be removed</p><p data-para-id={u.id} className="text-[14.5px] leading-[1.7]" dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} /></div>
+          )}
+
+          {editingParaId !== u.id && (
+            writerEdit ? (
+              <div className="mt-4"><WriterEditBadge onRevert={() => revertWriterEdit(u.id)} /></div>
+            ) : (
+              <div className="mt-4">
+                <DiffToggle accepted={!rejected} onAccept={() => setDecision(u.id, "accept")} onReject={() => setDecision(u.id, "reject")} acceptLabel={u.kind === "removed" ? "Remove" : u.kind === "added" ? "Keep" : "Accept"} rejectLabel={u.kind === "removed" ? "Keep" : u.kind === "added" ? "Drop" : "Keep mine"} />
+                <ActionRow onRewrite={() => setEditingParaId(u.id)} onComment={() => setOpenNoteId(u.id)} />
+              </div>
+            )
+          )}
+        </div>
+
+        {u.id && (u.comments.length > 0 || (writerNotes[u.id] ?? []).length > 0 || openNoteId === u.id) && (
+          <div className="flex flex-col gap-2 border-t border-[rgba(42,26,18,0.06)] bg-[rgba(199,93,44,0.02)] px-4 py-3">
+            {u.comments.map((c) => <InlineComment key={c.id} comment={c} state={commentFor(c.id)} onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })} onReplyChange={(v) => setComment(c.id, { reply: v })} />)}
+            <WriterNoteBlock isOpen={openNoteId === u.id} draft={noteDraft[u.id] ?? ""} notes={writerNotes[u.id] ?? []} onClose={() => setOpenNoteId(null)} onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))} onAdd={() => addWriterNote(u.id)} onRemove={(idx) => removeWriterNote(u.id, idx)} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-[640px] px-[22px] pb-[calc(120px+env(safe-area-inset-bottom))] pt-6">
       <Link href="/kekere/feed" className="mb-5 inline-flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors active:bg-[rgba(42,26,18,0.06)]" aria-label="Back"><ChevronLeft size={20} /></Link>
@@ -438,7 +568,7 @@ export function WriterReviewView(props: WriterReviewProps) {
           )}
 
           {viewMode === "tracked" && (
-            <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">Select any words to comment on them or rewrite them yourself.</p>
+            <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">Go through each change and accept it or keep your wording. Tap <span className="font-semibold text-[var(--color-primary)]">Rewrite it myself</span> on any change to word it your own way — your editor sees your rewrite as tracked changes.</p>
           )}
           {viewMode !== "tracked" && (
             <p className="mb-3 mt-1 text-[12px] leading-relaxed text-[var(--color-ink-muted-2)]">
@@ -448,7 +578,9 @@ export function WriterReviewView(props: WriterReviewProps) {
             </p>
           )}
           <div ref={bodyRef} className="relative flex flex-col gap-4">
-            {/* Floating selection toolbar */}
+            {/* Floating selection toolbar — a bonus on desktop where dragging
+                to select is natural; the per-change Rewrite/Comment buttons
+                are the real path and work on touch without it. */}
             {anchor && (
               <div
                 role="toolbar"
@@ -471,85 +603,35 @@ export function WriterReviewView(props: WriterReviewProps) {
                 ),
               )}
 
-            {viewMode === "tracked" && units.map((u, i) => {
-              if (u.kind === "unchanged") {
-                if (!u.newHtml?.trim()) return <div key={u.id || i} className="h-2" />;
-                const edit = u.id ? writerEdits[u.id] : undefined;
+            {viewMode === "tracked" && trackedItems.map((item, i) => {
+              if (item.type === "run") {
+                if (!expandedRuns[i]) {
+                  return (
+                    <button
+                      key={`run-${i}`}
+                      type="button"
+                      onClick={() => setExpandedRuns((p) => ({ ...p, [i]: true }))}
+                      className="group flex w-full items-center gap-3 py-0.5"
+                      aria-label={`Show ${item.paras.length} unchanged paragraph${item.paras.length === 1 ? "" : "s"}`}
+                    >
+                      <span className="h-px flex-1 bg-[rgba(42,26,18,0.1)]" />
+                      <span className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)] transition-colors group-active:text-[var(--color-ink-muted)]">
+                        {item.paras.length} unchanged paragraph{item.paras.length === 1 ? "" : "s"}
+                      </span>
+                      <span className="h-px flex-1 bg-[rgba(42,26,18,0.1)]" />
+                    </button>
+                  );
+                }
                 return (
-                  <div key={u.id || i} className="px-1">
-                    {editingParaId === u.id ? (
-                      <ParagraphEditor html={edit?.html ?? u.newHtml ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, u.newHtml ?? "")} onCancel={() => setEditingParaId(null)} />
-                    ) : (
-                      <p data-para-id={u.id} className={cn("text-[15px] leading-[1.75] text-[var(--color-ink)]", edit && "rounded-md bg-[rgba(31,138,91,0.07)] px-2 py-1 ring-1 ring-[rgba(31,138,91,0.25)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: edit?.html ?? u.newHtml ?? "" }} />
-                    )}
-                    {edit && editingParaId !== u.id && <WriterEditBadge onRevert={() => revertWriterEdit(u.id)} />}
-                    {u.id && (u.comments.length > 0 || (writerNotes[u.id] ?? []).length > 0 || openNoteId === u.id) && (
-                      <div className="mt-1.5 flex flex-col gap-2">
-                        {u.comments.map((c) => <InlineComment key={c.id} comment={c} state={commentFor(c.id)} onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })} onReplyChange={(v) => setComment(c.id, { reply: v })} />)}
-                        <WriterNoteBlock isOpen={openNoteId === u.id} draft={noteDraft[u.id] ?? ""} notes={writerNotes[u.id] ?? []} onClose={() => setOpenNoteId(null)} onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))} onAdd={() => addWriterNote(u.id)} onRemove={(idx) => removeWriterNote(u.id, idx)} />
-                      </div>
-                    )}
+                  <div key={`run-${i}`} className="flex flex-col gap-4 rounded-xl bg-[rgba(42,26,18,0.015)] px-1 py-3">
+                    <button type="button" onClick={() => setExpandedRuns((p) => ({ ...p, [i]: false }))} className="self-start px-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-2)] active:text-[var(--color-ink)]">
+                      Hide unchanged text
+                    </button>
+                    {item.paras.map((u, j) => renderUnchanged(u, `run-${i}-${j}`))}
                   </div>
                 );
               }
-
-              const rejected = decisionFor(u.id) === "reject";
-              const writerEdit = u.id ? writerEdits[u.id] : undefined;
-
-              return (
-                <div key={u.id || i} className="relative overflow-hidden rounded-xl border border-[rgba(42,26,18,0.1)]">
-                  <div className="flex items-center justify-between border-b border-[rgba(42,26,18,0.06)] bg-[rgba(42,26,18,0.02)] px-4 py-2">
-                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]", u.kind === "added" ? "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]" : u.kind === "removed" ? "bg-[rgba(193,58,58,0.1)] text-[#A13A3A]" : "bg-[rgba(199,93,44,0.12)] text-[var(--color-primary)]")}><AlertCircle size={10} />{u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}</span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Change {i + 1} of {changeUnits.length}</span>
-                  </div>
-
-                  <div className="p-4">
-                    {writerEdit && editingParaId !== u.id && (
-                      <div className="mb-3 rounded-lg bg-[rgba(31,138,91,0.06)] px-4 py-3 ring-1 ring-[rgba(31,138,91,0.25)]">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[#1F8A5B]">Your version</p>
-                        <p data-para-id={u.id} className="text-[14.5px] leading-[1.7] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: writerEdit.html }} />
-                      </div>
-                    )}
-                    {editingParaId === u.id && (
-                      <div className="mb-3"><ParagraphEditor html={writerEdit?.html ?? (u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""} textAlign={u.textAlign} onSave={(html) => saveWriterEdit(u.id, html, ((u.kind === "removed" ? u.oldHtml : u.newHtml) ?? ""))} onCancel={() => setEditingParaId(null)} /></div>
-                    )}
-
-                    {!writerEdit && editingParaId !== u.id && u.kind === "changed" && u.spans && (
-                      <div className={cn("rounded-lg px-4 py-3", rejected && "bg-[rgba(42,26,18,0.02)]")}>
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">{rejected ? "Your original (kept)" : "Tracked changes"}</p>
-                        <p data-para-id={u.id} className="text-[14.5px] leading-[1.7] text-[var(--color-ink)]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: rejected ? u.oldHtml || "" : renderSpansToHtml(u.spans) }} />
-                      </div>
-                    )}
-                    {!writerEdit && editingParaId !== u.id && u.kind === "changed" && !u.spans && (
-                      <>
-                        <div className={cn("rounded-lg px-4 py-3 mb-3", rejected ? "bg-[rgba(42,26,18,0.03)]" : "bg-[rgba(193,58,58,0.05)]")}><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Original</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink)]" : "text-[var(--color-ink-muted-3)] line-through")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} /></div>
-                        <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}><p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>{rejected ? "Keep mine instead" : "Editor's version"}</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} /></div>
-                      </>
-                    )}
-                    {!writerEdit && editingParaId !== u.id && u.kind === "added" && u.newHtml && (
-                      <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(193,58,58,0.05)] line-through text-[var(--color-ink-muted-3)]" : "bg-[rgba(31,138,91,0.05)]")}><p className={cn("mb-1 text-[10px] font-semibold uppercase tracking-[0.06em]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[#1F8A5B]")}>{rejected ? "Dropping this" : "New paragraph"}</p><p className={cn("text-[14.5px] leading-[1.7]", rejected ? "text-[var(--color-ink-muted-3)]" : "text-[var(--color-ink)]")} style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml }} /></div>
-                    )}
-                    {!writerEdit && editingParaId !== u.id && u.kind === "removed" && (
-                      <div className={cn("rounded-lg px-4 py-3", rejected ? "bg-[rgba(42,26,18,0.02)] text-[var(--color-ink)]" : "bg-[rgba(193,58,58,0.05)] text-[var(--color-ink-muted-3)] line-through")}><p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">This will be removed</p><p data-para-id={u.id} className="text-[14.5px] leading-[1.7]" dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} /></div>
-                    )}
-
-                    {editingParaId !== u.id && (
-                      <div className="mt-4">
-                        {writerEdit ? <WriterEditBadge onRevert={() => revertWriterEdit(u.id)} /> : (
-                          <DiffToggle accepted={!rejected} onAccept={() => setDecision(u.id, "accept")} onReject={() => setDecision(u.id, "reject")} acceptLabel={u.kind === "removed" ? "Remove" : u.kind === "added" ? "Keep" : "Accept"} rejectLabel={u.kind === "removed" ? "Keep" : u.kind === "added" ? "Drop" : "Keep mine"} />
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {u.id && (u.comments.length > 0 || (writerNotes[u.id] ?? []).length > 0 || openNoteId === u.id) && (
-                    <div className="flex flex-col gap-2 border-t border-[rgba(42,26,18,0.06)] bg-[rgba(199,93,44,0.02)] px-4 py-3">
-                      {u.comments.map((c) => <InlineComment key={c.id} comment={c} state={commentFor(c.id)} onToggleResolved={() => setComment(c.id, { resolved: !commentFor(c.id).resolved })} onReplyChange={(v) => setComment(c.id, { reply: v })} />)}
-                      <WriterNoteBlock isOpen={openNoteId === u.id} draft={noteDraft[u.id] ?? ""} notes={writerNotes[u.id] ?? []} onClose={() => setOpenNoteId(null)} onDraftChange={(v) => setNoteDraft((p) => ({ ...p, [u.id]: v }))} onAdd={() => addWriterNote(u.id)} onRemove={(idx) => removeWriterNote(u.id, idx)} />
-                    </div>
-                  )}
-                </div>
-              );
+              return item.unit.kind === "unchanged" ? renderUnchanged(item.unit, `u-${i}`) : renderChange(item.unit, `c-${i}`);
             })}
           </div>
         </section>
@@ -659,5 +741,23 @@ function ParagraphEditor({ html, textAlign, onSave, onCancel }: { html: string; 
 function WriterEditBadge({ onRevert }: { onRevert: () => void }) {
   return (
     <div className="mt-1.5 flex items-center gap-2"><span className="inline-flex items-center gap-1 rounded-full bg-[rgba(31,138,91,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em] text-[#1F8A5B]"><PencilLine size={10} /> Your edit</span><button type="button" onClick={onRevert} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-ink-muted-2)] active:text-[var(--color-ink)]"><Undo2 size={11} /> Undo my edit</button></div>
+  );
+}
+
+/** The two things a writer can always do to any paragraph, as explicit taps.
+ * This is the fix for "tap to edit didn't work": editing used to depend on a
+ * drag-to-select gesture firing `selectionchange`, which is unreliable on
+ * touch — a plain tap selects nothing, so the toolbar never appeared. These
+ * buttons need no selection at all. */
+function ActionRow({ onRewrite, onComment }: { onRewrite: () => void; onComment: () => void }) {
+  return (
+    <div className="mt-3 flex items-center gap-4">
+      <button type="button" onClick={onRewrite} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-primary)] active:opacity-70">
+        <PencilLine size={13} /> Rewrite it myself
+      </button>
+      <button type="button" onClick={onComment} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--color-ink-muted-2)] active:text-[var(--color-ink)]">
+        <MessageSquare size={13} /> Comment
+      </button>
+    </div>
   );
 }
