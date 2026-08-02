@@ -55,12 +55,20 @@ function providerConfig(provider: ChatProvider): ProviderConfig {
       };
     case "gemini":
       // Gemini's OpenAI-compatible endpoint speaks the same request/response
-      // shape as Groq, so the retry loop below is provider-agnostic. 2.0 Flash
-      // (not 2.5) for its far higher free-tier requests-per-day ceiling.
+      // shape as Groq, so the retry loop below is provider-agnostic.
+      //
+      // Model: the rolling `gemini-flash-latest` alias, NOT a pinned version.
+      // Google retires dated Flash IDs on a fixed schedule (gemini-2.0-flash
+      // was shut down 1 Jun 2026), and a retired ID returns a 404 that this
+      // caller treats as permanent — silently falling back to Groq and back
+      // into its tokens/min wall. The alias always resolves to the current GA
+      // Flash (free-tier eligible), and Google gives two weeks' notice before
+      // it hot-swaps. GEMINI_MODEL overrides it, so a specific version can be
+      // pinned from the environment without a code change if ever needed.
       return {
         url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
         apiKey: process.env.GEMINI_API_KEY,
-        defaultModel: "gemini-2.0-flash",
+        defaultModel: process.env.GEMINI_MODEL ?? "gemini-flash-latest",
         allowModelOverride: false,
         includeReasoningEffort: false,
       };
