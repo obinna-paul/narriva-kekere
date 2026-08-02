@@ -43,7 +43,16 @@ export async function askKemiAI(
   // gpt-oss-120b spends part of max_tokens on its own reasoning before the
   // visible reply — too tight a cap makes it plausible for reasoning alone to
   // exhaust the budget and leave the reply empty, reading as Kemi going "away".
-  const raw = await callGroqChat({ messages, temperature: 0.8, maxTokens: 900, label: "kemi" });
+  // Gemini first: Kemi's prompt (catalog + reader context) is large, and Groq's
+  // ~6k tokens/min free ceiling is what a single such message keeps blowing —
+  // Gemini's far larger TPM budget is the primary path, Groq the overflow.
+  const raw = await callGroqChat({
+    messages,
+    temperature: 0.8,
+    maxTokens: 900,
+    label: "kemi",
+    providers: ["gemini", "groq"],
+  });
   if (!raw) return null;
 
   const match = raw.match(RECOMMEND_LINE);

@@ -31,7 +31,16 @@ export async function askNariAI(
 
   messages.push({ role: "user", content: question });
 
-  const answer = await callGroqChat({ messages, temperature: 0.7, maxTokens: 750, label: "nari" });
+  // Gemini first for the same reason as Kemi: Nari's prompt embeds the full FAQ,
+  // so each turn is token-heavy and keeps blowing Groq's small tokens/min free
+  // ceiling. Gemini's larger TPM budget carries it; Groq is the overflow.
+  const answer = await callGroqChat({
+    messages,
+    temperature: 0.7,
+    maxTokens: 750,
+    label: "nari",
+    providers: ["gemini", "groq"],
+  });
   if (!answer) return null;
 
   return { answer };
