@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { TAG_BY_SLUG, buildTagCatalogForAI } from "@/content/story-tags";
+import { callGroqChat } from "@/lib/ai/groq";
 
 const schema = z.object({
   title: z.string().min(1).max(200),
@@ -123,34 +124,20 @@ export const POST = withAuth(async (request) => {
       : "";
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        reasoning_effort: "low",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Title: ${title}\n\nStory text:\n${truncated}${avoidSection}` },
-        ],
-        // Nudge more variety on a regenerate request than the first pass.
-        temperature: avoidSection ? 0.95 : 0.75,
-        max_tokens: 350,
-      }),
-      signal: AbortSignal.timeout(15000),
+    const raw = await callGroqChat({
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Title: ${title}\n\nStory text:\n${truncated}${avoidSection}` },
+      ],
+      // Nudge more variety on a regenerate request than the first pass.
+      temperature: avoidSection ? 0.95 : 0.75,
+      maxTokens: 350,
+      timeoutMs: 15000,
+      label: "kekere:suggest",
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "AI service unavailable" }, { status: 503 });
-    }
-
-    const json = await res.json();
-    const raw = json.choices?.[0]?.message?.content as string | undefined;
     if (!raw) {
-      return NextResponse.json({ error: "No suggestions returned" }, { status: 503 });
+      return NextResponse.json({ error: "AI service unavailable" }, { status: 503 });
     }
 
     const tagMatch = raw.match(/TAGS?:\s*(.+)/i);

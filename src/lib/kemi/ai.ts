@@ -1,9 +1,5 @@
 import { KEMI_SYSTEM_PROMPT } from "@/content/kemi-prompt";
-
-interface GroqMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
+import { callGroqChat, type GroqChatMessage } from "@/lib/ai/groq";
 
 export interface KemiAIResult {
   reply: string;
@@ -20,10 +16,9 @@ export interface KemiAIResult {
 const RECOMMEND_LINE = /\n?RECOMMEND:\s*(.*?)\s*$/i;
 
 /**
- * Calls Groq API with openai/gpt-oss-120b (free tier, no credit card) using
- * Kemi's own system prompt, catalog, and reader context. Returns null on
- * any failure (missing key, network error, non-2xx, empty content) so the
- * caller can fall back to a fun "Kemi's away" message instead of a raw
+ * Calls Groq (via the shared, retrying caller) with Kemi's own system prompt,
+ * catalog, and reader context. Returns null on any unrecoverable failure so
+ * the caller can fall back to a fun "Kemi's away" message instead of a raw
  * error — Kemi never surfaces a technical failure to a reader.
  */
 export async function askKemiAI(
@@ -34,73 +29,31 @@ export async function askKemiAI(
   writersText: string,
   competitionsText: string,
 ): Promise<KemiAIResult | null> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return null;
-
   const system = KEMI_SYSTEM_PROMPT.replace("{READER_CONTEXT}", readerContextText)
     .replace("{CATALOG}", catalogText)
     .replace("{WRITERS}", writersText)
     .replace("{COMPETITIONS}", competitionsText);
 
-  const messages: GroqMessage[] = [{ role: "system", content: system }];
+  const messages: GroqChatMessage[] = [{ role: "system", content: system }];
   for (const msg of history.slice(-10)) {
     messages.push({ role: msg.role, content: msg.content });
   }
   messages.push({ role: "user", content: question });
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        reasoning_effort: "low",
-        messages,
-        temperature: 0.8,
-        // gpt-oss-120b spends part of this budget on its own reasoning
-        // before the visible reply — too tight a cap makes it plausible for
-        // reasoning alone to exhaust max_tokens and leave `content` empty,
-        // which reads to a reader as Kemi randomly going "away" mid-chat.
-        max_tokens: 900,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
+  // gpt-oss-120b spends part of max_tokens on its own reasoning before the
+  // visible reply — too tight a cap makes it plausible for reasoning alone to
+  // exhaust the budget and leave the reply empty, reading as Kemi going "away".
+  const raw = await callGroqChat({ messages, temperature: 0.8, maxTokens: 900, label: "kemi" });
+  if (!raw) return null;
 
-    if (!res.ok) {
-      // Status + Groq's own error type/code only — never the raw response
-      // body. Some upstream validation errors echo the offending request
-      // back in the body, and that's the reader's actual conversation; with
-      // real users on the app now, that content has no business sitting in
-      // a server log.
-      const errJson = await res.json().catch(() => null);
-      console.error("Kemi Groq call failed:", res.status, errJson?.error?.type, errJson?.error?.code);
-      return null;
-    }
+  const match = raw.match(RECOMMEND_LINE);
+  if (!match) return { reply: raw.trim(), recommendedSlugs: [] };
 
-    const json = await res.json();
-    const raw = json.choices?.[0]?.message?.content as string | undefined;
-    if (!raw) {
-      // Same reasoning — log the shape of the failure (why there's no
-      // content), not the response itself.
-      console.error("Kemi Groq call returned no content:", json.choices?.[0]?.finish_reason, json.usage);
-      return null;
-    }
+  const recommendedSlugs = match[1]
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean);
+  const reply = raw.slice(0, match.index).trim();
 
-    const match = raw.match(RECOMMEND_LINE);
-    if (!match) return { reply: raw.trim(), recommendedSlugs: [] };
-
-    const recommendedSlugs = match[1]
-      .split(",")
-      .map((slug) => slug.trim())
-      .filter(Boolean);
-    const reply = raw.slice(0, match.index).trim();
-
-    return { reply, recommendedSlugs };
-  } catch (err) {
-    console.error("Kemi Groq call failed:", (err as Error).message);
-    return null;
-  }
+  return { reply, recommendedSlugs };
 }

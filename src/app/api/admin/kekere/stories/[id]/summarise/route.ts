@@ -12,6 +12,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { docToPlainText } from "@/lib/tiptap/doc-utils";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { callGroqChat } from "@/lib/ai/groq";
 
 /** Groq quota is per-account and shared with reader-facing Kemi, so an
  *  editor holding down this button would be spending readers' capacity, not
@@ -125,37 +126,17 @@ Respond ONLY with valid JSON in this exact shape:
 
 No markdown fences. No commentary. JSON only.`;
 
-    let res: Response;
-    try {
-      res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          temperature: 0.2,
-          max_tokens: 2000,
-          reasoning_effort: "low",
-          response_format: { type: "json_object" },
-          messages: [{ role: "user", content: prompt }],
-        }),
-        signal: AbortSignal.timeout(55000),
-      });
-    } catch {
-      // Timeout or network failure — distinct from the model answering badly.
-      return NextResponse.json({ error: "Kemi took too long reading this one." }, { status: 504 });
-    }
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[summarise] Groq error:", err);
+    const raw = (await callGroqChat({
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      maxTokens: 2000,
+      responseFormat: "json_object",
+      timeoutMs: 55000,
+      label: "kekere:summarise",
+    })) ?? "";
+    if (!raw) {
       return NextResponse.json({ error: "AI request failed" }, { status: 502 });
     }
-
-    const groqData = await res.json();
-    const raw: string = groqData.choices?.[0]?.message?.content ?? "{}";
     const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
 
     let parsed: {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { callGroqChat } from "@/lib/ai/groq";
 
 interface MessageEntry {
   role: "user" | "assistant";
@@ -145,40 +146,24 @@ function stringOrNull(value: unknown): string | null {
 }
 
 async function callGroqExtraction(transcript: string): Promise<ExtractionResult> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
+  if (!process.env.GROQ_API_KEY) {
     console.warn("[nari] GROQ_API_KEY not configured — falling back to BROWSING");
     return FALLBACK_RESULT;
   }
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-oss-120b",
-      reasoning_effort: "low",
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
-        { role: "user", content: EXTRACTION_USER_PREFIX + " " + transcript },
-      ],
-      temperature: 0.3,
-      max_tokens: 1400,
-    }),
-    signal: AbortSignal.timeout(30_000),
+  const text = await callGroqChat({
+    messages: [
+      { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
+      { role: "user", content: EXTRACTION_USER_PREFIX + " " + transcript },
+    ],
+    temperature: 0.3,
+    maxTokens: 1400,
+    responseFormat: "json_object",
+    timeoutMs: 30_000,
+    label: "nari:extract",
   });
 
-  if (!res.ok) {
-    throw new Error(`Groq API returned ${res.status}`);
-  }
-
-  const json = await res.json();
-  const text = json.choices?.[0]?.message?.content as string | undefined;
-
-  if (!text) throw new Error("Empty Groq response");
+  if (!text) throw new Error("Groq extraction failed");
 
   // Defensive: json_object mode keeps `content` itself valid JSON, but strip
   // markdown fences anyway in case the model wraps it despite the mode.
