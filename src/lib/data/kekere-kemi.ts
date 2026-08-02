@@ -195,8 +195,14 @@ export async function getKemiReaderContext(userId: string): Promise<KemiReaderCo
       getTopGenre(userId),
       getWalletForUser(userId),
       hasFreeReadAvailable(userId),
-      prisma.storyCompletion.findMany({ where: { userId }, select: { storyId: true, story: { select: { slug: true } } } }),
-      prisma.storyUnlock.findMany({ where: { userId }, select: { story: { select: { slug: true } } } }),
+      // Capped + newest-first: the only use of these slugs is "don't
+      // re-recommend what they've already read", and a reader with a big
+      // backlog would otherwise stuff hundreds of slugs into every single
+      // prompt — the heaviest Kemi users paying the most tokens and hitting
+      // the rate limit first. The most recent 80 (trimmed to 40 below) is far
+      // more than enough for that instruction.
+      prisma.storyCompletion.findMany({ where: { userId }, orderBy: { completedAt: "desc" }, take: 80, select: { storyId: true, completedAt: true, story: { select: { slug: true } } } }),
+      prisma.storyUnlock.findMany({ where: { userId }, orderBy: { unlockedAt: "desc" }, take: 80, select: { unlockedAt: true, story: { select: { slug: true } } } }),
       // Genuinely mid-read only: barely-started (a stray tap) and
       // all-but-finished both make a "where you left off" offer feel wrong.
       prisma.storyReadingProgress.findMany({
@@ -213,13 +219,20 @@ export async function getKemiReaderContext(userId: string): Promise<KemiReaderCo
     .map(([slug]) => resolveCategoryBySlug(slug)?.title)
     .filter((title): title is string => !!title);
 
+  // Merge completions + unlocks newest-first, dedupe by slug (keeping the most
+  // recent mention), and cap the list — it exists only to tell Kemi what not to
+  // re-recommend, so an unbounded backlog on the prompt is pure token waste.
   const recentlyReadSlugs = Array.from(
-    new Set(
-      [...completions, ...unlocks]
-        .map((row) => row.story.slug)
-        .filter((slug): slug is string => !!slug),
-    ),
-  );
+    new Map(
+      [
+        ...completions.map((c) => ({ slug: c.story.slug, at: c.completedAt })),
+        ...unlocks.map((u) => ({ slug: u.story.slug, at: u.unlockedAt })),
+      ]
+        .filter((row): row is { slug: string; at: Date } => !!row.slug)
+        .sort((a, b) => b.at.getTime() - a.at.getTime())
+        .map((row) => [row.slug, true] as const),
+    ).keys(),
+  ).slice(0, 40);
 
   // A story can carry progress and a completion at once (they finished it on
   // a later pass), and one that's since been unpublished shouldn't be offered
