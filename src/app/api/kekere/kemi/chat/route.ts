@@ -143,23 +143,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ answer: randomKemiAwayMessage(), away: true, recommendations: [] });
   }
 
-  const catalogBySlug = new Map(catalog.map((s) => [s.slug, s]));
-  const recommendations: KemiRecommendation[] = ai.recommendedSlugs
-    .map((slug) => catalogBySlug.get(slug))
-    .filter((s): s is NonNullable<typeof s> => !!s)
-    .slice(0, 3)
-    .map((s) => ({
-      slug: s.slug,
-      title: s.title,
-      hookLine: s.hookLine,
-      genre: s.genre,
-      cowrieCost: s.cowrieCost,
-      readingTime: s.readingTime,
-      isAdult: s.isAdult,
-      authorName: s.authorName,
-      coverColor: s.coverColor,
-      coverImageUrl: s.coverImageRef ? storyCoverUrl(s.coverImageRef) : null,
-    }));
+  type CatalogStory = (typeof catalog)[number];
+  const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const bySlug = new Map(catalog.map((s) => [s.slug, s]));
+  const byTitle = new Map(catalog.map((s) => [normalize(s.title), s]));
+
+  const picked: CatalogStory[] = [];
+  const pickedSlugs = new Set<string>();
+  const pushStory = (s: CatalogStory | undefined) => {
+    if (s && !pickedSlugs.has(s.slug)) {
+      pickedSlugs.add(s.slug);
+      picked.push(s);
+    }
+  };
+
+  // The token after RECOMMEND is meant to be a catalog slug, but models
+  // improvise — some emit the exact title instead — so accept either.
+  for (const token of ai.recommendedTokens) {
+    pushStory(bySlug.get(token) ?? byTitle.get(normalize(token)));
+  }
+
+  // Fallback for the "named a story in prose but botched the RECOMMEND line"
+  // case (e.g. a bare "RECOMMEND" with no slug): if nothing resolved, card any
+  // catalog story whose title Kemi actually named in her reply, earliest-named
+  // first. Skip titles already shown as cards earlier in the conversation so we
+  // never paint a duplicate underneath an answer about a pick already on screen.
+  if (picked.length === 0) {
+    const alreadyShown = new Set(alreadySuggestedSlugs);
+    const normReply = normalize(ai.reply);
+    catalog
+      .map((s) => ({ s, at: normReply.indexOf(normalize(s.title)) }))
+      .filter(({ s, at }) => at !== -1 && normalize(s.title).length >= 5 && !alreadyShown.has(s.slug))
+      .sort((a, b) => a.at - b.at)
+      .forEach(({ s }) => pushStory(s));
+  }
+
+  const recommendations: KemiRecommendation[] = picked.slice(0, 3).map((s) => ({
+    slug: s.slug,
+    title: s.title,
+    hookLine: s.hookLine,
+    genre: s.genre,
+    cowrieCost: s.cowrieCost,
+    readingTime: s.readingTime,
+    isAdult: s.isAdult,
+    authorName: s.authorName,
+    coverColor: s.coverColor,
+    coverImageUrl: s.coverImageRef ? storyCoverUrl(s.coverImageRef) : null,
+  }));
 
   const assistantEntry: MessageEntry = {
     role: "assistant",

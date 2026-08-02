@@ -3,17 +3,22 @@ import { callGroqChat, type GroqChatMessage } from "@/lib/ai/groq";
 
 export interface KemiAIResult {
   reply: string;
-  recommendedSlugs: string[];
+  /** Whatever the model wrote after its RECOMMEND line — catalog slugs or, for
+   *  models that improvise, exact titles. The route resolves each against the
+   *  real catalog, so this stays deliberately loose. */
+  recommendedTokens: string[];
 }
 
-// Matches a trailing "RECOMMEND: slug-1, slug-2" line the prompt instructs
-// the model to append — stripped from what the reader sees, parsed into
-// recommendedSlugs for the route to validate against the real catalog. The
-// captured group is 0+, not 1+: the model occasionally emits a bare
-// "RECOMMEND:" with nothing after it (decided mid-generation not to
-// recommend after all), and that trailing line must still be stripped from
-// the visible reply — a 1+ requirement left it leaking as literal text.
-const RECOMMEND_LINE = /\n?RECOMMEND:\s*(.*?)\s*$/i;
+// Matches the trailing "RECOMMEND: ..." directive the prompt asks the model to
+// append. Deliberately forgiving, because it's parsing free-form model output:
+//   - the colon is optional (some models write "RECOMMEND" then a newline),
+//   - the payload is optional (a bare "RECOMMEND" with nothing after it must
+//     still be stripped, or it leaks into the reply as literal text — exactly
+//     the bug this replaced),
+//   - trailing blank lines after it are tolerated.
+// It only matches on the final line (the capture can't cross a newline), which
+// is where the directive is supposed to live.
+const RECOMMEND_LINE = /\n*[ \t]*RECOMMEND\b[:：]?[ \t]*([^\n]*?)[ \t]*\n*$/i;
 
 /**
  * Calls Groq (via the shared, retrying caller) with Kemi's own system prompt,
@@ -56,13 +61,13 @@ export async function askKemiAI(
   if (!raw) return null;
 
   const match = raw.match(RECOMMEND_LINE);
-  if (!match) return { reply: raw.trim(), recommendedSlugs: [] };
+  if (!match) return { reply: raw.trim(), recommendedTokens: [] };
 
-  const recommendedSlugs = match[1]
+  const recommendedTokens = match[1]
     .split(",")
-    .map((slug) => slug.trim())
+    .map((token) => token.trim())
     .filter(Boolean);
   const reply = raw.slice(0, match.index).trim();
 
-  return { reply, recommendedSlugs };
+  return { reply, recommendedTokens };
 }

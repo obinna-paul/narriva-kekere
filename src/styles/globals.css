@@ -151,6 +151,35 @@ body {
   }
 }
 
+/* Kemi "typing…" indicator — three dots that rise and brighten in sequence,
+   the modern messaging-app pattern (WhatsApp/iMessage). Each dot runs the same
+   loop; the per-dot animation-delay set inline staggers them into a wave.
+   The mid-cycle lift + opacity swell keeps the bubble reading as *active* the
+   whole time, rather than the flat, near-invisible dots it replaced. */
+@keyframes kemi-typing {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  35% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.kemi-typing-dot {
+  animation: kemi-typing 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kemi-typing-dot {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 /* TipTap Placeholder extension — required global styles.
    The Tailwind arbitrary-variant approach is fragile for ::before pseudo-elements;
    declaring these here guarantees the placeholder always renders. */

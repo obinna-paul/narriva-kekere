@@ -520,10 +520,10 @@ export function KemiChat({
 
                   {loading && (
                     <li className="mt-2.5 flex justify-start" aria-label="Kemi is typing">
-                      <div className="flex items-center gap-1 rounded-2xl bg-white px-4 py-3 shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]">
-                        <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "0ms" }} />
-                        <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "150ms" }} />
-                        <span className="inline-block h-[6px] w-[6px] animate-bounce rounded-full bg-[var(--color-ink)]/40" style={{ animationDelay: "300ms" }} />
+                      <div className="flex items-center gap-[5px] rounded-2xl rounded-bl-md bg-white px-[15px] py-[13px] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]">
+                        <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "0ms" }} />
+                        <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "180ms" }} />
+                        <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "360ms" }} />
                       </div>
                     </li>
                   )}
