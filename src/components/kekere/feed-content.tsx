@@ -519,7 +519,7 @@ export function FeedContent({
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
                 {featuredStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
-                <span className="absolute left-0 top-4 bg-[var(--color-primary)] px-3 py-[7px] text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                <span className="absolute left-0 top-4 bg-[var(--color-primary)]/80 px-3 py-[7px] text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur-[2px]">
                   Editor&apos;s pick
                 </span>
               </div>
