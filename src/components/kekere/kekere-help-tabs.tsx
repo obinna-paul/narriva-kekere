@@ -39,7 +39,7 @@ export function KekereHelpTabs({ categories }: KekereHelpTabsProps) {
         ))}
       </div>
 
-      <section className="mx-auto max-w-[680px] px-[22px] pb-[70px] pt-6">
+      <section className="mx-auto max-w-[680px] px-[22px] pb-8 pt-6">
         <div className="border-t border-[rgba(42,26,18,0.12)]">
           {active.faqs.map((faq, i) => {
             const open = openIndex === i;
@@ -70,14 +70,6 @@ export function KekereHelpTabs({ categories }: KekereHelpTabsProps) {
               </div>
             );
           })}
-        </div>
-
-        <div className="mt-[34px] rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white p-[26px] text-center">
-          <p className="text-[15px] text-[var(--color-ink)]">
-            Still need us?{" "}
-            <span className="font-semibold text-[var(--color-primary)]">Message the team</span>{" "}
-            — a real person replies.
-          </p>
         </div>
       </section>
     </>

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Check,
   Sliders,
+  LifeBuoy,
 } from "lucide-react";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
@@ -993,6 +994,12 @@ export function ProfileView(props: ProfileViewProps) {
                       </span>
                     ) : undefined
                   }
+                />
+                <ListRow
+                  href="/kekere/help"
+                  icon={<LifeBuoy size={15} />}
+                  tone="primary"
+                  label="Help & support"
                 />
                 <ListRow href="/kekere/invite" icon={<Gift size={15} />} tone="accent" label="Invite friends, earn cowries" />
               </ListCard>
