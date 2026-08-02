@@ -1,5 +1,6 @@
 import { NARI_FAQ } from "@/content/nari-faq";
 import { NARI_SYSTEM_PROMPT } from "@/content/nari-prompt";
+import { callGroqChat, type GroqChatMessage } from "@/lib/ai/groq";
 
 const FAQ_EMBEDDED = NARI_FAQ.map(
   (faq) => `Q: ${faq.question}\nA: ${faq.answer}`,
@@ -7,27 +8,19 @@ const FAQ_EMBEDDED = NARI_FAQ.map(
 
 const SYSTEM = NARI_SYSTEM_PROMPT.replace("{FAQ_EMBEDDED}", FAQ_EMBEDDED);
 
-interface GroqMessage {
-  role: "system" | "user" | "assistant";
-  content: string;
-}
-
 interface NariResponse {
   answer: string;
 }
 
 /**
- * Calls Groq API with openai/gpt-oss-120b (free tier, no credit card).
- * Falls back to null if the API key is not configured or the call fails.
+ * Calls Groq (via the shared, retrying caller). Falls back to null if the API
+ * key is not configured or the call fails unrecoverably.
  */
 export async function askNariAI(
   question: string,
   history: { role: "user" | "nari"; text: string }[],
 ): Promise<NariResponse | null> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return null;
-
-  const messages: GroqMessage[] = [{ role: "system", content: SYSTEM }];
+  const messages: GroqChatMessage[] = [{ role: "system", content: SYSTEM }];
 
   for (const msg of history.slice(-8)) {
     messages.push({
@@ -38,37 +31,10 @@ export async function askNariAI(
 
   messages.push({ role: "user", content: question });
 
-  try {
-    const res = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          reasoning_effort: "low",
-          messages,
-          temperature: 0.7,
-          max_tokens: 750,
-        }),
-        signal: AbortSignal.timeout(20000),
-      },
-    );
+  const answer = await callGroqChat({ messages, temperature: 0.7, maxTokens: 750, label: "nari" });
+  if (!answer) return null;
 
-    if (!res.ok) return null;
-
-    const json = await res.json();
-    const answer = json.choices?.[0]?.message?.content as string | undefined;
-    if (!answer) return null;
-
-    return { answer };
-  } catch (err) {
-    console.error("Nari Groq call failed:", (err as Error).message);
-    return null;
-  }
+  return { answer };
 }
 
 function normalize(text: string): string {

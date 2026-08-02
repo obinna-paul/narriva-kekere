@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { TAG_BY_SLUG, buildTagCatalogForAI } from "@/content/story-tags";
+import { callGroqChat } from "@/lib/ai/groq";
 
 function bodyToPlainText(body: unknown): string {
   if (!body || typeof body === "string") return (body as string) ?? "";
@@ -143,31 +144,17 @@ Or if a new tag is warranted:
 
 No markdown fences. No commentary. JSON only.`;
 
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        temperature: 0.2,
-        max_tokens: 700,
-        reasoning_effort: "low",
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
-      }),
-      signal: AbortSignal.timeout(25000),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("[suggest-tags] Groq error:", err);
+    const raw = (await callGroqChat({
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      maxTokens: 700,
+      responseFormat: "json_object",
+      timeoutMs: 25000,
+      label: "kekere:suggest-tags",
+    })) ?? "";
+    if (!raw) {
       return NextResponse.json({ error: "AI request failed" }, { status: 502 });
     }
-
-    const groqData = await res.json();
-    const raw: string = groqData.choices?.[0]?.message?.content ?? "{}";
 
     // Strip markdown fences if the model wraps the JSON anyway
     const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();

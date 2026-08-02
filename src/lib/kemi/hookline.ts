@@ -1,3 +1,5 @@
+import { callGroqChat } from "@/lib/ai/groq";
+
 // Kemi's writer-assist mode: suggests a single hook line for a writer's own
 // unfinished draft, so a "coming soon" pick with no hook line yet isn't
 // stuck without one. Separate from src/lib/kemi/ai.ts (the reader-facing
@@ -48,7 +50,7 @@ export async function suggestHookline(title: string, draftPlainText: string): Pr
   // Try full text first, then a shorter fallback if the model's provider
   // rejects the large payload (rate limits, token-per-minute caps, etc.).
   for (const attempt of [fullText, fullText.slice(0, 8000)]) {
-    const result = await tryGroqCall(apiKey, title, attempt, attempt === fullText ? "full" : "truncated");
+    const result = await tryGroqCall(title, attempt, attempt === fullText ? "full" : "truncated");
     if (result !== null) return result;
   }
 
@@ -56,77 +58,29 @@ export async function suggestHookline(title: string, draftPlainText: string): Pr
 }
 
 async function tryGroqCall(
-  apiKey: string,
   title: string,
   draftText: string,
   label: string,
 ): Promise<string | null> {
-  console.log("[kemi-hookline] sending to Groq:", {
-    label,
-    titleLen: title.length,
-    draftLen: draftText.length,
-    draftWords: draftText.trim() ? draftText.trim().split(/\s+/).length : 0,
+  const raw = await callGroqChat({
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: `Title: ${title}\n\nDraft:\n${draftText}` },
+    ],
+    temperature: 0.7,
+    maxTokens: 280,
+    timeoutMs: 30000,
+    label: `kemi:hookline:${label}`,
   });
+  if (!raw) return null;
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
-        reasoning_effort: "low",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: `Title: ${title}\n\nDraft:\n${draftText}` },
-        ],
-        temperature: 0.7,
-        max_tokens: 280,
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!res.ok) {
-      let errorBody = "";
-      try {
-        errorBody = await res.text();
-      } catch {
-        // body unreadable
-      }
-      console.error("[kemi-hookline] Groq API error:", {
-        label,
-        status: res.status,
-        statusText: res.statusText,
-        body: errorBody.slice(0, 500),
-      });
-      return null;
-    }
-
-    const json = await res.json();
-    const raw = json.choices?.[0]?.message?.content as string | undefined;
-    if (!raw) {
-      console.error("[kemi-hookline] Groq returned no content:", JSON.stringify(json).slice(0, 300));
-      return null;
-    }
-
-    const cleaned = raw.trim().replace(/^["']|["']$/g, "");
-    if (!cleaned || cleaned.length > 200) {
-      console.error("[kemi-hookline] invalid hookline:", {
-        raw: raw.slice(0, 200),
-        cleanedLen: cleaned.length,
-      });
-      return null;
-    }
-
-    return cleaned;
-  } catch (err) {
-    console.error("[kemi-hookline] fetch failed:", (err as Error).message, {
-      label,
-      name: (err as Error).name,
-      draftLen: draftText.length,
-    });
+  const cleaned = raw.trim().replace(/^["']|["']$/g, "");
+  // Reject an empty or runaway result (the model ignoring the length cap) —
+  // don't log the text itself, just why it was rejected.
+  if (!cleaned || cleaned.length > 200) {
+    console.error("[kemi-hookline] invalid hookline length:", cleaned.length);
     return null;
   }
+
+  return cleaned;
 }
