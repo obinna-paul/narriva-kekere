@@ -91,6 +91,8 @@ export function CowrieEconomy() {
   const [topupEmail, setTopupEmail] = useState("");
   const [reconcilingTopup, setReconcilingTopup] = useState(false);
   const [topupResult, setTopupResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [sweepingTopups, setSweepingTopups] = useState(false);
+  const [sweepResult, setSweepResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // `silent` refreshes the data without flashing the skeletons — used by the
   // background poll so the dashboard stays live without visibly reloading.
@@ -231,6 +233,32 @@ export function CowrieEconomy() {
       setTopupResult({ ok: false, message: e instanceof Error ? e.message : "Reconcile failed" });
     } finally {
       setReconcilingTopup(false);
+    }
+  }
+
+  async function handleSweepTopups() {
+    setSweepingTopups(true);
+    setSweepResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/reconcile-topups-sweep", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sinceHours: 48 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Sweep failed");
+      setSweepResult({
+        ok: true,
+        message:
+          data.credited > 0
+            ? `Credited ${data.credited} missed payment${data.credited === 1 ? "" : "s"} (checked ${data.checked} top-up${data.checked === 1 ? "" : "s"} in the last 48h; ${data.alreadyCredited} were already fine${data.skipped ? `, ${data.skipped} skipped` : ""}).`
+            : `All caught up — checked ${data.checked} top-up${data.checked === 1 ? "" : "s"} in the last 48h, every one was already credited.`,
+      });
+      load();
+    } catch (e) {
+      setSweepResult({ ok: false, message: e instanceof Error ? e.message : "Sweep failed" });
+    } finally {
+      setSweepingTopups(false);
     }
   }
 
@@ -460,6 +488,26 @@ export function CowrieEconomy() {
         {topupResult && (
           <p className={cn("mt-3 text-[12px]", topupResult.ok ? "text-[#1E874B]" : "text-[#C0392B]")}>{topupResult.message}</p>
         )}
+        <div className="mt-4 border-t border-[rgba(30,58,138,0.12)] pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] text-[#8B919A]">
+              Or don&apos;t have a reference? <span className="font-semibold text-[#1A1C20]">Sweep the last 48 hours</span> — it
+              checks every successful Paystack payment and credits any that never landed. This is the same
+              guarantee the nightly job runs; use it to fix a report right away. Idempotent, never double-credits.
+            </p>
+            <button
+              type="button"
+              onClick={handleSweepTopups}
+              disabled={sweepingTopups}
+              className="flex-none rounded-[8px] border border-[#1E3A8A] px-4 py-2 text-[12px] font-semibold text-[#1E3A8A] hover:bg-[rgba(30,58,138,0.06)] disabled:opacity-50"
+            >
+              {sweepingTopups ? "Sweeping…" : "Sweep last 48h of payments"}
+            </button>
+          </div>
+          {sweepResult && (
+            <p className={cn("mt-3 text-[12px]", sweepResult.ok ? "text-[#1E874B]" : "text-[#C0392B]")}>{sweepResult.message}</p>
+          )}
+        </div>
       </div>
 
       {/* Recovery sweep: pay every referral reward that was earned but

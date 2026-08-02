@@ -44,6 +44,62 @@ export async function verifyTransaction(reference: string): Promise<PaystackVeri
   return body.data as PaystackVerifyResult;
 }
 
+export interface PaystackListedTransaction {
+  reference: string;
+  amount: number; // kobo
+  status: string;
+  paidAt: string | null;
+  metadata: Record<string, unknown> | null;
+  customerEmail: string | null;
+}
+
+/**
+ * Lists transactions from Paystack, newest first — the basis of the
+ * reconciliation sweep that guarantees every settled top-up eventually gets
+ * credited even if both the client verify and the webhook missed it. One page
+ * at a time so the caller can bound how far back it walks; `from` is an ISO
+ * date string (Paystack accepts a plain YYYY-MM-DD or a full timestamp).
+ */
+export async function listTransactions(opts: {
+  status?: "success" | "failed" | "abandoned";
+  perPage?: number;
+  page?: number;
+  from?: string;
+}): Promise<{ transactions: PaystackListedTransaction[]; pageCount: number }> {
+  const params = new URLSearchParams();
+  if (opts.status) params.set("status", opts.status);
+  params.set("perPage", String(opts.perPage ?? 100));
+  params.set("page", String(opts.page ?? 1));
+  if (opts.from) params.set("from", opts.from);
+
+  const res = await fetch(`${PAYSTACK_BASE_URL}/transaction?${params.toString()}`, {
+    headers: authHeader(),
+  });
+  if (!res.ok) {
+    throw new Error(`Paystack transaction list failed with status ${res.status}`);
+  }
+  const body = await res.json();
+  const rows = (body.data ?? []) as Array<{
+    reference: string;
+    amount: number;
+    status: string;
+    paid_at: string | null;
+    metadata: Record<string, unknown> | null;
+    customer?: { email?: string };
+  }>;
+  return {
+    transactions: rows.map((r) => ({
+      reference: r.reference,
+      amount: r.amount,
+      status: r.status,
+      paidAt: r.paid_at,
+      metadata: r.metadata,
+      customerEmail: r.customer?.email ?? null,
+    })),
+    pageCount: Number(body.meta?.pageCount ?? 1),
+  };
+}
+
 /**
  * Validates the `x-paystack-signature` header Paystack sends on every
  * webhook delivery: HMAC-SHA512 of the raw request body, keyed with the

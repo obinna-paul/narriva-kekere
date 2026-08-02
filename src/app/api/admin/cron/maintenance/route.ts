@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { sweepExpiredRateLimits } from "@/lib/rate-limit";
+import { reconcileRecentTopUps } from "@/lib/economy/reconcile-topups";
 
 /** Kemi conversations are retired after three hours of silence (see the
  *  conversation route) but the rows were kept forever, each holding an
@@ -39,9 +40,23 @@ export async function GET(request: Request) {
     sweepExpiredRateLimits(),
   ]);
 
+  // Daily backstop that closes the loop on the payment guarantee: any settled
+  // top-up the client verify and the webhook both missed gets credited here on
+  // the next run. Idempotent (keyed on the Paystack reference), so this only
+  // ever fills genuine gaps. Isolated in its own try/catch — a Paystack outage
+  // must not turn nightly housekeeping into a failed cron.
+  let topUps: { credited: number; alreadyCredited: number; skipped: number } | { error: string };
+  try {
+    const swept = await reconcileRecentTopUps({ sinceHours: 72 });
+    topUps = { credited: swept.credited, alreadyCredited: swept.alreadyCredited, skipped: swept.skipped };
+  } catch (e) {
+    topUps = { error: e instanceof Error ? e.message : "top-up reconcile failed" };
+  }
+
   return NextResponse.json({
     kemiConversationsDeleted: conversations.count,
     kemiNudgesDeleted: nudges.count,
     rateLimitWindowsDeleted: rateLimits,
+    topUps,
   });
 }
