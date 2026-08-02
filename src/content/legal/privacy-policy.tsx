@@ -5,14 +5,11 @@ export interface PrivacyPolicyProps {
   brand: "Narriva" | "Kekere";
 }
 
-const LAWYER_NOTICE =
-  "This policy should be reviewed by a qualified lawyer before the platform processes real user data in production.";
-
 export function PrivacyPolicy({ brand }: PrivacyPolicyProps) {
   const otherBrand = brand === "Narriva" ? "Kekere" : "Narriva";
 
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="June 23, 2026" notice={LAWYER_NOTICE}>
+    <LegalLayout title="Privacy Policy" lastUpdated="June 23, 2026">
       <LegalSection heading="1. Who this policy covers">
         <p>
           {brand} and {otherBrand} are run on the same underlying platform and share one

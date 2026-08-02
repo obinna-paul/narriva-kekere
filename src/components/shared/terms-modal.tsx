@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 
-export function TermsModal({ children }: { children: React.ReactNode }) {
+export function TermsModal({
+  children,
+  label = "Terms of Use",
+}: {
+  children: React.ReactNode;
+  /** The trigger's link text — also lets the same modal open other legal
+   *  documents (e.g. the Privacy Policy) inline from a signup agreement. */
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -13,7 +21,7 @@ export function TermsModal({ children }: { children: React.ReactNode }) {
         onClick={(e) => { e.preventDefault(); setOpen(true); }}
         className="cursor-pointer border-none bg-transparent p-0 font-medium text-[var(--color-primary)] underline"
       >
-        Terms of Use
+        {label}
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,18,0.5)] p-4">

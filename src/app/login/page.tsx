@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { KekereTheme, NarrivaTheme } from "@/components/theme";
 import { KekereAuthForm } from "@/components/kekere/auth-form";
 import { TermsOfUse } from "@/content/legal/terms-of-use";
+import { PrivacyPolicy } from "@/content/legal/privacy-policy";
 import { getRandomKekereLoginQuote } from "@/content/kekere-login-quotes";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,11 @@ export default function LoginPage({
             </div>
           </div>
           <Suspense>
-            <KekereAuthForm brand="narriva" termsContent={<TermsOfUse brand="Narriva" />} />
+            <KekereAuthForm
+              brand="narriva"
+              termsContent={<TermsOfUse brand="Narriva" />}
+              privacyContent={<PrivacyPolicy brand="Narriva" />}
+            />
           </Suspense>
         </main>
       </NarrivaTheme>
@@ -72,7 +77,10 @@ export default function LoginPage({
         </div>
 
         <Suspense>
-          <KekereAuthForm termsContent={<TermsOfUse brand="Kekere" />} />
+          <KekereAuthForm
+            termsContent={<TermsOfUse brand="Kekere" />}
+            privacyContent={<PrivacyPolicy brand="Kekere" />}
+          />
         </Suspense>
       </main>
     </KekereTheme>
