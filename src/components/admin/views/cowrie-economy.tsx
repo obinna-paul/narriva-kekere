@@ -87,6 +87,10 @@ export function CowrieEconomy() {
   const [rebuildResult, setRebuildResult] = useState<string | null>(null);
   const [reconcilingRefs, setReconcilingRefs] = useState(false);
   const [reconcileRefsResult, setReconcileRefsResult] = useState<string | null>(null);
+  const [topupRef, setTopupRef] = useState("");
+  const [topupEmail, setTopupEmail] = useState("");
+  const [reconcilingTopup, setReconcilingTopup] = useState(false);
+  const [topupResult, setTopupResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // `silent` refreshes the data without flashing the skeletons — used by the
   // background poll so the dashboard stays live without visibly reloading.
@@ -196,6 +200,37 @@ export function CowrieEconomy() {
       setReconcileRefsResult(e instanceof Error ? e.message : "Reconcile failed");
     } finally {
       setReconcilingRefs(false);
+    }
+  }
+
+  async function handleReconcileTopup() {
+    if (!topupRef.trim()) return;
+    setReconcilingTopup(true);
+    setTopupResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/reconcile-topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: topupRef.trim(),
+          expectedEmail: topupEmail.trim() || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Reconcile failed");
+      setTopupResult({
+        ok: true,
+        message: data.alreadyCredited
+          ? `${data.user?.email ?? "This account"} was already credited for this payment — nothing was added, so there's no double-credit.`
+          : `Credited ${data.cowriesCredited} cowries to ${data.user?.email ?? "the account"} for their ₦${data.paidNGN} payment.${data.newBalance != null ? ` New spending balance: ${data.newBalance}.` : ""}`,
+      });
+      setTopupRef("");
+      setTopupEmail("");
+      load();
+    } catch (e) {
+      setTopupResult({ ok: false, message: e instanceof Error ? e.message : "Reconcile failed" });
+    } finally {
+      setReconcilingTopup(false);
     }
   }
 
@@ -384,6 +419,47 @@ export function CowrieEconomy() {
           </button>
         </div>
         {clearResult && <p className="mt-3 text-[12px] text-[#646B73]">{clearResult}</p>}
+      </div>
+
+      {/* Reconcile a paid-but-not-credited top-up. Re-verifies the reference
+          against Paystack, so it can only credit a charge Paystack actually
+          settled, and credits through the same idempotent path keyed on the
+          reference — safe to run twice and safe if the webhook lands later. */}
+      <div className="rounded-[11px] border border-[#1E3A8A]/20 bg-[rgba(30,58,138,0.03)] px-5 py-5">
+        <h3 className="text-[13px] font-semibold text-[#1A1C20]">Reconcile a paid top-up</h3>
+        <p className="mt-0.5 text-[12px] text-[#8B919A]">
+          For a reader who paid but whose cowries never landed (usually their connection dropped right
+          after paying). Paste the Paystack reference — it&apos;s re-verified against Paystack, then the
+          right number of cowries is credited to whichever account made the payment. Idempotent: it
+          never double-credits, even if the payment later reconciles on its own.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="text"
+            value={topupRef}
+            onChange={(e) => setTopupRef(e.target.value)}
+            placeholder="Paystack reference (e.g. T123456789)"
+            className="min-w-0 flex-1 rounded-[8px] border border-[rgba(20,22,26,0.14)] bg-white px-3 py-2 text-[12px] text-[#1A1C20] placeholder:text-[#B0B5BC] focus:border-[#1E3A8A] focus:outline-none"
+          />
+          <input
+            type="email"
+            value={topupEmail}
+            onChange={(e) => setTopupEmail(e.target.value)}
+            placeholder="Buyer's email (optional check)"
+            className="min-w-0 flex-1 rounded-[8px] border border-[rgba(20,22,26,0.14)] bg-white px-3 py-2 text-[12px] text-[#1A1C20] placeholder:text-[#B0B5BC] focus:border-[#1E3A8A] focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={handleReconcileTopup}
+            disabled={reconcilingTopup || !topupRef.trim()}
+            className="flex-none rounded-[8px] bg-[#1E3A8A] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#182f6f] disabled:opacity-50"
+          >
+            {reconcilingTopup ? "Reconciling…" : "Credit this payment"}
+          </button>
+        </div>
+        {topupResult && (
+          <p className={cn("mt-3 text-[12px]", topupResult.ok ? "text-[#1E874B]" : "text-[#C0392B]")}>{topupResult.message}</p>
+        )}
       </div>
 
       {/* Recovery sweep: pay every referral reward that was earned but
