@@ -13,7 +13,15 @@ import type { ReactNode } from "react";
 type Mode = "signin" | "signup";
 type Brand = "kekere" | "narriva";
 
-export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Brand; termsContent?: ReactNode }) {
+export function KekereAuthForm({
+  brand = "kekere",
+  termsContent,
+  privacyContent,
+}: {
+  brand?: Brand;
+  termsContent?: ReactNode;
+  privacyContent?: ReactNode;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? (brand === "narriva" ? "/" : "/kekere/feed");
@@ -73,7 +81,7 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
     setSuccess(null);
 
     if (!termsAccepted) {
-      setError("You must accept the Terms of Use to create an account.");
+      setError("You must accept the Terms of Use and Privacy Policy to create an account.");
       return;
     }
     if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken) {
@@ -285,18 +293,21 @@ export function KekereAuthForm({ brand = "kekere", termsContent }: { brand?: Bra
         </div>
 
         {mode === "signup" && (
-          <label className="flex cursor-pointer items-center gap-[10px] text-sm font-normal text-[#4A372C]">
+          <label className="flex cursor-pointer items-start gap-[10px] text-sm font-normal text-[#4A372C]">
             <input
               type="checkbox"
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
-              className="h-[17px] w-[17px] flex-none"
+              className="mt-[2px] h-[17px] w-[17px] flex-none"
               style={{ accentColor: "var(--color-primary)" }}
             />
-            I agree to the{" "}
-            <TermsModal>
-              {termsContent}
-            </TermsModal>
+            <span>
+              I agree to the{" "}
+              <TermsModal label="Terms of Use">{termsContent}</TermsModal>
+              {" "}and{" "}
+              <TermsModal label="Privacy Policy">{privacyContent}</TermsModal>
+              .
+            </span>
           </label>
         )}
 
