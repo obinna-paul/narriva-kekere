@@ -45,16 +45,20 @@ export async function askKemiAI(
   }
   messages.push({ role: "user", content: question });
 
-  // gpt-oss-120b spends part of max_tokens on its own reasoning before the
-  // visible reply — too tight a cap makes it plausible for reasoning alone to
-  // exhaust the budget and leave the reply empty, reading as Kemi going "away".
+  // Both providers spend part of max_tokens on reasoning/thinking before the
+  // visible reply — too tight a cap makes it plausible for that alone to eat
+  // most of the budget, leaving either an empty completion or (observed in
+  // production) a reply truncated mid-sentence. 900 wasn't enough headroom;
+  // groq.ts now also refuses a finish_reason: "length" completion outright,
+  // so a too-tight cap here would surface as Kemi going silent rather than
+  // showing a broken half-sentence — this budget just needs to make that rare.
   // Gemini first: Kemi's prompt (catalog + reader context) is large, and Groq's
   // ~6k tokens/min free ceiling is what a single such message keeps blowing —
   // Gemini's far larger TPM budget is the primary path, Groq the overflow.
   const raw = await callGroqChat({
     messages,
     temperature: 0.8,
-    maxTokens: 900,
+    maxTokens: 1500,
     label: "kemi",
     providers: ["gemini", "groq"],
   });
