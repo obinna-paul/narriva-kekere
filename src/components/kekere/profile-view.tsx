@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   LogOut,
-  Link2,
   Gift,
   Mail,
   BookOpen,
@@ -25,6 +24,8 @@ import { BankDetailsSection, type BankDetailsProp } from "@/components/kekere/ba
 import { AvatarCropModal } from "@/components/kekere/avatar-crop-modal";
 import { StreakCard, type StreakCardProps } from "@/components/kekere/streak-card";
 import { ShareProfileSheet } from "@/components/kekere/share-profile-sheet";
+import { SocialIcon } from "@/components/kekere/social-icon";
+import { detectSocialPlatform, formatSocialLinkLabel } from "@/lib/utils/social-links";
 import type { RatingSummary } from "@/lib/data/kekere-ratings";
 import type { AuthorStorySummary } from "@/lib/data/kekere-stories";
 import { SITE_URL } from "@/content/decisions";
@@ -882,10 +883,12 @@ export function ProfileView(props: ProfileViewProps) {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
+                    className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
                   >
-                    <Link2 size={12} />
-                    {link.label}
+                    <span className="flex-none text-[var(--color-primary)]/75">
+                      <SocialIcon platform={detectSocialPlatform(link.href)} />
+                    </span>
+                    <span className="truncate">{formatSocialLinkLabel(link)}</span>
                   </a>
                 ))}
               </div>

@@ -6,6 +6,8 @@ import { MapPin, Star, Quote, Users, BookOpen, Heart } from "lucide-react";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import { AvatarLightbox } from "@/components/kekere/AvatarLightbox";
+import { SocialIcon } from "@/components/kekere/social-icon";
+import { detectSocialPlatform, formatSocialLinkLabel } from "@/lib/utils/social-links";
 import type {
   PublicWriterProfile,
   WriterProfileStats,
@@ -332,9 +334,12 @@ export function WriterProfileView({
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-[rgba(42,26,18,0.10)] bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_1px_4px_rgba(199,93,44,0.1)]"
+                className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.10)] bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_1px_4px_rgba(199,93,44,0.1)]"
               >
-                {link.label}
+                <span className="flex-none text-[var(--color-primary)]/75">
+                  <SocialIcon platform={detectSocialPlatform(link.href)} />
+                </span>
+                <span className="truncate">{formatSocialLinkLabel(link)}</span>
               </a>
             ))}
           </div>
