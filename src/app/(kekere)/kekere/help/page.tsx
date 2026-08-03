@@ -45,7 +45,7 @@ export default function KekereHelpPage() {
                 Still need a hand?
               </h2>
               <p className="text-[13.5px] text-[var(--color-ink-muted)]">
-                Reach out any time — a real person reads every message.
+                Reach out any time and we&apos;ll help you sort it out.
               </p>
             </div>
           </div>

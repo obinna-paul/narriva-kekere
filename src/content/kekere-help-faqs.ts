@@ -15,7 +15,7 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
       {
         question: "What are cowries?",
         answer:
-          "Cowries are how you unlock stories on Kekere. Some stories are free; others cost a few cowries, and that goes straight to supporting the writer. Top up any time from your wallet.",
+          "Cowries are how you unlock stories on Kekere. Each story costs a few cowries, and that goes straight to supporting the writer. Top up any time from your wallet.",
       },
       {
         question: "How long are the stories?",
@@ -25,7 +25,7 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
       {
         question: "Can I read offline?",
         answer:
-          "Stories you've unlocked stay in your library and remember where you left off, so you can pick up reading any time.",
+          "Not yet — Kekere runs in your browser for now, so you'll need a connection to read. But every story you unlock stays in your library and remembers where you left off, so it's always one tap away when you're back online.",
       },
       {
         question: "What does the completion rate mean?",
@@ -40,17 +40,12 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
       {
         question: "How do I publish a story?",
         answer:
-          "Open the writer's editor, write your story, set a tier, and submit for review. We read everything that comes in, properly, within five to seven business days.",
+          "Open the writer's editor, write your story, and submit for review. We read everything that comes in, properly, within five to seven business days, and let you know once it's ready to go live.",
       },
       {
         question: "How do I earn from my writing?",
         answer:
           "When readers unlock your story with cowries, a share goes to you. The more readers finish and share, the more your story travels.",
-      },
-      {
-        question: "What are the tiers?",
-        answer:
-          "Standard, Featured, and Premium set the cowrie range readers pay to unlock your story. Higher tiers are for longer or standout work — we'll guide you if you're unsure.",
       },
     ],
   },
