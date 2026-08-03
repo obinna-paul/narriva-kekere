@@ -5,6 +5,8 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState, SkeletonTableShell } from "@/components/admin/admin-skeleton";
 import { AdjustCowriesModal } from "@/components/admin/adjust-cowries-modal";
+import { SuspendUserModal } from "@/components/admin/suspend-user-modal";
+import { DeleteUserModal } from "@/components/admin/delete-user-modal";
 
 interface User {
   id: string;
@@ -44,6 +46,8 @@ export function AllUsers() {
   const [acting, setActing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [adjustingUser, setAdjustingUser] = useState<User | null>(null);
+  const [suspendingUser, setSuspendingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,14 +76,25 @@ export function AllUsers() {
     setTimeout(() => setToast(null), durationMs);
   }
 
-  async function toggleSuspend(user: User) {
+  async function handleSuspendClick(user: User) {
+    // Suspending requires a reason (the API enforces it and emails it to the
+    // reader), so it opens the modal to collect one. Unsuspending has no
+    // required input, so it stays a single direct action here.
+    if (!user.suspended) {
+      setSuspendingUser(user);
+      return;
+    }
+
     setActing(user.id);
-    const endpoint = user.suspended ? `/api/admin/users/${user.id}/unsuspend` : `/api/admin/users/${user.id}/suspend`;
     try {
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const res = await fetch(`/api/admin/users/${user.id}/unsuspend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       if (!res.ok) throw new Error("Failed");
-      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, suspended: !u.suspended } : u));
-      showToast("ok", user.suspended ? "User unsuspended." : "User suspended.");
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, suspended: false } : u)));
+      showToast("ok", "User unsuspended.");
     } catch {
       showToast("err", "Action failed.");
     } finally {
@@ -214,7 +229,7 @@ export function AllUsers() {
                   <button
                     type="button"
                     disabled={acting === u.id}
-                    onClick={() => toggleSuspend(u)}
+                    onClick={() => handleSuspendClick(u)}
                     className={cn(
                       "rounded-[7px] px-3 py-1.5 text-[11px] font-semibold disabled:opacity-40",
                       u.suspended
@@ -224,6 +239,16 @@ export function AllUsers() {
                   >
                     {acting === u.id ? "…" : u.suspended ? "Unsuspend" : "Suspend"}
                   </button>
+                  {u.role !== "ADMIN" && (
+                    <button
+                      type="button"
+                      disabled={acting === u.id}
+                      onClick={() => setDeletingUser(u)}
+                      className="rounded-[7px] bg-[#C0392B] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#a5311f] disabled:opacity-40"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -262,6 +287,34 @@ export function AllUsers() {
           onSuccess={({ wallet, newBalance }) => {
             showToast("ok", `${adjustingUser.name}'s ${wallet} balance is now ${newBalance.toLocaleString()} cowries.`);
             setAdjustingUser(null);
+          }}
+        />
+      )}
+
+      {suspendingUser && (
+        <SuspendUserModal
+          userId={suspendingUser.id}
+          userName={suspendingUser.name}
+          onClose={() => setSuspendingUser(null)}
+          onSuccess={() => {
+            setUsers((prev) => prev.map((u) => (u.id === suspendingUser.id ? { ...u, suspended: true } : u)));
+            showToast("ok", "User suspended.");
+            setSuspendingUser(null);
+          }}
+        />
+      )}
+
+      {deletingUser && (
+        <DeleteUserModal
+          userId={deletingUser.id}
+          userName={deletingUser.name}
+          userEmail={deletingUser.email}
+          onClose={() => setDeletingUser(null)}
+          onSuccess={() => {
+            setUsers((prev) => prev.filter((u) => u.id !== deletingUser.id));
+            setTotal((t) => Math.max(0, t - 1));
+            showToast("ok", `${deletingUser.name} deleted.`);
+            setDeletingUser(null);
           }}
         />
       )}
