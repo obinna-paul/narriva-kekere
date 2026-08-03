@@ -46,6 +46,7 @@ export function PrivacyPolicy({ brand }: PrivacyPolicyProps) {
             ...(brand === "Kekere"
               ? [
                   "Review notes sent between readers and writers to enforce our content policies and keep the platform safe.",
+                  "Review chat conversations with Kemi, our reading companion, to understand how readers use the app and improve it.",
                 ]
               : []),
           ]}
