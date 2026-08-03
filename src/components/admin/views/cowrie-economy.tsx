@@ -87,6 +87,8 @@ export function CowrieEconomy() {
   const [rebuildResult, setRebuildResult] = useState<string | null>(null);
   const [reconcilingRefs, setReconcilingRefs] = useState(false);
   const [reconcileRefsResult, setReconcileRefsResult] = useState<string | null>(null);
+  const [reconcilingWithdrawals, setReconcilingWithdrawals] = useState(false);
+  const [reconcileWithdrawalsResult, setReconcileWithdrawalsResult] = useState<string | null>(null);
   const [topupRef, setTopupRef] = useState("");
   const [topupEmail, setTopupEmail] = useState("");
   const [reconcilingTopup, setReconcilingTopup] = useState(false);
@@ -202,6 +204,29 @@ export function CowrieEconomy() {
       setReconcileRefsResult(e instanceof Error ? e.message : "Reconcile failed");
     } finally {
       setReconcilingRefs(false);
+    }
+  }
+
+  async function handleReconcileWithdrawals() {
+    setReconcilingWithdrawals(true);
+    setReconcileWithdrawalsResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/economy/reconcile-withdrawals", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Reconcile failed");
+      const fixed = data.fixed ?? [];
+      setReconcileWithdrawalsResult(
+        fixed.length === 0
+          ? `Checked ${data.found} completed withdrawal${data.found === 1 ? "" : "s"} with a ledger problem — none needed fixing.`
+          : `Fixed ${fixed.length} withdrawal${fixed.length === 1 ? "" : "s"}: ${fixed
+              .map((f: { userEmail: string; cowriesAmount: number }) => `${f.userEmail} (${f.cowriesAmount} ₵)`)
+              .join(", ")}.`
+      );
+      load();
+    } catch (e) {
+      setReconcileWithdrawalsResult(e instanceof Error ? e.message : "Reconcile failed");
+    } finally {
+      setReconcilingWithdrawals(false);
     }
   }
 
@@ -533,6 +558,34 @@ export function CowrieEconomy() {
           </button>
         </div>
         {reconcileRefsResult && <p className="mt-3 text-[12px] text-[#646B73]">{reconcileRefsResult}</p>}
+      </div>
+
+      {/* A COMPLETED withdrawal whose wallet debit never landed — the one
+          class of imbalance the per-wallet audit above can't see, since the
+          wallet's own transaction history stays self-consistent either way.
+          Checks each completed withdrawal for its matching ledger row
+          before touching anything, so it's safe to run repeatedly. */}
+      <div className="rounded-[11px] border border-[#B7791F]/25 bg-[rgba(183,121,31,0.03)] px-5 py-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-[13px] font-semibold text-[#1A1C20]">Reconcile missing withdrawal debits</h3>
+            <p className="mt-0.5 text-[12px] text-[#8B919A]">
+              Finds a withdrawal marked paid whose writer wallet was never actually debited — real
+              money went out, but the ledger never caught up, so the wallet still shows the cowries
+              as available. Checks each one against its own transaction history first, so a
+              correctly-recorded withdrawal is left untouched. Safe to run any number of times.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleReconcileWithdrawals}
+            disabled={reconcilingWithdrawals}
+            className="flex-none rounded-[8px] bg-[#B7791F] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#9c661a] disabled:opacity-50"
+          >
+            {reconcilingWithdrawals ? "Reconciling…" : "Reconcile missing withdrawal debits"}
+          </button>
+        </div>
+        {reconcileWithdrawalsResult && <p className="mt-3 text-[12px] text-[#646B73]">{reconcileWithdrawalsResult}</p>}
       </div>
 
       {/* One-time cleanup: make the whole economy reflect the transaction
