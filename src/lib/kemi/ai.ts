@@ -33,11 +33,13 @@ export async function askKemiAI(
   readerContextText: string,
   writersText: string,
   competitionsText: string,
+  winnersText: string,
 ): Promise<KemiAIResult | null> {
   const system = KEMI_SYSTEM_PROMPT.replace("{READER_CONTEXT}", readerContextText)
     .replace("{CATALOG}", catalogText)
     .replace("{WRITERS}", writersText)
-    .replace("{COMPETITIONS}", competitionsText);
+    .replace("{COMPETITIONS}", competitionsText)
+    .replace("{WINNERS}", winnersText);
 
   const messages: GroqChatMessage[] = [{ role: "system", content: system }];
   for (const msg of history.slice(-10)) {

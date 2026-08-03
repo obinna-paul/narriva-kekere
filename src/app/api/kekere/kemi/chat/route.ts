@@ -21,6 +21,8 @@ import {
   formatWritersForPrompt,
   getKemiCompetitions,
   formatCompetitionsForPrompt,
+  getKemiRecentWinners,
+  formatWinnersForPrompt,
 } from "@/lib/data/kekere-kemi";
 import { storyCoverUrl } from "@/lib/storage/cloudinary-urls";
 import { randomKemiAwayMessage } from "@/content/kemi-away-messages";
@@ -110,11 +112,12 @@ export async function POST(request: Request) {
   const history = priorMessages.slice(-10).map((m) => ({ role: m.role, content: m.content }));
   const userEntry: MessageEntry = { role: "user", content: message, timestamp };
 
-  const [catalog, readerContext, writers, competitions] = await Promise.all([
+  const [catalog, readerContext, writers, competitions, winners] = await Promise.all([
     getKemiCatalog(),
     getKemiReaderContext(userId),
     getKemiWriters(),
     getKemiCompetitions(),
+    getKemiRecentWinners(),
   ]);
 
   // Slugs already pitched earlier in this conversation — folded into the
@@ -135,6 +138,7 @@ export async function POST(request: Request) {
     readerContextText,
     formatWritersForPrompt(writers),
     formatCompetitionsForPrompt(competitions),
+    formatWinnersForPrompt(winners),
   );
 
   if (!ai) {

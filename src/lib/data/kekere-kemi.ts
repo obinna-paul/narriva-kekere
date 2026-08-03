@@ -136,12 +136,13 @@ export interface KemiCompetition {
   slug: string;
   deadline: Date;
   status: "OPEN" | "UPCOMING";
+  prizeDescription: string;
 }
 
 export async function getKemiCompetitions(): Promise<KemiCompetition[]> {
   const rows = await prisma.competition.findMany({
     where: { status: { in: ["OPEN", "UPCOMING"] } },
-    select: { title: true, theme: true, slug: true, deadline: true, status: true },
+    select: { title: true, theme: true, slug: true, deadline: true, status: true, prizeDescription: true },
     orderBy: { deadline: "asc" },
     take: 5,
   });
@@ -151,6 +152,7 @@ export async function getKemiCompetitions(): Promise<KemiCompetition[]> {
     slug: r.slug,
     deadline: r.deadline,
     status: r.status as "OPEN" | "UPCOMING",
+    prizeDescription: r.prizeDescription,
   }));
 }
 
@@ -162,9 +164,58 @@ export function formatCompetitionsForPrompt(competitions: KemiCompetition[]): st
     .map((c) => {
       const when = c.deadline.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
       const state = c.status === "OPEN" ? `open now, entries close ${when}` : `not open yet, opens toward ${when}`;
-      return `- "${c.title}" — theme: ${c.theme}. ${state}. Reader can find it at /kekere/competitions/${c.slug}.`;
+      return `- "${c.title}" — theme: ${c.theme}. Prize: ${c.prizeDescription}. ${state}. Reader can find it at /kekere/competitions/${c.slug}.`;
     })
     .join("\n");
+}
+
+/** Most recently announced results — Kemi previously had no idea a
+ *  competition had ever finished, so "who won?" was a question she could
+ *  never actually answer even once results were live on the public
+ *  Winners' Circle. Deliberately scoped to the single most recent COMPLETE
+ *  competition (not the all-time Winner's Circle list, which also mixes in
+ *  standalone CHAMPION-tier stories with no competition attached) — this is
+ *  specifically for "who won the last competition"-shaped questions. */
+export interface KemiCompetitionWinner {
+  competitionTitle: string;
+  placement: number;
+  storyTitle: string;
+  authorName: string;
+}
+
+export async function getKemiRecentWinners(): Promise<KemiCompetitionWinner[]> {
+  const recentCompetition = await prisma.competition.findFirst({
+    where: { status: "COMPLETE" },
+    orderBy: { deadline: "desc" },
+    select: { id: true, title: true },
+  });
+  if (!recentCompetition) return [];
+
+  const entries = await prisma.competitionEntry.findMany({
+    where: { competitionId: recentCompetition.id, placement: { not: null } },
+    orderBy: { placement: "asc" },
+    select: {
+      placement: true,
+      story: { select: { title: true, author: { select: { name: true } } } },
+    },
+  });
+
+  return entries.map((e) => ({
+    competitionTitle: recentCompetition.title,
+    placement: e.placement!,
+    storyTitle: e.story.title,
+    authorName: e.story.author.name,
+  }));
+}
+
+const PLACEMENT_LABELS: Record<number, string> = { 1: "1st place", 2: "2nd place", 3: "3rd place", 4: "4th place" };
+
+export function formatWinnersForPrompt(winners: KemiCompetitionWinner[]): string {
+  if (winners.length === 0) {
+    return "(No competition has announced results yet. If asked who won, say results haven't been announced.)";
+  }
+  const lines = winners.map((w) => `- ${PLACEMENT_LABELS[w.placement] ?? `${w.placement}th place`}: "${w.storyTitle}" by ${w.authorName}`);
+  return `Winners of "${winners[0].competitionTitle}":\n${lines.join("\n")}`;
 }
 
 /** A story this reader started and hasn't finished — the one thing Kemi can
