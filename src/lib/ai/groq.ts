@@ -176,10 +176,16 @@ async function callProvider(provider: ChatProvider, params: GroqChatParams): Pro
       if (res.ok) {
         const json = await res.json();
         const content = json.choices?.[0]?.message?.content as string | undefined;
-        if (content) return content;
-        // Empty completion (e.g. reasoning ate the whole max_tokens budget) —
-        // a retry won't produce more tokens, so stop this provider here.
-        console.error(`[${tag}] empty completion`, json.choices?.[0]?.finish_reason);
+        const finishReason = json.choices?.[0]?.finish_reason;
+        // "length" means max_tokens was hit mid-reply — reasoning/thinking
+        // tokens ate the budget before the visible answer finished, so what
+        // came back is a sentence cut off mid-thought (readers have actually
+        // seen this: a reply ending "The closest" with nothing after it).
+        // That reads as broken, not just incomplete, so it's treated the same
+        // as no content — this provider failed, try the next one rather than
+        // show a half-formed reply.
+        if (content && finishReason !== "length") return content;
+        console.error(`[${tag}] ${content ? "truncated" : "empty"} completion`, finishReason);
         return null;
       }
 
