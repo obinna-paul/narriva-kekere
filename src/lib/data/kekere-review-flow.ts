@@ -340,6 +340,43 @@ async function promotePostContractEdits(storyId: string): Promise<void> {
   });
 }
 
+/**
+ * The admin's alternative to sendPostContractEditsToWriter: promotes any
+ * pending working-copy edits (editedBody/editedHookLine) straight onto the
+ * live fields, without asking the writer to review them first. For changes
+ * the admin judges too minor to need sign-off (a typo, a stray comment
+ * already settled some other way) — the writer round trip stays available,
+ * this is just no longer the only path. No-op if there's nothing pending.
+ * Also resolves any still-OPEN editorial comments, since publishing directly
+ * means the admin has decided none of them need further writer action.
+ */
+export async function promotePendingEditsWithoutReview(storyId: string): Promise<void> {
+  const story = await prisma.story.findUnique({ where: { id: storyId } });
+  if (!story) throw new ReviewFlowError("not_found", "Story not found");
+  if (story.editedBody === null && story.editedHookLine === null) return;
+
+  await prisma.$transaction(async (tx) => {
+    const promoted = await promoteWorkingCopy(tx, storyId, story, "Before publish — not sent back to writer");
+    await tx.story.update({
+      where: { id: storyId },
+      data: {
+        hookLine: promoted.hookLine,
+        ...(promoted.hasEditedBody
+          ? { body: story.editedBody as Prisma.InputJsonValue, wordCount: promoted.wordCount, readingTime: promoted.readingTime }
+          : {}),
+        editedBody: Prisma.DbNull,
+        editedHookLine: null,
+        editedWordCount: null,
+        editedReadingTime: null,
+        editLastSavedAt: null,
+        editSummaryNote: null,
+        editWriterNote: null,
+      },
+    });
+    await tx.editorialComment.updateMany({ where: { storyId, status: "OPEN" }, data: { status: "RESOLVED" } });
+  });
+}
+
 export interface WriterReview {
   storyId: string;
   title: string;
