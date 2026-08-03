@@ -43,6 +43,11 @@ export function PrivacyPolicy({ brand }: PrivacyPolicyProps) {
             "Send you transactional emails (purchase confirmations, submission updates, account notices).",
             "Send you marketing emails about new releases, competitions, or features — only if you've opted in, and you can unsubscribe at any time.",
             "Detect and prevent fraud, abuse, and security incidents.",
+            ...(brand === "Kekere"
+              ? [
+                  "Review notes sent between readers and writers to enforce our content policies and keep the platform safe.",
+                ]
+              : []),
           ]}
         />
       </LegalSection>

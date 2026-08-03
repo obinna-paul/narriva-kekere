@@ -480,3 +480,109 @@ export async function getNotesEnabled(writerId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { id: writerId }, select: { notesEnabled: true } });
   return user?.notesEnabled ?? true;
 }
+
+export interface AdminNoteListItem {
+  id: string;
+  storyId: string;
+  storyTitle: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserEmail: string;
+  toWriterId: string;
+  toWriterName: string;
+  toWriterEmail: string;
+  body: string;
+  replyBody: string | null;
+  repliedAt: Date | null;
+  reported: boolean;
+  reportedAt: Date | null;
+  pinnedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface AdminNoteListResult {
+  notes: AdminNoteListItem[];
+  total: number;
+}
+
+/**
+ * Trust & safety spot-check tool, not a reader-facing endpoint — this is the
+ * only place note content is ever read by anyone other than its two
+ * participants. Exists so an admin can confirm the feature is being used as
+ * intended and follow up on anything reported (reportNote hides a note from
+ * the writer's own inbox but nothing previously surfaced it anywhere for
+ * review, so a reported note otherwise went nowhere). Every read is
+ * unaudited by design, matching how every other admin data-browsing view in
+ * this app works — see the Privacy Policy for the one-line disclosure that
+ * this exists.
+ */
+export async function listNotesForAdmin(params: {
+  page?: number;
+  limit?: number;
+  reportedOnly?: boolean;
+  search?: string;
+}): Promise<AdminNoteListResult> {
+  const page = Math.max(1, params.page ?? 1);
+  const limit = Math.min(100, Math.max(1, params.limit ?? 25));
+  const search = params.search?.trim();
+
+  const where = {
+    ...(params.reportedOnly ? { reported: true } : {}),
+    ...(search
+      ? {
+          OR: [
+            { body: { contains: search, mode: "insensitive" as const } },
+            { replyBody: { contains: search, mode: "insensitive" as const } },
+            { fromUser: { OR: [{ name: { contains: search, mode: "insensitive" as const } }, { email: { contains: search, mode: "insensitive" as const } }] } },
+            { toWriter: { OR: [{ name: { contains: search, mode: "insensitive" as const } }, { email: { contains: search, mode: "insensitive" as const } }] } },
+          ],
+        }
+      : {}),
+  };
+
+  const [rows, total] = await Promise.all([
+    prisma.note.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+      select: {
+        id: true,
+        storyId: true,
+        body: true,
+        replyBody: true,
+        repliedAt: true,
+        reported: true,
+        reportedAt: true,
+        pinnedAt: true,
+        createdAt: true,
+        story: { select: { title: true } },
+        fromUser: { select: { id: true, name: true, email: true } },
+        toWriter: { select: { id: true, name: true, email: true } },
+      },
+    }),
+    prisma.note.count({ where }),
+  ]);
+
+  return {
+    total,
+    notes: rows.map((n) => ({
+      id: n.id,
+      storyId: n.storyId,
+      storyTitle: n.story.title,
+      fromUserId: n.fromUser.id,
+      fromUserName: n.fromUser.name,
+      fromUserEmail: n.fromUser.email,
+      toWriterId: n.toWriter.id,
+      toWriterName: n.toWriter.name,
+      toWriterEmail: n.toWriter.email,
+      body: n.body,
+      replyBody: n.replyBody,
+      repliedAt: n.repliedAt,
+      reported: n.reported,
+      reportedAt: n.reportedAt,
+      pinnedAt: n.pinnedAt,
+      createdAt: n.createdAt,
+    })),
+  };
+}
