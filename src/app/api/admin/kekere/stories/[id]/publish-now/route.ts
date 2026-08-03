@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { nextSlugForTitle } from "@/lib/data/kekere-slugs";
+import { promotePendingEditsWithoutReview } from "@/lib/data/kekere-review-flow";
 import { notifyFollowersOfPublish } from "@/lib/data/kekere-follows";
 import { createNotification } from "@/lib/notifications/create";
 import { createKemiNudge } from "@/lib/data/kekere-kemi-nudges";
@@ -37,6 +38,12 @@ export const PUT = withAuth(
     if (story.status !== "ACCEPTED") {
       return NextResponse.json({ error: "Story is not in the publishing queue" }, { status: 400 });
     }
+
+    // Any admin working-copy edits still pending (editedBody/editedHookLine)
+    // apply here rather than being silently dropped — this is the direct-
+    // publish path an admin takes specifically when they've decided those
+    // edits don't need another writer approval round.
+    await promotePendingEditsWithoutReview(id);
 
     const publishedAt = new Date();
 

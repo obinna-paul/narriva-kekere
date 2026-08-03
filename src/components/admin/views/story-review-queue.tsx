@@ -551,39 +551,54 @@ function DecisionPanel({
 
       {queueTab === "publishing" && requiresWriterApproval && (
         <p className="-mt-1 text-[11px] leading-snug text-[#8B919A]">
-          You’ve edited or annotated this story, so it goes to the writer for one more approval pass before you can publish.
+          You’ve edited or annotated this story. Send it to the writer for one more approval pass if the
+          change is worth their sign-off — or publish now if it isn’t (a typo, a stray comment already
+          settled some other way). Publishing now applies your edits and skips asking them.
         </p>
       )}
 
-      <button
-        type="button"
-        disabled={
-          acting ||
-          (queueTab === "submitted" && tab !== "publish" && !note.trim()) ||
-          (queueTab === "publishing" && (tagError || coverError))
-        }
-        onClick={() => {
-          if (queueTab === "submitted") {
-            onAction(tab, note, cowrieCost);
-          } else {
-            onAction(requiresWriterApproval ? "send_to_writer" : "publish", note, cowrieCost);
+      {queueTab === "submitted" || !requiresWriterApproval ? (
+        <button
+          type="button"
+          disabled={
+            acting ||
+            (queueTab === "submitted" && tab !== "publish" && !note.trim()) ||
+            (queueTab === "publishing" && (tagError || coverError))
           }
-        }}
-        className={cn(
-          "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
-          queueTab === "submitted"
-            ? tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
-            : "bg-[#1F8A5B] hover:bg-[#1a7a50]"
-        )}
-      >
-        {acting
-          ? "Processing…"
-          : queueTab === "submitted"
-          ? tab === "publish" ? "Send publishing contract" : tab === "reject" ? "Decline story" : "Request revisions"
-          : requiresWriterApproval
-          ? "Send edits to writer for approval"
-          : "Publish now"}
-      </button>
+          onClick={() => onAction(queueTab === "submitted" ? tab : "publish", note, cowrieCost)}
+          className={cn(
+            "w-full rounded-[8px] py-2.5 text-[13px] font-semibold text-white transition-opacity disabled:opacity-40",
+            queueTab === "submitted"
+              ? tab === "publish" ? "bg-[#1F8A5B] hover:bg-[#1a7a50]" : tab === "reject" ? "bg-[#C0392B] hover:bg-[#a93226]" : "bg-[#B7791F] hover:bg-[#9c6719]"
+              : "bg-[#1F8A5B] hover:bg-[#1a7a50]"
+          )}
+        >
+          {acting
+            ? "Processing…"
+            : queueTab === "submitted"
+            ? tab === "publish" ? "Send publishing contract" : tab === "reject" ? "Decline story" : "Request revisions"
+            : "Publish now"}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled={acting || tagError || coverError}
+            onClick={() => onAction("publish", note, cowrieCost)}
+            className="w-full rounded-[8px] bg-[#1F8A5B] py-2.5 text-[13px] font-semibold text-white transition-opacity hover:bg-[#1a7a50] disabled:opacity-40"
+          >
+            {acting ? "Processing…" : "Publish now"}
+          </button>
+          <button
+            type="button"
+            disabled={acting}
+            onClick={() => onAction("send_to_writer", note, cowrieCost)}
+            className="w-full rounded-[8px] border border-[rgba(20,22,26,0.16)] py-2.5 text-[13px] font-semibold text-[#1A1C20] transition-opacity hover:bg-[#F4F5F7] disabled:opacity-40"
+          >
+            {acting ? "Processing…" : "Send edits to writer for approval"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
