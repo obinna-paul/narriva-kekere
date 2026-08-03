@@ -665,6 +665,15 @@ const FEED_ROTATION_WEIGHTS = {
   randomness: 0.15,
 } as const;
 
+// Weight for similarityScores (tag overlap with a reference story), used
+// only by the "next read" picker today. Kept separate from the weights
+// above rather than shrinking them to make room, so existing rows
+// (feed, Winner's Circle) are unaffected: when a caller doesn't supply
+// similarityScores, every candidate gets the same normalized value
+// (normalize()'s constant-input fallback), which is just a flat offset
+// added to every score and changes nothing about the ordering.
+const SIMILARITY_WEIGHT = 0.5;
+
 /** Deterministic string → [0, 1). FNV-1a, 32-bit, with a murmur3-style
  *  finalizer. Not a security or statistical primitive — just enough spread
  *  that "which of these otherwise-similar stories gets today's spotlight"
@@ -717,6 +726,12 @@ export interface FeedRotationOptions {
    *  normalizing, so the term is present in the blend but doesn't move the
    *  ordering. */
   preferenceScores?: Map<string, number>;
+  /** Per-story similarity to some reference story — e.g. count of shared
+   *  tags with the story a reader just finished. Omit for a row that has
+   *  no reference story (the general feed, Winner's Circle); every
+   *  candidate then gets the same neutral value after normalizing, so the
+   *  term is present in the blend but doesn't move the ordering. */
+  similarityScores?: Map<string, number>;
   /** Identifies "this reader, today" — e.g. `${userId ?? "anon"}:${utcDayNumber}`.
    *  This is the entire rotation mechanism: nothing is stored anywhere, the
    *  randomness term is just a pure function of this key plus each story's
@@ -772,12 +787,14 @@ export async function rankStoriesBlended(
     );
   });
   const preferenceRaw = storyIds.map((id) => options.preferenceScores?.get(id) ?? 0);
+  const similarityRaw = storyIds.map((id) => options.similarityScores?.get(id) ?? 0);
   const randomRaw = storyIds.map((id) => seededUnitInterval(`${options.rotationKey}:${id}`));
 
   const popularity = normalize(popularityRaw);
   const newness = normalize(newnessRaw);
   const rating = normalize(ratingRaw);
   const preference = normalize(preferenceRaw);
+  const similarity = normalize(similarityRaw);
   const randomness = normalize(randomRaw);
 
   return storyIds
@@ -788,7 +805,8 @@ export async function rankStoriesBlended(
         FEED_ROTATION_WEIGHTS.newness * newness[i] +
         FEED_ROTATION_WEIGHTS.rating * rating[i] +
         FEED_ROTATION_WEIGHTS.preference * preference[i] +
-        FEED_ROTATION_WEIGHTS.randomness * randomness[i],
+        FEED_ROTATION_WEIGHTS.randomness * randomness[i] +
+        SIMILARITY_WEIGHT * similarity[i],
     }))
     .sort((a, b) => b.score - a.score) // stable — ties (e.g. two brand-new, unrated, unlocked stories) keep storyIds' original relative order
     .slice(0, limit)
