@@ -272,6 +272,12 @@ export async function getNextStoryRecommendation(
 
   let reason: "tag-match" | "popular" = "popular";
   let candidateIds: string[] = [];
+  // Shared-tag count with the finished story, per candidate — this is what
+  // actually makes the pick "similar to what you just finished" rather than
+  // just "popular among a tag-filtered pool"; passed through to
+  // rankStoriesBlended below as similarityScores instead of being dropped
+  // after it's done its job of shaping candidateIds.
+  const similarityScores = new Map<string, number>();
 
   if (tagIds.length > 0) {
     const overlap = await prisma.storyTag.findMany({
@@ -282,9 +288,8 @@ export async function getNextStoryRecommendation(
       },
       select: { storyId: true },
     });
-    const scoreMap = new Map<string, number>();
-    for (const o of overlap) scoreMap.set(o.storyId, (scoreMap.get(o.storyId) ?? 0) + 1);
-    candidateIds = Array.from(scoreMap.entries())
+    for (const o of overlap) similarityScores.set(o.storyId, (similarityScores.get(o.storyId) ?? 0) + 1);
+    candidateIds = Array.from(similarityScores.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, NEXT_READ_CANDIDATE_POOL)
       .map(([id]) => id);
@@ -340,6 +345,7 @@ export async function getNextStoryRecommendation(
 
   const rankedIds = await rankStoriesBlended(candidateIds, 1, {
     preferenceScores,
+    similarityScores,
     rotationKey: `${userId ?? "anon"}:next:${finishedStoryId}`,
   });
   if (rankedIds.length === 0) return null;
