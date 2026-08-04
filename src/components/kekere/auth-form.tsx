@@ -100,6 +100,7 @@ export function KekereAuthForm({
         termsAccepted,
         referralCode: referralCode.trim() || undefined,
         turnstileToken: turnstileToken || "dev-bypass",
+        brand,
       }),
     });
     setSubmitting(false);
@@ -112,6 +113,7 @@ export function KekereAuthForm({
 
     try { localStorage.setItem("kekere_welcome_new_user", "1"); } catch {}
     const verifyUrl = new URLSearchParams({ email });
+    if (isNarriva) verifyUrl.set("brand", "narriva");
     if (searchParams.get("callbackUrl")) verifyUrl.set("callbackUrl", searchParams.get("callbackUrl")!);
     router.push(`/verify-email?${verifyUrl.toString()}`);
   }
@@ -175,6 +177,7 @@ export function KekereAuthForm({
             className="underline font-medium"
             onClick={() => {
               const verifyUrl = new URLSearchParams({ email });
+              if (isNarriva) verifyUrl.set("brand", "narriva");
               if (searchParams.get("callbackUrl")) verifyUrl.set("callbackUrl", searchParams.get("callbackUrl")!);
               router.push(`/verify-email?${verifyUrl.toString()}`);
             }}

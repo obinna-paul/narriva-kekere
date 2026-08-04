@@ -19,6 +19,7 @@ const registerSchema = z.object({
   termsAccepted: z.boolean(),
   turnstileToken: z.string().min(1),
   referralCode: z.string().optional(),
+  brand: z.enum(["kekere", "narriva"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -32,7 +33,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, name, password, termsAccepted, turnstileToken, referralCode } = parsed.data;
+  // Normalized so a signup always lands in the DB lowercase, regardless of
+  // how the reader typed or autocapitalized it — the resend/verify lookups
+  // below match case-insensitively too, so this also covers accounts
+  // created before this normalization existed.
+  const { name, password, termsAccepted, turnstileToken, referralCode, brand } = parsed.data;
+  const email = parsed.data.email.trim().toLowerCase();
 
   const remoteIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (!(await verifyTurnstileToken(turnstileToken, remoteIp))) {
@@ -58,8 +64,14 @@ export async function POST(request: Request) {
     // confusing "account already exists" error, adopt/resume that row into
     // a real account — same outcome as prisma.user.create below, just
     // reusing the existing id.
-    const existing = await prisma.user.findUnique({
-      where: { email },
+    // Case-insensitive: an account created before email normalization
+    // existed may still have a stored email in whatever case it was typed
+    // at the time (e.g. "John@Gmail.com") — a case-sensitive lookup here
+    // would miss it and fall through to prisma.user.create below, which
+    // Postgres' case-sensitive unique index wouldn't block, silently
+    // creating a second account for the same real address.
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
       select: { id: true, accountStatus: true, password: true, emailVerified: true },
     });
 
@@ -110,7 +122,7 @@ export async function POST(request: Request) {
     // no-op if the admin's placeholder-creation route already made one).
     await prisma.wallet.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
 
-    await createAndSendOtp(user.id, user.email, user.name);
+    const otpResult = await createAndSendOtp(user.id, user.email, user.name, { brand });
 
     // get-or-create, not a blind create — the resumed-unverified-account
     // path above can hit this a second time for the same user (their first,
@@ -135,6 +147,18 @@ export async function POST(request: Request) {
       if (referralEnabled) {
         await recordReferralFromCode(codeToUse, user.id);
       }
+    }
+
+    // "recently_sent" means a still-valid code already went out moments ago
+    // (e.g. a duplicate form submit) — nothing to report, the reader already
+    // has a working code. Only an actual send failure should stop them from
+    // reaching the "check your email" screen, since that screen would
+    // otherwise be a dead end with no code ever delivered.
+    if (!otpResult.sent && otpResult.reason === "send_failed") {
+      return NextResponse.json(
+        { error: "Your account was created, but we couldn't send your verification code. Please try again in a moment." },
+        { status: 502 },
+      );
     }
 
     return NextResponse.json(

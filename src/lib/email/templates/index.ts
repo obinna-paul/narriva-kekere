@@ -15,7 +15,7 @@ import { SITE_URL } from "@/content/decisions";
 
 export { SignatureBlock, type SignatureProps } from "./signature";
 
-export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number }) {
+export async function renderOtpEmail(props: { name: string; otp: string; expiryMinutes?: number; brand?: "kekere" | "narriva" }) {
   return render(createElement(OtpEmail, props));
 }
 

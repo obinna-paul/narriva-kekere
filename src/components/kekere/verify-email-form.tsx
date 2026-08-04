@@ -8,11 +8,13 @@ export function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const callbackUrl = searchParams.get("callbackUrl");
+  const brand = searchParams.get("brand") === "narriva" ? "narriva" : "kekere";
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   function handleDigit(index: number, value: string) {
@@ -65,19 +67,23 @@ export function VerifyEmailForm() {
     }
 
     const loginUrl = new URLSearchParams({ verified: "1" });
+    if (brand === "narriva") loginUrl.set("brand", "narriva");
     if (callbackUrl) loginUrl.set("callbackUrl", callbackUrl);
     router.push(`/login?${loginUrl.toString()}`);
   }
 
   async function handleResend() {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || resending) return;
     setError(null);
+    setResending(true);
 
     const res = await fetch("/api/auth/resend-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, brand }),
     });
+
+    setResending(false);
 
     if (res.ok) {
       setResendCooldown(60);
@@ -139,10 +145,10 @@ export function VerifyEmailForm() {
         <button
           type="button"
           onClick={handleResend}
-          disabled={resendCooldown > 0}
+          disabled={resendCooldown > 0 || resending}
           className="font-medium text-[var(--color-primary)] disabled:opacity-50"
         >
-          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
+          {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : resending ? "Sending…" : "Resend code"}
         </button>
       </p>
     </div>
