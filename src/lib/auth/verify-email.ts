@@ -2,10 +2,19 @@ import { randomInt } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderOtpEmail } from "@/lib/email/templates";
-import { KEKERE_GENERAL_FROM, OBINNA_FROM } from "@/lib/constants";
+import { KEKERE_GENERAL_FROM, NARRIVA_GENERAL_FROM, OBINNA_FROM } from "@/lib/constants";
+
+type Brand = "kekere" | "narriva";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRY_MINUTES = 10;
+// Floor between two OTP sends to the same account. Without this, hitting
+// "resend" twice (a fast double-click, or a page refresh right after
+// registering) generates a second code that overwrites the first in the DB
+// — so if the two emails arrive out of order, or the first is just running
+// a few seconds behind, the reader types a code that's no longer valid and
+// it reads to them as "I never got a working code."
+const RESEND_COOLDOWN_SECONDS = 45;
 
 export function generateOtp(): string {
   let code = "";
@@ -15,13 +24,65 @@ export function generateOtp(): string {
   return code;
 }
 
+export type OtpSendResult =
+  | { sent: true }
+  | { sent: false; reason: "recently_sent"; retryAfterSeconds: number }
+  | { sent: false; reason: "send_failed" };
+
+/**
+ * Generates a code and emails it. Returns whether the email actually went
+ * out — sendEmail() itself never throws on a Resend failure (see its doc
+ * comment), so a caller that discards this return value would tell the
+ * reader "check your email" for a code that never left the server. The DB
+ * row is only written AFTER a successful send, not before: writing first
+ * (the old behaviour) meant a failed send still left a "valid" code sitting
+ * in the database that no email ever delivered, silently blocking a
+ * same-second retry from working either.
+ */
 export async function createAndSendOtp(
   userId: string,
   email: string,
   name: string,
-): Promise<void> {
+  options?: { isResend?: boolean; brand?: Brand },
+): Promise<OtpSendResult> {
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerificationExpiresAt: true },
+  });
+
+  if (existing?.emailVerificationExpiresAt) {
+    const msRemaining = existing.emailVerificationExpiresAt.getTime() - Date.now();
+    const secondsSinceIssued = OTP_EXPIRY_MINUTES * 60 - msRemaining / 1000;
+    if (msRemaining > 0 && secondsSinceIssued < RESEND_COOLDOWN_SECONDS) {
+      return {
+        sent: false,
+        reason: "recently_sent",
+        retryAfterSeconds: Math.ceil(RESEND_COOLDOWN_SECONDS - secondsSinceIssued),
+      };
+    }
+  }
+
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60_000);
+  const isResend = options?.isResend ?? false;
+  const brand = options?.brand ?? "kekere";
+  const brandName = brand === "kekere" ? "Kekere Stories" : "Narriva";
+  const from = brand === "kekere" ? KEKERE_GENERAL_FROM : NARRIVA_GENERAL_FROM;
+
+  const html = await renderOtpEmail({ name, otp, expiryMinutes: OTP_EXPIRY_MINUTES, brand }).catch(() => undefined);
+  const result = await sendEmail({
+    to: email,
+    subject: isResend ? `Your new verification code — ${brandName}` : `Verify your email address — ${brandName}`,
+    body: isResend
+      ? `Hi ${name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.`
+      : `Hi ${name},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't create this account, you can ignore this email.`,
+    from,
+    html,
+  });
+
+  if (!result.success) {
+    return { sent: false, reason: "send_failed" };
+  }
 
   await prisma.user.update({
     where: { id: userId },
@@ -31,21 +92,18 @@ export async function createAndSendOtp(
     },
   });
 
-  const html = await renderOtpEmail({ name, otp, expiryMinutes: OTP_EXPIRY_MINUTES }).catch(() => undefined);
-  await sendEmail({
-    to: email,
-    subject: "Verify your email address — Kekere Stories",
-    body: `Hi ${name},\n\nYour verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you didn't create this account, you can ignore this email.`,
-    from: KEKERE_GENERAL_FROM,
-    html,
-  });
+  return { sent: true };
 }
 
 export async function resendOtp(
   email: string,
+  brand: Brand = "kekere",
 ): Promise<{ success: true } | { error: string }> {
-  const user = await prisma.user.findUnique({
-    where: { email },
+  // Case-insensitive — see the matching comment in /api/auth/register for
+  // why (an account may still have whatever case it was originally typed
+  // in, from before email normalization existed).
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
     select: { id: true, name: true, emailVerified: true, email: true },
   });
 
@@ -57,25 +115,14 @@ export async function resendOtp(
     return { error: "This email is already verified." };
   }
 
-  const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60_000);
+  const result = await createAndSendOtp(user.id, user.email, user.name, { isResend: true, brand });
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerificationCode: otp,
-      emailVerificationExpiresAt: expiresAt,
-    },
-  });
-
-  const html = await renderOtpEmail({ name: user.name, otp, expiryMinutes: OTP_EXPIRY_MINUTES }).catch(() => undefined);
-  await sendEmail({
-    to: user.email,
-    subject: "Your new verification code — Kekere Stories",
-    body: `Hi ${user.name},\n\nYour new verification code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.`,
-    from: KEKERE_GENERAL_FROM,
-    html,
-  });
+  if (!result.sent) {
+    if (result.reason === "recently_sent") {
+      return { error: `Please wait ${result.retryAfterSeconds}s before requesting another code.` };
+    }
+    return { error: "Couldn't send your code — please try again in a moment." };
+  }
 
   return { success: true };
 }
@@ -84,8 +131,8 @@ export async function verifyOtp(
   email: string,
   otp: string,
 ): Promise<{ success: true } | { error: string }> {
-  const user = await prisma.user.findUnique({
-    where: { email },
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
     select: {
       id: true,
       name: true,

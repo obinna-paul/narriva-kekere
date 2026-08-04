@@ -6,6 +6,7 @@ import { resendOtp } from "@/lib/auth/verify-email";
 
 const resendSchema = z.object({
   email: z.string().email(),
+  brand: z.enum(["kekere", "narriva"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -19,9 +20,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email } = parsed.data;
+  const { email, brand } = parsed.data;
 
-  const result = await resendOtp(email);
+  const result = await resendOtp(email, brand);
 
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });

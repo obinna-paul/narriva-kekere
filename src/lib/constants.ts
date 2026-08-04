@@ -26,6 +26,12 @@ export const KEKERE_SUBMISSIONS_FROM = `Kemi from Kekere <${KEKERE_SUBMISSIONS_E
 export const KEKERE_GENERAL_EMAIL = "hello@narriva.pro";
 export const KEKERE_GENERAL_FROM = `Kekere Stories <${KEKERE_GENERAL_EMAIL}>`;
 
+// Same mailbox, Narriva-branded display name — for the handful of general
+// account emails (OTP, currently) that are shared code between both brands
+// and need to show the right name depending on which one the reader signed
+// up on, rather than always reading "Kekere Stories" to a Narriva user.
+export const NARRIVA_GENERAL_FROM = `Narriva <${KEKERE_GENERAL_EMAIL}>`;
+
 // Personal sender identity for mail from Obinna himself — the welcome email
 // and the first-top-up thank-you note. Deliberately not a branded template
 // (see the plain-text reasoning at each call site): a designed HTML email

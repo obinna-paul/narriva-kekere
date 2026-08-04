@@ -5,14 +5,16 @@ interface OtpEmailProps {
   name: string;
   otp: string;
   expiryMinutes?: number;
+  brand?: "kekere" | "narriva";
 }
 
-export function OtpEmail({ name, otp, expiryMinutes = 10 }: OtpEmailProps) {
+export function OtpEmail({ name, otp, expiryMinutes = 10, brand = "kekere" }: OtpEmailProps) {
+  const brandName = brand === "kekere" ? "Kekere Stories" : "Narriva";
   return (
-    <BaseEmail preview={`${otp} is your Kekere Stories verification code`}>
+    <BaseEmail preview={`${otp} is your ${brandName} verification code`} brand={brand}>
 
       <Text style={styles.h1}>Verify your email</Text>
-      <Text style={styles.p}>Hi {name}, welcome to Kekere Stories.</Text>
+      <Text style={styles.p}>Hi {name}, welcome to {brandName}.</Text>
       <Text style={{ ...styles.p, marginBottom: 24 }}>
         Enter this code to confirm your email address and activate your account:
       </Text>
@@ -39,7 +41,7 @@ export function OtpEmail({ name, otp, expiryMinutes = 10 }: OtpEmailProps) {
       </Section>
 
       <Text style={styles.muted}>
-        This code expires in {expiryMinutes} minutes. If you didn't create a Kekere Stories account, you can safely ignore this email.
+        This code expires in {expiryMinutes} minutes. If you didn't create a {brandName} account, you can safely ignore this email.
       </Text>
 
     </BaseEmail>
