@@ -19,6 +19,8 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [cardLoaded, setCardLoaded] = useState(false);
+  const [cardFailed, setCardFailed] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -97,16 +99,47 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
         <div className="px-5 pb-[calc(28px+env(safe-area-inset-bottom))]">
           {/* Live card preview */}
           <div
-            className="mx-auto mb-5 overflow-hidden rounded-[16px] bg-[#150D08]"
+            className="relative mx-auto mb-5 overflow-hidden rounded-[16px] bg-[#150D08]"
             style={{ width: "100%", maxWidth: 300, aspectRatio: "1080/1350" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cardUrl}
               alt="Your Kekere profile card"
-              className="h-full w-full object-cover"
-              loading="lazy"
+              className={cn(
+                "h-full w-full object-cover transition-opacity duration-300",
+                cardLoaded ? "opacity-100" : "opacity-0",
+              )}
+              onLoad={() => setCardLoaded(true)}
+              onError={() => setCardFailed(true)}
             />
+
+            {/* Card generation is a server-rendered image (fonts + a DB
+             *  lookup), so it's rarely instant — without this, a first-time
+             *  visitor sees a plain dark rectangle and has no way to know
+             *  anything is happening. */}
+            {!cardLoaded && !cardFailed && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+                <span className="font-[family-name:var(--font-display)] text-[14.5px] font-medium text-white/90">
+                  Designing your profile card…
+                </span>
+                <div className="h-[3px] w-full max-w-[140px] overflow-hidden rounded-full bg-white/15">
+                  <div className="h-full w-1/3 rounded-full bg-[var(--color-primary)]" style={{ animation: "spcLoadBar 1.1s ease-in-out infinite" }} />
+                </div>
+              </div>
+            )}
+            {cardFailed && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-8 text-center">
+                <span className="text-[13px] font-medium text-white/80">Couldn&rsquo;t load your card preview</span>
+                <span className="text-[12px] text-white/50">You can still try downloading it below.</span>
+              </div>
+            )}
+            <style>{`
+              @keyframes spcLoadBar {
+                0% { transform: translateX(-110%); }
+                100% { transform: translateX(310%); }
+              }
+            `}</style>
           </div>
 
           <div className="flex flex-col gap-2.5">
