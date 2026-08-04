@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Pencil, Image as ImageIcon } from "lucide-react";
+import { Search, Pencil, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface StoryRow {
@@ -49,6 +49,8 @@ export function AllStories() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalculateResult, setRecalculateResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,14 +79,46 @@ export function AllStories() {
 
   useEffect(() => { setPage(1); }, [search, status]);
 
+  const handleRecalculateCompletionRates = useCallback(async () => {
+    setRecalculating(true);
+    setRecalculateResult(null);
+    try {
+      const res = await fetch("/api/admin/kekere/stories/recalculate-completion-rates", { method: "POST" });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      const count = data.changed?.length ?? 0;
+      setRecalculateResult(
+        count === 0 ? "All published stories already had the correct completion rate." : `Fixed ${count} stor${count === 1 ? "y" : "ies"} with an inaccurate completion rate.`,
+      );
+    } catch {
+      setRecalculateResult("Couldn't recalculate completion rates — try again.");
+    } finally {
+      setRecalculating(false);
+    }
+  }, []);
+
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-[18px] font-bold text-[#15171C]">All Stories</h1>
-        <p className="mt-1 text-[13px] text-[#7C828C]">
-          Every story on Kekere, whatever stage it&rsquo;s at. Open any of them to edit content,
-          tags, or the cover — changes to a published story go live on the feed immediately.
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[18px] font-bold text-[#15171C]">All Stories</h1>
+          <p className="mt-1 text-[13px] text-[#7C828C]">
+            Every story on Kekere, whatever stage it&rsquo;s at. Open any of them to edit content,
+            tags, or the cover — changes to a published story go live on the feed immediately.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+          <button
+            type="button"
+            onClick={handleRecalculateCompletionRates}
+            disabled={recalculating}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[8px] border border-[rgba(20,22,26,0.12)] bg-white px-3 py-2 text-[12px] font-semibold text-[#15171C] hover:bg-[#F0F2F5] disabled:opacity-50"
+          >
+            <RefreshCw size={12} className={recalculating ? "animate-spin" : undefined} />
+            {recalculating ? "Recalculating…" : "Recalculate completion rates"}
+          </button>
+          {recalculateResult && <p className="text-[11px] text-[#7C828C]">{recalculateResult}</p>}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
