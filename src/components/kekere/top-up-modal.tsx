@@ -94,7 +94,7 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
           disabled={selected === null || submitting}
           onClick={handlePay}
         >
-          {submitting ? "Processing…" : "Pay with Paystack"}
+          {submitting ? "Processing…" : "Pay now"}
         </Button>
       </div>
     </div>
