@@ -4,6 +4,7 @@ import { WalletView } from "@/components/kekere/wallet-view";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { getWalletForUser, countTransactionsForUser } from "@/lib/data/kekere-wallet";
 import { prisma } from "@/lib/db/prisma";
+import { getPaymentProviderFromHeaders } from "@/lib/payments/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export default async function KekereWalletPage() {
           earnedBalance={wallet?.earnedBalance.toNumber() ?? 0}
           userId={userId ?? ""}
           userEmail={session?.user?.email ?? ""}
+          paymentProvider={getPaymentProviderFromHeaders()}
           isWriter={isWriter}
           totalTransactionCount={totalTransactionCount}
           referralCode={user?.referralCode ?? null}

@@ -317,7 +317,8 @@ export async function moveEarnedToSpending(userId: string, amount: number): Prom
 export async function creditTopUp(
   userId: string,
   cowriesTotal: number,
-  paymentReference: string
+  paymentReference: string,
+  description?: string
 ): Promise<TopUpResult> {
   const existing = await prisma.transaction.findFirst({
     where: { paymentReference, type: "TOP_UP", status: "COMPLETED" },
@@ -339,6 +340,7 @@ export async function creditTopUp(
         walletField: "SPENDING",
         paymentReference,
         status: "COMPLETED",
+        description,
       },
     });
 

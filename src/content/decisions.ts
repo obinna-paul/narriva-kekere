@@ -19,15 +19,22 @@ export const SITE_URL = `https://${DOMAINS.narriva}` as const;
 
 export type CowrieTopupPackage = {
   priceNGN: number;
+  // USD price for the Stripe path (international buyers) — a separate fixed
+  // price rather than a live NGN conversion, since a converted price would
+  // drift with FX rates on every page load and can land on an odd,
+  // un-sellable number (₦500 at a live rate might be "$0.33"). These are
+  // rough proportional price points, not pulled from a real FX rate — worth
+  // sanity-checking against actual margins before Stripe goes live.
+  priceUSD: number;
   cowries: number;
   bonusCowries: number;
 };
 
 export const COWRIE_TOPUP_PACKAGES: readonly CowrieTopupPackage[] = [
-  { priceNGN: 500,  cowries: 10, bonusCowries: 0 },
-  { priceNGN: 1000, cowries: 21, bonusCowries: 1 },
-  { priceNGN: 1500, cowries: 32, bonusCowries: 2 },
-  { priceNGN: 2000, cowries: 45, bonusCowries: 5 },
+  { priceNGN: 500,  priceUSD: 0.99, cowries: 10, bonusCowries: 0 },
+  { priceNGN: 1000, priceUSD: 1.99, cowries: 21, bonusCowries: 1 },
+  { priceNGN: 1500, priceUSD: 2.99, cowries: 32, bonusCowries: 2 },
+  { priceNGN: 2000, priceUSD: 3.99, cowries: 45, bonusCowries: 5 },
 ] as const;
 
 export type StoryTier = "standard" | "featured" | "champion";

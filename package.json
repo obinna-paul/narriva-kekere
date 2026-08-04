@@ -51,6 +51,7 @@
     "react-hook-form": "^7.80.0",
     "recharts": "^3.9.0",
     "resend": "^6.16.0",
+    "stripe": "^22.4.0",
     "tailwind-merge": "^3.6.0",
     "word-extractor": "^1.0.4",
     "zod": "^4.4.3"

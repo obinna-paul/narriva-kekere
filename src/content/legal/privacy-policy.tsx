@@ -24,7 +24,9 @@ export function PrivacyPolicy({ brand }: PrivacyPolicyProps) {
         <LegalList
           items={[
             "Account information: your name, email address, and password (stored as a salted hash, never in plain text).",
-            "Payment information: when you buy a book, top up a wallet, or pay for a publishing service, our payment processor (Paystack) handles your card details directly — we never see or store your full card number. We retain the transaction reference and amount for our own records.",
+            brand === "Kekere"
+              ? "Payment information: when you buy a book, top up a wallet, or pay for a publishing service, our payment processor (Paystack for Nigerian buyers, Stripe for international buyers) handles your card details directly — we never see or store your full card number. We retain the transaction reference and amount for our own records."
+              : "Payment information: when you buy a book, top up a wallet, or pay for a publishing service, our payment processor (Paystack) handles your card details directly — we never see or store your full card number. We retain the transaction reference and amount for our own records.",
             brand === "Narriva"
               ? "Reading and purchase activity: which books you've bought, your reading progress within them, and your submission history if you're an author."
               : "Reading and writing activity: which stories you've read, unlocked, saved, or written, your cowrie wallet balance and transaction history, and competition entries.",
@@ -61,6 +63,11 @@ export function PrivacyPolicy({ brand }: PrivacyPolicyProps) {
         <LegalList
           items={[
             "Paystack — processes payments for book purchases, wallet top-ups, and publishing services. Paystack receives your payment details directly; we receive only a transaction reference and status.",
+            ...(brand === "Kekere"
+              ? [
+                  "Stripe — processes wallet top-ups for buyers outside Nigeria. Stripe receives your payment details directly; we receive only a transaction reference and status.",
+                ]
+              : []),
             "Resend — sends transactional and marketing emails on our behalf. Resend receives your email address and the content of the email being sent.",
             "Cloudflare R2 — stores ebook content, submitted manuscripts, and other file uploads. Files are stored privately and are not publicly accessible.",
           ]}

@@ -10,18 +10,65 @@ import { usePaystackCheckout } from "@/lib/paystack/use-paystack-checkout";
 export interface TopUpModalProps {
   userId: string;
   userEmail: string;
+  /** Which checkout to run — decided server-side by the buyer's country, see
+   *  getPaymentProviderFromHeaders in wallet/page.tsx. */
+  provider: "paystack" | "stripe";
   onClose: () => void;
   onSuccess: () => void;
 }
 
 const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModalProps) {
+export function TopUpModal({ userId, userEmail, provider, onClose, onSuccess }: TopUpModalProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { checkout } = usePaystackCheckout();
+
+  async function handlePayPaystack() {
+    const { COWRIE_TOPUP_PACKAGES } = await import("@/content/decisions");
+    const pkg = COWRIE_TOPUP_PACKAGES[selected!];
+
+    const reference = await checkout({
+      email: userEmail,
+      amountNgn: pkg.priceNGN,
+      metadata: { type: "wallet_topup", packageIndex: selected, userId },
+    });
+
+    const res = await fetch("/api/paystack/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference, type: "wallet_topup", packageIndex: selected, turnstileToken }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? "Could not confirm payment");
+    }
+
+    onSuccess();
+  }
+
+  // Stripe Checkout is a full-page redirect — there's no "success" to react
+  // to here, the browser just leaves. Confirmation happens back on the
+  // wallet page once Stripe sends the buyer to successUrl (see
+  // wallet-view.tsx's stripe_session_id handling).
+  async function handlePayStripe() {
+    const res = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ packageIndex: selected, turnstileToken }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? "Could not start checkout");
+    }
+
+    const { url } = await res.json();
+    window.location.href = url;
+  }
 
   async function handlePay() {
     if (selected === null) return;
@@ -33,32 +80,17 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
     setError(null);
 
     try {
-      const { COWRIE_TOPUP_PACKAGES } = await import("@/content/decisions");
-      const pkg = COWRIE_TOPUP_PACKAGES[selected];
-
-      const reference = await checkout({
-        email: userEmail,
-        amountNgn: pkg.priceNGN,
-        metadata: { type: "wallet_topup", packageIndex: selected, userId },
-      });
-
-      const res = await fetch("/api/paystack/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference, type: "wallet_topup", packageIndex: selected, turnstileToken }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Could not confirm payment");
+      if (provider === "stripe") {
+        await handlePayStripe();
+      } else {
+        await handlePayPaystack();
       }
-
-      onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
       setSubmitting(false);
     }
+    // No `finally` — on the Stripe path a successful call navigates the
+    // browser away, so there's nothing left here to reset submitting for.
   }
 
   return (
@@ -77,7 +109,7 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
         </div>
 
         <div className="mt-4">
-          <TopUpSelector selected={selected} onSelect={setSelected} />
+          <TopUpSelector selected={selected} onSelect={setSelected} provider={provider} />
         </div>
 
         {turnstileEnabled && (
@@ -94,7 +126,7 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
           disabled={selected === null || submitting}
           onClick={handlePay}
         >
-          {submitting ? "Processing…" : "Pay with Paystack"}
+          {submitting ? "Processing…" : provider === "stripe" ? "Pay with card" : "Pay with Paystack"}
         </Button>
       </div>
     </div>

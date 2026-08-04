@@ -55,7 +55,7 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
       {
         question: "How do I top up?",
         answer:
-          "Go to your wallet, tap Top up, choose a package, and pay with Paystack. Cowries are added instantly, and bigger packages come with bonus cowries.",
+          "Go to your wallet, tap Top up, and choose a package. Cowries are added instantly, and bigger packages come with bonus cowries. Payment is priced in your local currency wherever you're paying from.",
       },
       {
         question: "Do cowries expire?",

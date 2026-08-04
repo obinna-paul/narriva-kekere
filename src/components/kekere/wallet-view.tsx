@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, ArrowRight, Copy, Check, Zap, Mail, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
@@ -24,6 +24,10 @@ export interface WalletViewProps {
   earnedBalance: number;
   userId: string;
   userEmail: string;
+  /** Which checkout to offer for a top-up — decided server-side from the
+   *  buyer's country (see getPaymentProviderFromHeaders), not re-detected
+   *  here. */
+  paymentProvider: "paystack" | "stripe";
   isWriter: boolean;
   transactions: readonly WalletTransactionView[];
   totalTransactionCount: number;
@@ -94,14 +98,48 @@ function getWalletForTx(type: string): string | null {
 }
 
 export function WalletView({
-  spendingBalance, earnedBalance, userId, userEmail, isWriter,
+  spendingBalance, earnedBalance, userId, userEmail, paymentProvider, isWriter,
   transactions, totalTransactionCount, referralCode, referralEarnings, tipEarnings,
 }: WalletViewProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [showTopUp, setShowTopUp] = useState(false);
   const [showHistoryExport, setShowHistoryExport] = useState(false);
   const [showMoveToSpending, setShowMoveToSpending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [stripeReturnMessage, setStripeReturnMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Stripe Checkout is a full-page redirect, not a same-page popup like
+  // Paystack — the buyer leaves the site entirely and comes back here with
+  // ?stripe_session_id=... once they pay or cancel. This is the fast-path
+  // verify call for that return trip (see /api/stripe/verify); the webhook
+  // is still the source of truth if this never runs (tab closed too soon).
+  useEffect(() => {
+    const sessionId = searchParams.get("stripe_session_id");
+    if (!sessionId) return;
+
+    router.replace(pathname);
+
+    fetch("/api/stripe/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error ?? "Could not confirm payment");
+        }
+        setStripeReturnMessage({ ok: true, text: "Cowries added to your wallet." });
+        router.refresh();
+      })
+      .catch((err) => {
+        setStripeReturnMessage({ ok: false, text: err instanceof Error ? err.message : "Something went wrong" });
+      });
+    // Only ever meant to run once, off the URL this page loaded with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const visibleTransactions = transactions.slice(0, HISTORY_PAGE_SIZE);
   const hasMoreHistory = totalTransactionCount > HISTORY_PAGE_SIZE;
@@ -111,6 +149,17 @@ export function WalletView({
   return (
     <div className="mx-auto max-w-[402px] px-[22px] pb-[120px] pt-6">
       <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#2A1A12] tracking-[-0.01em]">Wallet</h1>
+
+      {stripeReturnMessage && (
+        <div
+          className={cn(
+            "mt-4 rounded-[13px] px-4 py-3 text-[13px] font-medium",
+            stripeReturnMessage.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700",
+          )}
+        >
+          {stripeReturnMessage.text}
+        </div>
+      )}
 
       {/* Two-balance cards */}
       <div className="mt-5 flex flex-col gap-[14px]">
@@ -260,6 +309,7 @@ export function WalletView({
         <TopUpModal
           userId={userId}
           userEmail={userEmail}
+          provider={paymentProvider}
           onClose={() => setShowTopUp(false)}
           onSuccess={() => { setShowTopUp(false); router.refresh(); }}
         />

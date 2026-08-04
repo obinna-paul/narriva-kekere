@@ -7,13 +7,21 @@ const ngnFormatter = new Intl.NumberFormat("en-NG", {
   maximumFractionDigits: 0,
 });
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
 export interface TopUpSelectorProps {
   selected: number | null;
   onSelect: (index: number) => void;
+  /** Which price to show — matches whichever checkout the modal is actually
+   *  going to run. Defaults to Paystack/NGN for any other caller. */
+  provider?: "paystack" | "stripe";
 }
 
 /** Package amounts come straight from COWRIE_TOPUP_PACKAGES — never re-typed here. */
-export function TopUpSelector({ selected, onSelect }: TopUpSelectorProps) {
+export function TopUpSelector({ selected, onSelect, provider = "paystack" }: TopUpSelectorProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {COWRIE_TOPUP_PACKAGES.map((pkg, i) => (
@@ -36,7 +44,7 @@ export function TopUpSelector({ selected, onSelect }: TopUpSelectorProps) {
             </p>
           )}
           <p className="mt-2 text-sm font-semibold text-[var(--color-primary)]">
-            {ngnFormatter.format(pkg.priceNGN)}
+            {provider === "stripe" ? usdFormatter.format(pkg.priceUSD) : ngnFormatter.format(pkg.priceNGN)}
           </p>
         </button>
       ))}
