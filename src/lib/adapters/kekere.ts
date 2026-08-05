@@ -50,6 +50,7 @@ export function toFeedStoryData(story: Omit<StoryWithAuthor, "body">, trending =
       : undefined,
     publishedAt: publishedAt.toISOString(),
     isAdult: story.isAdult,
+    isLonglisted: story.longlisted,
     paragraphs: [],
     bodyDoc: null,
     tags: story.tags.map((st) => st.tag.slug),

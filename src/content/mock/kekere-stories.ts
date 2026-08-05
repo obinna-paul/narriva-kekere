@@ -50,6 +50,9 @@ export interface MockStory {
   /** Gates the reader behind an 18+ interstitial and shows a mature-content
    * badge on the cover. Defaults to false for the mock catalog. */
   isAdult: boolean;
+  /** A published, still-unjudged competition entry — drives the Longlist
+   *  badge on the cover. Cleared once the competition completes. */
+  isLonglisted: boolean;
   /** Full body, paragraph by paragraph. The reader shows roughly the first
    * 10% (by character count) before gating the rest. */
   paragraphs: readonly string[];

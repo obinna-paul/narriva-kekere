@@ -10,6 +10,7 @@ import { StoryPreviewSheet } from "@/components/kekere/story-preview-sheet";
 import { StorySearch } from "@/components/kekere/story-search";
 import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
+import { LonglistBadge } from "@/components/kekere/LonglistBadge";
 import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
 import {
   buildGreetingPool,
@@ -93,7 +94,15 @@ function RowCard({
         <span className="absolute right-[9px] top-[9px] rounded-[20px] bg-[rgba(42,26,18,0.55)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
           {story.readingTimeMinutes}m
         </span>
-        {story.isAdult && <MatureBadge className="absolute left-[9px] top-[9px]" />}
+        {/* Stacked rather than given its own corner — the reading-time pill,
+            the New/Trending badge and the finish rate already hold the other
+            three, so a fourth corner chip would collide. */}
+        {(story.isAdult || story.isLonglisted) && (
+          <span className="absolute left-[9px] top-[9px] flex flex-col items-start gap-1">
+            {story.isAdult && <MatureBadge />}
+            {story.isLonglisted && <LonglistBadge />}
+          </span>
+        )}
         {badge && (
           <span className="absolute bottom-[9px] left-[9px] rounded-[20px] bg-[rgba(199,93,44,0.88)] px-[7px] py-[3px] text-[9.5px] font-semibold text-white">
             {badge}
@@ -518,7 +527,12 @@ export function FeedContent({
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent" />
-                {featuredStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
+                {(featuredStory.isAdult || featuredStory.isLonglisted) && (
+                  <span className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                    {featuredStory.isAdult && <MatureBadge />}
+                    {featuredStory.isLonglisted && <LonglistBadge />}
+                  </span>
+                )}
                 <span className="absolute left-0 top-4 bg-[rgba(199,93,44,0.82)] px-3 py-[7px] text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur-[2px]">
                   Editor&apos;s pick
                 </span>

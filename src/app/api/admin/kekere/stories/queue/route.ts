@@ -50,6 +50,16 @@ export const GET = withAuth(
     });
     const openCommentCountByStory = new Map(commentStats.map((c) => [c.storyId, c._count]));
 
+    // Which of these are competition entries. Batched and keyed into a Map
+    // rather than a nested include, matching the two groupBy lookups above —
+    // the editorial decision on an entry IS what qualifies or disqualifies it
+    // for the prize, so an admin must never review one without knowing.
+    const entries = await prisma.competitionEntry.findMany({
+      where: { storyId: { in: storyIds } },
+      select: { storyId: true, competition: { select: { title: true } } },
+    });
+    const competitionByStory = new Map(entries.map((e) => [e.storyId, e.competition.title]));
+
     const now = Date.now();
 
     return NextResponse.json({
@@ -94,6 +104,10 @@ export const GET = withAuth(
           // been sent to the writer yet.
           hasEdits: s.editLastSavedAt != null,
           openCommentCount: openCommentCountByStory.get(s.id) ?? 0,
+          // Non-null when this story was entered into a competition —
+          // publishing it qualifies the entry for the prize, rejecting it
+          // knocks it out.
+          competitionTitle: competitionByStory.get(s.id) ?? null,
         };
       }),
     });

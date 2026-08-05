@@ -16,9 +16,28 @@ function daysUntil(deadline: Date): number {
   return Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 }
 
+/** Anything a writer can still act on comes first — an open competition is
+ *  the whole point of this page, and burying it under finished ones (which
+ *  is what a pure deadline sort does once a season ends) hides the only
+ *  thing on the page with a deadline attached. Within each band the newest
+ *  deadline still leads. */
+const STATUS_ORDER: Record<string, number> = {
+  OPEN: 0,
+  UPCOMING: 1,
+  JUDGING: 2,
+  CLOSED: 3,
+  COMPLETE: 4,
+};
+
 export default async function KekereCompetitionsPage() {
   const competitions = await listCompetitions();
-  const visible = competitions.filter((c) => c.status !== "DRAFT");
+  const visible = competitions
+    .filter((c) => c.status !== "DRAFT")
+    .sort((a, b) => {
+      const rank = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+      if (rank !== 0) return rank;
+      return b.deadline.getTime() - a.deadline.getTime();
+    });
 
   return (
     <KekereTheme>

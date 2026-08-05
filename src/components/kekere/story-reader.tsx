@@ -8,6 +8,7 @@ import { ArrowLeft, Bookmark, Share2, MessageCircle, Palette, Check, Copy, Arrow
 import { cn } from "@/lib/utils/cn";
 import { AmbientSoundMenu, type AmbientSoundMenuHandle } from "@/components/kekere/AmbientSoundMenu";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
+import { LonglistBadge } from "@/components/kekere/LonglistBadge";
 import { ReportModal, type ReportTargetType } from "@/components/kekere/ReportModal";
 import { StoryReaderContent } from "@/components/kekere/StoryReaderContent";
 import { ParagraphCommentIndicators } from "@/components/kekere/ParagraphCommentIndicators";
@@ -1078,7 +1079,12 @@ export function StoryReader({
                     />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
-                  {nextStory.isAdult && <MatureBadge className="absolute right-3 top-3" />}
+                  {(nextStory.isAdult || nextStory.isLonglisted) && (
+                    <span className="absolute right-3 top-3 flex flex-col items-end gap-1">
+                      {nextStory.isAdult && <MatureBadge />}
+                      {nextStory.isLonglisted && <LonglistBadge />}
+                    </span>
+                  )}
                 </div>
 
                 <div className="px-5 py-[18px]">
@@ -1164,8 +1170,19 @@ export function StoryReader({
   // columns in swipe mode — see the two render sites below.
   const titleBlock = (
     <div className="mb-[30px]">
-      <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
-        {story.genre.toUpperCase()}
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="inline-block rounded-[20px] bg-[var(--color-accent)] px-[11px] py-1 text-[11px] font-semibold text-white">
+          {story.genre.toUpperCase()}
+        </span>
+        {/* The reader never shows the 18+ badge (the age gate is the
+            treatment instead), but a Longlist entry has nothing else
+            marking it — and this is where someone actually reading the
+            story would notice it's in the running. */}
+        {story.isLonglisted && (
+          <span className="inline-block rounded-[20px] bg-[#5A3D8A] px-[11px] py-1 text-[11px] font-semibold uppercase text-white">
+            Longlist
+          </span>
+        )}
       </span>
       <h1 className="mt-4 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-[1.12] text-[var(--color-ink)] transition-colors duration-300">
         {story.title}

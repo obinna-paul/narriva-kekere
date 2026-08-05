@@ -13,7 +13,9 @@ const GRAIN_SVG =
 // Competition model has no rules column — so this fallback is what actually
 // renders on the live site for every competition.
 const DEFAULT_RULES: readonly string[] = [
-  "You may submit multiple stories — only one per writer is selected for the shortlist.",
+  "You may enter as many stories as you like — but only one per writer is selected for the shortlist.",
+  "Entries must be finished drafts you haven't already submitted for review. Stories already published on Kekere aren't eligible.",
+  "Every entry is read by our editors first. If yours is accepted, it goes live on Kekere with a Longlist badge and competes for the prize; if it isn't, it doesn't enter judging.",
   "We're looking for stories that leave a lasting impression: beautiful narration and an interesting writing voice. New to flash fiction? Research what it is (and isn't) before submitting.",
   "Stories can be set anywhere in the world, but we expect submissions from Nigerian writers.",
   "Original, unpublished work only — nothing that has appeared on any other platform.",
@@ -193,6 +195,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
             <CompetitionApply
               competitionId={competition.id}
               competitionSlug={competition.slug}
+              competitionTitle={competition.title}
               wordCountLimit={competition.wordCountLimit}
               wordCountMin={competition.wordCountMin}
             />

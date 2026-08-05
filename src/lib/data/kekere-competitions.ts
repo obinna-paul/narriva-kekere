@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db/prisma";
 import { submitStory } from "@/lib/data/kekere-stories";
 import { isWordCountEligible, wordCountRangeLabel } from "@/lib/competitions/word-count";
-import type { Competition, CompetitionEntry, CompetitionStatus, Story } from "@prisma/client";
+import { createNotification } from "@/lib/notifications/create";
+import type { Competition, CompetitionEntry, CompetitionStatus, Prisma, Story } from "@prisma/client";
 import type { StoryWithAuthor } from "@/lib/data/kekere-stories";
 
 export class CompetitionNotFoundError extends Error {
@@ -151,10 +152,52 @@ export async function createCompetition(input: CompetitionInput): Promise<Compet
   return prisma.competition.create({ data: input });
 }
 
+/**
+ * Clears the Longlist badge from every story entered into a competition.
+ *
+ * "Longlisted" means "published and still in the running" — once judging is
+ * over the badge has to come off the entries that didn't place, and the ones
+ * that did get the Winner's Circle treatment instead. Called from BOTH paths
+ * that can complete a competition (selectWinners, and a direct status edit
+ * via updateCompetition): clearing in only one would strand the flag on
+ * whichever path the admin happened not to take, leaving stale badges on the
+ * feed forever with no way to notice.
+ */
+export async function clearLonglistForCompetition(
+  competitionId: string,
+  tx?: Prisma.TransactionClient,
+): Promise<void> {
+  const db = tx ?? prisma;
+  const entries = await db.competitionEntry.findMany({
+    where: { competitionId },
+    select: { storyId: true },
+  });
+  if (entries.length === 0) return;
+
+  await db.story.updateMany({
+    where: { id: { in: entries.map((e) => e.storyId) } },
+    data: { longlisted: false },
+  });
+}
+
 export async function updateCompetition(
   id: string,
   input: Partial<CompetitionInput>
 ): Promise<Competition> {
+  // A competition can also be completed by editing its status directly here,
+  // not just through selectWinners — so the badge cleanup has to run on this
+  // path too. Guarded on the transition (not just the target value) so
+  // re-saving an already-COMPLETE competition doesn't re-run the sweep.
+  if (input.status === "COMPLETE") {
+    const current = await prisma.competition.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+    if (current && current.status !== "COMPLETE") {
+      await clearLonglistForCompetition(id);
+    }
+  }
+
   return prisma.competition.update({ where: { id }, data: input });
 }
 
@@ -169,18 +212,23 @@ export async function selectWinners(
   competitionId: string,
   placements: PlacementInput[]
 ): Promise<Competition> {
-  await prisma.$transaction(
-    placements.map((p) =>
-      prisma.competitionEntry.update({
+  return prisma.$transaction(async (tx) => {
+    for (const p of placements) {
+      await tx.competitionEntry.update({
         where: { id: p.entryId },
         data: { placement: p.placement },
-      })
-    )
-  );
+      });
+    }
 
-  return prisma.competition.update({
-    where: { id: competitionId },
-    data: { status: "COMPLETE" },
+    // Judging is over, so no entry is "in the running" any more — the
+    // winners move to the Winner's Circle and everyone else goes back to
+    // being an ordinary published story.
+    await clearLonglistForCompetition(competitionId, tx);
+
+    return tx.competition.update({
+      where: { id: competitionId },
+      data: { status: "COMPLETE" },
+    });
   });
 }
 
@@ -238,8 +286,31 @@ export async function submitStoryToCompetition(
   });
   if (existingEntry) throw new CompetitionEntryError("Already entered into this competition.");
 
-  // Ride the normal moderation path the moment the story is entered.
+  // Ride the normal moderation path the moment the story is entered — a
+  // competition entry is reviewed exactly like any other submission, and
+  // it's that editorial decision (publish vs reject) that decides whether
+  // the entry qualifies.
   await submitStory(storyId, userId);
 
-  return prisma.competitionEntry.create({ data: { competitionId, storyId } });
+  // The entry row and the badge flag go together: an entry without the flag
+  // would publish with no Longlist badge and nothing to notice it by.
+  const [entry] = await prisma.$transaction([
+    prisma.competitionEntry.create({ data: { competitionId, storyId } }),
+    prisma.story.update({ where: { id: storyId }, data: { longlisted: true } }),
+  ]);
+
+  // submitStory already emailed the generic "we've got your story" note, but
+  // said nothing about the prize — and unlike an ordinary submission (see
+  // /api/kekere/stories/[id]/submit) an entry got no in-app notification at
+  // all. Entering a competition is exactly the moment a writer wants written
+  // confirmation of what they entered.
+  await createNotification({
+    userId,
+    type: "STORY_SUBMITTED",
+    title: `Entered — ${competition.title}`,
+    body: `"${story.title}" is in. Our editors read every entry; if yours is accepted it goes live on Kekere and competes for the prize. We'll come back to you within 5–7 business days.`,
+    link: `/kekere/write?id=${storyId}`,
+  }).catch(() => {});
+
+  return entry;
 }
