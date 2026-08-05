@@ -58,6 +58,11 @@ export const HELP_CATEGORIES: readonly HelpCategory[] = [
           "Go to your wallet, tap Top up, choose a package, and pay with Paystack. Cowries are added instantly, and bigger packages come with bonus cowries.",
       },
       {
+        question: "I paid for cowries but they haven't shown up yet — what do I do?",
+        answer:
+          "This almost never happens, and when it does, it's nearly always a short delay rather than a lost payment — cowries usually land within seconds. If yours haven't shown up after a few minutes, please don't worry or resubmit the payment. Just email us at kekerestories@gmail.com or support@narriva.pro, or message us on Instagram @kekere.stories, with your payment details, and we'll get it sorted right away.",
+      },
+      {
         question: "Do cowries expire?",
         answer: "No. Cowries in your wallet stay there until you spend them.",
       },
