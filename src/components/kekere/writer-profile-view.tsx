@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin, Star, Quote, Users, BookOpen, Heart } from "lucide-react";
 import { WriterFollowHeader } from "@/components/kekere/writer-follow-header";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
+import { LonglistBadge } from "@/components/kekere/LonglistBadge";
 import { AvatarLightbox } from "@/components/kekere/AvatarLightbox";
 import { SocialIcon } from "@/components/kekere/social-icon";
 import { detectSocialPlatform, formatSocialLinkLabel } from "@/lib/utils/social-links";
@@ -55,7 +56,12 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={story.coverImageUrl} alt="" className="h-full w-full object-cover" loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
         )}
-        {story.isAdult && <MatureBadge className="absolute right-[4px] top-[4px] px-[4px] py-[1px] text-[7.5px]" />}
+        {(story.isAdult || story.isLonglisted) && (
+          <span className="absolute right-[4px] top-[4px] flex flex-col items-end gap-[3px]">
+            {story.isAdult && <MatureBadge className="px-[4px] py-[1px] text-[7.5px]" />}
+            {story.isLonglisted && <LonglistBadge className="px-[4px] py-[1px] text-[7.5px]" />}
+          </span>
+        )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5">

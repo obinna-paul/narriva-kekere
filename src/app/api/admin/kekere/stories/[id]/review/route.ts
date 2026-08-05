@@ -20,6 +20,12 @@ export const GET = withAuth(
           },
         },
         tags: { select: { tagId: true } },
+        // At most one entry matters here — a story can only be entered into
+        // a given competition once, and in practice only into one at a time.
+        competitionEntries: {
+          select: { competition: { select: { title: true } } },
+          take: 1,
+        },
       },
     });
 
@@ -77,6 +83,7 @@ export const GET = withAuth(
       publishedAt: story.publishedAt?.toISOString() ?? null,
       createdAt: story.createdAt.toISOString(),
       updatedAt: story.updatedAt.toISOString(),
+      competitionTitle: story.competitionEntries[0]?.competition.title ?? null,
       authorProfile: {
         name: story.author.name,
         username: story.author.slug ?? story.author.name,

@@ -524,6 +524,20 @@ model Story {
   // interstitial (see story-reader.tsx) and shows a mature-content badge
   // on the cover everywhere the story is listed.
   isAdult           Boolean @default(false)
+  // True while this story is a live competition entry — set when it's
+  // entered (see submitStoryToCompetition) and cleared for every entry the
+  // moment that competition goes COMPLETE. Drives the "Longlist" badge on
+  // the cover wherever the story is listed.
+  //
+  // Deliberately denormalized rather than derived from the
+  // Story -> CompetitionEntry -> Competition join: the feed fans out to
+  // ~8 story fetchers plus one per tag row, and threading a nested include
+  // through the shared authorInclude would add two queries to every one of
+  // them — reintroducing exactly the fan-out getFeedTagRows was rewritten
+  // to avoid. A scalar rides along free on queries that already run, and is
+  // safe to expose on the public unauthenticated feed (unlike raw entries,
+  // which would reveal who's in the running mid-judging).
+  longlisted        Boolean @default(false)
 
   sourceType        StorySource @default(STANDARD)
   authoredByAdminId String?

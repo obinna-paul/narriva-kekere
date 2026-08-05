@@ -136,8 +136,19 @@ export async function finalizeContract(
   // passes through SUBMITTED/finalizeContract at all.
   const isOnboarded = story.sourceType === "ADMIN_AUTHORED";
 
+  // A competition entry gets a different contract: same terms, plus a clause
+  // naming the prize and confirming the work is original and unpublished. The
+  // renderer has no conditionals (see src/lib/contracts/render.ts), so this is
+  // a separate template row rather than an optional clause — and the writer
+  // signs the version that actually matches what they entered.
+  const entry = await prisma.competitionEntry.findFirst({
+    where: { storyId },
+    select: { competition: { select: { title: true } } },
+  });
+  const competitionName = entry?.competition.title ?? null;
+
   const template = await prisma.kekereContractTemplate.findFirst({
-    where: { contractType: "PUBLISHING" },
+    where: { contractType: competitionName ? "PUBLISHING_COMPETITION" : "PUBLISHING" },
     orderBy: { createdAt: "desc" },
   });
   if (!template) throw new ReviewFlowError("no_template", "No publishing contract template found.");
@@ -152,6 +163,10 @@ export async function finalizeContract(
       cowrie_cost: String(story.cowrieCost),
       genre: story.genre,
       date: dateStr,
+      // Only passed when there's a real name to pass — renderContractBody
+      // treats an empty string as a missing variable, so a blank here would
+      // fail the whole render rather than render an empty clause.
+      ...(competitionName ? { competition_name: competitionName } : {}),
     },
     template.variables,
   );

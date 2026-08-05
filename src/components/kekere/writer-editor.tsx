@@ -31,6 +31,7 @@ import {
   type TiptapDoc,
 } from "@/lib/tiptap/doc-utils";
 import { formatRelativeTime, type SaveStatus } from "@/lib/tiptap/save-status";
+import { isWordCountEligible, wordCountRangeLabel } from "@/lib/competitions/word-count";
 
 const HOOK_LINE_SOFT = 100;
 const HOOK_LINE_HARD = 120;
@@ -55,6 +56,15 @@ interface VersionSummary {
   wordCount: number;
   label: string;
   savedAt: string;
+}
+
+interface OpenCompetition {
+  id: string;
+  slug: string;
+  title: string;
+  deadline: string;
+  wordCountMin: number | null;
+  wordCountLimit: number;
 }
 
 export interface WriterEditorProps {
@@ -156,6 +166,16 @@ export function WriterEditor({
 
   // Feature 6 — submit preview
   const [submitPreviewOpen, setSubmitPreviewOpen] = useState(false);
+
+  // Competition entry from the editor. `competitionId` (a prop) is the
+  // deep-link path — /kekere/write?competition=slug pins the whole editor
+  // session to one prize. These are the in-editor path: the writer submits a
+  // perfectly ordinary draft and decides at the last step whether it's going
+  // to review or into a prize. Both end up in the same confirmSubmit branch.
+  const [openCompetitions, setOpenCompetitions] = useState<OpenCompetition[] | null>(null);
+  const [chosenCompetitionId, setChosenCompetitionId] = useState<string | null>(null);
+  const [showPrizePicker, setShowPrizePicker] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
   const hydrating = useRef(true);
@@ -323,6 +343,26 @@ export function WriterEditor({
   function handleClickSubmit() {
     setPreviewDoc(getLatestDoc());
     setSubmitPreviewOpen(true);
+    setShowPrizePicker(false);
+    setChosenCompetitionId(null);
+
+    // Only offered when the editor isn't already pinned to a competition by
+    // the ?competition= deep link — in that case the destination is already
+    // decided and a second choice would just be confusing.
+    if (!competitionId && openCompetitions === null) {
+      fetch("/api/kekere/competitions/open")
+        .then((res) => (res.ok ? res.json() : { competitions: [] }))
+        .then((body) => setOpenCompetitions(body.competitions ?? []))
+        .catch(() => setOpenCompetitions([]));
+    }
+  }
+
+  /** The prize option is only offered for a story that would actually be
+   *  accepted — the word-count rule is the one thing the writer can't fix
+   *  from the submit screen, so surfacing it here beats a rejection after
+   *  they've committed. Mirrors the server's isWordCountEligible exactly. */
+  function eligibleFor(competition: OpenCompetition): boolean {
+    return isWordCountEligible(wordCount, competition.wordCountMin, competition.wordCountLimit);
   }
 
   const [exporting, setExporting] = useState(false);
@@ -419,7 +459,12 @@ export function WriterEditor({
     setImportConfirmOpen(false);
   }
 
-  async function confirmSubmit() {
+  /**
+   * @param forCompetitionId when set, the story is entered into that prize
+   *   instead of going to ordinary review. Falls back to the `competitionId`
+   *   prop so the ?competition=slug deep link keeps working unchanged.
+   */
+  async function confirmSubmit(forCompetitionId?: string) {
     if (!storyId) return;
 
     if (mode === "scroll") {
@@ -427,8 +472,10 @@ export function WriterEditor({
     }
     await saveDraft();
 
-    const res = competitionId
-      ? await fetch(`/api/kekere/competitions/${competitionId}/submit`, {
+    const targetCompetitionId = forCompetitionId ?? competitionId;
+
+    const res = targetCompetitionId
+      ? await fetch(`/api/kekere/competitions/${targetCompetitionId}/submit`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ storyId }),
@@ -438,6 +485,15 @@ export function WriterEditor({
     if (res.ok) {
       setStatus("SUBMITTED");
       setJustSubmitted(true);
+      setSubmitError(null);
+    } else {
+      // A competition entry can be refused for reasons the writer can act on
+      // (deadline passed while they were writing, word count, already
+      // entered) — showing the server's message beats silently doing nothing,
+      // which is what this did before.
+      const body = await res.json().catch(() => ({}));
+      setSubmitError(body.error ?? "Couldn't submit that story. Try again.");
+      return;
     }
     setConfirmOpen(false);
     setSubmitPreviewOpen(false);
@@ -887,7 +943,9 @@ export function WriterEditor({
         <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]">
           <div className="flex items-center justify-between border-b border-[var(--color-ink)]/[0.08] px-6 py-3">
             <span className="text-sm text-[var(--color-ink-muted)]">
-              This is what you&apos;re submitting. Our team will review it within 5–7 business days.
+              {competitionId || showPrizePicker || chosenCompetitionId
+                ? "Entering a prize means confirming this is your own original work and hasn't been published anywhere else. If it's accepted, it goes live on Kekere as a competition entry."
+                : "This is what you're submitting. Our team will review it within 5–7 business days."}
             </span>
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-8">
@@ -917,21 +975,91 @@ export function WriterEditor({
               </div>
             </div>
           </div>
-          <div className="flex flex-none items-center gap-3 border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)] px-6 py-4">
-            <button
-              type="button"
-              onClick={() => setSubmitPreviewOpen(false)}
-              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
-            >
-              Go back and edit
-            </button>
-            <button
-              type="button"
-              onClick={confirmSubmit}
-              className={cn(buttonVariants({ variant: "primary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
-            >
-              Confirm and submit
-            </button>
+          <div className="flex-none border-t border-[var(--color-ink)]/[0.08] bg-[var(--color-bg)] px-6 py-4">
+            {/* Choosing which prize to enter. Only reached when more than one
+                competition is open — with exactly one, the button below goes
+                straight through. */}
+            {showPrizePicker && openCompetitions && openCompetitions.length > 0 && (
+              <div className="mx-auto mb-3 flex max-w-[680px] flex-col gap-2">
+                <span className="text-[13px] font-semibold text-[var(--color-ink)]">
+                  Which prize are you entering?
+                </span>
+                {openCompetitions.map((c) => {
+                  const eligible = eligibleFor(c);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      disabled={!eligible}
+                      onClick={() => setChosenCompetitionId(c.id)}
+                      className={cn(
+                        "flex flex-col rounded-[10px] border px-4 py-2.5 text-left transition-colors disabled:opacity-50",
+                        chosenCompetitionId === c.id
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
+                          : "border-[var(--color-ink)]/[0.14] bg-white"
+                      )}
+                    >
+                      <span className="text-[13.5px] font-semibold text-[var(--color-ink)]">{c.title}</span>
+                      <span className="mt-0.5 text-[12px] text-[var(--color-ink-muted-2)]">
+                        {wordCountRangeLabel(c.wordCountMin, c.wordCountLimit)} words
+                        {!eligible && ` — your story is ${wordCount.toLocaleString()}`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {submitError && (
+              <p className="mx-auto mb-3 max-w-[680px] text-[13px] text-red-600">{submitError}</p>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSubmitPreviewOpen(false)}
+                className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
+              >
+                Go back and edit
+              </button>
+
+              {/* The prize option only exists while something is open to enter
+                  — and never when the editor is already pinned to one prize
+                  by the ?competition= deep link. */}
+              {!competitionId && openCompetitions && openCompetitions.some(eligibleFor) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (showPrizePicker) {
+                      if (chosenCompetitionId) void confirmSubmit(chosenCompetitionId);
+                      return;
+                    }
+                    const eligible = openCompetitions.filter(eligibleFor);
+                    // One prize open — no point making them pick from a list of one.
+                    if (eligible.length === 1) {
+                      void confirmSubmit(eligible[0].id);
+                      return;
+                    }
+                    setShowPrizePicker(true);
+                  }}
+                  disabled={showPrizePicker && !chosenCompetitionId}
+                  className={cn(
+                    buttonVariants({ variant: "secondary", size: "sm" }),
+                    "rounded-[10px] flex-1 border-[var(--color-primary)] text-[var(--color-primary)] disabled:opacity-50 sm:flex-none"
+                  )}
+                >
+                  Submit for the prize
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void confirmSubmit()}
+                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "rounded-[10px] flex-1 sm:flex-none")}
+              >
+                {competitionId ? "Confirm and enter" : "Submit for review"}
+              </button>
+            </div>
           </div>
         </div>
       )}

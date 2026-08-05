@@ -406,6 +406,42 @@ Story: {{story_title}}
 Writer: {{writer_name}}
 Date: {{date}}`;
 
+const PUBLISHING_VARIABLES = ["story_title", "writer_name", "cowrie_cost", "genre", "date"];
+
+const COMPETITION_ENTRY_CLAUSE = `10. COMPETITION ENTRY
+
+By entering the {{competition_name}}, you confirm that this is your original work and that it has not previously been published elsewhere. If accepted, the story will be published on the Kekere Stories platform as an official competition entry and will be eligible for judging under the rules of the {{competition_name}}. You retain ownership of your work, subject to the publishing rights granted under the Kekere Stories publishing agreement and the competition terms.
+`;
+
+/**
+ * The competition variant is DERIVED from the standard template rather than
+ * copied, so the nine shared sections can never drift apart — an edit to the
+ * earnings or exclusivity terms lands in both automatically.
+ *
+ * The clause goes in as section 10, immediately before the closing signature
+ * block, and is separated by blank lines because the PDF and DOCX renderers
+ * (src/lib/contracts/pdf.ts, docx.ts) both split paragraphs on /\n\n+/ — a
+ * clause without one would be glued onto the previous paragraph in the
+ * signed copy the writer keeps.
+ */
+const CLOSING_DIVIDER = "────────────────────────────────────────";
+
+function buildCompetitionContractTemplate(): string {
+  const dividerIndex = PUBLISHING_CONTRACT_TEMPLATE.lastIndexOf(CLOSING_DIVIDER);
+  if (dividerIndex === -1) {
+    throw new Error(
+      "Publishing contract template no longer ends with the closing divider — " +
+        "the competition clause has nowhere to be inserted."
+    );
+  }
+  return (
+    PUBLISHING_CONTRACT_TEMPLATE.slice(0, dividerIndex) +
+    COMPETITION_ENTRY_CLAUSE +
+    "\n" +
+    PUBLISHING_CONTRACT_TEMPLATE.slice(dividerIndex)
+  );
+}
+
 async function seedPublishingContractTemplate() {
   await prisma.kekereContractTemplate.upsert({
     where: { id: "publishing-contract-v1" },
@@ -413,14 +449,37 @@ async function seedPublishingContractTemplate() {
       name: "Standard Publishing Contract",
       contractType: "PUBLISHING",
       body: PUBLISHING_CONTRACT_TEMPLATE,
-      variables: ["story_title", "writer_name", "cowrie_cost", "genre", "date"],
+      variables: PUBLISHING_VARIABLES,
     },
     create: {
       id: "publishing-contract-v1",
       name: "Standard Publishing Contract",
       contractType: "PUBLISHING",
       body: PUBLISHING_CONTRACT_TEMPLATE,
-      variables: ["story_title", "writer_name", "cowrie_cost", "genre", "date"],
+      variables: PUBLISHING_VARIABLES,
+    },
+  });
+
+  // A separate row, not a conditional inside the standard one: the contract
+  // renderer (src/lib/contracts/render.ts) is flat {{var}} substitution with
+  // no conditionals, and a placeholder left unsubstituted leaks literally
+  // into the signed contract. Separate rows also keep the existing
+  // contractType: "PUBLISHING" lookup untouched for non-competition stories.
+  const competitionBody = buildCompetitionContractTemplate();
+  await prisma.kekereContractTemplate.upsert({
+    where: { id: "publishing-contract-competition-v1" },
+    update: {
+      name: "Publishing Contract — Competition Entry",
+      contractType: "PUBLISHING_COMPETITION",
+      body: competitionBody,
+      variables: [...PUBLISHING_VARIABLES, "competition_name"],
+    },
+    create: {
+      id: "publishing-contract-competition-v1",
+      name: "Publishing Contract — Competition Entry",
+      contractType: "PUBLISHING_COMPETITION",
+      body: competitionBody,
+      variables: [...PUBLISHING_VARIABLES, "competition_name"],
     },
   });
 }

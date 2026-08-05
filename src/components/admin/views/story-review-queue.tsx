@@ -34,6 +34,11 @@ interface QueueStory {
   /** A working copy sits in the To Be Published editor, not yet sent to the writer. */
   hasEdits: boolean;
   openCommentCount: number;
+  /** The competition this story was entered into, or null for an ordinary
+   *  submission. Publishing an entry qualifies it for the prize; rejecting it
+   *  knocks it out — so this has to be visible before the decision is made,
+   *  in both tabs. */
+  competitionTitle: string | null;
 }
 
 interface StoryDetail extends QueueStory {
@@ -1199,6 +1204,20 @@ export function StoryReviewQueue() {
                     {s.tier}
                   </span>
                 )}
+                {/* Both tabs — an entry sits in Story Queue first and moves
+                    to To Be Published once the contract is signed, and the
+                    decision matters for the prize at every step. */}
+                {s.competitionTitle && (
+                  <span
+                    title={s.competitionTitle}
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
+                      selectedId === s.id ? "bg-white/15 text-white" : "bg-[rgba(90,61,138,0.14)] text-[#5A3D8A]",
+                    )}
+                  >
+                    Longlist
+                  </span>
+                )}
                 {!s.opened && (
                   <span className={cn(
                     "rounded-full px-2 py-0.5 text-[9px] font-bold uppercase",
@@ -1361,6 +1380,17 @@ export function StoryReviewQueue() {
                 <span>·</span>
                 <span>{selected.genre}</span>
               </div>
+
+              {/* Spelled out rather than left as the chip in the list, because
+                  this is the pane the accept/reject decision is actually made
+                  from — and for an entry that decision is also the call on
+                  whether it competes for the prize. */}
+              {selected.competitionTitle && (
+                <div className="mt-3 rounded-[8px] bg-[rgba(90,61,138,0.08)] px-3 py-2 text-[12px] leading-[1.5] text-[#5A3D8A]">
+                  <span className="font-semibold">Competition entry — {selected.competitionTitle}.</span>{" "}
+                  Publishing this qualifies it for the prize; rejecting it knocks it out.
+                </div>
+              )}
             </div>
 
             {/* Body — Story Review always reads plain; To Be Published gets

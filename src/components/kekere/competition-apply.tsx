@@ -2,18 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FileText, Upload } from "lucide-react";
+import { FileText, PenLine } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { isWordCountEligible, wordCountRangeLabel } from "@/lib/competitions/word-count";
 
@@ -28,6 +18,7 @@ interface DraftStory {
 export interface CompetitionApplyProps {
   competitionId: string;
   competitionSlug: string;
+  competitionTitle: string;
   wordCountLimit: number;
   wordCountMin?: number;
 }
@@ -35,6 +26,7 @@ export interface CompetitionApplyProps {
 export function CompetitionApply({
   competitionId,
   competitionSlug,
+  competitionTitle,
   wordCountLimit,
   wordCountMin,
 }: CompetitionApplyProps) {
@@ -47,12 +39,6 @@ export function CompetitionApply({
   const [draftSubmitting, setDraftSubmitting] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
 
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadTitle, setUploadTitle] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
   async function openDraftPicker() {
     setDraftsOpen(true);
     setDraftError(null);
@@ -60,6 +46,10 @@ export function CompetitionApply({
     try {
       const res = await fetch("/api/kekere/stories/mine");
       const { stories } = await res.json();
+      // DRAFT only — a published story can't be entered, and neither can one
+      // already sitting with the editorial team. The backend enforces this
+      // too (submitStoryToCompetition); filtering here just means the writer
+      // never sees an option that would be rejected.
       setDrafts((stories as DraftStory[]).filter((s) => s.status === "DRAFT"));
     } catch {
       setDrafts([]);
@@ -89,84 +79,42 @@ export function CompetitionApply({
     }
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    setUploadError(null);
-    const name = file?.name.toLowerCase() ?? "";
-    if (file && !name.endsWith(".doc") && !name.endsWith(".docx")) {
-      setUploadFile(null);
-      setUploadError("Only Word documents (.doc or .docx) are accepted — no PDFs.");
-      return;
-    }
-    setUploadFile(file);
-  }
-
-  async function submitUpload() {
-    if (!uploadFile || !uploadTitle.trim()) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", uploadFile);
-      formData.append("title", uploadTitle.trim());
-
-      const res = await fetch(`/api/kekere/competitions/${competitionId}/submit-upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setUploadError(body.error ?? "Couldn't submit that document. Try again.");
-        return;
-      }
-      setUploadOpen(false);
-      setEntered(true);
-    } finally {
-      setUploading(false);
-    }
-  }
-
   if (entered) {
     return (
-      <div className="rounded-xl bg-[rgba(31,111,74,0.1)] px-4 py-[17px] text-center text-[14px] font-medium text-[var(--color-success)]">
-        You&apos;re entered! We&apos;ll be in touch if your story is shortlisted.{" "}
+      <div className="rounded-xl bg-[rgba(31,111,74,0.1)] px-4 py-[17px] text-center text-[14px] leading-[1.55] text-[var(--color-success)]">
+        <span className="font-semibold">You&apos;re entered.</span> Our editors read every entry — if
+        yours is accepted, it goes live on Kekere with a Longlist badge and is in the running for the
+        prize. You can enter another story any time.{" "}
         <Link href={`/kekere/write?competition=${competitionSlug}`} className="underline">
-          View your stories →
+          Your stories →
         </Link>
       </div>
     );
   }
 
+  const hasNoDrafts = drafts !== null && drafts.length === 0;
+
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button
-          type="button"
-          onClick={openDraftPicker}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[var(--color-sand-accent)] bg-transparent px-4 py-[15px] text-[15px] font-semibold text-[var(--color-sand-accent)] transition-colors hover:bg-[rgba(233,201,163,0.08)]"
-        >
-          <FileText size={16} />
-          Select from draft
-        </button>
-        <button
-          type="button"
-          onClick={() => setUploadOpen(true)}
-          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-[15px] text-[15px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
-        >
-          <Upload size={16} />
-          Upload story
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={openDraftPicker}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-[15px] text-[15px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+      >
+        <FileText size={16} />
+        Enter a story
+      </button>
 
-      {/* Select from draft — mobile drawer */}
       <Sheet open={draftsOpen} onOpenChange={setDraftsOpen}>
         <SheetContent side="bottom" className="flex max-h-[80vh] flex-col gap-0 p-0">
           <div className="flex-none border-b border-[rgba(42,26,18,.10)] px-5 py-4">
             <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">
-              Select a draft to enter
+              Choose a story to enter
             </span>
-            <p className="mt-1 text-[13px] text-[rgba(42,26,18,.55)]">
-              Only one story can be entered per writer.
+            <p className="mt-1 text-[13px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+              Pick a finished draft you haven&apos;t submitted for review yet. Already-published
+              stories aren&apos;t eligible — entries have to be new work. You can enter as many
+              stories as you like.
             </p>
           </div>
 
@@ -174,19 +122,34 @@ export function CompetitionApply({
             {drafts === null && (
               <p className="py-8 text-center text-[13.5px] text-[rgba(42,26,18,.5)]">Loading your drafts…</p>
             )}
-            {drafts?.length === 0 && (
-              <p className="py-8 text-center text-[13.5px] text-[rgba(42,26,18,.5)]">
-                No drafts yet — write a story first, or upload one instead.
-              </p>
+
+            {hasNoDrafts && (
+              <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                <PenLine size={22} className="text-[rgba(42,26,18,.35)]" />
+                <p className="text-[14px] font-semibold text-[#2A1A12]">
+                  You don&apos;t have any drafts yet
+                </p>
+                <p className="text-[13px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+                  Write your story first — then come back and enter it. Entries need to be{" "}
+                  {rangeLabel} words.
+                </p>
+                <Link
+                  href={`/kekere/write?new=1&competition=${competitionSlug}`}
+                  className="mt-1 rounded-[10px] bg-[var(--color-primary)] px-4 py-2.5 text-[13.5px] font-semibold text-white"
+                >
+                  Start writing
+                </Link>
+              </div>
             )}
+
             {drafts?.map((story) => {
-              const overLimit = !isWordCountEligible(story.wordCount, wordCountMin, wordCountLimit);
+              const ineligible = !isWordCountEligible(story.wordCount, wordCountMin, wordCountLimit);
               const selected = selectedDraftId === story.id;
               return (
                 <button
                   key={story.id}
                   type="button"
-                  disabled={overLimit}
+                  disabled={ineligible}
                   onClick={() => setSelectedDraftId(story.id)}
                   className={cn(
                     "mb-2 flex w-full flex-col rounded-[11px] border px-4 py-3 text-left transition-colors disabled:opacity-50",
@@ -200,7 +163,7 @@ export function CompetitionApply({
                   </span>
                   <span className="mt-0.5 text-[12.5px] text-[rgba(42,26,18,.5)]">
                     {story.wordCount.toLocaleString()} words
-                    {overLimit && ` — outside the ${rangeLabel}-word range`}
+                    {ineligible && ` — outside the ${rangeLabel}-word range`}
                   </span>
                 </button>
               );
@@ -211,69 +174,26 @@ export function CompetitionApply({
             <p className="flex-none px-5 pb-2 text-center text-[13px] text-red-600">{draftError}</p>
           )}
 
-          <div className="flex-none border-t border-[rgba(42,26,18,.10)] px-5 py-4">
-            <button
-              type="button"
-              disabled={!selectedDraftId || draftSubmitting}
-              onClick={submitDraft}
-              className="w-full rounded-[10px] bg-[var(--color-primary)] py-3 text-[14.5px] font-semibold text-white disabled:opacity-50"
-            >
-              {draftSubmitting ? "Submitting…" : "Submit this story"}
-            </button>
-          </div>
+          {!hasNoDrafts && (
+            <div className="flex-none border-t border-[rgba(42,26,18,.10)] px-5 py-4">
+              <p className="mb-3 text-[11.5px] leading-[1.5] text-[rgba(42,26,18,.5)]">
+                By entering the {competitionTitle}, you confirm this is your own original work and
+                that it hasn&apos;t been published anywhere else. If it&apos;s accepted, it will be
+                published on Kekere as a competition entry under the publishing agreement and the
+                competition terms.
+              </p>
+              <button
+                type="button"
+                disabled={!selectedDraftId || draftSubmitting}
+                onClick={submitDraft}
+                className="w-full rounded-[10px] bg-[var(--color-primary)] py-3 text-[14.5px] font-semibold text-white disabled:opacity-50"
+              >
+                {draftSubmitting ? "Entering…" : "Enter this story"}
+              </button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
-
-      {/* Upload story */}
-      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upload your story</DialogTitle>
-            <DialogDescription>
-              Word documents (.doc or .docx) only — no PDFs. {rangeLabel} words.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="upload-title" className="text-sm font-medium text-[var(--color-ink)]">
-                Title
-              </label>
-              <Input
-                id="upload-title"
-                value={uploadTitle}
-                onChange={(e) => setUploadTitle(e.target.value)}
-                placeholder="Give your story a title…"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="upload-file" className="text-sm font-medium text-[var(--color-ink)]">
-                Manuscript (.doc or .docx)
-              </label>
-              <input
-                id="upload-file"
-                type="file"
-                accept=".doc,.docx"
-                onChange={handleFileChange}
-                className="text-sm text-[var(--color-ink)]/70 file:mr-3 file:rounded-md file:border-0 file:bg-[var(--color-primary)] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
-              />
-            </div>
-
-            {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
-          </div>
-
-          <DialogFooter>
-            <Button
-              onClick={submitUpload}
-              disabled={!uploadFile || !uploadTitle.trim() || uploading}
-              className={cn(buttonVariants({ variant: "primary" }))}
-            >
-              {uploading ? "Submitting…" : "Submit story"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
