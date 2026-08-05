@@ -40,11 +40,15 @@ export async function GET(request: Request) {
     sweepExpiredRateLimits(),
   ]);
 
-  // Daily backstop that closes the loop on the payment guarantee: any settled
-  // top-up the client verify and the webhook both missed gets credited here on
-  // the next run. Idempotent (keyed on the Paystack reference), so this only
-  // ever fills genuine gaps. Isolated in its own try/catch — a Paystack outage
-  // must not turn nightly housekeeping into a failed cron.
+  // Deep backstop that closes the loop on the payment guarantee: any settled
+  // top-up the client verify and the webhook both missed gets credited here,
+  // looking back a full 72 hours. The everyday version of this is the
+  // topup-sweep cron (every 15 minutes, 3-hour window) — this nightly run
+  // exists to catch anything even THAT missed (e.g. a run that itself
+  // failed), not to be the primary path. Idempotent (keyed on the Paystack
+  // reference), so this only ever fills genuine gaps. Isolated in its own
+  // try/catch — a Paystack outage must not turn nightly housekeeping into a
+  // failed cron.
   let topUps: { credited: number; alreadyCredited: number; skipped: number } | { error: string };
   try {
     const swept = await reconcileRecentTopUps({ sinceHours: 72 });
