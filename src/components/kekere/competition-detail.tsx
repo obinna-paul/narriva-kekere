@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getStoryById } from "@/content/mock/kekere-stories";
 import type { MockCompetition } from "@/content/mock/kekere-competitions";
 import { CompetitionApply } from "@/components/kekere/competition-apply";
+import { wordCountRangeLabel } from "@/lib/competitions/word-count";
 
 const GRAIN_SVG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
@@ -71,6 +72,15 @@ export interface CompetitionDetailProps {
 export function CompetitionDetail({ competition }: CompetitionDetailProps) {
   const countdown = useCountdown(competition.deadline);
   const rules = competition.rules && competition.rules.length > 0 ? competition.rules : DEFAULT_RULES;
+  const rangeLabel = wordCountRangeLabel(competition.wordCountMin, competition.wordCountLimit);
+  const canApply = competition.status === "OPEN" && !!countdown && !!competition.id;
+
+  const howToEnter = [
+    `Finish a draft in the Kekere editor — entries need to be ${rangeLabel} words.`,
+    'Come back here and tap "Enter a story" below.',
+    "Pick that draft from your list. No upload, no separate form.",
+    "Our editors read every entry. If yours is accepted, it goes live on Kekere with a Longlist badge and is in the running for the prize.",
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))]">
@@ -189,6 +199,24 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
             </p>
           </div>
         </section>
+
+        {canApply && (
+          <section className="mb-8">
+            <h2 className="mb-[14px] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+              How to enter
+            </h2>
+            <div className="flex flex-col gap-[14px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-5">
+              {howToEnter.map((step, i) => (
+                <div key={i} className="flex gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.12)] text-[11px] font-semibold text-[var(--color-primary)]">
+                    {i + 1}
+                  </span>
+                  <span className="text-[14.5px] leading-[1.55] text-[#3A2A20]">{step}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {competition.status === "OPEN" ? (
           countdown && competition.id ? (
