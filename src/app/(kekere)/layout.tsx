@@ -6,13 +6,14 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { webSiteSchema } from "@/lib/seo/schema";
 import { KekerePulseProvider } from "@/components/kekere/pulse-provider";
 
-const DESCRIPTION = "Small stories. Big feelings. African fiction, read in the time it takes to wait for a bus.";
+const DESCRIPTION =
+  "Kekere Stories is the home for short fiction by African writers. We're always eager to publish fresh voices and outstanding storytelling, and we run special short story prizes four times a year.";
 
 // Scoped to this route group only — Next merges per-segment metadata up to
 // the real <head>, so the manifest link (and everything else here) only
 // ever renders on Kekere pages, never on Narriva or admin routes.
 export const metadata: Metadata = {
-  title: { default: "Kekere Stories", template: "%s | Kekere Stories" },
+  title: { default: "Kekere Stories | Short Fiction", template: "%s | Kekere Stories" },
   description: DESCRIPTION,
   manifest: "/kekere/manifest.webmanifest",
   // Explicit icons here replace (rather than merge with) the root layout's
@@ -32,13 +33,13 @@ export const metadata: Metadata = {
     siteName: "Kekere Stories",
     type: "website",
     locale: "en_NG",
-    title: "Kekere Stories",
+    title: "Kekere Stories | Short Fiction",
     description: DESCRIPTION,
     images: [`/api/og?brand=kekere&title=${encodeURIComponent("Kekere Stories")}`],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kekere Stories",
+    title: "Kekere Stories | Short Fiction",
     description: DESCRIPTION,
   },
 };
