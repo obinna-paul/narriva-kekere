@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { PanelLeftClose, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 interface NavItem {
@@ -74,9 +74,13 @@ function isActive(href: string, pathname: string) {
 export interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Desktop-only persistent collapse — distinct from the mobile drawer's
+   * isOpen, which resets on every route change (see the effect below). */
+  collapsed: boolean;
+  onCollapse: () => void;
 }
 
-export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export function AdminSidebar({ isOpen, onClose, collapsed, onCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const [counts, setCounts] = useState<Record<string, number>>({});
 
@@ -108,8 +112,9 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col bg-[#15171C] transition-transform duration-200 md:z-30 md:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col bg-[#15171C] transition-transform duration-200 md:z-30",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          collapsed ? "md:-translate-x-full" : "md:translate-x-0"
         )}
       >
       {/* Logo lockup */}
@@ -130,6 +135,15 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           className="flex h-[28px] w-[28px] flex-none items-center justify-center rounded-[7px] text-[#7C828C] hover:bg-[rgba(255,255,255,0.06)] hover:text-white md:hidden"
         >
           <X size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+          className="hidden h-[28px] w-[28px] flex-none items-center justify-center rounded-[7px] text-[#7C828C] hover:bg-[rgba(255,255,255,0.06)] hover:text-white md:flex"
+        >
+          <PanelLeftClose size={16} />
         </button>
       </div>
 

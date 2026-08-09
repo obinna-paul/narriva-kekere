@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, Menu } from "lucide-react";
+import { Bell, Menu, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const ROUTE_META: Record<string, { section: string; subsection?: string; title: string }> = {
@@ -34,9 +34,18 @@ interface AdminTopBarProps {
   onRangeChange?: (range: string) => void;
   showRange?: boolean;
   onMenuClick?: () => void;
+  sidebarCollapsed?: boolean;
+  onExpandSidebar?: () => void;
 }
 
-export function AdminTopBar({ range = "30d", onRangeChange, showRange = true, onMenuClick }: AdminTopBarProps) {
+export function AdminTopBar({
+  range = "30d",
+  onRangeChange,
+  showRange = true,
+  onMenuClick,
+  sidebarCollapsed,
+  onExpandSidebar,
+}: AdminTopBarProps) {
   const pathname = usePathname();
   const meta = ROUTE_META[pathname]
     ?? (pathname.startsWith("/admin/kekere/writers/") ? { section: "Kekere", title: "Author a Story" } : null)
@@ -56,6 +65,17 @@ export function AdminTopBar({ range = "30d", onRangeChange, showRange = true, on
             className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[9px] border border-[rgba(20,22,26,0.08)] bg-white hover:bg-[#FBFBFC] md:hidden"
           >
             <Menu size={16} className="text-[#646B73]" />
+          </button>
+        )}
+        {sidebarCollapsed && onExpandSidebar && (
+          <button
+            type="button"
+            onClick={onExpandSidebar}
+            aria-label="Open sidebar"
+            title="Open sidebar"
+            className="hidden h-[38px] w-[38px] flex-none items-center justify-center rounded-[9px] border border-[rgba(20,22,26,0.08)] bg-white hover:bg-[#FBFBFC] md:flex"
+          >
+            <PanelLeftOpen size={16} className="text-[#646B73]" />
           </button>
         )}
         <div className="min-w-0">
