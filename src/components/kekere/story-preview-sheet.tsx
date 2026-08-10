@@ -7,6 +7,7 @@ import Link from "next/link";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import { LonglistBadge } from "@/components/kekere/LonglistBadge";
+import { TopUpModal } from "@/components/kekere/top-up-modal";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 interface StoryPreviewSheetProps {
@@ -14,16 +15,36 @@ interface StoryPreviewSheetProps {
   initialSaved?: boolean;
   balance?: number;
   isLoggedIn?: boolean;
+  /** Reader id + email — only used to open the in-context top-up modal when
+   *  they're short on cowries. Null when logged out (falls back to the
+   *  plain wallet link). */
+  viewerId?: string | null;
+  viewerEmail?: string | null;
+  /** The reader's referral code — presence enables the "invite a friend"
+   *  alternative on the paywall. */
+  referralCode?: string | null;
   onClose: () => void;
 }
 
 type Step = "preview" | "unlock";
+
+function CowrieDot() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+      <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+      <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+    </svg>
+  );
+}
 
 export function StoryPreviewSheet({
   story,
   initialSaved = false,
   balance = 0,
   isLoggedIn = false,
+  viewerId = null,
+  viewerEmail = null,
+  referralCode = null,
   onClose,
 }: StoryPreviewSheetProps) {
   const router = useRouter();
@@ -32,12 +53,14 @@ export function StoryPreviewSheet({
   const [step, setStep] = useState<Step>("preview");
   const [unlocking, setUnlocking] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [showTopUp, setShowTopUp] = useState(false);
 
   // Reset to preview when a different story is opened
   useEffect(() => {
     setSaved(initialSaved);
     setStep("preview");
     setUnlockError(null);
+    setShowTopUp(false);
   }, [story?.id, initialSaved]);
 
   useEffect(() => {
@@ -231,57 +254,82 @@ export function StoryPreviewSheet({
               />
             </div>
 
-            <div className="mt-6 rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-5 shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
-              {/* Balance row */}
-              <div className="mb-4 flex items-center justify-between text-[13.5px]">
-                <span className="text-[var(--color-ink-muted)]">Your balance</span>
-                <span className="flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
-                  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-                    <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                    <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                  </svg>
-                  {balance} cowries
-                </span>
-              </div>
-
-              {/* Cost row */}
-              <div className="mb-5 flex items-center justify-between text-[13.5px]">
-                <span className="text-[var(--color-ink-muted)]">Story cost</span>
-                <span className="flex items-center gap-[5px] font-semibold text-[var(--color-primary)]">
-                  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
-                    <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                    <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                  </svg>
-                  {story.cowrieCost} cowries
-                </span>
+            <div className="mt-6 overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
+              {/* Balance / cost ledger */}
+              <div className="px-5 pt-5">
+                <div className="flex items-center justify-between text-[13.5px]">
+                  <span className="text-[var(--color-ink-muted)]">Your balance</span>
+                  <span className="flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
+                    <CowrieDot />
+                    {balance} {balance === 1 ? "cowrie" : "cowries"}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-[13.5px]">
+                  <span className="text-[var(--color-ink-muted)]">Story cost</span>
+                  <span className="flex items-center gap-[5px] font-semibold text-[var(--color-primary)]">
+                    <CowrieDot />
+                    {story.cowrieCost} {story.cowrieCost === 1 ? "cowrie" : "cowries"}
+                  </span>
+                </div>
               </div>
 
               {canAfford ? (
-                <button
-                  type="button"
-                  disabled={unlocking}
-                  onClick={handleUnlock}
-                  className="w-full rounded-[12px] bg-[var(--color-primary)] py-[15px] text-[15px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(199,93,44,0.5)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
-                >
-                  {unlocking ? "Unlocking…" : `Unlock for ${story.cowrieCost} cowries`}
-                </button>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <p className="text-center text-[13px] text-[var(--color-ink-muted)]">
-                    You need {story.cowrieCost - balance} more cowries to read this.
-                  </p>
-                  <Link
-                    href="/kekere/wallet"
-                    onClick={onClose}
-                    className="block rounded-[12px] bg-[var(--color-primary)] py-[15px] text-center text-[15px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                <div className="px-5 pb-5 pt-5">
+                  <button
+                    type="button"
+                    disabled={unlocking}
+                    onClick={handleUnlock}
+                    className="w-full rounded-[12px] bg-[var(--color-primary)] py-[15px] text-[15px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(199,93,44,0.5)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
                   >
-                    Top up cowries
-                  </Link>
+                    {unlocking ? "Unlocking…" : `Unlock for ${story.cowrieCost} ${story.cowrieCost === 1 ? "cowrie" : "cowries"}`}
+                  </button>
+                  {unlockError && (
+                    <p className="mt-3 text-center text-[13px] text-red-600">{unlockError}</p>
+                  )}
                 </div>
-              )}
+              ) : (
+                <div className="mt-5 border-t border-[rgba(42,26,18,0.08)] bg-[rgba(199,93,44,0.05)] px-5 pb-5 pt-4">
+                  <p className="text-center text-[13.5px] font-semibold text-[var(--color-ink)]">
+                    You&apos;re {story.cowrieCost - balance}{" "}
+                    {story.cowrieCost - balance === 1 ? "cowrie" : "cowries"} away
+                  </p>
+                  <p className="mx-auto mt-1 max-w-[260px] text-center text-[12.5px] leading-[1.5] text-[var(--color-ink-muted)]">
+                    Top up to unlock this story — a little goes a long way, and most of it reaches the
+                    writer.
+                  </p>
 
-              {unlockError && (
-                <p className="mt-3 text-center text-[13px] text-red-600">{unlockError}</p>
+                  {viewerId && viewerEmail ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowTopUp(true)}
+                      className="mt-4 w-full rounded-[12px] bg-[var(--color-primary)] py-[15px] text-[15px] font-semibold text-white shadow-[0_8px_20px_-10px_rgba(199,93,44,0.5)] transition-colors hover:bg-[var(--color-primary-light)]"
+                    >
+                      Top up to unlock
+                    </button>
+                  ) : (
+                    <Link
+                      href="/kekere/wallet"
+                      onClick={onClose}
+                      className="mt-4 block rounded-[12px] bg-[var(--color-primary)] py-[15px] text-center text-[15px] font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                    >
+                      Top up cowries
+                    </Link>
+                  )}
+
+                  {referralCode && (
+                    <Link
+                      href="/kekere/invite"
+                      onClick={onClose}
+                      className="mt-3 block text-center text-[13px] font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                      or invite a friend and earn 3 cowries →
+                    </Link>
+                  )}
+
+                  {unlockError && (
+                    <p className="mt-3 text-center text-[13px] text-red-600">{unlockError}</p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -291,6 +339,25 @@ export function StoryPreviewSheet({
           </div>
         )}
       </div>
+
+      {showTopUp && viewerId && viewerEmail && (
+        <TopUpModal
+          userId={viewerId}
+          userEmail={viewerEmail}
+          initialPackageIndex={0}
+          elevated
+          context={{ storyTitle: story.title, needed: story.cowrieCost - balance }}
+          onClose={() => setShowTopUp(false)}
+          onSuccess={() => {
+            setShowTopUp(false);
+            // Refresh so the new balance flows into this sheet's `balance`
+            // prop; the panel then flips to an enabled "Unlock" button while
+            // the sheet stays open on the unlock step. One deliberate tap to
+            // spend, rather than auto-spending their fresh cowries.
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }
