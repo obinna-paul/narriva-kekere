@@ -52,6 +52,15 @@ export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;
 // (SIGNUP_BONUS transactions), not a silent balance bump: see
 // grantSignupBonus in lib/economy/cowries.ts.
 export const SIGNUP_BONUS_COWRIES = 2 as const;
+// Anti-abuse: at most this many signup bonuses may be granted from one IP
+// within the window below. Over the cap, the account is still created and
+// fully usable — only the free cowries are withheld (see
+// grantSignupBonusIfEligible). Set generously on purpose: on carrier-grade
+// NAT (common on Nigerian mobile networks) many real users share one public
+// IP, and email canonicalization is the primary defence — the IP cap is only
+// a backstop against farming many disposable inboxes from a single machine.
+export const SIGNUP_BONUS_MAX_PER_IP = 5 as const;
+export const SIGNUP_BONUS_IP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h
 
 // Story pricing: admin sets cost at publish time. All stories are paid.
 // Range: 1–10 cowries (inclusive). Tier is an editorial classification

@@ -38,6 +38,17 @@ enum AccountStatus {
 model User {
   id       String   @id @default(cuid())
   email    String   @unique
+  // The email reduced to a single identity: lowercased, +tag stripped, and
+  // (for Gmail/Googlemail) dots removed — so me@gmail, m.e@gmail and
+  // me+2@gmail all collapse to one value. Used only to dedupe the signup
+  // bonus (one free grant per real inbox), never for login/display. Not
+  // unique-constrained: pre-existing alias pairs are grandfathered, and the
+  // bonus gate checks it explicitly rather than relying on the DB.
+  canonicalEmail String?
+  // The IP the account was created from — a soft, withhold-only signal for
+  // the signup-bonus velocity check (never blocks signup). Null for accounts
+  // created before this was recorded.
+  signupIp String?
   name     String
   password String?
   role     UserRole @default(READER)
@@ -174,6 +185,8 @@ model User {
   noteBlocksMade       NoteBlock[]           @relation("NoteBlocksMade")
   noteBlocksReceived   NoteBlock[]           @relation("NoteBlocksReceived")
   reportsFiled         Report[]
+
+  @@index([canonicalEmail])
 }
 
 // A reader subscribing to a writer — not messaging or a social graph, a

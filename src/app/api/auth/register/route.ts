@@ -11,7 +11,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 import { getOrCreateReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
 import { getFeatureFlag } from "@/lib/settings/get";
 import { createAndSendOtp } from "@/lib/auth/verify-email";
-import { grantSignupBonus } from "@/lib/economy/cowries";
+import { canonicalizeEmail } from "@/lib/auth/email";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -40,6 +40,8 @@ export async function POST(request: Request) {
   // created before this normalization existed.
   const { name, password, termsAccepted, turnstileToken, referralCode, brand } = parsed.data;
   const email = parsed.data.email.trim().toLowerCase();
+  // Collapsed identity for the signup-bonus dedupe only (never login/send).
+  const canonicalEmail = canonicalizeEmail(parsed.data.email);
 
   const remoteIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (!(await verifyTurnstileToken(turnstileToken, remoteIp))) {
@@ -87,6 +89,8 @@ export async function POST(request: Request) {
           accountStatus: "CLAIMED",
           claimToken: null,
           claimTokenExpiresAt: null,
+          canonicalEmail,
+          signupIp: remoteIp ?? null,
         },
         select: { id: true, email: true, name: true, role: true },
       });
@@ -102,7 +106,13 @@ export async function POST(request: Request) {
       // through to the same OTP-send/response path as a brand-new signup.
       user = await prisma.user.update({
         where: { id: existing.id },
-        data: { name, password: hashedPassword, termsAcceptedAt: new Date() },
+        data: {
+          name,
+          password: hashedPassword,
+          termsAcceptedAt: new Date(),
+          canonicalEmail,
+          signupIp: remoteIp ?? null,
+        },
         select: { id: true, email: true, name: true, role: true },
       });
     } else {
@@ -112,16 +122,19 @@ export async function POST(request: Request) {
           name,
           password: hashedPassword,
           termsAcceptedAt: new Date(),
+          canonicalEmail,
+          signupIp: remoteIp ?? null,
         },
         select: { id: true, email: true, name: true, role: true },
       });
     }
 
-    // Ensures a wallet exists (a no-op if the admin's placeholder-creation
-    // route already made one) and credits the one-time welcome grant — a
-    // real, ledgered SIGNUP_BONUS transaction, not a silent balance bump.
-    // Idempotent, so a resumed/retried signup can safely hit this twice.
-    await grantSignupBonus(user.id);
+    // Ensure a wallet exists (no-op if the admin's placeholder-creation route
+    // already made one). The signup bonus is NOT granted here anymore — it's
+    // credited at email verification (grantSignupBonusIfEligible), so it's
+    // tied to a proven-deliverable inbox and never lands in an account that
+    // never verifies.
+    await prisma.wallet.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
 
     const otpResult = await createAndSendOtp(user.id, user.email, user.name, { brand });
 
