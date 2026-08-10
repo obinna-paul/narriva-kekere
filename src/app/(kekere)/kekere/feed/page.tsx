@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { FeedContent } from "@/components/kekere/feed-content";
+import { WelcomeBonusModal } from "@/components/kekere/welcome-bonus-modal";
 import {
   listStories,
   getInProgressStories,
@@ -239,6 +240,7 @@ export default async function KekereFeedPage() {
         greetingUserId={userId ?? null}
         greetingPersonalization={greetingPersonalization}
       />
+      {userId && <WelcomeBonusModal cowries={wallet?.spendingBalance ?? 0} />}
     </KekereTheme>
   );
 }
