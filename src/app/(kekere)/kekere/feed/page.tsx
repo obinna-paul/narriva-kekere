@@ -22,6 +22,7 @@ import { getKekereUserProfile, getReaderStats } from "@/lib/data/kekere-profile-
 import { getStreakStats } from "@/lib/data/kekere-streaks";
 import { getLatestFollowedWriterStory } from "@/lib/data/kekere-follows";
 import { getRecentNoteReply } from "@/lib/data/kekere-notes";
+import { getOrCreateReferralCodeForUser } from "@/lib/data/kekere-referrals";
 import { toFeedStoryData } from "@/lib/adapters/kekere";
 import { getCurrentSession } from "@/lib/auth/middleware";
 import { FEED_TAG_ORDER, resolveCategoryBySlug } from "@/content/story-tags";
@@ -78,6 +79,7 @@ export default async function KekereFeedPage() {
     topGenre,
     followedWriterStory,
     recentReply,
+    referralCode,
   ] = await Promise.all([
     listStories({ sort: "trending", pageSize: 12 }),
     listStories({ tier: ["FEATURED", "CHAMPION"], pageSize: 50 }),
@@ -95,6 +97,7 @@ export default async function KekereFeedPage() {
     userId ? getTopGenre(userId) : Promise.resolve(null),
     userId ? getLatestFollowedWriterStory(userId) : Promise.resolve(null),
     userId ? getRecentNoteReply(userId) : Promise.resolve(null),
+    userId ? getOrCreateReferralCodeForUser(userId) : Promise.resolve(null),
   ]);
 
   // Pure/synchronous now that categoryScores is already in hand — see
@@ -235,6 +238,9 @@ export default async function KekereFeedPage() {
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
         isLoggedIn={!!userId}
+        viewerId={userId ?? null}
+        viewerEmail={session?.user?.email ?? null}
+        referralCode={referralCode}
         readingProgress={readingProgress}
         greeting={greeting}
         greetingUserId={userId ?? null}

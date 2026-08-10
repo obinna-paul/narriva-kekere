@@ -24,6 +24,10 @@ export interface TopUpModalProps {
    *  showing a generic funds screen — the top-up prompt converts on
    *  desire-in-the-moment far better tied to the thing they actually want. */
   context?: { storyTitle: string; needed: number };
+  /** Raise the overlay above another already-open overlay (e.g. the story
+   *  preview sheet, which sits at z-50) so it stacks cleanly on top rather
+   *  than tying with it. Defaults to the standalone z-50. */
+  elevated?: boolean;
 }
 
 const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -52,6 +56,7 @@ export function TopUpModal({
   onSuccess,
   initialPackageIndex,
   context,
+  elevated = false,
 }: TopUpModalProps) {
   const [selected, setSelected] = useState<number | null>(initialPackageIndex ?? null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -114,7 +119,7 @@ export function TopUpModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
+    <div className={`fixed inset-0 ${elevated ? "z-[70]" : "z-50"} flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center`}>
       <div className="w-full max-w-md animate-fade-in-up rounded-t-3xl bg-[var(--color-surface)] p-6 sm:rounded-3xl">
         <div className="flex items-start justify-between">
           <div>

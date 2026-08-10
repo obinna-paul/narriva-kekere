@@ -317,6 +317,9 @@ enum TransactionType {
   TIP
   REFERRAL
   READ_REWARD
+  // Retired: there is no completion bonus anymore. Kept as a tombstone
+  // because no code writes it (so no rows carry it) and dropping a Postgres
+  // enum value needs a risky full-type-rewrite migration for zero benefit.
   COMPLETION_BONUS
   TIP_SENT
   TIP_RECEIVED

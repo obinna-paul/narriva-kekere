@@ -20,7 +20,7 @@ export async function countTransactionsForUser(userId: string): Promise<number> 
   const wallet = await prisma.wallet.findUnique({ where: { userId }, select: { id: true } });
   if (!wallet) return 0;
   return prisma.transaction.count({
-    where: { walletId: wallet.id, type: { not: "COMPLETION_BONUS" } },
+    where: { walletId: wallet.id },
   });
 }
 
@@ -42,7 +42,6 @@ export async function sendWalletHistoryEmail(
   const transactions = await prisma.transaction.findMany({
     where: {
       walletId: wallet.id,
-      type: { not: "COMPLETION_BONUS" },
       createdAt: { gte: from, lte: to },
     },
     orderBy: { createdAt: "desc" },

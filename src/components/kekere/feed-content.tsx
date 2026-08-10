@@ -203,6 +203,11 @@ export interface FeedContentProps {
   tagRows: readonly FeedTagRow[];
   balance: number;
   isLoggedIn?: boolean;
+  /** Reader id + email + referral code — threaded only to the preview
+   *  sheet's in-context top-up paywall. Null when logged out. */
+  viewerId?: string | null;
+  viewerEmail?: string | null;
+  referralCode?: string | null;
   readingProgress?: Record<string, number>;
   /** Server-picked (see getFeedGreeting) — the deterministic initial paint,
    * used as-is for the very first render so hydration matches exactly. On
@@ -229,6 +234,9 @@ export function FeedContent({
   tagRows,
   balance,
   isLoggedIn = false,
+  viewerId = null,
+  viewerEmail = null,
+  referralCode = null,
   readingProgress,
   greeting: initialGreeting,
   greetingUserId,
@@ -654,6 +662,9 @@ export function FeedContent({
         story={previewStory}
         balance={balance}
         isLoggedIn={isLoggedIn}
+        viewerId={viewerId}
+        viewerEmail={viewerEmail}
+        referralCode={referralCode}
         onClose={() => setPreviewStory(null)}
       />
     </div>
