@@ -12,6 +12,18 @@ export interface TopUpModalProps {
   userEmail: string;
   onClose: () => void;
   onSuccess: () => void;
+  /** Which package to pre-select when the modal opens. Opened from the
+   *  wallet page this is left undefined (nothing pre-selected — the reader
+   *  is browsing packages deliberately). Opened at a paywall it's set to 0
+   *  (the smallest ₦500 pack): the psychological barrier to a *first*
+   *  payment is the whole game, so the smallest commitment is the right
+   *  default at that exact moment — never the biggest pack for its rate. */
+  initialPackageIndex?: number;
+  /** When present, anchors the modal to the specific story the reader was
+   *  trying to unlock ("you're N cowries away from this one") rather than
+   *  showing a generic funds screen — the top-up prompt converts on
+   *  desire-in-the-moment far better tied to the thing they actually want. */
+  context?: { storyTitle: string; needed: number };
 }
 
 const turnstileEnabled = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -33,8 +45,15 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModalProps) {
-  const [selected, setSelected] = useState<number | null>(null);
+export function TopUpModal({
+  userId,
+  userEmail,
+  onClose,
+  onSuccess,
+  initialPackageIndex,
+  context,
+}: TopUpModalProps) {
+  const [selected, setSelected] = useState<number | null>(initialPackageIndex ?? null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,12 +116,23 @@ export function TopUpModal({ userId, userEmail, onClose, onSuccess }: TopUpModal
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
       <div className="w-full max-w-md animate-fade-in-up rounded-t-3xl bg-[var(--color-surface)] p-6 sm:rounded-3xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Top up cowries</h2>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold">Top up cowries</h2>
+            {context && (
+              <p className="mt-1 text-[13px] leading-[1.5] text-[var(--color-ink-muted)]">
+                You&rsquo;re {context.needed} {context.needed === 1 ? "cowrie" : "cowries"} away from{" "}
+                <span className="font-semibold text-[var(--color-ink)]">
+                  &ldquo;{context.storyTitle}&rdquo;
+                </span>
+                .
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/5"
+            className="-mr-1 flex-none rounded-full p-1.5 text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/5"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
