@@ -10,6 +10,7 @@ interface EconomyOverview {
     totalIssued: number;
     totalFromTopUps: number;
     totalFromReferralRewards: number;
+    totalFromSignupBonuses: number;
     totalFromAdminAdjustments: number;
     totalInSpendingWallets: number;
     totalInEarnedWallets: number;
@@ -428,14 +429,15 @@ export function CowrieEconomy() {
 
       {/* Where "Total issued" actually comes from — a "cowries in circulation"
           figure is meaningless for judging real revenue unless it's split by
-          source, since referral rewards and admin corrections issue cowries
-          with no purchase behind them. */}
+          source, since referral rewards, signup bonuses, and admin
+          corrections all issue cowries with no purchase behind them. */}
       <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
         <h3 className="mb-4 text-[13px] font-semibold text-[#1A1C20]">Issuance breakdown</h3>
         <div className="space-y-3">
           {[
             { label: "Purchased (real top-ups)", value: rec?.totalFromTopUps ?? 0, accent: "#1F8A5B" },
             { label: "Referral rewards (free)", value: rec?.totalFromReferralRewards ?? 0, accent: "#1E3A8A" },
+            { label: "Signup bonuses (free)", value: rec?.totalFromSignupBonuses ?? 0, accent: "#6B21A8" },
             { label: "Admin adjustments (net, free)", value: rec?.totalFromAdminAdjustments ?? 0, accent: "#B7791F" },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between gap-3">

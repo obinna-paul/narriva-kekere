@@ -2,7 +2,8 @@
  * Cowrie ledger reconciliation.
  *
  * Cowries are either "issued" into a spending wallet (top-ups, referral
- * rewards, manual admin credits) or removed from circulation. Every unlock
+ * rewards, signup bonuses, manual admin credits) or removed from
+ * circulation. Every unlock
  * moves cowries out of a reader's spending wallet: the writer's share lands
  * in the writer's earned wallet, the platform's share becomes realized
  * platform revenue (it is never held in any wallet). Tips just move a
@@ -45,6 +46,7 @@ export interface ReconcileResult {
   // manual admin corrections.
   totalFromTopUps: number;
   totalFromReferralRewards: number;
+  totalFromSignupBonuses: number;
   totalFromAdminAdjustments: number; // net: admin credits minus admin debits
   totalInSpendingWallets: number;
   totalInEarnedWallets: number;
@@ -75,7 +77,7 @@ const RECONCILE_TOLERANCE_COWRIES = 1;
 export const CREDIT_TYPES: TransactionType[] = [
   "TOP_UP", "REFUND", "REFERRAL", "READ_REWARD", "TIP_RECEIVED",
   "REFERRAL_REWARD", "EARNINGS_CREDIT", "ADMIN_CREDIT", "DATA_CORRECTION_CREDIT",
-  "EARNED_TO_SPENDING_IN",
+  "EARNED_TO_SPENDING_IN", "SIGNUP_BONUS",
 ];
 export const DEBIT_TYPES: TransactionType[] = [
   "UNLOCK", "WITHDRAWAL", "TIP_SENT", "ADMIN_DEBIT", "DATA_CORRECTION_DEBIT",
@@ -121,6 +123,7 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
   const [
     totalFromTopUps,
     totalFromReferralRewards,
+    totalFromSignupBonuses,
     totalAdminCredit,
     totalAdminDebit,
     walletSums,
@@ -133,6 +136,7 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
   ] = await Promise.all([
     sumTransactionAmounts(["TOP_UP"]),
     sumTransactionAmounts(["REFERRAL_REWARD"]),
+    sumTransactionAmounts(["SIGNUP_BONUS"]),
     sumTransactionAmounts(["ADMIN_CREDIT"]),
     sumTransactionAmounts(["ADMIN_DEBIT"]),
     prisma.wallet.aggregate({
@@ -150,7 +154,7 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
   ]);
 
   const totalFromAdminAdjustments = totalAdminCredit - totalAdminDebit;
-  const totalIssued = totalFromTopUps + totalFromReferralRewards + totalFromAdminAdjustments;
+  const totalIssued = totalFromTopUps + totalFromReferralRewards + totalFromSignupBonuses + totalFromAdminAdjustments;
 
   const totalInSpendingWallets = walletSums._sum.spendingBalance ?? 0;
   const totalInEarnedWallets = walletSums._sum.earnedBalance?.toNumber() ?? 0;
@@ -174,6 +178,7 @@ export async function reconcileEconomy(): Promise<ReconcileResult> {
     totalIssued,
     totalFromTopUps,
     totalFromReferralRewards,
+    totalFromSignupBonuses,
     totalFromAdminAdjustments,
     totalInSpendingWallets,
     totalInEarnedWallets,

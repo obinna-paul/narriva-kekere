@@ -11,6 +11,7 @@ const EDITABLE_KEYS = new Set([
   "writer_earnings_rate",
   "referral_reward_cowries",
   "tip_amount_cowries",
+  "signup_bonus_cowries",
   "withdrawal_rate_ngn_per_cowrie",
   "minimum_withdrawal_cowries",
 ]);

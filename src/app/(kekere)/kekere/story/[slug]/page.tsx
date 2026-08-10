@@ -121,7 +121,6 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
         initialBalance={wallet?.spendingBalance ?? 0}
         initialSaved={saved}
         initialRating={rating ?? undefined}
-        firstReadFree={dbStory.firstReadFree}
         initialFollowing={following}
         isOwnStory={userId === dbStory.author.id}
         noteEligible={noteEligibility.eligible}

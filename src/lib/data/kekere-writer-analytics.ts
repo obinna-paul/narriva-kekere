@@ -16,13 +16,14 @@ function daysAgo(days: number): Date {
 
 export interface WriterOverview {
   publishedCount: number;
-  /** Count of StoryUnlock rows (paid or first-story-free) across every
-   *  published story — the same "reads" proxy already used on the writer's
-   *  own profile and public writer page. There's no page-view/impression
-   *  model in this schema, so a genuinely free read with no unlock row
-   *  can't happen under current product rules (cowrieCost is enforced >=1
-   *  everywhere a story is priced), which keeps this an accurate total
-   *  rather than an undercount. */
+  /** Count of StoryUnlock rows across every published story — the same
+   *  "reads" proxy already used on the writer's own profile and public
+   *  writer page. There's no page-view/impression model in this schema, so
+   *  a genuinely free read with no unlock row can't happen under current
+   *  product rules (cowrieCost is enforced >=1 everywhere a story is
+   *  priced, and every unlock — including one paid for out of a reader's
+   *  starter cowries — writes a real StoryUnlock row), which keeps this an
+   *  accurate total rather than an undercount. */
   totalReads: number;
   /** Weighted across all stories (total completions / total reads), not an
    *  average of each story's own percentage — a weighted figure can't be

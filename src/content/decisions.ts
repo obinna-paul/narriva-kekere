@@ -47,6 +47,11 @@ export const STORY_TIER_RANGES: Record<StoryTier, readonly [number, number]> = {
 export const WRITER_EARNINGS_RATE = 0.7 as const;
 export const TIP_AMOUNT_COWRIES = 1 as const;
 export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;
+// Welcome grant credited to every new spending wallet at registration —
+// replaces the old free-first-unlock benefit. A real, ledgered issuance
+// (SIGNUP_BONUS transactions), not a silent balance bump: see
+// grantSignupBonus in lib/economy/cowries.ts.
+export const SIGNUP_BONUS_COWRIES = 2 as const;
 
 // Story pricing: admin sets cost at publish time. All stories are paid.
 // Range: 1–10 cowries (inclusive). Tier is an editorial classification
