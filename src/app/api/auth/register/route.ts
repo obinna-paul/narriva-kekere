@@ -11,6 +11,7 @@ import { verifyTurnstileToken } from "@/lib/turnstile/verify";
 import { getOrCreateReferralCodeForUser, recordReferralFromCode } from "@/lib/data/kekere-referrals";
 import { getFeatureFlag } from "@/lib/settings/get";
 import { createAndSendOtp } from "@/lib/auth/verify-email";
+import { grantSignupBonus } from "@/lib/economy/cowries";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -111,16 +112,16 @@ export async function POST(request: Request) {
           name,
           password: hashedPassword,
           termsAcceptedAt: new Date(),
-          wallet: { create: {} },
         },
         select: { id: true, email: true, name: true, role: true },
       });
     }
 
-    // The placeholder path above doesn't create a wallet inline like the
-    // fresh-user path does — ensure one exists either way (upsert is a
-    // no-op if the admin's placeholder-creation route already made one).
-    await prisma.wallet.upsert({ where: { userId: user.id }, create: { userId: user.id }, update: {} });
+    // Ensures a wallet exists (a no-op if the admin's placeholder-creation
+    // route already made one) and credits the one-time welcome grant — a
+    // real, ledgered SIGNUP_BONUS transaction, not a silent balance bump.
+    // Idempotent, so a resumed/retried signup can safely hit this twice.
+    await grantSignupBonus(user.id);
 
     const otpResult = await createAndSendOtp(user.id, user.email, user.name, { brand });
 

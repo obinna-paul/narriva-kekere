@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import { KekereTheme } from "@/components/theme";
 import { KekereNavWrapper } from "@/components/kekere/kekere-nav-wrapper";
 import { FeedContent } from "@/components/kekere/feed-content";
-import { FirstStoryFreeModal } from "@/components/kekere/FirstStoryFreeModal";
+import { WelcomeBonusModal } from "@/components/kekere/welcome-bonus-modal";
 import {
   listStories,
   getInProgressStories,
   getRecommendedStories,
   getFeedTagRows,
   getStoriesByIds,
-  hasFreeReadAvailable,
   countPublishedStoriesSince,
   rankStoriesBlended,
   seededUnitInterval,
@@ -73,7 +72,6 @@ export default async function KekereFeedPage() {
     recommended,
     tagPreferences,
     signatureRowMeta,
-    firstReadFree,
     profile,
     readerStats,
     streakStats,
@@ -91,7 +89,6 @@ export default async function KekereFeedPage() {
       ? getUserTagPreferences(userId)
       : Promise.resolve({ explicit: [], autoDetected: [], categoryScores: new Map<string, number>() }),
     userId ? getSignatureRow(userId, 8) : Promise.resolve(null),
-    hasFreeReadAvailable(userId),
     userId ? getKekereUserProfile(userId) : Promise.resolve(null),
     userId ? getReaderStats(userId) : Promise.resolve(null),
     userId ? getStreakStats(userId) : Promise.resolve(null),
@@ -238,13 +235,12 @@ export default async function KekereFeedPage() {
         tagRows={feedTagRows}
         balance={wallet?.spendingBalance ?? 0}
         isLoggedIn={!!userId}
-        firstReadFree={firstReadFree}
         readingProgress={readingProgress}
         greeting={greeting}
         greetingUserId={userId ?? null}
         greetingPersonalization={greetingPersonalization}
       />
-      <FirstStoryFreeModal />
+      {userId && <WelcomeBonusModal cowries={wallet?.spendingBalance ?? 0} />}
     </KekereTheme>
   );
 }

@@ -2,7 +2,6 @@ import type { StoryTier } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getUserCategoryScores, getTopGenre } from "@/lib/data/kekere-taste";
 import { getWalletForUser } from "@/lib/data/kekere-wallet";
-import { hasFreeReadAvailable } from "@/lib/data/kekere-stories";
 import { resolveCategoryBySlug } from "@/content/story-tags";
 
 const MAX_CATALOG_ENTRIES = 300;
@@ -230,22 +229,19 @@ export interface KemiReaderContext {
   topGenre: string | null;
   topCategoryTitles: string[];
   recentlyReadSlugs: string[];
-  freeReadAvailable: boolean;
   cowrieBalance: number;
   inProgress: KemiInProgressStory | null;
 }
 
 /** Everything Kemi is told about THIS reader — taste signal, what they've
  *  already read (so she doesn't recommend it back to them), and their
- *  cowrie situation (so she knows whether to lean on the free-read hook or
- *  just recommend). */
+ *  cowrie balance (so she knows how much runway they have to spend). */
 export async function getKemiReaderContext(userId: string): Promise<KemiReaderContext> {
-  const [categoryScores, topGenre, wallet, freeReadAvailable, completions, unlocks, progressRows] =
+  const [categoryScores, topGenre, wallet, completions, unlocks, progressRows] =
     await Promise.all([
       getUserCategoryScores(userId),
       getTopGenre(userId),
       getWalletForUser(userId),
-      hasFreeReadAvailable(userId),
       // Capped + newest-first: the only use of these slugs is "don't
       // re-recommend what they've already read", and a reader with a big
       // backlog would otherwise stuff hundreds of slugs into every single
@@ -297,7 +293,6 @@ export async function getKemiReaderContext(userId: string): Promise<KemiReaderCo
     topGenre,
     topCategoryTitles,
     recentlyReadSlugs,
-    freeReadAvailable,
     cowrieBalance: wallet?.spendingBalance ?? 0,
     inProgress: resumable
       ? {
@@ -361,11 +356,7 @@ export function formatReaderContextForPrompt(ctx: KemiReaderContext): string {
     );
   }
 
-  lines.push(
-    ctx.freeReadAvailable
-      ? "They still have their free first read available and haven't used it yet — a great, low-pressure nudge if they haven't unlocked anything."
-      : `Their cowrie balance is ${ctx.cowrieBalance}.`,
-  );
+  lines.push(`Their cowrie balance is ${ctx.cowrieBalance}.`);
 
   if (ctx.inProgress) {
     lines.push(

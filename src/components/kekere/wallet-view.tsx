@@ -11,7 +11,7 @@ import { MoveToSpendingModal } from "@/components/kekere/move-to-spending-modal"
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT" | "EARNED_TO_SPENDING_OUT" | "EARNED_TO_SPENDING_IN";
+  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "SIGNUP_BONUS" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT" | "EARNED_TO_SPENDING_OUT" | "EARNED_TO_SPENDING_IN";
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;
@@ -52,6 +52,7 @@ const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = 
   UNLOCK: { icon: ArrowUpRight, color: "#C0392B" },
   WITHDRAWAL: { icon: ArrowUpRight, color: "#C0392B" },
   REFERRAL_REWARD: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  SIGNUP_BONUS: { icon: ArrowDownLeft, color: "#1F8A5B" },
   EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
   TIP_SENT: { icon: ArrowUpRight, color: "#C0392B" },
@@ -76,7 +77,7 @@ function TxIcon({ type }: { type: string }) {
 function TxLabel(type: string): string {
   const map: Record<string, string> = {
     TOP_UP: "Top-up", UNLOCK: "Story unlock", WITHDRAWAL: "Withdrawal",
-    REFERRAL_REWARD: "Referral reward",
+    REFERRAL_REWARD: "Referral reward", SIGNUP_BONUS: "Welcome bonus",
     TIP_SENT: "Tip sent", TIP_RECEIVED: "Tip received",
     EARNINGS_CREDIT: "Earnings", REFERRAL: "Referral",
     READ_REWARD: "Read reward", PLATFORM_EARNINGS: "Platform earnings",
@@ -88,7 +89,7 @@ function TxLabel(type: string): string {
 }
 
 function getWalletForTx(type: string): string | null {
-  if (["TOP_UP", "UNLOCK", "TIP_SENT", "REFERRAL_REWARD", "EARNED_TO_SPENDING_IN"].includes(type)) return "Spending";
+  if (["TOP_UP", "UNLOCK", "TIP_SENT", "REFERRAL_REWARD", "SIGNUP_BONUS", "EARNED_TO_SPENDING_IN"].includes(type)) return "Spending";
   if (["EARNINGS_CREDIT", "WITHDRAWAL", "TIP_RECEIVED", "EARNED_TO_SPENDING_OUT"].includes(type)) return "Earned";
   return null;
 }

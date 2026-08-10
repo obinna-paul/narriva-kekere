@@ -14,10 +14,11 @@ import { round2 } from "@/lib/economy/round";
 import {
   TIP_AMOUNT_COWRIES,
   WRITER_EARNINGS_RATE,
+  SIGNUP_BONUS_COWRIES,
 } from "@/content/decisions";
 
 export type UnlockResult =
-  | { success: true; cowriesSpent: number; writerShare: number; platformShare: number; balance: number; firstStoryFree?: boolean }
+  | { success: true; cowriesSpent: number; writerShare: number; platformShare: number; balance: number }
   | { already_unlocked: true; balance: number }
   | { insufficient_balance: true; balance: number; needed: number }
   | { error: "story_not_available" };
@@ -42,6 +43,10 @@ export type ReferralRewardResult =
   | { success: true; reward: number; referrerId: string }
   | { already_rewarded: true }
   | { error: "referral_not_found" };
+
+export type SignupBonusResult =
+  | { success: true; granted: number; balance: number }
+  | { already_granted: true; balance: number };
 
 /** Returns true if the reader already has access: they authored it, or have an unlock record. */
 async function isAlreadyUnlocked(userId: string, storyId: string, story: { authorId: string }) {
@@ -74,36 +79,6 @@ export async function unlockStory(userId: string, storyId: string): Promise<Unlo
 
   if (existingUnlock) {
     return { already_unlocked: true, balance: readerWallet.spendingBalance };
-  }
-
-  // First-story-free benefit: new readers get their first unlock at no
-  // cost. Admin accounts are never eligible — an admin's role already gives
-  // them every other capability an account needs; a free unlock on top of
-  // that is just an untracked cowrie grant with no purchase behind it.
-  const reader = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { freeReadUsed: true, role: true },
-  });
-
-  if (reader && !reader.freeReadUsed && reader.role !== "ADMIN") {
-    const storyUnlockId = randomUUID();
-    await prisma.$transaction([
-      prisma.storyUnlock.create({
-        data: { id: storyUnlockId, userId, storyId, unlockedAt: new Date() },
-      }),
-      prisma.user.update({
-        where: { id: userId },
-        data: { freeReadUsed: true },
-      }),
-    ]);
-    return {
-      success: true,
-      cowriesSpent: 0,
-      writerShare: 0,
-      platformShare: 0,
-      balance: readerWallet.spendingBalance,
-      firstStoryFree: true,
-    };
   }
 
   if (readerWallet.spendingBalance < story.cowrieCost) {
@@ -396,4 +371,54 @@ export async function creditReferralReward(referralId: string): Promise<Referral
 
   if (!wonRace) return { already_rewarded: true };
   return { success: true, reward, referrerId: referral.referrerId };
+}
+
+/**
+ * Credits every new account's one-time welcome grant into their spending
+ * wallet — replaces the old free-first-unlock benefit. Unlike that benefit,
+ * this is a real issuance: a SIGNUP_BONUS transaction backs the balance, so
+ * it counts in totalIssued (reconcile.ts) instead of showing up as
+ * untracked balance, and the writer whose story it eventually unlocks still
+ * earns their normal 70% share same as any other spent cowrie.
+ *
+ * Idempotent via a ledger check rather than a boolean flag on User — safe
+ * to call from every path that can create a wallet (fresh signup, resuming
+ * an unverified signup, claiming an admin-created placeholder account)
+ * without ever double-granting.
+ */
+export async function grantSignupBonus(userId: string): Promise<SignupBonusResult> {
+  const wallet = await prisma.wallet.upsert({
+    where: { userId },
+    create: { userId },
+    update: {},
+  });
+
+  const existing = await prisma.transaction.findFirst({
+    where: { walletId: wallet.id, type: "SIGNUP_BONUS" },
+  });
+  if (existing) return { already_granted: true, balance: wallet.spendingBalance };
+
+  const bonus = await getSettingNumber("signup_bonus_cowries", SIGNUP_BONUS_COWRIES);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const w = await tx.wallet.update({
+      where: { id: wallet.id },
+      data: { spendingBalance: { increment: bonus } },
+    });
+
+    await tx.transaction.create({
+      data: {
+        walletId: wallet.id,
+        type: "SIGNUP_BONUS",
+        amountCowries: bonus,
+        walletField: "SPENDING",
+        description: `Welcome bonus — ${bonus} free cowries to get started`,
+        status: "COMPLETED",
+      },
+    });
+
+    return w;
+  });
+
+  return { success: true, granted: bonus, balance: updated.spendingBalance };
 }

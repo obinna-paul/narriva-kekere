@@ -77,9 +77,6 @@ model User {
   suspensionReason String?
   suspendedUntil   DateTime?
 
-  // First-story-free benefit: each new user gets their first unlock at no cost.
-  freeReadUsed Boolean @default(false)
-
   // Per-writer kill switch for the notes feature — off hides them from every
   // reader's "send a note" prompt entirely, not just from the writer's own view.
   notesEnabled Boolean @default(true)
@@ -326,6 +323,12 @@ enum TransactionType {
   REFERRAL_REWARD
   EARNINGS_CREDIT
   PLATFORM_EARNINGS
+  // Every new account's welcome grant — 2 free cowries into the spending
+  // wallet the moment they register, replacing the old free-first-unlock
+  // benefit. A real, ledgered issuance (counted in totalIssued) rather than
+  // a silent balance bump: the writer whose story it eventually unlocks
+  // still earns their normal 70% share, same as any other spent cowrie.
+  SIGNUP_BONUS
   // Manual admin wallet adjustments (e.g. compensating a user, correcting an
   // error) — must never share the TOP_UP type, since every revenue/conversion
   // metric filters on TOP_UP to mean "a real Paystack purchase happened."

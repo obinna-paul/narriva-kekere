@@ -203,7 +203,6 @@ export interface FeedContentProps {
   tagRows: readonly FeedTagRow[];
   balance: number;
   isLoggedIn?: boolean;
-  firstReadFree?: boolean;
   readingProgress?: Record<string, number>;
   /** Server-picked (see getFeedGreeting) — the deterministic initial paint,
    * used as-is for the very first render so hydration matches exactly. On
@@ -230,7 +229,6 @@ export function FeedContent({
   tagRows,
   balance,
   isLoggedIn = false,
-  firstReadFree = false,
   readingProgress,
   greeting: initialGreeting,
   greetingUserId,
@@ -656,7 +654,6 @@ export function FeedContent({
         story={previewStory}
         balance={balance}
         isLoggedIn={isLoggedIn}
-        firstReadFree={firstReadFree}
         onClose={() => setPreviewStory(null)}
       />
     </div>

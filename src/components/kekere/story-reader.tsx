@@ -20,6 +20,7 @@ import { HighlightToolbar } from "@/components/kekere/HighlightToolbar";
 import type { HighlightColorId } from "@/content/highlight-colors";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
+import { TopUpModal } from "@/components/kekere/top-up-modal";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 /**
@@ -128,14 +129,13 @@ export interface StoryReaderProps {
    * of just Report). Not the same as isOwnStory, which is about the story's
    * author, not the comment's. */
   viewerId?: string | null;
+  /** The reader's email — needed only to open the in-context top-up modal at
+   * the paywall (Paystack checkout is keyed on it). Null when logged out. */
+  viewerEmail?: string | null;
   initialUnlocked: boolean;
   initialBalance: number;
   initialSaved: boolean;
   initialRating?: number;
-  /** True when this reader hasn't unlocked anything yet and still has their
-   * one free first read available — lets this specific story open free
-   * regardless of cowrie balance. */
-  firstReadFree?: boolean;
   /** Whether the current reader already follows this story's author —
    * omitted entirely (no Follow button shown) when they ARE the author. */
   initialFollowing?: boolean;
@@ -174,11 +174,11 @@ export function StoryReader({
   story,
   isLoggedIn,
   viewerId = null,
+  viewerEmail = null,
   initialUnlocked,
   initialBalance,
   initialSaved,
   initialRating = 0,
-  firstReadFree = false,
   initialFollowing = false,
   isOwnStory = false,
   noteEligible = false,
@@ -198,6 +198,7 @@ export function StoryReader({
   const [shareCopied, setShareCopied] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
 
   const [finished, setFinished] = useState(false);
   const [rating, setRating] = useState(initialRating);
@@ -346,6 +347,14 @@ export function StoryReader({
   useEffect(() => {
     setUnlocked(initialUnlocked);
   }, [initialUnlocked]);
+
+  // Same reasoning for the balance: after a top-up (or any router.refresh)
+  // the server sends the authoritative figure, so mirror it into local state
+  // — otherwise the paywall would keep showing the pre-top-up balance until
+  // a full navigation.
+  useEffect(() => {
+    setBalance(initialBalance);
+  }, [initialBalance]);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const ambientSoundRef = useRef<AmbientSoundMenuHandle>(null);
@@ -745,7 +754,7 @@ export function StoryReader({
     }
   }
 
-  const canAfford = firstReadFree || balance >= story.cowrieCost;
+  const canAfford = balance >= story.cowrieCost;
   // story.completionRate is already stored 0-100 (see recalculateCompletionRate) —
   // do not multiply by 100 again here, that produced e.g. "3300%".
   const completionPct = Math.round(story.completionRate);
@@ -1615,22 +1624,16 @@ export function StoryReader({
                 )}
 
                 <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]">
-                  {firstReadFree ? (
-                    <p className="mb-4 rounded-lg bg-[rgba(199,93,44,0.08)] px-3 py-2 text-[13px] font-semibold text-[var(--color-primary)]">
-                      Your first story is free — no cowries needed
-                    </p>
-                  ) : (
-                    <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
-                      <span>Your balance</span>
-                      <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
-                        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-                          <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                          <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-                        </svg>
-                        {balance}
-                      </span>
-                    </div>
-                  )}
+                  <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
+                    <span>Your balance</span>
+                    <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
+                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+                        <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                        <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+                      </svg>
+                      {balance}
+                    </span>
+                  </div>
 
                   {canAfford ? (
                     <button
@@ -1640,28 +1643,39 @@ export function StoryReader({
                       className="w-full cursor-pointer rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-base font-semibold text-white shadow-[0_10px_24px_-10px_rgba(199,93,44,0.55)] transition-colors hover:bg-[var(--color-primary-light)] disabled:opacity-60"
                       style={{ border: "none" }}
                     >
-                      {unlocking || isRefreshing
-                        ? "Unlocking…"
-                        : firstReadFree
-                          ? "Read free"
-                          : `Unlock for ${story.cowrieCost} cowries`}
+                      {unlocking || isRefreshing ? "Unlocking…" : `Unlock for ${story.cowrieCost} cowries`}
                     </button>
                   ) : (
                     <div className="flex flex-col gap-3">
-                      <button
-                        type="button"
-                        disabled
-                        className="w-full cursor-not-allowed rounded-[10px] bg-[var(--color-ink)]/[0.12] px-4 py-4 text-base font-semibold text-[var(--color-ink-muted-2)]"
-                        style={{ border: "none" }}
-                      >
-                        Unlock for {story.cowrieCost} cowries
-                      </button>
-                      <Link
-                        href="/kekere/wallet"
-                        className="block rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-center text-base font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
-                      >
-                        Top up
-                      </Link>
+                      <p className="text-[13px] text-[var(--color-ink-muted)]">
+                        You&apos;re {story.cowrieCost - balance}{" "}
+                        {story.cowrieCost - balance === 1 ? "cowrie" : "cowries"} away from this one.
+                      </p>
+                      {viewerId && viewerEmail ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowTopUp(true)}
+                          className="block rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-center text-base font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                          style={{ border: "none" }}
+                        >
+                          Top up to unlock
+                        </button>
+                      ) : (
+                        <Link
+                          href="/kekere/wallet"
+                          className="block rounded-[10px] bg-[var(--color-primary)] px-4 py-4 text-center text-base font-semibold text-white transition-colors hover:bg-[var(--color-primary-light)]"
+                        >
+                          Top up
+                        </Link>
+                      )}
+                      {referralCode && (
+                        <Link
+                          href="/kekere/invite"
+                          className="text-center text-[13px] font-medium text-[var(--color-primary)] hover:underline"
+                        >
+                          or invite a friend and earn 3 cowries →
+                        </Link>
+                      )}
                     </div>
                   )}
 
@@ -1704,6 +1718,22 @@ export function StoryReader({
           targetType={reportTarget.targetType}
           targetId={reportTarget.targetId}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {showTopUp && viewerId && viewerEmail && (
+        <TopUpModal
+          userId={viewerId}
+          userEmail={viewerEmail}
+          initialPackageIndex={0}
+          context={{ storyTitle: story.title, needed: story.cowrieCost - balance }}
+          onClose={() => setShowTopUp(false)}
+          onSuccess={() => {
+            setShowTopUp(false);
+            // Pull the new balance in; the paywall re-enables its unlock
+            // button once the refreshed initialBalance clears the cost.
+            startRefresh(() => router.refresh());
+          }}
         />
       )}
     </div>

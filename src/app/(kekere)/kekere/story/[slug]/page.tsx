@@ -117,11 +117,11 @@ export default async function KekereStoryPage({ params }: { params: { slug: stri
         story={toReaderStoryData(dbStory)}
         isLoggedIn={!!userId}
         viewerId={userId ?? null}
+        viewerEmail={session?.user?.email ?? null}
         initialUnlocked={dbStory.unlocked}
         initialBalance={wallet?.spendingBalance ?? 0}
         initialSaved={saved}
         initialRating={rating ?? undefined}
-        firstReadFree={dbStory.firstReadFree}
         initialFollowing={following}
         isOwnStory={userId === dbStory.author.id}
         noteEligible={noteEligibility.eligible}
