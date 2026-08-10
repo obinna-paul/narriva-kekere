@@ -1,5 +1,6 @@
 "use client";
 
+import type { TransactionType } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -11,7 +12,10 @@ import { MoveToSpendingModal } from "@/components/kekere/move-to-spending-modal"
 
 export interface WalletTransactionView {
   id: string;
-  type: "TOP_UP" | "UNLOCK" | "REFUND" | "WITHDRAWAL" | "TIP" | "REFERRAL" | "READ_REWARD" | "TIP_SENT" | "TIP_RECEIVED" | "REFERRAL_REWARD" | "SIGNUP_BONUS" | "EARNINGS_CREDIT" | "PLATFORM_EARNINGS" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "DATA_CORRECTION_CREDIT" | "DATA_CORRECTION_DEBIT" | "EARNED_TO_SPENDING_OUT" | "EARNED_TO_SPENDING_IN";
+  // The full DB transaction type. The label/icon maps below fall back
+  // gracefully for any value they don't name, so this doesn't need to be
+  // hand-narrowed (e.g. the retired COMPLETION_BONUS simply never appears).
+  type: TransactionType;
   amountCowries: number;
   amountNgn?: number | null;
   description: string | null;

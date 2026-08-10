@@ -309,7 +309,6 @@ const PLATFORM_SETTINGS = [
   { key: "monthly_revenue_target_ngn", value: "500000" },
   { key: "writer_earnings_rate", value: "0.70" },
   { key: "referral_reward_cowries", value: "3" },
-  { key: "completion_bonus_cowries", value: "1" },
   { key: "tip_amount_cowries", value: "1" },
   { key: "signup_bonus_cowries", value: "2" },
   { key: "withdrawal_rate_ngn_per_cowrie", value: "50" },
