@@ -339,11 +339,12 @@ enum TransactionType {
   REFERRAL_REWARD
   EARNINGS_CREDIT
   PLATFORM_EARNINGS
-  // Every new account's welcome grant — 2 free cowries into the spending
-  // wallet the moment they register, replacing the old free-first-unlock
-  // benefit. A real, ledgered issuance (counted in totalIssued) rather than
-  // a silent balance bump: the writer whose story it eventually unlocks
-  // still earns their normal 70% share, same as any other spent cowrie.
+  // Every new account's welcome grant (amount set by the signup_bonus_cowries
+  // platform setting) — credited into the spending wallet at email
+  // verification, replacing the old free-first-unlock benefit. A real,
+  // ledgered issuance (counted in totalIssued) rather than a silent balance
+  // bump: the writer whose story it eventually unlocks still earns their
+  // normal 70% share, same as any other spent cowrie.
   SIGNUP_BONUS
   // Manual admin wallet adjustments (e.g. compensating a user, correcting an
   // error) — must never share the TOP_UP type, since every revenue/conversion

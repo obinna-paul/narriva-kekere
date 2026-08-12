@@ -51,7 +51,7 @@ export const MINIMUM_WITHDRAWAL_COWRIES = 10 as const;
 // replaces the old free-first-unlock benefit. A real, ledgered issuance
 // (SIGNUP_BONUS transactions), not a silent balance bump: see
 // grantSignupBonus in lib/economy/cowries.ts.
-export const SIGNUP_BONUS_COWRIES = 2 as const;
+export const SIGNUP_BONUS_COWRIES = 1 as const;
 // Anti-abuse: at most this many signup bonuses may be granted from one IP
 // within the window below. Over the cap, the account is still created and
 // fully usable — only the free cowries are withheld (see
