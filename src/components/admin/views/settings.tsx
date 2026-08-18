@@ -24,6 +24,32 @@ export function SettingsView() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
+  const [emailTesting, setEmailTesting] = useState(false);
+  const [emailResult, setEmailResult] = useState<{
+    sentTo: string;
+    from: string;
+    resendApiKeyPresent: boolean;
+    accepted: boolean;
+    providerError: string | null;
+  } | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  async function runEmailTest() {
+    setEmailTesting(true);
+    setEmailError(null);
+    setEmailResult(null);
+    try {
+      const res = await fetch("/api/admin/email-diagnostics", { method: "POST" });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? "Diagnostic failed to run.");
+      setEmailResult(data);
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : "Diagnostic failed to run.");
+    } finally {
+      setEmailTesting(false);
+    }
+  }
+
   const load = useCallback(() => {
     fetch("/api/admin/settings").then(r => r.json()).then(d => {
       setSettings(d.settings ?? []);
@@ -74,6 +100,62 @@ export function SettingsView() {
       </div>
 
       <div className="flex-1 space-y-7">
+        <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-[14px] font-semibold text-[#1A1C20]">Email diagnostics</h3>
+              <p className="mt-0.5 text-[11.5px] leading-[1.5] text-[#8B919A]">
+                Sends a test email to your own address and reports exactly what Resend did — the fastest
+                way to tell whether OTP codes and reset links are actually going out. Owner only.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={emailTesting}
+              onClick={runEmailTest}
+              className="flex-none rounded-[8px] bg-[#1A1C20] px-4 py-2 text-[12px] font-semibold text-white hover:bg-[#2D3139] disabled:opacity-50"
+            >
+              {emailTesting ? "Sending…" : "Send test email"}
+            </button>
+          </div>
+
+          {emailError && <p className="mt-3 text-[12px] text-[#C0392B]">{emailError}</p>}
+
+          {emailResult && (
+            <div className="mt-4 space-y-2 rounded-[8px] bg-[#F9FAFB] px-4 py-3 text-[12px]">
+              {!emailResult.resendApiKeyPresent ? (
+                <p className="font-semibold text-[#C0392B]">
+                  RESEND_API_KEY is not set on this deployment — no email is being sent at all. Add it in
+                  Vercel → Settings → Environment Variables (Production), then redeploy.
+                </p>
+              ) : emailResult.accepted ? (
+                <>
+                  <p className="font-semibold text-[#1F8A5B]">
+                    Resend accepted the send to {emailResult.sentTo}.
+                  </p>
+                  <p className="text-[#646B73]">
+                    If it still doesn&apos;t arrive, it&apos;s a delivery issue (spam / domain reputation),
+                    not a rejection — check the Resend dashboard → Emails for the final status, and your
+                    spam folder.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-[#C0392B]">Resend rejected the send.</p>
+                  <p className="break-words font-mono text-[11px] text-[#1A1C20]">
+                    {emailResult.providerError}
+                  </p>
+                  <p className="text-[#646B73]">
+                    A &ldquo;domain is not verified&rdquo; error means {emailResult.from.replace(/.*<|>.*/g, "")}
+                    &apos;s domain needs verifying in the Resend dashboard → Domains (add the DKIM/SPF DNS
+                    records it lists).
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="rounded-[11px] border border-[rgba(20,22,26,0.08)] bg-white px-5 py-5">
           <h3 className="text-[14px] font-semibold text-[#1A1C20] mb-4">Feature flags</h3>
           <div className="space-y-3">
