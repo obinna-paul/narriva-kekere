@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
+import { OWNER_EMAIL } from "@/content/decisions";
 import { logAdminAction } from "@/lib/admin/logAction";
 
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 /**
  * One-time (repeatable) policy action: zeroes every admin account's
@@ -24,7 +24,7 @@ const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
  */
 export const POST = withAuth(
   async (_request, session) => {
-    const superAdminEmail = await getSetting("super_admin_email", SUPER_ADMIN_DEFAULT);
+    const superAdminEmail = await getSetting("super_admin_email", OWNER_EMAIL);
     if (session.user.email !== superAdminEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

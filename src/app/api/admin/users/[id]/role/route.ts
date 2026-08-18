@@ -6,8 +6,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
 import { logAdminAction } from "@/lib/admin/logAction";
-
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
+import { OWNER_EMAIL } from "@/content/decisions";
 
 const roleSchema = z.object({
   role: z.enum(["READER", "WRITER", "ADMIN"]),
@@ -20,7 +19,7 @@ export const PATCH = withAuth(
   async (request, session, { params }) => {
     const { id } = params as { id: string };
 
-    const superAdminEmail = await getSetting("super_admin_email", SUPER_ADMIN_DEFAULT);
+    const superAdminEmail = await getSetting("super_admin_email", OWNER_EMAIL);
     if (session.user.email !== superAdminEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -29,9 +28,18 @@ export const PATCH = withAuth(
       return NextResponse.json({ error: "Cannot change your own role." }, { status: 400 });
     }
 
-    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, email: true } });
     if (!target) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // The owner's role can never change, by anyone, through this endpoint —
+    // even a future/alternate super admin (if `super_admin_email` were ever
+    // repointed) can't touch it. Checked against the hardcoded OWNER_EMAIL,
+    // not the mutable setting above, so this holds regardless of who
+    // currently passes the super-admin gate.
+    if (target.email === OWNER_EMAIL) {
+      return NextResponse.json({ error: "The owner's role can't be changed." }, { status: 403 });
     }
 
     const body = await request.json().catch(() => null);

@@ -7,6 +7,19 @@
 
 export const COMPANY_NAME = "Narriva" as const;
 
+// The one permanent owner account. Deliberately a hardcoded constant, not a
+// PlatformSetting — every owner protection below (role-lock, un-suspendable,
+// un-deletable; see role/route.ts, suspend/route.ts, [id]/route.ts) checks
+// THIS value directly, never the mutable `super_admin_email` setting, so the
+// protection can't be weakened by changing a setting. `super_admin_email`
+// still exists and still gates the day-to-day super-admin-only actions
+// (granting ADMIN, manual cowrie adjustments, economy reconciliation) — it
+// defaults to this address but an admin with DB access could repoint it;
+// doing so would change who holds those day-to-day powers, but would NOT
+// make this account demotable, suspendable, or deletable. That guarantee is
+// anchored here and only changes if this literal is edited and redeployed.
+export const OWNER_EMAIL = "ezeodilipaul@gmail.com" as const;
+
 export const DOMAINS = {
   narriva: "narriva.pro",
   kekere: "narriva.pro/kekere",

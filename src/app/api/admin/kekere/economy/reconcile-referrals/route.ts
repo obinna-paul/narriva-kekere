@@ -3,10 +3,10 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { getSetting } from "@/lib/settings/get";
+import { OWNER_EMAIL } from "@/content/decisions";
 import { logAdminAction } from "@/lib/admin/logAction";
 import { reconcilePendingReferralRewards } from "@/lib/data/kekere-referrals";
 
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 /**
  * Pays out every referral reward that should already have been earned — a
@@ -16,7 +16,7 @@ const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
  */
 export const POST = withAuth(
   async (_request, session) => {
-    const superAdminEmail = await getSetting("super_admin_email", SUPER_ADMIN_DEFAULT);
+    const superAdminEmail = await getSetting("super_admin_email", OWNER_EMAIL);
     if (session.user.email !== superAdminEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

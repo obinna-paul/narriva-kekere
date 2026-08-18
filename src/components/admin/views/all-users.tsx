@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Lock } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { AdminViewError, AdminEmptyState, SkeletonTableShell } from "@/components/admin/admin-skeleton";
 import { AdjustCowriesModal } from "@/components/admin/adjust-cowries-modal";
@@ -18,6 +18,11 @@ interface User {
   suspended: boolean;
   storyCount: number;
   unlockCount: number;
+  /** The one permanent owner account — role, suspend, and delete are all
+   *  blocked server-side for this row regardless of who's asking, so the
+   *  controls below are replaced with a static badge rather than offering
+   *  actions that would just fail. */
+  isOwner: boolean;
 }
 
 const ROLE_STYLES: Record<string, string> = {
@@ -201,19 +206,25 @@ export function AllUsers() {
                   </div>
                 </div>
                 <p className="truncate text-[12px] text-[#646B73]">{u.email}</p>
-                <select
-                  value={u.role}
-                  disabled={acting === u.id}
-                  onChange={(e) => changeRole(u, e.target.value as User["role"])}
-                  className={cn(
-                    "w-fit cursor-pointer rounded-full border-0 px-2.5 py-0.5 text-[10px] font-bold uppercase focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30 disabled:opacity-50",
-                    ROLE_STYLES[u.role] ?? ROLE_STYLES.READER
-                  )}
-                >
-                  <option value="READER">Reader</option>
-                  <option value="WRITER">Writer</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
+                {u.isOwner ? (
+                  <span className="flex w-fit items-center gap-1 rounded-full bg-[rgba(183,121,31,0.14)] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#B7791F]">
+                    <Lock size={9} /> Owner
+                  </span>
+                ) : (
+                  <select
+                    value={u.role}
+                    disabled={acting === u.id}
+                    onChange={(e) => changeRole(u, e.target.value as User["role"])}
+                    className={cn(
+                      "w-fit cursor-pointer rounded-full border-0 px-2.5 py-0.5 text-[10px] font-bold uppercase focus:outline-none focus:ring-1 focus:ring-[#1A1C20]/30 disabled:opacity-50",
+                      ROLE_STYLES[u.role] ?? ROLE_STYLES.READER
+                    )}
+                  >
+                    <option value="READER">Reader</option>
+                    <option value="WRITER">Writer</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                )}
                 <span className="text-[13px] text-[#1A1C20]">{u.storyCount}</span>
                 <span className="text-[13px] text-[#1A1C20]">{u.unlockCount}</span>
                 <span className="text-[12px] text-[#8B919A]">{relativeTime(u.lastActiveAt)}</span>
@@ -226,28 +237,36 @@ export function AllUsers() {
                   >
                     Cowries
                   </button>
-                  <button
-                    type="button"
-                    disabled={acting === u.id}
-                    onClick={() => handleSuspendClick(u)}
-                    className={cn(
-                      "rounded-[7px] px-3 py-1.5 text-[11px] font-semibold disabled:opacity-40",
-                      u.suspended
-                        ? "bg-[#1F8A5B] text-white hover:bg-[#1a7a50]"
-                        : "border border-[#C0392B]/30 text-[#C0392B] hover:bg-[rgba(192,57,43,0.06)]"
-                    )}
-                  >
-                    {acting === u.id ? "…" : u.suspended ? "Unsuspend" : "Suspend"}
-                  </button>
-                  {u.role !== "ADMIN" && (
-                    <button
-                      type="button"
-                      disabled={acting === u.id}
-                      onClick={() => setDeletingUser(u)}
-                      className="rounded-[7px] bg-[#C0392B] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#a5311f] disabled:opacity-40"
-                    >
-                      Delete
-                    </button>
+                  {u.isOwner ? (
+                    <span className="rounded-[7px] px-3 py-1.5 text-[11px] font-semibold text-[#A08C7C]">
+                      Protected
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled={acting === u.id}
+                        onClick={() => handleSuspendClick(u)}
+                        className={cn(
+                          "rounded-[7px] px-3 py-1.5 text-[11px] font-semibold disabled:opacity-40",
+                          u.suspended
+                            ? "bg-[#1F8A5B] text-white hover:bg-[#1a7a50]"
+                            : "border border-[#C0392B]/30 text-[#C0392B] hover:bg-[rgba(192,57,43,0.06)]"
+                        )}
+                      >
+                        {acting === u.id ? "…" : u.suspended ? "Unsuspend" : "Suspend"}
+                      </button>
+                      {u.role !== "ADMIN" && (
+                        <button
+                          type="button"
+                          disabled={acting === u.id}
+                          onClick={() => setDeletingUser(u)}
+                          className="rounded-[7px] bg-[#C0392B] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#a5311f] disabled:opacity-40"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

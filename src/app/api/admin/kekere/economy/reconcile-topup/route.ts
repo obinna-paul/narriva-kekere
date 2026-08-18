@@ -7,12 +7,11 @@ import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { creditTopUp } from "@/lib/economy/cowries";
-import { COWRIE_TOPUP_PACKAGES } from "@/content/decisions";
+import { COWRIE_TOPUP_PACKAGES, OWNER_EMAIL } from "@/content/decisions";
 import { triggerReferralRewardOnFirstTopUp } from "@/lib/data/kekere-referrals";
 import { sendFirstTopUpThankYouEmail } from "@/lib/data/kekere-wallet";
 import { logAdminAction } from "@/lib/admin/logAction";
 
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 const schema = z.object({
   reference: z.string().trim().min(1, "A Paystack reference is required."),
@@ -40,7 +39,7 @@ export const POST = withAuth(
     // Money movement is gated to the super admin, same as manual cowrie
     // adjustments — the Paystack re-verify makes it safe, but crediting real
     // balances still shouldn't be a whole-team capability.
-    const superAdminEmail = await getSetting("super_admin_email", SUPER_ADMIN_DEFAULT);
+    const superAdminEmail = await getSetting("super_admin_email", OWNER_EMAIL);
     if (session.user.email !== superAdminEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

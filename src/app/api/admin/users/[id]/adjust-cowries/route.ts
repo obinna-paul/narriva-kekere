@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { getSetting } from "@/lib/settings/get";
+import { OWNER_EMAIL } from "@/content/decisions";
 import { logAdminAction } from "@/lib/admin/logAction";
 import { round2 } from "@/lib/economy/round";
 
@@ -38,7 +39,6 @@ const adjustSchema = z
     path: ["amount"],
   });
 
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 export const POST = withAuth(
   async (request, session, { params }) => {
@@ -46,7 +46,7 @@ export const POST = withAuth(
 
     const superAdminEmail = await getSetting(
       "super_admin_email",
-      SUPER_ADMIN_DEFAULT,
+      OWNER_EMAIL,
     );
 
     if (session.user.email !== superAdminEmail) {
