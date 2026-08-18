@@ -7,6 +7,7 @@ import { AdminViewError, AdminEmptyState, SkeletonTableShell } from "@/component
 import { AdjustCowriesModal } from "@/components/admin/adjust-cowries-modal";
 import { SuspendUserModal } from "@/components/admin/suspend-user-modal";
 import { DeleteUserModal } from "@/components/admin/delete-user-modal";
+import { RestoreAccessModal } from "@/components/admin/restore-access-modal";
 
 interface User {
   id: string;
@@ -53,6 +54,7 @@ export function AllUsers() {
   const [adjustingUser, setAdjustingUser] = useState<User | null>(null);
   const [suspendingUser, setSuspendingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [restoringUser, setRestoringUser] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,6 +239,16 @@ export function AllUsers() {
                   >
                     Cowries
                   </button>
+                  {!u.isOwner && (
+                    <button
+                      type="button"
+                      disabled={acting === u.id}
+                      onClick={() => setRestoringUser(u)}
+                      className="rounded-[7px] border border-[rgba(20,22,26,0.14)] px-3 py-1.5 text-[11px] font-semibold text-[#1A1C20] hover:bg-[#F4F5F7] disabled:opacity-40"
+                    >
+                      Restore access
+                    </button>
+                  )}
                   {u.isOwner ? (
                     <span className="rounded-[7px] px-3 py-1.5 text-[11px] font-semibold text-[#A08C7C]">
                       Protected
@@ -335,6 +347,14 @@ export function AllUsers() {
             showToast("ok", `${deletingUser.name} deleted.`);
             setDeletingUser(null);
           }}
+        />
+      )}
+
+      {restoringUser && (
+        <RestoreAccessModal
+          userId={restoringUser.id}
+          userName={restoringUser.name}
+          onClose={() => setRestoringUser(null)}
         />
       )}
     </div>

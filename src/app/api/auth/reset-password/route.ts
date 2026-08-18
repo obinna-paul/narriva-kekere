@@ -24,11 +24,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const result = await applyPasswordReset(parsed.data.token, parsed.data.password);
+  try {
+    const result = await applyPasswordReset(parsed.data.token, parsed.data.password);
 
-  if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    if ("error" in result) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    // An expired/invalid token already returns a clean {error} above without
+    // throwing — this is only an unexpected infra failure. Surfaced as a
+    // retryable message rather than a raw 500, so "reset whenever they want"
+    // holds even through a transient blip.
+    console.error("[reset-password] applyPasswordReset failed:", err);
+    return NextResponse.json(
+      { error: "Something went wrong on our end. Please try again in a moment." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ success: true });
 }
