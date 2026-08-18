@@ -34,8 +34,13 @@ async function issuePasswordResetToken(userId: string): Promise<string> {
 }
 
 export async function createPasswordReset(email: string): Promise<void> {
-  const user = await prisma.user.findUnique({
-    where: { email },
+  // Case-insensitive, matching the OTP resend/verify lookups — an account
+  // created before email normalization (or via any path that didn't
+  // lowercase) can be stored in mixed case, and a case-sensitive findUnique
+  // here would silently miss it: the caller still shows "check your email",
+  // but no email is ever sent. findFirst + insensitive closes that gap.
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
     select: { id: true, name: true, email: true, emailVerified: true },
   });
 

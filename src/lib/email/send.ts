@@ -27,6 +27,11 @@ export interface SendEmailResult {
   success: boolean;
   /** Set when success is false — safe to show a user, never the raw Resend error. */
   error?: string;
+  /** The raw provider (Resend) failure reason, or "no_api_key" when email is
+   *  stubbed. NEVER surface this to end users (it can name internal domains,
+   *  quota states, etc.) — it exists only for admin-only diagnostics, which
+   *  is the one place that needs to know *why* a send failed. */
+  providerError?: string;
 }
 
 /**
@@ -46,7 +51,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       subject: message.subject,
       body: message.body,
     });
-    return { success: true };
+    return { success: true, providerError: "no_api_key" };
   }
 
   try {
@@ -64,11 +69,19 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
 
     if (error) {
       console.error("[email] Resend error:", error);
-      return { success: false, error: "Couldn't send the email — please try again." };
+      return {
+        success: false,
+        error: "Couldn't send the email — please try again.",
+        providerError: `${error.name ?? "error"}: ${error.message ?? String(error)}`,
+      };
     }
     return { success: true };
   } catch (err) {
     console.error("[email] Failed to send:", (err as Error).message);
-    return { success: false, error: "Couldn't send the email — please try again." };
+    return {
+      success: false,
+      error: "Couldn't send the email — please try again.",
+      providerError: (err as Error).message,
+    };
   }
 }

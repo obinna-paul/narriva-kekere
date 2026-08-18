@@ -116,8 +116,16 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        // Case-insensitive + trimmed, matching every other auth lookup in
+        // this app (register, resend-otp, verify-email, forgot-password).
+        // Login was the one path still doing a case-sensitive exact match —
+        // an account stored in mixed case (or a reader who capitalizes their
+        // email differently than they originally typed it) would silently
+        // fail here with "no such user" even with the exactly right
+        // password, and there's no error message that distinguishes that
+        // from a genuinely wrong password.
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: credentials.email.trim(), mode: "insensitive" } },
           select: {
             id: true,
             email: true,
