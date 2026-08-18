@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import type { UserRole } from "@prisma/client";
+import { OWNER_EMAIL } from "@/content/decisions";
 
 const VALID_ROLES: UserRole[] = ["READER", "WRITER", "ADMIN"];
 
@@ -66,6 +67,9 @@ export const GET = withAuth(
         suspended: u.suspended,
         storyCount: u._count.stories,
         unlockCount: u._count.unlocks,
+        // Server-computed so the list, not just /api/admin/me, can show the
+        // Owner badge and disable role/suspend controls on that row.
+        isOwner: u.email === OWNER_EMAIL,
       })),
     });
   },

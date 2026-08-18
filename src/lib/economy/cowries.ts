@@ -11,10 +11,13 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { getSettingNumber } from "@/lib/settings/get";
 import { round2 } from "@/lib/economy/round";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   TIP_AMOUNT_COWRIES,
   WRITER_EARNINGS_RATE,
   SIGNUP_BONUS_COWRIES,
+  SIGNUP_BONUS_MAX_PER_IP,
+  SIGNUP_BONUS_IP_WINDOW_MS,
 } from "@/content/decisions";
 
 export type UnlockResult =
@@ -421,4 +424,72 @@ export async function grantSignupBonus(userId: string): Promise<SignupBonusResul
   });
 
   return { success: true, granted: bonus, balance: updated.spendingBalance };
+}
+
+export type SignupBonusEligibility =
+  | SignupBonusResult
+  | { withheld: "duplicate_inbox" | "ip_velocity" };
+
+/**
+ * Grants the signup bonus only if the account passes the anti-abuse gate —
+ * otherwise the account keeps working normally, it just doesn't receive free
+ * cowries. Called once, at email verification (grantSignupBonus itself stays
+ * the low-level, always-grants primitive used by seeds/admin paths).
+ *
+ * Two withhold signals, both targeting the *bonus* and never the account:
+ *  - duplicate_inbox: another account with the same canonical email already
+ *    received a bonus — i.e. this is a +tag / dotted alias of one real inbox.
+ *  - ip_velocity: too many bonuses already granted from this signup IP in the
+ *    window. Deliberately a soft cap (see SIGNUP_BONUS_MAX_PER_IP) so shared
+ *    carrier-NAT IPs don't lock real readers out — email is the primary gate.
+ *
+ * Order matters: we check for an already-granted bonus and the duplicate
+ * inbox *before* consuming any IP budget, so a re-verify or a clearly-aliased
+ * account never eats into a legitimately-shared IP's allowance.
+ */
+export async function grantSignupBonusIfEligible(userId: string): Promise<SignupBonusEligibility> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      canonicalEmail: true,
+      signupIp: true,
+      wallet: { select: { id: true, spendingBalance: true } },
+    },
+  });
+  if (!user) return { withheld: "duplicate_inbox" };
+
+  // Already granted to this very account — idempotent no-op, no IP budget spent.
+  if (user.wallet) {
+    const existing = await prisma.transaction.findFirst({
+      where: { walletId: user.wallet.id, type: "SIGNUP_BONUS" },
+      select: { id: true },
+    });
+    if (existing) return { already_granted: true, balance: user.wallet.spendingBalance };
+  }
+
+  // One free grant per real inbox: withhold if any *other* account sharing
+  // this canonical email already collected a bonus.
+  if (user.canonicalEmail) {
+    const dupe = await prisma.user.findFirst({
+      where: {
+        id: { not: userId },
+        canonicalEmail: user.canonicalEmail,
+        wallet: { transactions: { some: { type: "SIGNUP_BONUS" } } },
+      },
+      select: { id: true },
+    });
+    if (dupe) return { withheld: "duplicate_inbox" };
+  }
+
+  // Soft per-IP velocity backstop. Skipped when the IP is unknown (older
+  // accounts) — we never withhold on a signal we don't have.
+  if (user.signupIp) {
+    const rl = await checkRateLimit(`signup-bonus-ip:${user.signupIp}`, {
+      limit: SIGNUP_BONUS_MAX_PER_IP,
+      windowMs: SIGNUP_BONUS_IP_WINDOW_MS,
+    });
+    if (!rl.allowed) return { withheld: "ip_velocity" };
+  }
+
+  return grantSignupBonus(userId);
 }

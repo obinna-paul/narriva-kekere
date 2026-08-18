@@ -6,6 +6,7 @@ import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { logAdminAction } from "@/lib/admin/logAction";
 import { sendEmail } from "@/lib/email/send";
+import { OWNER_EMAIL } from "@/content/decisions";
 
 const suspendSchema = z.object({
   reason: z.string().min(1),
@@ -27,6 +28,14 @@ export const POST = withAuth(
 
     if (id === session.user.id) {
       return NextResponse.json({ error: "Cannot suspend yourself." }, { status: 400 });
+    }
+
+    // Suspension blocks login outright (see auth/options.ts), so without
+    // this, any admin — not just a would-be self-suspend — could lock the
+    // owner out. Checked against the hardcoded OWNER_EMAIL so it holds no
+    // matter who currently passes any other admin gate.
+    if (target.email === OWNER_EMAIL) {
+      return NextResponse.json({ error: "The owner's account can't be suspended." }, { status: 403 });
     }
 
     let body: unknown;

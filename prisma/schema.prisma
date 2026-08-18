@@ -38,6 +38,17 @@ enum AccountStatus {
 model User {
   id       String   @id @default(cuid())
   email    String   @unique
+  // The email reduced to a single identity: lowercased, +tag stripped, and
+  // (for Gmail/Googlemail) dots removed — so me@gmail, m.e@gmail and
+  // me+2@gmail all collapse to one value. Used only to dedupe the signup
+  // bonus (one free grant per real inbox), never for login/display. Not
+  // unique-constrained: pre-existing alias pairs are grandfathered, and the
+  // bonus gate checks it explicitly rather than relying on the DB.
+  canonicalEmail String?
+  // The IP the account was created from — a soft, withhold-only signal for
+  // the signup-bonus velocity check (never blocks signup). Null for accounts
+  // created before this was recorded.
+  signupIp String?
   name     String
   password String?
   role     UserRole @default(READER)
@@ -174,6 +185,8 @@ model User {
   noteBlocksMade       NoteBlock[]           @relation("NoteBlocksMade")
   noteBlocksReceived   NoteBlock[]           @relation("NoteBlocksReceived")
   reportsFiled         Report[]
+
+  @@index([canonicalEmail])
 }
 
 // A reader subscribing to a writer — not messaging or a social graph, a
@@ -326,11 +339,12 @@ enum TransactionType {
   REFERRAL_REWARD
   EARNINGS_CREDIT
   PLATFORM_EARNINGS
-  // Every new account's welcome grant — 2 free cowries into the spending
-  // wallet the moment they register, replacing the old free-first-unlock
-  // benefit. A real, ledgered issuance (counted in totalIssued) rather than
-  // a silent balance bump: the writer whose story it eventually unlocks
-  // still earns their normal 70% share, same as any other spent cowrie.
+  // Every new account's welcome grant (amount set by the signup_bonus_cowries
+  // platform setting) — credited into the spending wallet at email
+  // verification, replacing the old free-first-unlock benefit. A real,
+  // ledgered issuance (counted in totalIssued) rather than a silent balance
+  // bump: the writer whose story it eventually unlocks still earns their
+  // normal 70% share, same as any other spent cowrie.
   SIGNUP_BONUS
   // Manual admin wallet adjustments (e.g. compensating a user, correcting an
   // error) — must never share the TOP_UP type, since every revenue/conversion

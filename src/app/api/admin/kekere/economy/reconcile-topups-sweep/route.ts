@@ -4,10 +4,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { getSetting } from "@/lib/settings/get";
+import { OWNER_EMAIL } from "@/content/decisions";
 import { logAdminAction } from "@/lib/admin/logAction";
 import { reconcileRecentTopUps } from "@/lib/economy/reconcile-topups";
 
-const SUPER_ADMIN_DEFAULT = "ezeodilipaul@gmail.com";
 
 const schema = z.object({
   // How far back to sweep. Bounded so an admin can't accidentally ask Paystack
@@ -25,7 +25,7 @@ const schema = z.object({
  */
 export const POST = withAuth(
   async (request, session) => {
-    const superAdminEmail = await getSetting("super_admin_email", SUPER_ADMIN_DEFAULT);
+    const superAdminEmail = await getSetting("super_admin_email", OWNER_EMAIL);
     if (session.user.email !== superAdminEmail) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

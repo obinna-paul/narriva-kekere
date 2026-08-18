@@ -80,15 +80,30 @@ export interface AdminSidebarProps {
   onCollapse: () => void;
 }
 
+interface AdminMe {
+  name: string;
+  email: string;
+  role: string;
+  isOwner: boolean;
+}
+
 export function AdminSidebar({ isOpen, onClose, collapsed, onCollapse }: AdminSidebarProps) {
   const pathname = usePathname();
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [me, setMe] = useState<AdminMe | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/command-center")
       .then((r) => r.json())
       .then((d) => {
         if (d?.pendingActionsBreakdown) setCounts(d.pendingActionsBreakdown);
+      })
+      .catch(() => {});
+
+    fetch("/api/admin/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.name) setMe(d);
       })
       .catch(() => {});
   }, []);
@@ -192,15 +207,25 @@ export function AdminSidebar({ isOpen, onClose, collapsed, onCollapse }: AdminSi
       {/* User chip */}
       <div className="flex-none border-t border-[rgba(255,255,255,0.06)] px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-[32px] w-[32px] flex-none items-center justify-center rounded-full bg-[#6B21A8] text-[12px] font-bold text-white">
-            A
+          <div
+            className={cn(
+              "flex h-[32px] w-[32px] flex-none items-center justify-center rounded-full text-[12px] font-bold text-white",
+              me?.isOwner ? "bg-[#B7791F]" : "bg-[#6B21A8]"
+            )}
+          >
+            {(me?.name ?? "A").charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[12px] font-medium text-white">Admin</div>
-            <div className="text-[10px] text-[#7C828C]">Administrator</div>
+            <div className="truncate text-[12px] font-medium text-white">{me?.name ?? "Admin"}</div>
+            <div className="truncate text-[10px] text-[#7C828C]">{me?.email ?? "Administrator"}</div>
           </div>
-          <span className="flex-none rounded-full bg-[#6B21A8]/20 px-2 py-0.5 text-[9px] font-semibold text-[#6B21A8]">
-            ADMIN
+          <span
+            className={cn(
+              "flex-none rounded-full px-2 py-0.5 text-[9px] font-semibold",
+              me?.isOwner ? "bg-[#B7791F]/20 text-[#B7791F]" : "bg-[#6B21A8]/20 text-[#6B21A8]"
+            )}
+          >
+            {me?.isOwner ? "OWNER" : "ADMIN"}
           </span>
         </div>
       </div>

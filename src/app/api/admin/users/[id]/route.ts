@@ -5,6 +5,7 @@ import { z } from "zod";
 import { withAuth } from "@/lib/auth/middleware";
 import { prisma } from "@/lib/db/prisma";
 import { logAdminAction } from "@/lib/admin/logAction";
+import { OWNER_EMAIL } from "@/content/decisions";
 
 export const GET = withAuth(
   async (_request, _session, { params }) => {
@@ -118,6 +119,15 @@ export const DELETE = withAuth(
 
     if (!target) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Explicit and unconditional, checked against the hardcoded OWNER_EMAIL
+    // rather than relying solely on the role==ADMIN block below — the role
+    // route already guarantees the owner's role can never change, but this
+    // makes the owner un-deletable a standalone invariant too, independent
+    // of that guarantee continuing to hold.
+    if (target.email === OWNER_EMAIL) {
+      return NextResponse.json({ error: "The owner's account can't be deleted." }, { status: 403 });
     }
 
     // A blanket block, not force-bypassable — deleting an admin account this

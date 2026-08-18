@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendEmail } from "@/lib/email/send";
 import { renderOtpEmail } from "@/lib/email/templates";
 import { KEKERE_GENERAL_FROM, NARRIVA_GENERAL_FROM, OBINNA_FROM } from "@/lib/constants";
+import { grantSignupBonusIfEligible } from "@/lib/economy/cowries";
 
 type Brand = "kekere" | "narriva";
 
@@ -171,6 +172,18 @@ export async function verifyOtp(
       emailVerificationExpiresAt: null,
     },
   });
+
+  // Credit the welcome cowries now that the inbox is proven real — subject to
+  // the anti-abuse gate (dedupes aliases of one inbox, soft per-IP cap). A
+  // withheld grant is silent: the account works normally, just without the
+  // free cowries. Never blocks verification, so a failure here can't strand a
+  // user on the verify screen.
+  try {
+    await grantSignupBonusIfEligible(user.id);
+  } catch {
+    // Ledger hiccup shouldn't fail an otherwise-successful verification; the
+    // account is verified and usable regardless.
+  }
 
   // Send welcome email now that the address is confirmed.
   await sendWelcomeEmail(user.name, user.email);
