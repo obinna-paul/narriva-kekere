@@ -11,7 +11,7 @@ import { StorySearch } from "@/components/kekere/story-search";
 import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import { LonglistBadge } from "@/components/kekere/LonglistBadge";
-import { ChevronRight, Bookmark, BookmarkCheck, Moon, Sun } from "lucide-react";
+import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
 import {
   buildGreetingPool,
   pickRandomGreeting,
@@ -20,19 +20,20 @@ import {
   GREETING_ROTATION_MS,
   type GreetingPersonalization,
 } from "@/content/kekere-feed-greetings";
+import { readFeedTheme, onFeedThemeChange } from "@/lib/utils/feed-theme";
 
 /**
- * Feed-only light/dark toggle. Scoped deliberately to just this component's
- * subtree (not the nav bar above it, not any other page) — a reader opts
- * into a dark feed the way they'd flip a reading-light switch, not a global
- * app theme. Reuses the exact palette the story reader's own "Dark"
- * background option already established (story-reader.tsx's READER_THEMES),
- * so a reader who likes dark in one place sees the same tone in the other
- * instead of two different "darks" in the same app.
+ * Feed-only light/dark background. The toggle button itself lives in
+ * KekereNav, beside the notification bell (only shown on this page) — see
+ * lib/utils/feed-theme.ts for why a shared-state module bridges the two.
+ * Scoped deliberately to just this component's subtree (not the nav bar,
+ * not any other page) — a reader opts into a dark feed the way they'd flip
+ * a reading-light switch, not a global app theme. Reuses the exact palette
+ * the story reader's own "Dark" background option already established
+ * (story-reader.tsx's READER_THEMES), so a reader who likes dark in one
+ * place sees the same tone in the other instead of two different "darks"
+ * in the same app.
  */
-type FeedTheme = "light" | "dark";
-const FEED_THEME_STORAGE_KEY = "kekere-feed-theme";
-
 const FEED_DARK_VARS: React.CSSProperties = {
   "--color-bg": "#181510",
   "--color-ink": "#EDE6DA",
@@ -274,31 +275,20 @@ export function FeedContent({
   const [greeting, setGreeting] = useState(initialGreeting);
   const [featuredSaved, setFeaturedSaved] = useState(false);
   const [featuredSaving, setFeaturedSaving] = useState(false);
-  const [feedTheme, setFeedTheme] = useState<FeedTheme>("light");
+  const [dark, setDark] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const dark = feedTheme === "dark";
 
   // Same defer-then-upgrade pattern as the reader's theme (story-reader.tsx):
-  // SSR and first paint stay on the "light" default so hydration matches
-  // exactly, then this upgrades to whatever the reader last picked on this
-  // device.
+  // SSR and first paint stay on light so hydration matches exactly, then
+  // this upgrades to whatever the reader last picked on this device. The
+  // toggle button itself lives in KekereNav (a sibling, not a parent, of
+  // this component) — onFeedThemeChange is what makes a tap there repaint
+  // the feed instantly instead of waiting for the next page load.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(FEED_THEME_STORAGE_KEY);
-      if (saved === "light" || saved === "dark") setFeedTheme(saved);
-    } catch {
-      // ignore unavailable storage
-    }
+    setDark(readFeedTheme() === "dark");
+    return onFeedThemeChange((theme) => setDark(theme === "dark"));
   }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(FEED_THEME_STORAGE_KEY, feedTheme);
-    } catch {
-      // ignore unavailable storage
-    }
-  }, [feedTheme]);
 
   // Editor's Pick has its own explicit "Save for later" button (unlike the
   // rest of the feed, which only saves through the preview sheet), so it
@@ -492,36 +482,20 @@ export function FeedContent({
               topGenre={greetingPersonalization.topGenre}
             />
           </div>
-          <div className="flex flex-none items-center gap-[8px]">
-            <button
-              type="button"
-              onClick={() => setFeedTheme(dark ? "light" : "dark")}
-              aria-label={dark ? "Switch to light background" : "Switch to dark background"}
-              aria-pressed={dark}
-              className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full border transition-colors"
-              style={{
-                backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
-                borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
-                color: "var(--color-ink-muted)",
-              }}
-            >
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <Link
-              href="/kekere/wallet"
-              className="flex flex-none items-center gap-[7px] rounded-[30px] border px-[14px] py-[7px]"
-              style={{
-                backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
-                borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-                <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-                <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-              </svg>
-              <span className="text-[13px] font-semibold text-[var(--color-ink)]">{balance}</span>
-            </Link>
-          </div>
+          <Link
+            href="/kekere/wallet"
+            className="flex flex-none items-center gap-[7px] rounded-[30px] border px-[14px] py-[7px]"
+            style={{
+              backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
+              borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+              <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+              <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+            </svg>
+            <span className="text-[13px] font-semibold text-[var(--color-ink)]">{balance}</span>
+          </Link>
         </div>
       </div>
 

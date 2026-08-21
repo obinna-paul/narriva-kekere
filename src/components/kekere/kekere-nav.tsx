@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils/cn";
 import { BottomNav } from "@/components/kekere/bottom-nav";
 import { UserMenu } from "@/components/shared/user-menu";
 import { NotificationBell } from "@/components/kekere/NotificationBell";
+import { FeedThemeToggle } from "@/components/kekere/FeedThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/kekere/feed", label: "Feed", icon: BookOpen },
@@ -22,6 +23,7 @@ export interface KekereNavProps {
 
 export function KekereNav({ user }: KekereNavProps = {}) {
   const pathname = usePathname();
+  const onFeed = pathname === "/kekere/feed";
 
   return (
     <>
@@ -34,7 +36,10 @@ export function KekereNav({ user }: KekereNavProps = {}) {
           <Link href="/kekere/feed" className="inline-block">
             <Image src="/kekere-logo.png" alt="Kekere Stories" width={32} height={32} className="h-8 w-auto" />
           </Link>
-          <NotificationBell />
+          <div className="flex items-center gap-2">
+            {onFeed && <FeedThemeToggle />}
+            <NotificationBell />
+          </div>
         </header>
       )}
 
@@ -70,6 +75,7 @@ export function KekereNav({ user }: KekereNavProps = {}) {
                 </Link>
               );
             })}
+            {user && onFeed && <FeedThemeToggle />}
             {user && <NotificationBell />}
             {user && <UserMenu name={user.name} email={user.email} brand="kekere" />}
           </nav>
