@@ -31,7 +31,7 @@ export function KekereHelpTabs({ categories }: KekereHelpTabsProps) {
               "cursor-pointer rounded-[30px] border px-[15px] py-[9px] text-[13px] font-semibold transition-colors",
               tab === category.label
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)]"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink-muted)]"
             )}
           >
             {category.label}
@@ -40,11 +40,11 @@ export function KekereHelpTabs({ categories }: KekereHelpTabsProps) {
       </div>
 
       <section className="mx-auto max-w-[680px] px-[22px] pb-8 pt-6">
-        <div className="border-t border-[rgba(42,26,18,0.12)]">
+        <div className="border-t border-[var(--color-border)]">
           {active.faqs.map((faq, i) => {
             const open = openIndex === i;
             return (
-              <div key={faq.question} className="border-b border-[rgba(42,26,18,0.12)]">
+              <div key={faq.question} className="border-b border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setOpenIndex(open ? null : i)}
