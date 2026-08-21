@@ -21,6 +21,7 @@ import type { HighlightColorId } from "@/content/highlight-colors";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
+import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 /**
@@ -28,6 +29,15 @@ import type { MockStory } from "@/content/mock/kekere-stories";
  * `#FCFCFA` reading surface). Each theme overrides the ink CSS variables the
  * reader chrome + body text read from, so switching re-colours everything at
  * once; transitions are applied on the reader root so the change is smooth.
+ *
+ * The app-wide light/dark toggle (KekereNav, via kekere-theme-mode.ts) only
+ * ever supplies the *default* here — "white" for app-light, "dark" for
+ * app-dark. A reader who has never touched this picker keeps tracking that
+ * default live, so flipping the app toggle changes the reader too. The
+ * moment they pick a background from this picker, that choice is explicit
+ * and persists in its own right — it stops following the app toggle, and
+ * (per how KekereTheme is scoped) never affects anything outside the
+ * reader.
  */
 type ReaderTheme = "white" | "cream" | "dark";
 
@@ -216,6 +226,11 @@ export function StoryReader({
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
+  // True once the reader has explicitly picked a background from the
+  // picker (or one was already saved from a previous visit) — see the
+  // ReaderTheme comment above. False means readerTheme is just tracking
+  // the app-wide toggle and shouldn't be written to its own storage key.
+  const explicitReaderThemeRef = useRef(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [contentHidden, setContentHidden] = useState(false);
 
@@ -257,16 +272,27 @@ export function StoryReader({
   }, [unlocked]);
 
   // Load the saved reader theme after mount (keeps SSR/first paint on the
-  // default `white` so hydration matches, then upgrades to the reader's pick).
+  // default `white` so hydration matches, then upgrades to the reader's
+  // pick). If this reader has never explicitly chosen one, fall back to —
+  // and keep live-tracking — the app-wide light/dark toggle instead, so it
+  // serves as this reader's default without becoming a "choice" on its own.
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(READER_THEME_STORAGE_KEY);
-      if (saved === "white" || saved === "cream" || saved === "dark") {
-        setReaderTheme(saved);
-      }
+      saved = localStorage.getItem(READER_THEME_STORAGE_KEY);
     } catch {
       // ignore unavailable storage
     }
+    if (saved === "white" || saved === "cream" || saved === "dark") {
+      explicitReaderThemeRef.current = true;
+      setReaderTheme(saved);
+      return;
+    }
+    setReaderTheme(readThemeMode() === "dark" ? "dark" : "white");
+    return onThemeModeChange((mode) => {
+      if (explicitReaderThemeRef.current) return; // an explicit pick since mount wins
+      setReaderTheme(mode === "dark" ? "dark" : "white");
+    });
   }, []);
 
   // Same pattern for reading mode — defaults to scroll for the first paint,
@@ -312,6 +338,7 @@ export function StoryReader({
   }
 
   useEffect(() => {
+    if (!explicitReaderThemeRef.current) return; // still just tracking the app default — nothing to save yet
     try {
       localStorage.setItem(READER_THEME_STORAGE_KEY, readerTheme);
     } catch {
@@ -1309,6 +1336,7 @@ export function StoryReader({
                           role="menuitemradio"
                           aria-checked={active}
                           onClick={() => {
+                            explicitReaderThemeRef.current = true;
                             setReaderTheme(key);
                             setThemeMenuOpen(false);
                           }}

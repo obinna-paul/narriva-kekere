@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
 import { cn } from "@/lib/utils/cn";
+import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 
 export interface UserMenuProps {
   name: string;
@@ -26,6 +27,14 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
 
+  // Narriva never sets this (no dark mode there), so this always resolves
+  // light for that brand — only Kekere's sign-out colour actually adjusts.
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setDark(readThemeMode() === "dark");
+    return onThemeModeChange((mode) => setDark(mode === "dark"));
+  }, []);
+
   const initial = name.trim().charAt(0).toUpperCase() || "?";
 
   const isKekere = brand === "kekere";
@@ -45,7 +54,7 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[200px] rounded-xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_12px_32px_-12px_rgba(42,26,18,0.3)]">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[200px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-[0_12px_32px_-12px_rgba(42,26,18,0.3)]">
           <div className="px-3 py-2">
             <p className="text-sm font-semibold text-[var(--color-ink)]">{name}</p>
             {email && (
@@ -53,12 +62,12 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
             )}
           </div>
 
-          <div className="my-1 border-t border-[rgba(42,26,18,0.08)]" />
+          <div className="my-1 border-t border-[var(--color-ink)]/[0.08]" />
 
           <Link
             href={profileHref}
             onClick={() => setOpen(false)}
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[rgba(42,26,18,0.04)]"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-ink)]/[0.04]"
           >
             {profileLabel}
           </Link>
@@ -66,7 +75,7 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
             <Link
               href="/account/library"
               onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[rgba(42,26,18,0.04)]"
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-ink)]/[0.04]"
             >
               My Library
             </Link>
@@ -75,18 +84,21 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
             <Link
               href="/kekere/library"
               onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[rgba(42,26,18,0.04)]"
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink)] transition-colors hover:bg-[var(--color-ink)]/[0.04]"
             >
               My Library
             </Link>
           )}
 
-          <div className="my-1 border-t border-[rgba(42,26,18,0.08)]" />
+          <div className="my-1 border-t border-[var(--color-ink)]/[0.08]" />
 
           <button
             type="button"
             onClick={() => hardSignOut(isKekere ? "/kekere" : "/")}
-            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
+            className={cn(
+              "block w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
+              dark ? "text-[#E28080] hover:bg-[#E28080]/10" : "text-[#A13A3A] hover:bg-[rgba(193,58,58,0.06)]"
+            )}
           >
             Sign out
           </button>

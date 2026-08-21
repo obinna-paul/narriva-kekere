@@ -20,34 +20,19 @@ import {
   GREETING_ROTATION_MS,
   type GreetingPersonalization,
 } from "@/content/kekere-feed-greetings";
-import { readFeedTheme, onFeedThemeChange } from "@/lib/utils/feed-theme";
+import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 
-/**
- * Feed-only light/dark background. The toggle button itself lives in
- * KekereNav, beside the notification bell (only shown on this page) — see
- * lib/utils/feed-theme.ts for why a shared-state module bridges the two.
- * Scoped deliberately to just this component's subtree (not the nav bar,
- * not any other page) — a reader opts into a dark feed the way they'd flip
- * a reading-light switch, not a global app theme. Reuses the exact palette
- * the story reader's own "Dark" background option already established
- * (story-reader.tsx's READER_THEMES), so a reader who likes dark in one
- * place sees the same tone in the other instead of two different "darks"
- * in the same app.
- */
-const FEED_DARK_VARS: React.CSSProperties = {
-  "--color-bg": "#181510",
-  "--color-ink": "#EDE6DA",
-  "--color-ink-muted": "#B8AE9E",
-  "--color-ink-muted-2": "#9A9082",
-} as React.CSSProperties;
-
-// The handful of spots that use a literal white/cream surface color instead
-// of a --color-* token (a translucent sticky-header blur, and a few pill/
-// card surfaces) — CSS variable overrides can't reach these since they're
-// not var()-based, so they're swapped explicitly wherever `dark` is true.
-const FEED_SURFACE_DARK = "#211B14";
+// The sticky header's blur backdrop needs a translucent version of the page
+// background for the blur-behind-content effect — a plain --color-bg token
+// swap can't express the alpha channel, so this is the one spot that still
+// needs to know light vs dark directly rather than just reading a token.
+// Everywhere else on the feed already uses --color-surface/--color-border/
+// --color-bg/--color-ink tokens, which KekereTheme (the shared parent
+// wrapping every Kekere page, see feed/page.tsx) now resolves to the right
+// palette on its own — the app-wide toggle in KekereNav and this page's
+// background are the same switch.
 const FEED_HEADER_BLUR_DARK = "rgba(24,21,16,0.94)";
-const FEED_BORDER_DARK = "rgba(237,230,218,0.14)";
+const FEED_HEADER_BLUR_LIGHT = "rgba(245,235,221,0.94)";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -279,15 +264,13 @@ export function FeedContent({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Same defer-then-upgrade pattern as the reader's theme (story-reader.tsx):
-  // SSR and first paint stay on light so hydration matches exactly, then
-  // this upgrades to whatever the reader last picked on this device. The
-  // toggle button itself lives in KekereNav (a sibling, not a parent, of
-  // this component) — onFeedThemeChange is what makes a tap there repaint
-  // the feed instantly instead of waiting for the next page load.
+  // Only needed here for the header blur backdrop's alpha channel (see
+  // FEED_HEADER_BLUR_DARK/LIGHT above) — everything else on this page reads
+  // the active palette straight from --color-* tokens via KekereTheme, which
+  // is already subscribed to the same shared theme-mode state.
   useEffect(() => {
-    setDark(readFeedTheme() === "dark");
-    return onFeedThemeChange((theme) => setDark(theme === "dark"));
+    setDark(readThemeMode() === "dark");
+    return onThemeModeChange((mode) => setDark(mode === "dark"));
   }, []);
 
   // Editor's Pick has its own explicit "Save for later" button (unlike the
@@ -409,14 +392,11 @@ export function FeedContent({
   }, []);
 
   return (
-    <div
-      className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)] transition-colors duration-300"
-      style={dark ? FEED_DARK_VARS : undefined}
-    >
+    <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)] transition-colors duration-300">
       {/* Sticky header */}
       <div
         className="sticky top-0 z-30 backdrop-blur-[10px]"
-        style={{ backgroundColor: dark ? FEED_HEADER_BLUR_DARK : "rgba(245,235,221,0.94)" }}
+        style={{ backgroundColor: dark ? FEED_HEADER_BLUR_DARK : FEED_HEADER_BLUR_LIGHT }}
       >
         <div className="px-5 pb-3 pt-4">
           <span
@@ -440,22 +420,12 @@ export function FeedContent({
               <button
                 type="button"
                 onClick={() => setTagOpen(!tagOpen)}
-                className="flex cursor-pointer items-center gap-1 rounded-[30px] border px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors"
-                style={{
-                  backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
-                  borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.14)",
-                }}
+                className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors"
               >
                 Genre ▾
               </button>
               {tagOpen && (
-                <div
-                  className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
-                  style={{
-                    backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
-                    borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
-                  }}
-                >
+                <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
                   {STORY_TAGS.map((tag) => (
                     <button
                       key={tag.slug}
@@ -464,7 +434,7 @@ export function FeedContent({
                         setTagOpen(false);
                         router.push(`/kekere/tag/${tag.slug}`);
                       }}
-                      className="block w-full rounded-xl px-3 py-[9px] text-left text-[13px] font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[rgba(42,26,18,0.04)] hover:text-[var(--color-ink)]"
+                      className="block w-full rounded-xl px-3 py-[9px] text-left text-[13px] font-medium text-[var(--color-ink-muted)] transition-colors hover:bg-[var(--color-ink)]/[0.05] hover:text-[var(--color-ink)]"
                     >
                       {tag.label}
                       <span className="ml-2 text-[11px] text-[var(--color-ink-muted-2)]">
@@ -484,11 +454,7 @@ export function FeedContent({
           </div>
           <Link
             href="/kekere/wallet"
-            className="flex flex-none items-center gap-[7px] rounded-[30px] border px-[14px] py-[7px]"
-            style={{
-              backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
-              borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
-            }}
+            className="flex flex-none items-center gap-[7px] rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[14px] py-[7px]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
               <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
@@ -576,10 +542,7 @@ export function FeedContent({
           one place a reader can act without leaving the feed. */}
       {featuredStory && (
         <section className="px-5 py-[18px]">
-          <div
-            className="overflow-hidden rounded-[20px] shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)]"
-            style={{ backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF" }}
-          >
+          <div className="overflow-hidden rounded-[20px] bg-[var(--color-surface)] shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)]">
             <Link href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`} className="block">
               <div
                 className="relative aspect-[3/4] w-full overflow-hidden"
@@ -638,7 +601,7 @@ export function FeedContent({
                 type="button"
                 onClick={toggleFeaturedSave}
                 disabled={featuredSaving}
-                className="flex flex-1 items-center justify-center gap-[6px] border-2 border-[rgba(42,26,18,0.15)] bg-transparent py-[12px] text-[13.5px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[rgba(42,26,18,0.3)] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-[6px] border-2 border-[var(--color-ink)]/15 bg-transparent py-[12px] text-[13.5px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-ink)]/30 disabled:opacity-60"
               >
                 {featuredSaved ? (
                   <BookmarkCheck size={15} className="text-[var(--color-primary)]" />
