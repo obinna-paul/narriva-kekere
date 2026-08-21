@@ -11,7 +11,7 @@ import { StorySearch } from "@/components/kekere/story-search";
 import { KemiChat } from "@/components/kekere/kemi-chat";
 import { MatureBadge } from "@/components/kekere/MatureBadge";
 import { LonglistBadge } from "@/components/kekere/LonglistBadge";
-import { ChevronRight, Bookmark, BookmarkCheck } from "lucide-react";
+import { ChevronRight, Bookmark, BookmarkCheck, Moon, Sun } from "lucide-react";
 import {
   buildGreetingPool,
   pickRandomGreeting,
@@ -20,6 +20,33 @@ import {
   GREETING_ROTATION_MS,
   type GreetingPersonalization,
 } from "@/content/kekere-feed-greetings";
+
+/**
+ * Feed-only light/dark toggle. Scoped deliberately to just this component's
+ * subtree (not the nav bar above it, not any other page) — a reader opts
+ * into a dark feed the way they'd flip a reading-light switch, not a global
+ * app theme. Reuses the exact palette the story reader's own "Dark"
+ * background option already established (story-reader.tsx's READER_THEMES),
+ * so a reader who likes dark in one place sees the same tone in the other
+ * instead of two different "darks" in the same app.
+ */
+type FeedTheme = "light" | "dark";
+const FEED_THEME_STORAGE_KEY = "kekere-feed-theme";
+
+const FEED_DARK_VARS: React.CSSProperties = {
+  "--color-bg": "#181510",
+  "--color-ink": "#EDE6DA",
+  "--color-ink-muted": "#B8AE9E",
+  "--color-ink-muted-2": "#9A9082",
+} as React.CSSProperties;
+
+// The handful of spots that use a literal white/cream surface color instead
+// of a --color-* token (a translucent sticky-header blur, and a few pill/
+// card surfaces) — CSS variable overrides can't reach these since they're
+// not var()-based, so they're swapped explicitly wherever `dark` is true.
+const FEED_SURFACE_DARK = "#211B14";
+const FEED_HEADER_BLUR_DARK = "rgba(24,21,16,0.94)";
+const FEED_BORDER_DARK = "rgba(237,230,218,0.14)";
 
 function thumbnailPattern(seed: string): string {
   const i = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -247,8 +274,31 @@ export function FeedContent({
   const [greeting, setGreeting] = useState(initialGreeting);
   const [featuredSaved, setFeaturedSaved] = useState(false);
   const [featuredSaving, setFeaturedSaving] = useState(false);
+  const [feedTheme, setFeedTheme] = useState<FeedTheme>("light");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const dark = feedTheme === "dark";
+
+  // Same defer-then-upgrade pattern as the reader's theme (story-reader.tsx):
+  // SSR and first paint stay on the "light" default so hydration matches
+  // exactly, then this upgrades to whatever the reader last picked on this
+  // device.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FEED_THEME_STORAGE_KEY);
+      if (saved === "light" || saved === "dark") setFeedTheme(saved);
+    } catch {
+      // ignore unavailable storage
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FEED_THEME_STORAGE_KEY, feedTheme);
+    } catch {
+      // ignore unavailable storage
+    }
+  }, [feedTheme]);
 
   // Editor's Pick has its own explicit "Save for later" button (unlike the
   // rest of the feed, which only saves through the preview sheet), so it
@@ -369,9 +419,15 @@ export function FeedContent({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)]">
+    <div
+      className="min-h-screen bg-[var(--color-bg)] pb-[calc(80px+env(safe-area-inset-bottom))] text-[var(--color-ink)] transition-colors duration-300"
+      style={dark ? FEED_DARK_VARS : undefined}
+    >
       {/* Sticky header */}
-      <div className="sticky top-0 z-30 bg-[rgba(245,235,221,0.94)] backdrop-blur-[10px]">
+      <div
+        className="sticky top-0 z-30 backdrop-blur-[10px]"
+        style={{ backgroundColor: dark ? FEED_HEADER_BLUR_DARK : "rgba(245,235,221,0.94)" }}
+      >
         <div className="px-5 pb-3 pt-4">
           <span
             className="line-clamp-2 text-[13.5px] font-medium leading-[1.35] text-[var(--color-primary)]"
@@ -394,12 +450,22 @@ export function FeedContent({
               <button
                 type="button"
                 onClick={() => setTagOpen(!tagOpen)}
-                className="flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
+                className="flex cursor-pointer items-center gap-1 rounded-[30px] border px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors"
+                style={{
+                  backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
+                  borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.14)",
+                }}
               >
                 Genre ▾
               </button>
               {tagOpen && (
-                <div className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
+                <div
+                  className="absolute left-0 top-full z-50 mt-1 max-h-[360px] w-[240px] overflow-y-auto rounded-2xl border p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]"
+                  style={{
+                    backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
+                    borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
+                  }}
+                >
                   {STORY_TAGS.map((tag) => (
                     <button
                       key={tag.slug}
@@ -426,16 +492,36 @@ export function FeedContent({
               topGenre={greetingPersonalization.topGenre}
             />
           </div>
-          <Link
-            href="/kekere/wallet"
-            className="flex flex-none items-center gap-[7px] rounded-[30px] border border-[rgba(42,26,18,0.1)] bg-white px-[14px] py-[7px]"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-              <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
-              <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
-            </svg>
-            <span className="text-[13px] font-semibold text-[var(--color-ink)]">{balance}</span>
-          </Link>
+          <div className="flex flex-none items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() => setFeedTheme(dark ? "light" : "dark")}
+              aria-label={dark ? "Switch to light background" : "Switch to dark background"}
+              aria-pressed={dark}
+              className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full border transition-colors"
+              style={{
+                backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
+                borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
+                color: "var(--color-ink-muted)",
+              }}
+            >
+              {dark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <Link
+              href="/kekere/wallet"
+              className="flex flex-none items-center gap-[7px] rounded-[30px] border px-[14px] py-[7px]"
+              style={{
+                backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF",
+                borderColor: dark ? FEED_BORDER_DARK : "rgba(42,26,18,0.1)",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+                <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
+                <path d="M12 5 Q13.5 12 12 19 M12 5 Q10.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.1" fill="none" />
+              </svg>
+              <span className="text-[13px] font-semibold text-[var(--color-ink)]">{balance}</span>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -516,7 +602,10 @@ export function FeedContent({
           one place a reader can act without leaving the feed. */}
       {featuredStory && (
         <section className="px-5 py-[18px]">
-          <div className="overflow-hidden rounded-[20px] bg-white shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)]">
+          <div
+            className="overflow-hidden rounded-[20px] shadow-[0_18px_40px_-20px_rgba(199,93,44,0.4)] ring-1 ring-[rgba(199,93,44,0.14)]"
+            style={{ backgroundColor: dark ? FEED_SURFACE_DARK : "#FFFFFF" }}
+          >
             <Link href={`/kekere/story/${featuredStory.slug ?? featuredStory.id}`} className="block">
               <div
                 className="relative aspect-[3/4] w-full overflow-hidden"
