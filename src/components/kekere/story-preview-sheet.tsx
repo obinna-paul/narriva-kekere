@@ -135,7 +135,7 @@ export function StoryPreviewSheet({
       <div className="fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-y-auto rounded-t-[24px] bg-[var(--color-bg)] shadow-[0_-20px_60px_-10px_rgba(42,26,18,0.5)]">
         {/* Drag handle */}
         <div className="flex justify-center pb-1 pt-3">
-          <div className="h-[3px] w-10 rounded-full bg-[rgba(42,26,18,0.18)]" />
+          <div className="h-[3px] w-10 rounded-full bg-[var(--color-ink)]/[0.18]" />
         </div>
 
         {step === "preview" ? (
@@ -212,7 +212,7 @@ export function StoryPreviewSheet({
                 <button
                   onClick={toggleSave}
                   disabled={saving}
-                  className="flex flex-1 items-center justify-center gap-[6px] rounded-[14px] border-2 border-[rgba(42,26,18,0.15)] bg-transparent py-[13px] text-[14px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[rgba(42,26,18,0.3)] disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-[6px] rounded-[14px] border-2 border-[var(--color-ink)]/15 bg-transparent py-[13px] text-[14px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-ink)]/30 disabled:opacity-60"
                 >
                   {saved ? (
                     <BookmarkCheck size={15} className="text-[var(--color-primary)]" />
@@ -254,7 +254,7 @@ export function StoryPreviewSheet({
               />
             </div>
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
+            <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_12px_36px_-16px_rgba(42,26,18,0.28)]">
               {/* Balance / cost ledger */}
               <div className="px-5 pt-5">
                 <div className="flex items-center justify-between text-[13.5px]">
@@ -288,7 +288,7 @@ export function StoryPreviewSheet({
                   )}
                 </div>
               ) : (
-                <div className="mt-5 border-t border-[rgba(42,26,18,0.08)] bg-[rgba(199,93,44,0.05)] px-5 pb-5 pt-4">
+                <div className="mt-5 border-t border-[var(--color-border)] bg-[var(--color-primary)]/[0.05] px-5 pb-5 pt-4">
                   <p className="text-center text-[13.5px] font-semibold text-[var(--color-ink)]">
                     You&apos;re {story.cowrieCost - balance}{" "}
                     {story.cowrieCost - balance === 1 ? "cowrie" : "cowries"} away

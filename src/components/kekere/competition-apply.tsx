@@ -81,7 +81,7 @@ export function CompetitionApply({
 
   if (entered) {
     return (
-      <div className="rounded-xl bg-[rgba(31,111,74,0.1)] px-4 py-[17px] text-center text-[14px] leading-[1.55] text-[var(--color-success)]">
+      <div className="rounded-xl bg-[var(--color-success)]/10 px-4 py-[17px] text-center text-[14px] leading-[1.55] text-[var(--color-success)]">
         <span className="font-semibold">You&apos;re entered.</span> Our editors read every entry — if
         yours is accepted, it goes live on Kekere with a Longlist badge and is in the running for the
         prize. You can enter another story any time.{" "}
@@ -107,11 +107,11 @@ export function CompetitionApply({
 
       <Sheet open={draftsOpen} onOpenChange={setDraftsOpen}>
         <SheetContent side="bottom" className="flex max-h-[80vh] flex-col gap-0 p-0">
-          <div className="flex-none border-b border-[rgba(42,26,18,.10)] px-5 py-4">
-            <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">
+          <div className="flex-none border-b border-[var(--color-border)] px-5 py-4">
+            <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-ink)]">
               Choose a story to enter
             </span>
-            <p className="mt-1 text-[13px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+            <p className="mt-1 text-[13px] leading-[1.5] text-[var(--color-ink)]/[0.55]">
               Pick a finished draft you haven&apos;t submitted for review yet. Already-published
               stories aren&apos;t eligible — entries have to be new work. You can enter as many
               stories as you like.
@@ -120,16 +120,16 @@ export function CompetitionApply({
 
           <div className="flex-1 overflow-y-auto px-5 py-3">
             {drafts === null && (
-              <p className="py-8 text-center text-[13.5px] text-[rgba(42,26,18,.5)]">Loading your drafts…</p>
+              <p className="py-8 text-center text-[13.5px] text-[var(--color-ink)]/50">Loading your drafts…</p>
             )}
 
             {hasNoDrafts && (
               <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-                <PenLine size={22} className="text-[rgba(42,26,18,.35)]" />
-                <p className="text-[14px] font-semibold text-[#2A1A12]">
+                <PenLine size={22} className="text-[var(--color-ink)]/35" />
+                <p className="text-[14px] font-semibold text-[var(--color-ink)]">
                   You don&apos;t have any drafts yet
                 </p>
-                <p className="text-[13px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+                <p className="text-[13px] leading-[1.5] text-[var(--color-ink)]/[0.55]">
                   Write your story first — then come back and enter it. Entries need to be{" "}
                   {rangeLabel} words.
                 </p>
@@ -154,14 +154,14 @@ export function CompetitionApply({
                   className={cn(
                     "mb-2 flex w-full flex-col rounded-[11px] border px-4 py-3 text-left transition-colors disabled:opacity-50",
                     selected
-                      ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
-                      : "border-[rgba(42,26,18,.08)] bg-white"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)]"
                   )}
                 >
-                  <span className="text-[14.5px] font-semibold text-[#2A1A12]">
+                  <span className="text-[14.5px] font-semibold text-[var(--color-ink)]">
                     {story.title || "Untitled story"}
                   </span>
-                  <span className="mt-0.5 text-[12.5px] text-[rgba(42,26,18,.5)]">
+                  <span className="mt-0.5 text-[12.5px] text-[var(--color-ink)]/50">
                     {story.wordCount.toLocaleString()} words
                     {ineligible && ` — outside the ${rangeLabel}-word range`}
                   </span>
@@ -175,8 +175,8 @@ export function CompetitionApply({
           )}
 
           {!hasNoDrafts && (
-            <div className="flex-none border-t border-[rgba(42,26,18,.10)] px-5 py-4">
-              <p className="mb-3 text-[11.5px] leading-[1.5] text-[rgba(42,26,18,.5)]">
+            <div className="flex-none border-t border-[var(--color-border)] px-5 py-4">
+              <p className="mb-3 text-[11.5px] leading-[1.5] text-[var(--color-ink)]/50">
                 By entering the {competitionTitle}, you confirm this is your own original work and
                 that it hasn&apos;t been published anywhere else. If it&apos;s accepted, it will be
                 published on Kekere as a competition entry under the publishing agreement and the

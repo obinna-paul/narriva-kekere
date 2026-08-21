@@ -23,7 +23,7 @@ export default async function KekereWithdrawPage() {
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[#F5EBDD]">
+      <div className="min-h-screen bg-[var(--color-bg)]">
         <KekereNavWrapper />
         {isVerified && bankDetails ? (
           <WithdrawalPage
@@ -40,17 +40,17 @@ export default async function KekereWithdrawPage() {
               <Link
                 href="/kekere/wallet"
                 aria-label="Back to wallet"
-                className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[rgba(42,26,18,0.08)]"
+                className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[var(--color-border)]"
               >
-                <ArrowLeft size={16} className="text-[#8A7565]" />
+                <ArrowLeft size={16} className="text-[var(--color-ink-muted-2)]" />
               </Link>
-              <h1 className="font-[family-name:var(--font-display)] text-[22px] font-semibold text-[#2A1A12]">Withdraw</h1>
+              <h1 className="font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--color-ink)]">Withdraw</h1>
             </div>
             <div className="mt-10 flex flex-col items-center text-center">
-              <h2 className="font-[family-name:var(--font-display)] text-[19px] font-semibold text-[#2A1A12]">
+              <h2 className="font-[family-name:var(--font-display)] text-[19px] font-semibold text-[var(--color-ink)]">
                 Add your bank details first
               </h2>
-              <p className="mt-2 text-[14px] leading-[1.5] text-[#8A7565]">
+              <p className="mt-2 text-[14px] leading-[1.5] text-[var(--color-ink-muted-2)]">
                 {bankDetails
                   ? "Your bank details couldn't be verified. Update them in your profile before withdrawing."
                   : "You need a verified bank account before you can withdraw cowries."}

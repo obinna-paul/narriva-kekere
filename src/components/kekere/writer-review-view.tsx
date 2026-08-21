@@ -63,9 +63,9 @@ function renderSpansToHtml(spans: DiffSpan[]): string {
     .map((s) => {
       if (s.kind === "equal") return s.html;
       if (s.kind === "removed") {
-        return `<del style="text-decoration:line-through;text-decoration-color:#A13A3A;color:#A13A3A;background:rgba(193,58,58,0.12);border-radius:3px;">${sr("deleted:")}${s.html}</del>`;
+        return `<del style="text-decoration:line-through;text-decoration-color:var(--color-danger);color:var(--color-danger);background:color-mix(in srgb, var(--color-danger) 12%, transparent);border-radius:3px;">${sr("deleted:")}${s.html}</del>`;
       }
-      return `<ins style="text-decoration:underline;text-decoration-color:#1F8A5B;color:#1F8A5B;background:rgba(31,138,91,0.14);border-radius:3px;">${sr("inserted:")}${s.html}</ins>`;
+      return `<ins style="text-decoration:underline;text-decoration-color:var(--color-success);color:var(--color-success);background:color-mix(in srgb, var(--color-success) 14%, transparent);border-radius:3px;">${sr("inserted:")}${s.html}</ins>`;
     })
     .join("");
 }
@@ -438,7 +438,7 @@ export function WriterReviewView(props: WriterReviewProps) {
     return (
       <div key={keyHint ?? u.id} className="relative overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white shadow-[0_1px_2px_rgba(42,26,18,0.04)]">
         <div className="flex items-center justify-between border-b border-[rgba(42,26,18,0.06)] bg-[rgba(42,26,18,0.02)] px-4 py-2.5">
-          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]", u.kind === "added" ? "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]" : u.kind === "removed" ? "bg-[rgba(193,58,58,0.1)] text-[#A13A3A]" : "bg-[rgba(199,93,44,0.12)] text-[var(--color-primary)]")}><AlertCircle size={10} />{u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}</span>
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.04em]", u.kind === "added" ? "bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]" : u.kind === "removed" ? "bg-[rgba(193,58,58,0.1)] text-[var(--color-danger)]" : "bg-[rgba(199,93,44,0.12)] text-[var(--color-primary)]")}><AlertCircle size={10} />{u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}</span>
           {changeNo != null && <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--color-ink-muted-3)]">Change {changeNo} of {changeUnits.length}</span>}
         </div>
 
@@ -650,7 +650,7 @@ export function WriterReviewView(props: WriterReviewProps) {
         </div>
       )}
 
-      {error && <p role="alert" className="mb-4 text-[13px] font-medium text-[#A13A3A]">{error}</p>}
+      {error && <p role="alert" className="mb-4 text-[13px] font-medium text-[var(--color-danger)]">{error}</p>}
 
       {goesToEditor && (
         <div className="mb-4"><label className="mb-1.5 block text-[13px] font-semibold text-[var(--color-ink)]">A note to your editor (optional)</label><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Explain why you kept certain changes…" className="w-full resize-none rounded-xl border border-[rgba(42,26,18,0.14)] bg-white px-4 py-3 text-[14px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]/30" /></div>
@@ -713,7 +713,7 @@ function WriterNoteBlock({ isOpen, draft, notes, onClose, onDraftChange, onAdd, 
   return (
     <div className="flex flex-col gap-2">
       {notes.length > 0 && (
-        <ul className="flex flex-col gap-1.5">{notes.map((n, i) => (<li key={i} className="flex items-start gap-2 rounded-lg bg-[rgba(199,93,44,0.07)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)]"><MessageSquare size={12} className="mt-0.5 flex-none text-[var(--color-primary)]" /><span className="min-w-0 flex-1 whitespace-pre-wrap">{n}</span><button type="button" onClick={() => onRemove(i)} className="flex-none text-[var(--color-ink-muted-3)] active:text-[#A13A3A]" aria-label="Remove note"><X size={12} /></button></li>))}</ul>
+        <ul className="flex flex-col gap-1.5">{notes.map((n, i) => (<li key={i} className="flex items-start gap-2 rounded-lg bg-[rgba(199,93,44,0.07)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)]"><MessageSquare size={12} className="mt-0.5 flex-none text-[var(--color-primary)]" /><span className="min-w-0 flex-1 whitespace-pre-wrap">{n}</span><button type="button" onClick={() => onRemove(i)} className="flex-none text-[var(--color-ink-muted-3)] active:text-[var(--color-danger)]" aria-label="Remove note"><X size={12} /></button></li>))}</ul>
       )}
       {isOpen && (
         <div className="flex flex-col gap-2"><textarea value={draft} onChange={(e) => onDraftChange(e.target.value)} rows={2} autoFocus placeholder="Tell your editor what you think…" className="w-full resize-none rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-[12.5px] leading-relaxed text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-3)] focus:border-[var(--color-primary)] focus:outline-none" /><div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-full px-3 py-1 text-[11px] font-semibold text-[var(--color-ink-muted-2)] active:text-[var(--color-ink)]">Cancel</button><button type="button" onClick={onAdd} disabled={!draft.trim()} className="rounded-full bg-[var(--color-primary)] px-3 py-1 text-[11px] font-semibold text-white transition-opacity disabled:opacity-40">Add note</button></div></div>

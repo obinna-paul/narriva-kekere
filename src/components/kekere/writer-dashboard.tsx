@@ -109,13 +109,13 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
   const otherStories = stories?.filter((s) => !EDITABLE.includes(s.status)) ?? [];
 
   return (
-    <div className="min-h-screen bg-[#F5EBDD]">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-[rgba(42,26,18,.08)] bg-[#F5EBDD]/95 backdrop-blur-md">
+      <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-5 py-3.5">
           <Link
             href="/kekere/feed"
-            className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#C75D2C]"
+            className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-primary)]"
           >
             Kekere
           </Link>
@@ -306,20 +306,20 @@ function StoryCard({
         {isRejected && (
           <a
             href={`/api/kekere/stories/${story.id}/export`}
-            className="text-[12.5px] font-semibold text-[#C75D2C] underline"
+            className="text-[12.5px] font-semibold text-[var(--color-primary)] underline"
           >
             Export as .docx first
           </a>
         )}
         {deleteError && (
-          <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
+          <p className="text-[12.5px] text-[var(--color-danger)]">Couldn&apos;t delete — try again.</p>
         )}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setConfirming(false)}
             disabled={deleting}
-            className="rounded-full border border-[rgba(42,26,18,.16)] px-4 py-1.5 text-[13px] font-semibold text-[#2A1A12] disabled:opacity-60"
+            className="rounded-full border border-[var(--color-border)] px-4 py-1.5 text-[13px] font-semibold text-[var(--color-ink)] disabled:opacity-60"
           >
             Cancel
           </button>
@@ -401,7 +401,7 @@ function StoryCard({
             setConfirming(true);
           }}
           aria-label="Delete story"
-          className="absolute right-3 top-3 rounded-full p-1.5 text-[rgba(42,26,18,.35)] transition-colors hover:bg-[rgba(193,58,58,0.08)] hover:text-[#A13A3A]"
+          className="absolute right-3 top-3 rounded-full p-1.5 text-[var(--color-ink)]/35 transition-colors hover:bg-[var(--color-danger)]/[0.08] hover:text-[var(--color-danger)]"
         >
           <Trash2 size={15} />
         </button>

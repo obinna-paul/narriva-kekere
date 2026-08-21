@@ -66,11 +66,11 @@ export function WelcomeBonusModal({ cowries }: WelcomeBonusModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Welcome to Kekere"
-        className="fixed bottom-0 left-0 right-0 z-[61] mx-auto max-w-sm rounded-t-[24px] bg-[#FBF5EC] px-6 pb-10 pt-8 shadow-[0_-16px_48px_rgba(42,26,18,.28)] md:bottom-auto md:left-1/2 md:top-1/2 md:rounded-[20px] md:-translate-x-1/2 md:-translate-y-1/2"
+        className="fixed bottom-0 left-0 right-0 z-[61] mx-auto max-w-sm rounded-t-[24px] bg-[var(--color-bg)] px-6 pb-10 pt-8 shadow-[0_-16px_48px_rgba(42,26,18,.28)] md:bottom-auto md:left-1/2 md:top-1/2 md:rounded-[20px] md:-translate-x-1/2 md:-translate-y-1/2"
         style={{ animation: "wbSlideUp .32s cubic-bezier(.2,.8,.2,1)" }}
       >
         {/* Two stacked cowries — the gift is the currency itself */}
-        <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[rgba(199,93,44,0.12)]">
+        <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[var(--color-primary-muted)]">
           <svg width="42" height="36" viewBox="0 0 32 24" aria-hidden="true">
             <ellipse cx="12" cy="12" rx="6" ry="9" fill="#C75D2C" />
             <path d="M12 5 Q13.5 12 12 19" stroke="#F5EBDD" strokeWidth="1.2" fill="none" />
@@ -79,10 +79,10 @@ export function WelcomeBonusModal({ cowries }: WelcomeBonusModalProps) {
           </svg>
         </div>
 
-        <h2 className="text-center font-[family-name:var(--font-display)] text-[22px] font-semibold leading-[1.2] text-[#2A1A12]">
+        <h2 className="text-center font-[family-name:var(--font-display)] text-[22px] font-semibold leading-[1.2] text-[var(--color-ink)]">
           Welcome — here&apos;s {cowries} {cowrieWord}
         </h2>
-        <p className="mx-auto mt-3 max-w-[290px] text-center text-[14px] leading-[1.6] text-[rgba(42,26,18,.65)]">
+        <p className="mx-auto mt-3 max-w-[290px] text-center text-[14px] leading-[1.6] text-[var(--color-ink)]/[0.65]">
           They&apos;re in your wallet now, ready to spend. Stories here cost a few cowries each — and
           most of it goes straight to the writer. These first {cowries === 1 ? "one is" : "ones are"} on
           us.
@@ -91,7 +91,7 @@ export function WelcomeBonusModal({ cowries }: WelcomeBonusModalProps) {
         <button
           type="button"
           onClick={dismiss}
-          className="mt-7 w-full cursor-pointer rounded-[30px] bg-[#C75D2C] py-[14px] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
+          className="mt-7 w-full cursor-pointer rounded-[30px] bg-[var(--color-primary)] py-[14px] text-[15px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
           style={{ border: "none" }}
         >
           Find a story

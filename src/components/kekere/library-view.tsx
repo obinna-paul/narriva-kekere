@@ -51,18 +51,18 @@ function LibraryCard({
   const cta =
     variant === "saved"
       ? story.isFree
-        ? { text: "Saved · Free", color: "text-[#1F6F4A]" }
-        : { text: `Saved · ${story.cowrieCost} to unlock`, color: "text-[#8A7565]" }
+        ? { text: "Saved · Free", color: "text-[var(--color-success)]" }
+        : { text: `Saved · ${story.cowrieCost} to unlock`, color: "text-[var(--color-ink-muted-2)]" }
       : variant === "unlocked"
-        ? { text: "Unlocked · Read again", color: "text-[#C75D2C]" }
+        ? { text: "Unlocked · Read again", color: "text-[var(--color-primary)]" }
         : scrollFraction === undefined || scrollFraction >= 1
-          ? { text: "Finished", color: "text-[#1F6F4A]" }
-          : { text: "Continue reading →", color: "text-[#C75D2C]" };
+          ? { text: "Finished", color: "text-[var(--color-success)]" }
+          : { text: "Continue reading →", color: "text-[var(--color-primary)]" };
 
   return (
     <Link
       href={`/kekere/story/${story.slug ?? story.id}`}
-      className="flex gap-[14px] rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white p-3 transition-colors hover:border-[var(--color-primary)]"
+      className="flex gap-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 transition-colors hover:border-[var(--color-primary)]"
     >
       <div
         className="relative h-[84px] w-[84px] flex-none overflow-hidden rounded-[8px]"
@@ -100,7 +100,7 @@ function LibraryCard({
         </div>
 
         {variant === "history" && scrollFraction !== undefined && scrollFraction < 1 && (
-          <div className="mt-[9px] h-1 overflow-hidden rounded-[2px] bg-[rgba(42,26,18,0.1)]">
+          <div className="mt-[9px] h-1 overflow-hidden rounded-[2px] bg-[var(--color-ink)]/10">
             <div
               className="h-full bg-[var(--color-primary)]"
               style={{ width: `${Math.round(scrollFraction * 100)}%` }}
@@ -154,7 +154,7 @@ export function LibraryView({
         </h1>
       </header>
 
-      <div className="sticky top-0 z-20 flex gap-2 bg-[rgba(245,235,221,0.95)] px-[22px] pb-3 pt-[10px] backdrop-blur-[10px]">
+      <div className="sticky top-0 z-20 flex gap-2 bg-[var(--color-bg)]/95 px-[22px] pb-3 pt-[10px] backdrop-blur-[10px]">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -164,7 +164,7 @@ export function LibraryView({
               "cursor-pointer rounded-[30px] border px-4 py-[9px] text-[13.5px] font-semibold transition-colors",
               tab === t.id
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)]"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink-muted)]"
             )}
           >
             {t.label}

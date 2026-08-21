@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useKekerePulse } from "@/components/kekere/pulse-provider";
+import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 
 type NotificationType =
   | "STORY_SUBMITTED"
@@ -36,27 +37,53 @@ interface Notification {
   createdAt: string;
 }
 
-// Glyph characters in tinted circles — matches the design spec exactly
-const TYPE_CONFIG: Record<NotificationType, { glyph: string; bg: string; fg: string }> = {
-  STORY_APPROVED:            { glyph: "✓", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  STORY_REVISIONS_REQUESTED: { glyph: "✎", bg: "rgba(199,122,30,.16)", fg: "#A8690F" },
-  STORY_REJECTED:            { glyph: "✕", bg: "rgba(42,26,18,.08)",    fg: "rgba(42,26,18,.5)" },
-  STORY_SUBMITTED:           { glyph: "↗", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  CONTRACT_RECEIVED:         { glyph: "✶", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
-  COMPETITION_RESULT:        { glyph: "★", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
-  REFERRAL_REWARD_EARNED:    { glyph: "◆", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
-  REFERRAL_JOINED:           { glyph: "◇", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  WITHDRAWAL_PROCESSED:      { glyph: "₦", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  WITHDRAWAL_REJECTED:       { glyph: "✕", bg: "rgba(42,26,18,.08)",    fg: "rgba(42,26,18,.5)" },
-  VERSION_RESTORED:          { glyph: "⟲", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
-  STREAK_MILESTONE_REACHED:  { glyph: "🔥", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
-  NEW_FOLLOWER:              { glyph: "★", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  WRITER_PUBLISHED:          { glyph: "✎", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
-  NOTE_RECEIVED:             { glyph: "✉", bg: "rgba(154,106,63,.16)",  fg: "#7A4A2E" },
-  NOTE_REPLIED:              { glyph: "↩", bg: "rgba(31,75,75,.12)",    fg: "#1F4B4B" },
-  STREAK_AT_RISK:            { glyph: "⚡", bg: "rgba(199,93,44,.14)",   fg: "#C75D2C" },
-  EDITS_PROPOSED:            { glyph: "✎", bg: "rgba(199,122,30,.16)",  fg: "#A8690F" },
-};
+// Glyph characters in tinted circles — matches the design spec exactly.
+// Five recurring colour pairs, each with a dark-mode variant: the light
+// values are too low-contrast as-is once the circle sits on a near-black
+// page (a dark teal/tan glyph on a barely-visible dark tint reads as
+// invisible), so getTypeConfig picks the right pair for the active theme.
+const TEAL = { light: "#1F4B4B", dark: "#4FA3A3" };
+const AMBER = { light: "#A8690F", dark: "#E0A048" };
+const MUTED_INK = { light: "rgba(42,26,18,.5)", dark: "rgba(237,230,218,.5)" };
+const TAN = { light: "#7A4A2E", dark: "#C08A5E" };
+const ORANGE = { light: "#C75D2C", dark: "#E2895A" };
+
+function tint(color: { light: string; dark: string }, alpha: number, dark: boolean) {
+  const hex = dark ? color.dark : color.light;
+  if (hex.startsWith("rgba")) return hex; // MUTED_INK is already rgba with its own alpha
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function getTypeConfig(dark: boolean): Record<NotificationType, { glyph: string; bg: string; fg: string }> {
+  const teal = { bg: tint(TEAL, dark ? 0.18 : 0.12, dark), fg: dark ? TEAL.dark : TEAL.light };
+  const amber = { bg: tint(AMBER, dark ? 0.2 : 0.16, dark), fg: dark ? AMBER.dark : AMBER.light };
+  const muted = { bg: dark ? "rgba(237,230,218,.1)" : "rgba(42,26,18,.08)", fg: dark ? MUTED_INK.dark : MUTED_INK.light };
+  const tan = { bg: tint(TAN, dark ? 0.2 : 0.16, dark), fg: dark ? TAN.dark : TAN.light };
+  const orange = { bg: tint(ORANGE, dark ? 0.2 : 0.14, dark), fg: dark ? ORANGE.dark : ORANGE.light };
+  return {
+    STORY_APPROVED:            { glyph: "✓", ...teal },
+    STORY_REVISIONS_REQUESTED: { glyph: "✎", ...amber },
+    STORY_REJECTED:            { glyph: "✕", ...muted },
+    STORY_SUBMITTED:           { glyph: "↗", ...teal },
+    CONTRACT_RECEIVED:         { glyph: "✶", ...tan },
+    COMPETITION_RESULT:        { glyph: "★", ...orange },
+    REFERRAL_REWARD_EARNED:    { glyph: "◆", ...orange },
+    REFERRAL_JOINED:           { glyph: "◇", ...teal },
+    WITHDRAWAL_PROCESSED:      { glyph: "₦", ...teal },
+    WITHDRAWAL_REJECTED:       { glyph: "✕", ...muted },
+    VERSION_RESTORED:          { glyph: "⟲", ...tan },
+    STREAK_MILESTONE_REACHED:  { glyph: "🔥", ...orange },
+    NEW_FOLLOWER:              { glyph: "★", ...teal },
+    WRITER_PUBLISHED:          { glyph: "✎", ...orange },
+    NOTE_RECEIVED:             { glyph: "✉", ...tan },
+    NOTE_REPLIED:              { glyph: "↩", ...teal },
+    STREAK_AT_RISK:            { glyph: "⚡", ...orange },
+    EDITS_PROPOSED:            { glyph: "✎", ...amber },
+  };
+}
 
 function formatRelativeTime(iso: string): string {
   const diffSec = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
@@ -84,6 +111,16 @@ export function NotificationBell() {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragDx, setDragDx] = useState(0);
   const startXRef = useRef(0);
+
+  // Needed only for the glyph tints above (getTypeConfig) and the swipe
+  // "Delete" reveal below — everything else in this drawer uses --color-*
+  // tokens, which already follow KekereTheme's active palette on their own.
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setDark(readThemeMode() === "dark");
+    return onThemeModeChange((mode) => setDark(mode === "dark"));
+  }, []);
+  const typeConfig = useMemo(() => getTypeConfig(dark), [dark]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -165,8 +202,8 @@ export function NotificationBell() {
         className={cn(
           "relative flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border transition-colors",
           open
-            ? "border-[#C75D2C] bg-[#C75D2C] text-white"
-            : "border-[rgba(42,26,18,.12)] bg-white text-[#2A1A12] hover:border-[rgba(42,26,18,.2)]"
+            ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+            : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-ink)]/20"
         )}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -174,7 +211,7 @@ export function NotificationBell() {
           <path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -right-[3px] -top-[3px] flex min-w-[18px] items-center justify-center rounded-full border-2 border-[#FBF5EC] bg-[#C75D2C] px-1 pb-px text-[10.5px] font-bold leading-none text-white" style={{ height: 18 }}>
+          <span className="absolute -right-[3px] -top-[3px] flex min-w-[18px] items-center justify-center rounded-full border-2 border-[var(--color-surface)] bg-[var(--color-primary)] px-1 pb-px text-[10.5px] font-bold leading-none text-white" style={{ height: 18 }}>
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -204,11 +241,11 @@ export function NotificationBell() {
           <div
             className={cn(
               "notif-sheet",
-              "fixed z-50 flex flex-col bg-[#FBF5EC]",
+              "fixed z-50 flex flex-col bg-[var(--color-bg)]",
               // Mobile — bottom sheet
               "inset-x-0 bottom-0 max-h-[80%] rounded-t-[20px] shadow-[0_-14px_44px_rgba(42,26,18,.25)]",
               // Desktop — right panel
-              "md:inset-x-auto md:bottom-0 md:right-0 md:top-0 md:w-[396px] md:max-h-none md:rounded-none md:border-l md:border-[rgba(42,26,18,.12)] md:shadow-[-12px_0_40px_rgba(42,26,18,.16)]"
+              "md:inset-x-auto md:bottom-0 md:right-0 md:top-0 md:w-[396px] md:max-h-none md:rounded-none md:border-l md:border-[var(--color-border)] md:shadow-[-12px_0_40px_rgba(42,26,18,.16)]"
             )}
           >
             {/* Mobile drag handle */}
@@ -218,12 +255,12 @@ export function NotificationBell() {
               className="flex w-full justify-center py-[9px] pb-1 md:hidden"
               aria-label="Close notifications"
             >
-              <span className="h-1 w-10 rounded-full bg-[rgba(42,26,18,.2)]" />
+              <span className="h-1 w-10 rounded-full bg-[var(--color-ink)]/20" />
             </button>
 
             {/* Header */}
-            <div className="flex-none flex items-center justify-between border-b border-[rgba(42,26,18,.1)] px-4 py-[14px]">
-              <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12]">
+            <div className="flex-none flex items-center justify-between border-b border-[var(--color-border)] px-4 py-[14px]">
+              <span className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">
                 Notifications
               </span>
               <div className="flex items-center gap-2">
@@ -231,7 +268,7 @@ export function NotificationBell() {
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="border-none bg-transparent text-[12.5px] font-semibold text-[#C75D2C]"
+                    className="border-none bg-transparent text-[12.5px] font-semibold text-[var(--color-primary)]"
                   >
                     Mark all as read
                   </button>
@@ -239,7 +276,7 @@ export function NotificationBell() {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[rgba(42,26,18,.05)] text-[15px] text-[#2A1A12]"
+                  className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[var(--color-ink)]/[0.05] text-[15px] text-[var(--color-ink)]"
                   aria-label="Close"
                 >
                   ✕
@@ -250,16 +287,16 @@ export function NotificationBell() {
             {/* Empty state */}
             {notifications.length === 0 && (
               <div className="flex flex-1 flex-col items-center justify-center gap-[14px] px-8 py-11 text-center">
-                <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[rgba(31,75,75,.1)] text-[#1F4B4B]">
+                <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)]">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M13.7 21a2 2 0 0 1-3.4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </span>
-                <p className="font-[family-name:var(--font-display)] text-[16px] font-semibold text-[#2A1A12]">
+                <p className="font-[family-name:var(--font-display)] text-[16px] font-semibold text-[var(--color-ink)]">
                   You&apos;re all caught up
                 </p>
-                <p className="max-w-[250px] text-[13.5px] leading-[1.5] text-[rgba(42,26,18,.55)]">
+                <p className="max-w-[250px] text-[13.5px] leading-[1.5] text-[var(--color-ink)]/[0.55]">
                   Notifications about your stories will appear here.
                 </p>
               </div>
@@ -269,7 +306,7 @@ export function NotificationBell() {
             {notifications.length > 0 && (
               <div className="flex-1 overflow-y-auto py-[6px]">
                 {notifications.map((n) => {
-                  const config = TYPE_CONFIG[n.type];
+                  const config = typeConfig[n.type];
                   if (!config) return null;
                   const { glyph, bg, fg } = config;
                   const dx = dragId === n.id ? dragDx : 0;
@@ -291,10 +328,8 @@ export function NotificationBell() {
                         onPointerDown={(e) => onPointerDown(n.id, e)}
                         onPointerMove={onPointerMove}
                         onPointerUp={() => onPointerUp(n.id)}
-                        className="relative flex cursor-pointer gap-3 px-4 py-[13px]"
+                        className="relative flex cursor-pointer gap-3 border-b border-[var(--color-ink)]/[0.06] bg-[var(--color-bg)] px-4 py-[13px]"
                         style={{
-                          background: "#FBF5EC",
-                          borderBottom: "1px solid rgba(42,26,18,.06)",
                           transform: `translateX(${dx}px)`,
                           transition: isDragging ? "none" : "transform .15s ease",
                           touchAction: "pan-y",
@@ -314,19 +349,19 @@ export function NotificationBell() {
                             <span
                               className={cn(
                                 "flex-1 text-[13.5px] leading-[1.35]",
-                                n.read ? "font-medium text-[rgba(42,26,18,.7)]" : "font-bold text-[#2A1A12]"
+                                n.read ? "font-medium text-[var(--color-ink)]/70" : "font-bold text-[var(--color-ink)]"
                               )}
                             >
                               {n.title}
                             </span>
                             {!n.read && (
-                              <span className="mt-1 h-2 w-2 flex-none rounded-full bg-[#C75D2C]" />
+                              <span className="mt-1 h-2 w-2 flex-none rounded-full bg-[var(--color-primary)]" />
                             )}
                           </div>
-                          <p className="mt-[3px] text-[12.5px] leading-[1.45] text-[rgba(42,26,18,.6)]">
+                          <p className="mt-[3px] text-[12.5px] leading-[1.45] text-[var(--color-ink)]/60">
                             {n.body}
                           </p>
-                          <p className="mt-[5px] text-[11px] text-[rgba(42,26,18,.42)]">
+                          <p className="mt-[5px] text-[11px] text-[var(--color-ink)]/[0.42]">
                             {formatRelativeTime(n.createdAt)}
                           </p>
                         </div>
@@ -341,7 +376,7 @@ export function NotificationBell() {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleDismiss(n.id); }}
                           aria-label="Dismiss"
-                          className="flex-none self-start rounded-[6px] border-none bg-transparent p-[5px] text-[13px] text-[rgba(42,26,18,.35)] hover:bg-[rgba(42,26,18,.08)] hover:text-[#B3371D]"
+                          className="flex-none self-start rounded-[6px] border-none bg-transparent p-[5px] text-[13px] text-[var(--color-ink)]/35 hover:bg-[var(--color-ink)]/[0.08] hover:text-[#B3371D]"
                         >
                           ✕
                         </button>

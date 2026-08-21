@@ -85,15 +85,15 @@ function countWords(text: string): number {
 const EDITABLE_STATUSES: Status[] = ["DRAFT", "REVISIONS_REQUESTED"];
 
 const STATUS_STYLES: Record<Status, string> = {
-  DRAFT: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-  SUBMITTED: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
-  REVIEWING: "bg-[rgba(31,75,75,0.12)] text-[var(--color-accent)]",
+  DRAFT: "bg-[var(--color-accent)]/[0.12] text-[var(--color-accent)]",
+  SUBMITTED: "bg-[var(--color-accent)]/[0.12] text-[var(--color-accent)]",
+  REVIEWING: "bg-[var(--color-accent)]/[0.12] text-[var(--color-accent)]",
   REVISIONS_REQUESTED: "bg-[var(--color-primary-muted)] text-[var(--color-primary)]",
-  PENDING_CONTRACT: "bg-[rgba(31,111,74,0.1)] text-[var(--color-success)]",
-  PUBLISHED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
-  REJECTED: "bg-[rgba(193,58,58,0.12)] text-[#A13A3A]",
+  PENDING_CONTRACT: "bg-[var(--color-success)]/10 text-[var(--color-success)]",
+  PUBLISHED: "bg-[var(--color-success)]/[0.12] text-[var(--color-success)]",
+  REJECTED: "bg-[var(--color-danger)]/[0.12] text-[var(--color-danger)]",
   CHANGES_PROPOSED: "bg-[rgba(199,122,30,0.12)] text-[#A8690F]",
-  ACCEPTED: "bg-[rgba(31,111,74,0.12)] text-[var(--color-success)]",
+  ACCEPTED: "bg-[var(--color-success)]/[0.12] text-[var(--color-success)]",
 };
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -563,13 +563,13 @@ export function WriterEditor({
   const hookLen = hookLine.length;
   const hookCountColor =
     hookLen >= HOOK_LINE_HARD
-      ? "text-[#B3371D]"
+      ? "text-[var(--color-danger)]"
       : hookLen >= HOOK_LINE_SOFT
         ? "text-[#C77A1E]"
-        : "text-[rgba(42,26,18,.45)]";
+        : "text-[var(--color-ink)]/45";
   const hookNoteColor =
     hookLen >= HOOK_LINE_HARD
-      ? "text-[#B3371D]"
+      ? "text-[var(--color-danger)]"
       : hookLen >= HOOK_LINE_SOFT
         ? "text-[#C77A1E]"
         : "text-transparent";
@@ -633,9 +633,9 @@ export function WriterEditor({
               phone without spilling onto a third line). */}
           <div className="flex flex-nowrap items-center justify-end gap-1.5" data-writer-header-actions>
             {isEditable && (
-              <div className="flex flex-none items-center gap-[6px] whitespace-nowrap rounded-full border border-[rgba(42,26,18,.10)] bg-white px-2 py-[5px]">
+              <div className="flex flex-none items-center gap-[6px] whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-[5px]">
                 {saveStatus.kind === "saving" ? (
-                  <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
+                  <span className="h-[11px] w-[11px] flex-none animate-spin rounded-full border-2 border-[var(--color-ink)]/20 border-t-[var(--color-primary)]" />
                 ) : (
                   <span
                     className={cn(
@@ -649,7 +649,7 @@ export function WriterEditor({
                   {savedLabel.text}
                 </span>
                 {saveStatus.kind === "conflict" && (
-                  <button type="button" onClick={openHistory} className="text-[11.5px] font-semibold text-[#B3371D] underline">
+                  <button type="button" onClick={openHistory} className="text-[11.5px] font-semibold text-[var(--color-danger)] underline">
                     View conflict
                   </button>
                 )}
@@ -660,7 +660,7 @@ export function WriterEditor({
               <button
                 type="button"
                 onClick={() => editorHandle.current?.flush("Manual save")}
-                className="flex flex-none items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-1.5 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                className="flex flex-none items-center gap-1.5 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04]"
                 title="Save (Cmd+S)"
               >
                 Save
@@ -682,7 +682,7 @@ export function WriterEditor({
                   <button
                     type="button"
                     aria-label="More options"
-                    className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[rgba(42,26,18,.06)] hover:text-[var(--color-primary)]"
+                    className="flex h-7 w-7 flex-none items-center justify-center rounded-[9px] text-[var(--color-ink-muted)] hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-primary)]"
                   >
                     <Menu size={18} />
                   </button>
@@ -745,19 +745,19 @@ export function WriterEditor({
         )}
 
         {status === "REJECTED" && moderationNotes && (
-          <div className="mb-6 rounded-lg border-l-4 border-[#A13A3A] bg-[rgba(193,58,58,0.08)] px-4 py-3" data-writer-chrome>
-            <p className="text-sm font-semibold text-[#A13A3A]">Why this wasn&apos;t accepted</p>
+          <div className="mb-6 rounded-lg border-l-4 border-[var(--color-danger)] bg-[var(--color-danger)]/[0.08] px-4 py-3" data-writer-chrome>
+            <p className="text-sm font-semibold text-[var(--color-danger)]">Why this wasn&apos;t accepted</p>
             <p className="mt-1 text-sm text-[var(--color-ink)]/80">{moderationNotes}</p>
           </div>
         )}
 
         {importError && (
-          <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border-l-4 border-[#A13A3A] bg-[rgba(193,58,58,0.08)] px-4 py-3" data-writer-chrome>
-            <p className="text-sm text-[#A13A3A]">{importError}</p>
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-lg border-l-4 border-[var(--color-danger)] bg-[var(--color-danger)]/[0.08] px-4 py-3" data-writer-chrome>
+            <p className="text-sm text-[var(--color-danger)]">{importError}</p>
             <button
               type="button"
               onClick={() => setImportError(null)}
-              className="flex-none text-[#A13A3A]/70 hover:text-[#A13A3A]"
+              className="flex-none text-[var(--color-danger)]/70 hover:text-[var(--color-danger)]"
               aria-label="Dismiss"
             >
               <X size={14} />
@@ -766,8 +766,8 @@ export function WriterEditor({
         )}
 
         {importing && (
-          <div className="mb-6 flex items-center gap-2 rounded-lg border border-[rgba(42,26,18,.14)] bg-white px-4 py-3 text-sm text-[#2A1A12]" data-writer-chrome>
-            <span className="h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-[rgba(42,26,18,.2)] border-t-[#C75D2C]" />
+          <div className="mb-6 flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-ink)]" data-writer-chrome>
+            <span className="h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-[var(--color-ink)]/20 border-t-[var(--color-primary)]" />
             Reading your document…
           </div>
         )}
@@ -775,7 +775,7 @@ export function WriterEditor({
         {status === "REJECTED" && storyId && (
           <a
             href={`/api/kekere/stories/${storyId}/export`}
-            className="mb-6 flex items-center justify-center gap-2 rounded-lg border border-[rgba(42,26,18,.14)] bg-white px-4 py-3 text-sm font-semibold text-[#2A1A12] transition-colors hover:bg-[rgba(42,26,18,.04)]"
+            className="mb-6 flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-ink)]/[0.04]"
             data-writer-chrome
           >
             <Download size={15} />
@@ -784,7 +784,7 @@ export function WriterEditor({
         )}
 
         {justSubmitted && (
-          <div className="mb-6 rounded-lg bg-[rgba(31,111,74,0.1)] px-4 py-3 text-sm text-[var(--color-success)]" data-writer-chrome>
+          <div className="mb-6 rounded-lg bg-[var(--color-success)]/10 px-4 py-3 text-sm text-[var(--color-success)]" data-writer-chrome>
             Submitted. We read everything within 5–7 business days.
           </div>
         )}
@@ -797,7 +797,7 @@ export function WriterEditor({
 
         <fieldset disabled={!isEditable} className="contents">
           {/* Field 1 — Title */}
-          <div className="mb-5 rounded-[14px] border border-[rgba(42,26,18,0.10)] bg-white px-4 py-3.5">
+          <div className="mb-5 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5">
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
               Title
             </label>
@@ -813,7 +813,7 @@ export function WriterEditor({
           </div>
 
           {/* Field 2 — Hookline */}
-          <div className="mb-5 rounded-[14px] border border-[rgba(42,26,18,0.10)] bg-white px-4 py-3.5">
+          <div className="mb-5 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5">
             <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-ink-muted-2)]">
               Hookline
             </label>
@@ -841,14 +841,14 @@ export function WriterEditor({
 
           {mode === "scroll" ? (
             initError ? (
-              <div className="flex min-h-[340px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[rgba(42,26,18,.18)] bg-[rgba(42,26,18,.02)] text-center px-6">
-                <p className="text-[14px] text-[rgba(42,26,18,.55)]">
+              <div className="flex min-h-[340px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-[var(--color-ink)]/[0.18] bg-[var(--color-ink)]/[0.02] text-center px-6">
+                <p className="text-[14px] text-[var(--color-ink)]/[0.55]">
                   Couldn&apos;t load the editor. Your story is safe — this is usually a brief connection hiccup.
                 </p>
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  className="rounded-[9px] bg-[#C75D2C] px-5 py-2 text-[13.5px] font-semibold text-white"
+                  className="rounded-[9px] bg-[var(--color-primary)] px-5 py-2 text-[13.5px] font-semibold text-white"
                 >
                   Reload and try again
                 </button>
@@ -996,7 +996,7 @@ export function WriterEditor({
                         "flex flex-col rounded-[10px] border px-4 py-2.5 text-left transition-colors disabled:opacity-50",
                         chosenCompetitionId === c.id
                           ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
-                          : "border-[var(--color-ink)]/[0.14] bg-white"
+                          : "border-[var(--color-ink)]/[0.14] bg-[var(--color-surface)]"
                       )}
                     >
                       <span className="text-[13.5px] font-semibold text-[var(--color-ink)]">{c.title}</span>
@@ -1094,7 +1094,7 @@ export function WriterEditor({
             <button
               type="button"
               onClick={cancelImport}
-              className="rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-4 py-2 text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+              className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04]"
             >
               Cancel
             </button>
@@ -1177,15 +1177,15 @@ export function WriterEditor({
       <Sheet open={historyOpen} onOpenChange={(open) => { setHistoryOpen(open); if (!open) { setSelectedVersion(null); setShowRestoreConfirm(false); } }}>
         <SheetContent side="right" className="flex flex-col gap-0 p-0">
           {/* Header */}
-          <div className="flex flex-none items-center justify-between border-b border-[rgba(42,26,18,.10)] px-[18px] py-4">
-            <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">
+          <div className="flex flex-none items-center justify-between border-b border-[var(--color-border)] px-[18px] py-4">
+            <span className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-ink)]">
               Version history
             </span>
             <button
               type="button"
               onClick={() => { setHistoryOpen(false); setSelectedVersion(null); setShowRestoreConfirm(false); }}
               aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[rgba(42,26,18,.05)] text-[#2A1A12] hover:bg-[rgba(42,26,18,.10)]"
+              className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[var(--color-ink)]/[0.05] text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.10]"
             >
               <X size={16} />
             </button>
@@ -1194,40 +1194,40 @@ export function WriterEditor({
           {selectedVersion ? (
             <div className="flex flex-1 flex-col overflow-hidden">
               {/* Back + meta */}
-              <div className="flex-none border-b border-[rgba(42,26,18,.08)] px-4 py-2.5">
+              <div className="flex-none border-b border-[var(--color-border)] px-4 py-2.5">
                 <button
                   type="button"
                   onClick={() => { setSelectedVersion(null); setShowRestoreConfirm(false); }}
-                  className="flex items-center gap-1 text-[13px] font-semibold text-[#C75D2C] hover:underline"
+                  className="flex items-center gap-1 text-[13px] font-semibold text-[var(--color-primary)] hover:underline"
                 >
                   ‹ All versions
                 </button>
-                <p className="mt-2 text-[14px] font-semibold text-[#2A1A12]">{selectedVersion.label}</p>
-                <p className="mt-0.5 text-[12px] text-[rgba(42,26,18,.5)]">
+                <p className="mt-2 text-[14px] font-semibold text-[var(--color-ink)]">{selectedVersion.label}</p>
+                <p className="mt-0.5 text-[12px] text-[var(--color-ink)]/50">
                   {selectedVersion.wordCount ? `${selectedVersion.wordCount.toLocaleString()} words · ` : ""}
                   {new Date(selectedVersion.savedAt).toLocaleString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
               {/* Preview content */}
-              <div className="flex-1 overflow-y-auto bg-[#FDF8F0] p-4">
+              <div className="flex-1 overflow-y-auto bg-[var(--color-surface)] p-4">
                 <StoryReaderContent doc={selectedVersion.content} />
               </div>
               {/* Restore footer */}
-              <div className="flex-none border-t border-[rgba(42,26,18,.10)] bg-[#FBF5EC] px-4 py-[14px]">
+              <div className="flex-none border-t border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-[14px]">
                 {status === "PUBLISHED" ? (
-                  <p className="rounded-[9px] bg-[rgba(42,26,18,.04)] px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-[rgba(42,26,18,.6)]">
+                  <p className="rounded-[9px] bg-[var(--color-ink)]/[0.04] px-[13px] py-[11px] text-[12.5px] leading-[1.5] text-[var(--color-ink)]/60">
                     Published stories cannot be edited. Contact us if you need to make changes.
                   </p>
                 ) : showRestoreConfirm ? (
                   <div>
-                    <p className="mb-2.5 text-[13px] font-medium leading-[1.5] text-[#2A1A12]">
+                    <p className="mb-2.5 text-[13px] font-medium leading-[1.5] text-[var(--color-ink)]">
                       Restore this version? A backup of your current content will be saved first.
                     </p>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setShowRestoreConfirm(false)}
-                        className="flex-1 rounded-[9px] border border-[rgba(42,26,18,.18)] py-[10px] text-[13px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+                        className="flex-1 rounded-[9px] border border-[var(--color-ink)]/[0.18] py-[10px] text-[13px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04]"
                       >
                         Cancel
                       </button>
@@ -1235,7 +1235,7 @@ export function WriterEditor({
                         type="button"
                         disabled={restoring}
                         onClick={restoreSelectedVersion}
-                        className="flex-1 rounded-[9px] bg-[#C75D2C] py-[10px] text-[13px] font-semibold text-white hover:bg-[#B5512A] disabled:opacity-50"
+                        className="flex-1 rounded-[9px] bg-[var(--color-primary)] py-[10px] text-[13px] font-semibold text-white hover:bg-[var(--color-primary-light)] disabled:opacity-50"
                       >
                         {restoring ? "Restoring…" : "Confirm restore"}
                       </button>
@@ -1245,7 +1245,7 @@ export function WriterEditor({
                   <button
                     type="button"
                     onClick={() => setShowRestoreConfirm(true)}
-                    className="w-full rounded-[10px] bg-[#C75D2C] py-3 text-[13.5px] font-semibold text-white hover:bg-[#B5512A]"
+                    className="w-full rounded-[10px] bg-[var(--color-primary)] py-3 text-[13.5px] font-semibold text-white hover:bg-[var(--color-primary-light)]"
                   >
                     Restore this version
                   </button>
@@ -1256,14 +1256,14 @@ export function WriterEditor({
             <div className="flex flex-1 flex-col overflow-hidden">
               {versionsLoading && (
                 <div className="flex flex-1 items-center justify-center">
-                  <p className="text-sm text-[rgba(42,26,18,.5)]">Loading…</p>
+                  <p className="text-sm text-[var(--color-ink)]/50">Loading…</p>
                 </div>
               )}
               {!versionsLoading && versions?.length === 0 && (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-10 text-center">
-                  <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[rgba(42,26,18,.05)] text-[24px] text-[rgba(42,26,18,.4)]">⟲</span>
-                  <p className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[#2A1A12]">No version history yet</p>
-                  <p className="text-[13.5px] leading-[1.5] text-[rgba(42,26,18,.55)]">Versions appear here automatically as you write.</p>
+                  <span className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[var(--color-ink)]/[0.05] text-[24px] text-[var(--color-ink)]/40">⟲</span>
+                  <p className="font-[family-name:var(--font-display)] text-[17px] font-semibold text-[var(--color-ink)]">No version history yet</p>
+                  <p className="text-[13.5px] leading-[1.5] text-[var(--color-ink)]/[0.55]">Versions appear here automatically as you write.</p>
                 </div>
               )}
               {!versionsLoading && versions && versions.length > 0 && (
@@ -1273,19 +1273,19 @@ export function WriterEditor({
                       key={v.id}
                       type="button"
                       onClick={() => selectVersion(v.id)}
-                      className="mb-2 flex w-full items-center gap-3 rounded-[11px] border border-[rgba(42,26,18,.08)] bg-white px-3 py-[13px] text-left hover:border-[rgba(199,93,44,.35)]"
+                      className="mb-2 flex w-full items-center gap-3 rounded-[11px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-[13px] text-left hover:border-[var(--color-primary)]/35"
                     >
                       <span
                         className="h-[9px] w-[9px] flex-none rounded-full"
                         style={{ background: versionDotColor(v.label) }}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13.5px] font-semibold text-[#2A1A12]">{v.label}</span>
-                        <span className="mt-0.5 block text-[12px] text-[rgba(42,26,18,.5)]">
+                        <span className="block truncate text-[13.5px] font-semibold text-[var(--color-ink)]">{v.label}</span>
+                        <span className="mt-0.5 block text-[12px] text-[var(--color-ink)]/50">
                           {v.wordCount.toLocaleString()} words · {formatRelativeTime(v.savedAt)}
                         </span>
                       </span>
-                      <span className="flex-none text-[16px] text-[rgba(42,26,18,.3)]">›</span>
+                      <span className="flex-none text-[16px] text-[var(--color-ink)]/30">›</span>
                     </button>
                   ))}
                 </div>
@@ -1315,14 +1315,18 @@ function formatSaveStatus(status: SaveStatus): { text: string } {
   }
 }
 
+// Returned as an inline style color, not a Tailwind class, so CSS vars work
+// directly here — each already resolves to a dark-mode-safe value via
+// KekereTheme except the two literals below (amber and primary orange),
+// which already compute sufficient contrast against both palettes.
 function saveStatusColor(kind: SaveStatus["kind"]): string {
   switch (kind) {
-    case "idle":   return "#5C7A6B";
+    case "idle":   return "var(--color-ink-muted-2)";
     case "dirty":  return "#C77A1E";
-    case "saving": return "rgba(42,26,18,.55)";
-    case "saved":  return "#1F4B4B";
-    case "offline": return "#C75D2C";
-    case "conflict": return "#B3371D";
+    case "saving": return "var(--color-ink-muted)";
+    case "saved":  return "var(--color-accent)";
+    case "offline": return "var(--color-primary)";
+    case "conflict": return "var(--color-danger)";
   }
 }
 

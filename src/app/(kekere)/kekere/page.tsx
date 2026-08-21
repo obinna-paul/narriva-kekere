@@ -522,13 +522,13 @@ export default async function KekereLandingPage() {
                     <span className="font-[family-name:var(--font-display)] text-sm font-semibold">
                       The Last Bus to Yaba
                     </span>
-                    <span className="rounded-[20px] bg-[rgba(31,75,75,0.12)] px-2 py-[3px] text-[10px] font-semibold text-[var(--color-accent)]">
+                    <span className="rounded-[20px] bg-[var(--color-accent)]/[0.12] px-2 py-[3px] text-[10px] font-semibold text-[var(--color-accent)]">
                       Draft
                     </span>
                   </div>
-                  <div className="mt-[14px] h-2 rounded bg-[#E2D3C0]" />
-                  <div className="mt-[7px] h-2 w-[88%] rounded bg-[#E2D3C0]" />
-                  <div className="mt-[7px] h-2 w-[72%] rounded bg-[#E2D3C0]" />
+                  <div className="mt-[14px] h-2 rounded bg-[var(--color-ink)]/15" />
+                  <div className="mt-[7px] h-2 w-[88%] rounded bg-[var(--color-ink)]/15" />
+                  <div className="mt-[7px] h-2 w-[72%] rounded bg-[var(--color-ink)]/15" />
                   <p className="mt-4 text-[11px] text-[var(--color-ink-muted-2)]">
                     1,247 words · ~5 min read · Saved
                   </p>

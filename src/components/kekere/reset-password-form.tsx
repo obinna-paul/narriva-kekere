@@ -101,7 +101,7 @@ export function ResetPasswordForm() {
       </p>
 
       {error && (
-        <p className="mb-5 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
+        <p className="mb-5 rounded-lg bg-[var(--color-danger)]/[0.08] px-4 py-3 text-sm text-[var(--color-danger)]">
           {error}
           {(error.includes("expired") || error.includes("invalid")) && (
             <>

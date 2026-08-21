@@ -328,7 +328,7 @@ export function KemiChat({
             ? "Ask Kemi — she has a new message for you"
             : "Ask Kemi for a story recommendation"
         }
-        className="relative flex cursor-pointer items-center gap-1 rounded-[30px] border border-[rgba(199,93,44,0.35)] bg-white px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(199,93,44,0.55)]"
+        className="relative flex cursor-pointer items-center gap-1 rounded-[30px] border border-[var(--color-primary)]/35 bg-[var(--color-surface)] px-4 py-[8px] text-[13.5px] font-semibold text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-primary)]/55"
       >
         <span className="kemi-cta-halo" aria-hidden="true" />
         Ask Kemi
@@ -364,7 +364,7 @@ export function KemiChat({
             >
               {/* Drag handle */}
               <div className="flex flex-none justify-center pb-1 pt-3">
-                <div className="h-[3px] w-10 rounded-full bg-[rgba(42,26,18,0.18)]" />
+                <div className="h-[3px] w-10 rounded-full bg-[var(--color-ink)]/[0.18]" />
               </div>
 
               {/* Header */}
@@ -430,7 +430,7 @@ export function KemiChat({
                                   !isLastInGroup && "rounded-bl-md",
                                 )
                               : cn(
-                                  "bg-white text-[var(--color-ink)] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]",
+                                  "bg-[var(--color-surface)] text-[var(--color-ink)] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]",
                                   "rounded-2xl",
                                   !isFirstInGroup && "rounded-tl-md",
                                   !isLastInGroup && "rounded-bl-md",
@@ -446,7 +446,7 @@ export function KemiChat({
                                 key={rec.slug}
                                 type="button"
                                 onClick={() => openStory(rec.slug)}
-                                className="group flex items-center gap-3 rounded-xl bg-white p-2.5 text-left shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                className="group flex items-center gap-3 rounded-xl bg-[var(--color-surface)] p-2.5 text-left shadow-sm ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-md"
                               >
                                 <div
                                   className="relative h-16 w-[52px] flex-none overflow-hidden rounded-[8px]"
@@ -520,7 +520,7 @@ export function KemiChat({
 
                   {loading && (
                     <li className="mt-2.5 flex justify-start" aria-label="Kemi is typing">
-                      <div className="flex items-center gap-[5px] rounded-2xl rounded-bl-md bg-white px-[15px] py-[13px] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]">
+                      <div className="flex items-center gap-[5px] rounded-2xl rounded-bl-md bg-[var(--color-surface)] px-[15px] py-[13px] shadow-[0_1px_3px_rgba(42,26,18,0.08)] ring-1 ring-black/[0.05]">
                         <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "0ms" }} />
                         <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "180ms" }} />
                         <span className="kemi-typing-dot inline-block h-[7px] w-[7px] rounded-full bg-[var(--color-primary)]" style={{ animationDelay: "360ms" }} />
@@ -541,7 +541,7 @@ export function KemiChat({
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask Kemi for a story…"
                   aria-label="Message Kemi"
-                  className="flex-1 rounded-full border border-[var(--color-border)] bg-white px-4 py-2.5 text-[14px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-2)] focus:border-[var(--color-primary)] focus:outline-none"
+                  className="flex-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-[14px] text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted-2)] focus:border-[var(--color-primary)] focus:outline-none"
                 />
                 <button
                   type="submit"

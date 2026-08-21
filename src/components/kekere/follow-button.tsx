@@ -71,7 +71,7 @@ export function FollowButton({
         className={cn(
           "flex items-center justify-center gap-1.5 rounded-full px-6 py-[10px] text-sm font-semibold transition-colors disabled:opacity-60",
           following
-            ? "border border-[rgba(42,26,18,0.16)] bg-transparent text-[var(--color-ink)] hover:border-[#A13A3A] hover:text-[#A13A3A]"
+            ? "border border-[var(--color-border)] bg-transparent text-[var(--color-ink)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
             : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)]",
           className,
         )}

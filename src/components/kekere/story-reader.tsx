@@ -21,6 +21,7 @@ import type { HighlightColorId } from "@/content/highlight-colors";
 import { AuthorChip } from "@/components/kekere/author-chip";
 import { FollowButton } from "@/components/kekere/follow-button";
 import { TopUpModal } from "@/components/kekere/top-up-modal";
+import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 import type { MockStory } from "@/content/mock/kekere-stories";
 
 /**
@@ -28,6 +29,15 @@ import type { MockStory } from "@/content/mock/kekere-stories";
  * `#FCFCFA` reading surface). Each theme overrides the ink CSS variables the
  * reader chrome + body text read from, so switching re-colours everything at
  * once; transitions are applied on the reader root so the change is smooth.
+ *
+ * The app-wide light/dark toggle (KekereNav, via kekere-theme-mode.ts) only
+ * ever supplies the *default* here — "white" for app-light, "dark" for
+ * app-dark. A reader who has never touched this picker keeps tracking that
+ * default live, so flipping the app toggle changes the reader too. The
+ * moment they pick a background from this picker, that choice is explicit
+ * and persists in its own right — it stops following the app toggle, and
+ * (per how KekereTheme is scoped) never affects anything outside the
+ * reader.
  */
 type ReaderTheme = "white" | "cream" | "dark";
 
@@ -58,6 +68,12 @@ const READER_THEMES: Record<
     track: string;
     swatch: string;
     swatchRing: string;
+    /** Error/danger text — kept per-theme rather than inherited from the
+     *  app-wide --color-danger, since this reader theme is independent of
+     *  the app toggle: a reader could be on "Dark" while the app itself is
+     *  light (or vice versa), and inheriting the ancestor's value would
+     *  pick the wrong contrast for THIS surface. */
+    danger: string;
   }
 > = {
   white: {
@@ -72,6 +88,7 @@ const READER_THEMES: Record<
     track: "rgba(42,26,18,0.08)",
     swatch: "#FCFCFA",
     swatchRing: "rgba(42,26,18,0.18)",
+    danger: "#A13A3A",
   },
   cream: {
     label: "Cream",
@@ -85,6 +102,7 @@ const READER_THEMES: Record<
     track: "rgba(42,26,18,0.08)",
     swatch: "#F0E2CC",
     swatchRing: "rgba(42,26,18,0.18)",
+    danger: "#A13A3A",
   },
   dark: {
     label: "Dark",
@@ -98,6 +116,7 @@ const READER_THEMES: Record<
     track: "rgba(237,230,218,0.14)",
     swatch: "#181510",
     swatchRing: "rgba(237,230,218,0.3)",
+    danger: "#E28080",
   },
 };
 
@@ -216,6 +235,11 @@ export function StoryReader({
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [readerTheme, setReaderTheme] = useState<ReaderTheme>("white");
+  // True once the reader has explicitly picked a background from the
+  // picker (or one was already saved from a previous visit) — see the
+  // ReaderTheme comment above. False means readerTheme is just tracking
+  // the app-wide toggle and shouldn't be written to its own storage key.
+  const explicitReaderThemeRef = useRef(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [contentHidden, setContentHidden] = useState(false);
 
@@ -257,16 +281,27 @@ export function StoryReader({
   }, [unlocked]);
 
   // Load the saved reader theme after mount (keeps SSR/first paint on the
-  // default `white` so hydration matches, then upgrades to the reader's pick).
+  // default `white` so hydration matches, then upgrades to the reader's
+  // pick). If this reader has never explicitly chosen one, fall back to —
+  // and keep live-tracking — the app-wide light/dark toggle instead, so it
+  // serves as this reader's default without becoming a "choice" on its own.
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(READER_THEME_STORAGE_KEY);
-      if (saved === "white" || saved === "cream" || saved === "dark") {
-        setReaderTheme(saved);
-      }
+      saved = localStorage.getItem(READER_THEME_STORAGE_KEY);
     } catch {
       // ignore unavailable storage
     }
+    if (saved === "white" || saved === "cream" || saved === "dark") {
+      explicitReaderThemeRef.current = true;
+      setReaderTheme(saved);
+      return;
+    }
+    setReaderTheme(readThemeMode() === "dark" ? "dark" : "white");
+    return onThemeModeChange((mode) => {
+      if (explicitReaderThemeRef.current) return; // an explicit pick since mount wins
+      setReaderTheme(mode === "dark" ? "dark" : "white");
+    });
   }, []);
 
   // Same pattern for reading mode — defaults to scroll for the first paint,
@@ -312,6 +347,7 @@ export function StoryReader({
   }
 
   useEffect(() => {
+    if (!explicitReaderThemeRef.current) return; // still just tracking the app default — nothing to save yet
     try {
       localStorage.setItem(READER_THEME_STORAGE_KEY, readerTheme);
     } catch {
@@ -337,6 +373,7 @@ export function StoryReader({
     // of a hardcoded dark-ink border that vanishes on the dark background.
     "--color-border": theme.border,
     "--color-border-strong": theme.swatchRing,
+    "--color-danger": theme.danger,
   } as CSSProperties;
 
   // Once a successful unlock triggers router.refresh(), this fires when the
@@ -830,6 +867,10 @@ export function StoryReader({
     return (
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#F5EBDD] px-7 text-center">
         <div className="w-full max-w-[340px]">
+          {/* Fixed light cream, like the finish screen below — a safety
+              checkpoint with its own identity, not part of the reader's
+              white/cream/dark reading surface, so this intentionally does
+              NOT use --color-danger (which follows the app-wide toggle). */}
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#A13A3A]/10">
             <ShieldAlert size={26} className="text-[#A13A3A]" />
           </div>
@@ -1001,7 +1042,7 @@ export function StoryReader({
                       <Send size={13} /> {noteSending ? "Sending…" : "Send note"}
                     </button>
                   </div>
-                  {noteError && <p className="mt-2 text-[12px] text-[#A13A3A]">{noteError}</p>}
+                  {noteError && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{noteError}</p>}
                 </>
               )}
             </div>
@@ -1309,6 +1350,7 @@ export function StoryReader({
                           role="menuitemradio"
                           aria-checked={active}
                           onClick={() => {
+                            explicitReaderThemeRef.current = true;
                             setReaderTheme(key);
                             setThemeMenuOpen(false);
                           }}
@@ -1436,7 +1478,7 @@ export function StoryReader({
                         type="button"
                         role="menuitem"
                         onClick={() => openReport("STORY", story.id)}
-                        className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                        className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
                         style={{ background: "none", border: "none", cursor: "pointer" }}
                       >
                         <Flag className="h-[15px] w-[15px] flex-none" />
@@ -1623,7 +1665,10 @@ export function StoryReader({
                   </p>
                 )}
 
-                <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]">
+                <div
+                  className="mx-auto max-w-[360px] rounded-2xl border p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]"
+                  style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+                >
                   <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
                     <span>Your balance</span>
                     <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">

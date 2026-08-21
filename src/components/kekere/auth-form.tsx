@@ -165,12 +165,12 @@ export function KekereAuthForm({
         </p>
       )}
       {error && error !== "__UNVERIFIED__" && (
-        <p className="mb-4 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
+        <p className="mb-4 rounded-lg bg-[var(--color-danger)]/[0.08] px-4 py-3 text-sm text-[var(--color-danger)]">
           {error}
         </p>
       )}
       {error === "__UNVERIFIED__" && (
-        <p className="mb-4 rounded-lg bg-[rgba(193,58,58,0.08)] px-4 py-3 text-sm text-[#A13A3A]">
+        <p className="mb-4 rounded-lg bg-[var(--color-danger)]/[0.08] px-4 py-3 text-sm text-[var(--color-danger)]">
           Your email isn&apos;t verified yet.{" "}
           <button
             type="button"

@@ -87,7 +87,7 @@ function PromptRow({ prompt, onSent }: { prompt: NotePrompt; onSent: (storyId: s
             rows={3}
             placeholder={`Tell ${prompt.writerName} what stuck with you…`}
             disabled={sending}
-            className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.14)] px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
+            className="w-full resize-none rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[13.5px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
           />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-[11px] text-[var(--color-ink-muted-3)]">{body.length} / 500</span>
@@ -100,7 +100,7 @@ function PromptRow({ prompt, onSent }: { prompt: NotePrompt; onSent: (storyId: s
               <Send size={12} /> {sending ? "Sending…" : "Send note"}
             </button>
           </div>
-          {error && <p className="mt-2 text-[12px] text-[#A13A3A]">{error}</p>}
+          {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
         </div>
       )}
     </div>
@@ -265,7 +265,7 @@ function InboxNoteRow({
                 rows={2}
                 placeholder="Reply once — make it count…"
                 disabled={replying}
-                className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.14)] px-3 py-2.5 text-[13px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
+                className="w-full resize-none rounded-[10px] border border-[var(--color-border)] px-3 py-2.5 text-[13px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none disabled:opacity-60"
               />
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-[11px] text-[var(--color-ink-muted-3)]">{replyBody.length} / 500</span>
@@ -278,7 +278,7 @@ function InboxNoteRow({
                   <Send size={11} /> {replying ? "Sending…" : "Reply"}
                 </button>
               </div>
-              {error && <p className="mt-2 text-[12px] text-[#A13A3A]">{error}</p>}
+              {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
             </div>
           )}
 
@@ -303,16 +303,16 @@ function InboxNoteRow({
             {confirmBlock ? (
               <span className="flex items-center gap-2 text-[11.5px]">
                 Block {note.fromUserName}?
-                <button type="button" onClick={block} className="font-semibold text-[#A13A3A]">Yes</button>
+                <button type="button" onClick={block} className="font-semibold text-[var(--color-danger)]">Yes</button>
                 <button type="button" onClick={() => setConfirmBlock(false)} className="text-[var(--color-ink-muted-2)]">No</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmBlock(true)} className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-ink-muted-2)] hover:text-[#A13A3A]">
+              <button type="button" onClick={() => setConfirmBlock(true)} className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-ink-muted-2)] hover:text-[var(--color-danger)]">
                 <UserX size={12} /> Block
               </button>
             )}
           </div>
-          {pinError && <p className="mt-2 text-[12px] text-[#A13A3A]">{pinError}</p>}
+          {pinError && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{pinError}</p>}
           {!note.pinned && (
             <p className="mt-2 text-[11px] text-[var(--color-ink-muted-3)]">
               Pin a note to feature it as a testimonial on your public profile — up to {maxPinnedNotes}.
@@ -404,13 +404,13 @@ export function NotesView({
       <h1 className="mb-4 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--color-ink)]">Notes</h1>
 
       {isWriter && (
-        <div className="mb-5 flex rounded-full bg-[rgba(42,26,18,0.05)] p-1">
+        <div className="mb-5 flex rounded-full bg-[var(--color-ink)]/[0.05] p-1">
           <button
             type="button"
             onClick={() => setTab("sent")}
             className={cn(
               "flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-              tab === "sent" ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-ink-muted-2)]",
+              tab === "sent" ? "bg-[var(--color-surface)] text-[var(--color-ink)] shadow-sm" : "text-[var(--color-ink-muted-2)]",
             )}
           >
             Sent
@@ -420,7 +420,7 @@ export function NotesView({
             onClick={() => setTab("inbox")}
             className={cn(
               "relative flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors",
-              tab === "inbox" ? "bg-white text-[var(--color-ink)] shadow-sm" : "text-[var(--color-ink-muted-2)]",
+              tab === "inbox" ? "bg-[var(--color-surface)] text-[var(--color-ink)] shadow-sm" : "text-[var(--color-ink-muted-2)]",
             )}
           >
             Inbox
@@ -482,7 +482,7 @@ export function NotesView({
               disabled={togglingNotes}
               className={cn(
                 "relative h-6 w-11 flex-none rounded-full transition-colors disabled:opacity-60",
-                notesEnabled ? "bg-[var(--color-primary)]" : "bg-[rgba(42,26,18,0.15)]",
+                notesEnabled ? "bg-[var(--color-primary)]" : "bg-[var(--color-ink)]/15",
               )}
               aria-label={notesEnabled ? "Turn notes off" : "Turn notes on"}
             >

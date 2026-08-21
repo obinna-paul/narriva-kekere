@@ -122,7 +122,7 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search stories"
-        className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full border border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink-muted)] transition-colors hover:border-[rgba(42,26,18,0.25)]"
+        className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink-muted)] transition-colors hover:border-[var(--color-ink)]/25"
       >
         <Search size={16} />
       </button>
@@ -139,7 +139,7 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
   // regardless of what else lives in this row.
   return (
     <div ref={containerRef} className="absolute inset-y-0 left-0 right-0 z-10 flex items-center bg-[var(--color-bg)] px-5">
-      <div className="flex w-full items-center gap-2 rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-4 py-[8px]">
+      <div className="flex w-full items-center gap-2 rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-[8px]">
         <Search size={15} className="flex-none text-[var(--color-ink-muted-2)]" />
         <input
           ref={inputRef}
@@ -156,7 +156,7 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
       </div>
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[400px] overflow-y-auto rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[400px] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-[0_16px_40px_-14px_rgba(42,26,18,0.35)]">
           {loading && results.length === 0 ? (
             <div className="px-3 py-4 text-center text-[13px] text-[var(--color-ink-muted-2)]">Searching…</div>
           ) : results.length === 0 ? (
@@ -172,7 +172,7 @@ export function StorySearch({ onPreview }: { onPreview: (story: MockStory) => vo
                 onMouseEnter={() => setActiveIndex(i)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors",
-                  i === activeIndex ? "bg-[rgba(42,26,18,0.06)]" : "hover:bg-[rgba(42,26,18,0.04)]"
+                  i === activeIndex ? "bg-[var(--color-ink)]/[0.06]" : "hover:bg-[var(--color-ink)]/[0.04]"
                 )}
               >
                 <div

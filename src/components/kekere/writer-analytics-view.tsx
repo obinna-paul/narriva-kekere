@@ -42,7 +42,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white p-4", className)}>
+    <div className={cn("rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4", className)}>
       {children}
     </div>
   );
@@ -73,7 +73,7 @@ function CompletionRing({ pct }: { pct: number | null }) {
   return (
     <div className="relative flex h-[72px] w-[72px] flex-none items-center justify-center">
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(42,26,18,0.08)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="color-mix(in srgb, var(--color-ink) 8%, transparent)" strokeWidth={stroke} />
         {pct !== null && (
           <circle
             cx={size / 2}
@@ -137,8 +137,8 @@ function AreaSparkline({ data, color, gradientId }: { data: number[]; color: str
 
 function EmptyState({ icon, title, note }: { icon: React.ReactNode; title: string; note: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[16px] border border-dashed border-[rgba(42,26,18,0.15)] bg-[rgba(42,26,18,0.02)] px-6 py-10 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(42,26,18,0.06)] text-[var(--color-ink-muted)]">
+    <div className="flex flex-col items-center gap-3 rounded-[16px] border border-dashed border-[var(--color-ink)]/[0.15] bg-[var(--color-ink)]/[0.02] px-6 py-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-ink)]/[0.06] text-[var(--color-ink-muted)]">
         {icon}
       </div>
       <div>
@@ -162,7 +162,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
       <div className="mb-[26px] flex items-center gap-3">
         <Link
           href="/kekere/profile"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-ink)]/[0.06]"
           aria-label="Back to profile"
         >
           <ChevronLeft size={20} />
@@ -227,16 +227,16 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
             </span>
             <span className="text-[12px] font-semibold text-[var(--color-primary)]">{earnings.writerRatePercent}% to you</span>
           </div>
-          <div className="mt-2.5 flex h-[10px] overflow-hidden rounded-full bg-[rgba(42,26,18,0.06)]">
+          <div className="mt-2.5 flex h-[10px] overflow-hidden rounded-full bg-[var(--color-ink)]/[0.06]">
             <div className="h-full" style={{ width: `${earnings.writerRatePercent}%`, backgroundColor: ORANGE }} />
-            <div className="h-full" style={{ width: `${100 - earnings.writerRatePercent}%`, backgroundColor: "rgba(42,26,18,0.12)" }} />
+            <div className="h-full" style={{ width: `${100 - earnings.writerRatePercent}%`, backgroundColor: "color-mix(in srgb, var(--color-ink) 12%, transparent)" }} />
           </div>
           <p className="mt-2.5 text-[12.5px] leading-[1.55] text-[var(--color-ink-muted)]">
             On a {exampleCost}-cowrie story, that&apos;s{" "}
             <strong className="text-[var(--color-ink)]">{exampleWriterShare.toFixed(2)} cowries</strong> to you — plus every
             tip in full.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[rgba(42,26,18,0.07)] pt-3">
+          <div className="mt-3 grid grid-cols-2 gap-3 border-t border-[var(--color-ink)]/[0.07] pt-3">
             <StatBlock value={earnings.lifetimeFromUnlocks.toFixed(2)} label="From unlocks" />
             <StatBlock value={earnings.lifetimeFromTips.toFixed(2)} label="From tips" />
           </div>
@@ -247,7 +247,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
       <section className="mb-7">
         <SectionLabel>Overview</SectionLabel>
         <Card>
-          <div className="flex items-center gap-4 border-b border-[rgba(42,26,18,0.07)] pb-4">
+          <div className="flex items-center gap-4 border-b border-[var(--color-ink)]/[0.07] pb-4">
             <CompletionRing pct={overview.avgCompletionRate} />
             <div>
               <p className="text-[13px] font-semibold text-[var(--color-ink)]">Average completion</p>
@@ -278,7 +278,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
               <Users size={12} /> Followers · last 30 days
             </span>
           </SectionLabel>
-          <span className={cn("text-[12px] font-semibold", followerDelta >= 0 ? "text-[#1F8A5B]" : "text-[#C0392B]")}>
+          <span className={cn("text-[12px] font-semibold", followerDelta >= 0 ? "text-[var(--color-success)]" : "text-[var(--color-danger)]")}>
             {followerDelta >= 0 ? "+" : ""}{followerDelta}
           </span>
         </div>
@@ -295,7 +295,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
               <TrendingUp size={12} /> Earnings · last 30 days
             </span>
           </SectionLabel>
-          <span className="text-[12px] font-semibold text-[#1F8A5B]">{earningsTotal.toFixed(2)} cowries</span>
+          <span className="text-[12px] font-semibold text-[var(--color-success)]">{earningsTotal.toFixed(2)} cowries</span>
         </div>
         <Card>
           <AreaSparkline data={earningsSeries.map((p) => p.value)} color={GREEN} gradientId="earnings-area" />
@@ -328,7 +328,7 @@ export function WriterAnalyticsView({ overview, earnings, earningsSeries, follow
 
                   {/* Relative reads bar — same reads figure, just given a
                       quick visual scale against this writer's best story. */}
-                  <div className="mt-1.5 h-[4px] w-full overflow-hidden rounded-full bg-[rgba(42,26,18,0.06)]">
+                  <div className="mt-1.5 h-[4px] w-full overflow-hidden rounded-full bg-[var(--color-ink)]/[0.06]">
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${Math.max(4, (story.reads / maxReads) * 100)}%`, backgroundColor: ORANGE }}

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { KekereTheme } from "@/components/theme";
 import { PwaRegister } from "@/components/kekere/pwa-register";
 import { InstallPrompt } from "@/components/kekere/install-prompt";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -56,7 +55,7 @@ export default function KekereLayout({
 }>) {
   // Kekere-specific theme classes are applied here only — never at the root layout.
   return (
-    <div className="bg-kekere-bg text-kekere-ink font-body">
+    <div className="bg-[var(--color-bg)] text-[var(--color-ink)] font-body">
       <JsonLd data={webSiteSchema("kekere")} />
       <PwaRegister />
       <InstallPrompt />

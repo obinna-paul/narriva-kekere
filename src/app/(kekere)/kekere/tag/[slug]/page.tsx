@@ -132,7 +132,7 @@ export default async function TagBrowsePage({
             {page > 1 && (
               <Link
                 href={`/kekere/tag/${params.slug}?page=${page - 1}`}
-                className="rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-5 py-[9px] text-[13px] font-semibold text-[var(--color-ink-muted)] hover:border-[rgba(42,26,18,0.25)]"
+                className="rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-[9px] text-[13px] font-semibold text-[var(--color-ink-muted)] hover:border-[var(--color-ink)]/25"
               >
                 ← Previous
               </Link>
@@ -143,7 +143,7 @@ export default async function TagBrowsePage({
             {page < result.totalPages && (
               <Link
                 href={`/kekere/tag/${params.slug}?page=${page + 1}`}
-                className="rounded-[30px] border border-[rgba(42,26,18,0.14)] bg-white px-5 py-[9px] text-[13px] font-semibold text-[var(--color-ink-muted)] hover:border-[rgba(42,26,18,0.25)]"
+                className="rounded-[30px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-[9px] text-[13px] font-semibold text-[var(--color-ink-muted)] hover:border-[var(--color-ink)]/25"
               >
                 Next →
               </Link>

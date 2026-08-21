@@ -17,7 +17,7 @@ function QuickLinkRow({ href, label, description }: { href: string; label: strin
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition-colors hover:border-[rgba(42,26,18,0.22)]"
+      className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 transition-colors hover:border-[var(--color-ink)]/[0.22]"
     >
       <div>
         <p className="text-[13px] font-semibold text-[var(--color-ink)]">{label}</p>
@@ -91,7 +91,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
       <div className="mb-[26px] flex items-center gap-3">
         <Link
           href="/kekere/profile"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-ink)]/[0.06]"
           aria-label="Back to profile"
         >
           <ChevronLeft size={20} />
@@ -123,7 +123,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
           className="flex flex-col gap-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
         >
           <div>
-            <label htmlFor="current-password" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
+            <label htmlFor="current-password" className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">
               Current password
             </label>
             <input
@@ -132,13 +132,13 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
               autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+              className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
               style={{ fontFamily: "inherit" }}
               required
             />
           </div>
           <div>
-            <label htmlFor="new-password" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
+            <label htmlFor="new-password" className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">
               New password
             </label>
             <input
@@ -149,14 +149,14 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
               maxLength={72}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+              className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
               style={{ fontFamily: "inherit" }}
               required
             />
             <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">At least 8 characters.</div>
           </div>
           <div>
-            <label htmlFor="confirm-password" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
+            <label htmlFor="confirm-password" className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">
               Confirm new password
             </label>
             <input
@@ -165,13 +165,13 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+              className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
               style={{ fontFamily: "inherit" }}
               required
             />
           </div>
 
-          {error && <p className="text-[12.5px] text-[#A13A3A]">{error}</p>}
+          {error && <p className="text-[12.5px] text-[var(--color-danger)]">{error}</p>}
           {success && <p className="text-[12.5px] font-semibold text-[var(--color-accent)]">Password updated.</p>}
 
           <button
@@ -207,7 +207,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
           </div>
           <span
             className={`relative h-6 w-[42px] flex-none rounded-full transition-colors ${
-              emailNotificationsEnabled ? "bg-[var(--color-primary)]" : "bg-[rgba(42,26,18,0.18)]"
+              emailNotificationsEnabled ? "bg-[var(--color-primary)]" : "bg-[var(--color-ink)]/[0.18]"
             }`}
           >
             <span
@@ -246,7 +246,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
       <button
         type="button"
         onClick={() => hardSignOut("/kekere")}
-        className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(193,58,58,0.22)] bg-transparent py-[14px] text-[14px] font-semibold text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
+        className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--color-danger)]/[0.22] bg-transparent py-[14px] text-[14px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/[0.06]"
       >
         Log out
       </button>

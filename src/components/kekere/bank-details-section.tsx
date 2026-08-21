@@ -82,12 +82,12 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
   return (
     <>
       {!editing && saved ? (
-        <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
+        <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate text-[14.5px] font-semibold text-[var(--color-ink)]">{saved.bankName}</span>
               {saved.verifiedAt ? (
-                <span className="flex flex-none items-center gap-1 rounded-full bg-[#1F8A5B]/10 px-2 py-[2px] text-[11px] font-medium text-[#1F8A5B]">
+                <span className="flex flex-none items-center gap-1 rounded-full bg-[var(--color-success)]/10 px-2 py-[2px] text-[11px] font-medium text-[var(--color-success)]">
                   <Check size={11} /> Verified
                 </span>
               ) : (
@@ -111,7 +111,7 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
       ) : (
         <div className="flex flex-col gap-[14px]">
           <div>
-            <label htmlFor="bank-search" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
+            <label htmlFor="bank-search" className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">
               Bank
             </label>
             <input
@@ -123,11 +123,11 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
               }}
               placeholder={banksError ? "Bank list unavailable" : banks ? "Search for your bank" : "Loading banks…"}
               disabled={!!banksError || !banks}
-              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
+              className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:opacity-60"
               style={{ fontFamily: "inherit" }}
             />
             {bankQuery && !selectedBank && filteredBanks.length > 0 && (
-              <div className="mt-1 max-h-[180px] overflow-y-auto rounded-[10px] border border-[rgba(42,26,18,0.12)] bg-white">
+              <div className="mt-1 max-h-[180px] overflow-y-auto rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)]">
                 {filteredBanks.slice(0, 30).map((b) => (
                   <button
                     key={b.code}
@@ -136,18 +136,18 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
                       setSelectedBank(b);
                       setBankQuery("");
                     }}
-                    className="block w-full px-[15px] py-[10px] text-left text-[14px] text-[var(--color-ink)] hover:bg-[rgba(199,93,44,0.06)]"
+                    className="block w-full px-[15px] py-[10px] text-left text-[14px] text-[var(--color-ink)] hover:bg-[var(--color-primary)]/[0.06]"
                   >
                     {b.name}
                   </button>
                 ))}
               </div>
             )}
-            {banksError && <p className="mt-[6px] text-[12.5px] text-[#A13A3A]">{banksError}</p>}
+            {banksError && <p className="mt-[6px] text-[12.5px] text-[var(--color-danger)]">{banksError}</p>}
           </div>
 
           <div>
-            <label htmlFor="bank-account-number" className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">
+            <label htmlFor="bank-account-number" className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">
               Account number
             </label>
             <input
@@ -158,12 +158,12 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
               value={accountNumber}
               onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
               placeholder="0123456789"
-              className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)]"
+              className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] outline-none transition-colors focus:border-[var(--color-primary)]"
               style={{ fontFamily: "inherit" }}
             />
           </div>
 
-          {verifyError && <p className="text-[12.5px] text-[#A13A3A]">{verifyError}</p>}
+          {verifyError && <p className="text-[12.5px] text-[var(--color-danger)]">{verifyError}</p>}
 
           <div className="flex gap-[10px]">
             {saved && (
@@ -173,7 +173,7 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
                   setEditing(false);
                   setVerifyError(null);
                 }}
-                className="flex-none rounded-[10px] border border-[rgba(42,26,18,0.16)] px-4 py-[12px] text-[14px] font-semibold text-[var(--color-ink-muted)]"
+                className="flex-none rounded-[10px] border border-[var(--color-border)] px-4 py-[12px] text-[14px] font-semibold text-[var(--color-ink-muted)]"
               >
                 Cancel
               </button>

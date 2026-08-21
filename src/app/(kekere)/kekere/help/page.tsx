@@ -4,6 +4,7 @@ import { HELP_CATEGORIES } from "@/content/kekere-help-faqs";
 import { KekereHelpTabs } from "@/components/kekere/kekere-help-tabs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { faqPageSchema } from "@/lib/seo/schema";
+import { KekereTheme } from "@/components/theme";
 
 const SUPPORT_EMAIL = "support@narriva.pro";
 
@@ -15,6 +16,7 @@ export const metadata = {
 
 export default function KekereHelpPage() {
   return (
+    <KekereTheme>
     <main className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
       <JsonLd data={faqPageSchema(HELP_CATEGORIES)} />
       <div className="px-[22px] pt-[18px]">
@@ -35,9 +37,9 @@ export default function KekereHelpPage() {
       <KekereHelpTabs categories={HELP_CATEGORIES} />
 
       <section className="mx-auto max-w-[680px] px-[22px] pb-[90px]">
-        <div className="rounded-[22px] border border-[rgba(42,26,18,0.1)] bg-white p-[26px] shadow-[0_1px_3px_rgba(42,26,18,0.05)]">
+        <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] p-[26px] shadow-[0_1px_3px_rgba(42,26,18,0.05)]">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]">
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
               <LifeBuoy size={20} />
             </span>
             <div>
@@ -84,5 +86,6 @@ export default function KekereHelpPage() {
         </div>
       </section>
     </main>
+    </KekereTheme>
   );
 }
