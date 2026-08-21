@@ -1665,7 +1665,10 @@ export function StoryReader({
                   </p>
                 )}
 
-                <div className="mx-auto max-w-[360px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]">
+                <div
+                  className="mx-auto max-w-[360px] rounded-2xl border p-6 text-center shadow-[0_16px_40px_-18px_rgba(42,26,18,0.3)]"
+                  style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+                >
                   <div className="mb-4 flex items-center justify-center gap-2 text-[13px] text-[var(--color-ink-muted)]">
                     <span>Your balance</span>
                     <span className="inline-flex items-center gap-[5px] font-semibold text-[var(--color-ink)]">
