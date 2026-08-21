@@ -4,11 +4,15 @@ import type { MockCompetition } from "@/content/mock/kekere-competitions";
 
 const STATUS_STYLES: Record<MockCompetition["status"], string> = {
   DRAFT: "bg-[var(--color-ink)]/10 text-[var(--color-ink-muted)]",
-  UPCOMING: "bg-[rgba(224,138,74,0.18)] text-[#B14E22]",
-  OPEN: "bg-[#C75D2C] text-white",
-  JUDGING: "bg-[rgba(31,75,75,0.14)] text-[#1F4B4B]",
-  CLOSED: "bg-[rgba(42,26,18,0.08)] text-[#8A7565]",
-  COMPLETE: "bg-[#2A1A12] text-white",
+  UPCOMING: "bg-[var(--color-primary-muted)] text-[var(--color-primary-light)]",
+  OPEN: "bg-[var(--color-primary)] text-white",
+  JUDGING: "bg-[var(--color-accent)]/[0.14] text-[var(--color-accent)]",
+  CLOSED: "bg-[var(--color-ink)]/[0.08] text-[var(--color-ink-muted-2)]",
+  // Inverted rather than fixed-dark: a literal near-black chip would nearly
+  // vanish against a dark-mode card that's already close to that same tone.
+  // --color-ink flips light/dark on its own, so this stays a legible
+  // "stamped" chip either way.
+  COMPLETE: "bg-[var(--color-ink)] text-[var(--color-bg)]",
 };
 
 const STATUS_LABELS: Record<MockCompetition["status"], string> = {
@@ -31,7 +35,7 @@ export function CompetitionCard({ competition, daysLeft }: CompetitionCardProps)
   return (
     <Link
       href={`/kekere/competitions/${competition.slug}`}
-      className="group block rounded-[18px] border border-[rgba(42,26,18,0.1)] bg-white p-6 shadow-[0_10px_26px_-16px_rgba(42,26,18,0.3)] transition-colors hover:border-[var(--color-primary)]"
+      className="group block rounded-[18px] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[0_10px_26px_-16px_rgba(42,26,18,0.3)] transition-colors hover:border-[var(--color-primary)]"
     >
       <div className="mb-[14px] flex items-center justify-between gap-3">
         <span
@@ -57,7 +61,7 @@ export function CompetitionCard({ competition, daysLeft }: CompetitionCardProps)
         {competition.theme}
       </p>
 
-      <div className="mt-4 border-t border-[rgba(42,26,18,0.08)] pt-4">
+      <div className="mt-4 border-t border-[var(--color-ink)]/[0.08] pt-4">
         <p className="text-[13px] text-[var(--color-ink-muted-2)]">
           {competition.prizeDescription}
         </p>

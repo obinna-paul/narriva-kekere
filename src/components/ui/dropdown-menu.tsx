@@ -20,7 +20,7 @@ export const DropdownMenuContent = forwardRef<
       sideOffset={sideOffset}
       align={align}
       className={cn(
-        "z-50 min-w-[228px] rounded-[14px] border border-[rgba(42,26,18,.10)] bg-white p-1.5 text-[var(--color-ink)] shadow-[0_12px_32px_rgba(42,26,18,.16)] focus:outline-none data-[state=closed]:animate-none data-[state=closed]:opacity-0 data-[state=open]:opacity-100",
+        "z-50 min-w-[228px] rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 text-[var(--color-ink)] shadow-[0_12px_32px_rgba(42,26,18,.16)] focus:outline-none data-[state=closed]:animate-none data-[state=closed]:opacity-0 data-[state=open]:opacity-100",
         className
       )}
       {...props}
@@ -36,7 +36,7 @@ export const DropdownMenuItem = forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "flex cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-medium text-[#2A1A12] outline-none transition-colors data-[highlighted]:bg-[rgba(42,26,18,.05)] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40",
+      "flex cursor-pointer select-none items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-[13.5px] font-medium text-[var(--color-ink)] outline-none transition-colors data-[highlighted]:bg-[var(--color-ink)]/[0.05] data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40",
       className
     )}
     {...props}
@@ -48,6 +48,6 @@ export const DropdownMenuSeparator = forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.Separator ref={ref} className={cn("my-1.5 h-px bg-[rgba(42,26,18,.08)]", className)} {...props} />
+  <DropdownMenuPrimitive.Separator ref={ref} className={cn("my-1.5 h-px bg-[var(--color-ink)]/[0.08]", className)} {...props} />
 ));
 DropdownMenuSeparator.displayName = "DropdownMenuSeparator";

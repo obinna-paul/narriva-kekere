@@ -6,6 +6,7 @@ import { getStoryById } from "@/content/mock/kekere-stories";
 import type { MockCompetition } from "@/content/mock/kekere-competitions";
 import { CompetitionApply } from "@/components/kekere/competition-apply";
 import { wordCountRangeLabel } from "@/lib/competitions/word-count";
+import { cn } from "@/lib/utils/cn";
 
 const GRAIN_SVG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
@@ -157,10 +158,10 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
             {rules.map((rule, i) => (
               <div
                 key={i}
-                className="flex gap-[14px] border-b border-[rgba(42,26,18,0.08)] py-[13px]"
+                className="flex gap-[14px] border-b border-[var(--color-ink)]/[0.08] py-[13px]"
               >
                 <span className="mt-2 h-[6px] w-[6px] flex-none rounded-full bg-[var(--color-primary)]" />
-                <span className="text-[15px] leading-[1.55] text-[#3A2A20]">
+                <span className="text-[15px] leading-[1.55] text-[var(--color-ink)]">
                   {rule}
                 </span>
               </div>
@@ -172,7 +173,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
           <h2 className="mb-[14px] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
             The prize
           </h2>
-          <div className="rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-6">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
             {competition.prizeAmount && (
               <>
                 <div className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[var(--color-primary)]">
@@ -184,16 +185,10 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
               </>
             )}
             <p
-              className="text-[15px] leading-[1.65] text-[#3A2A20]"
-              style={
-                competition.prizeAmount
-                  ? {
-                      marginTop: 18,
-                      paddingTop: 18,
-                      borderTop: "1px solid rgba(42,26,18,0.08)",
-                    }
-                  : undefined
-              }
+              className={cn(
+                "text-[15px] leading-[1.65] text-[var(--color-ink)]",
+                competition.prizeAmount && "mt-[18px] border-t border-[var(--color-ink)]/[0.08] pt-[18px]"
+              )}
             >
               {competition.prizeDescription}
             </p>
@@ -205,13 +200,13 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
             <h2 className="mb-[14px] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
               How to enter
             </h2>
-            <div className="flex flex-col gap-[14px] rounded-2xl border border-[rgba(42,26,18,0.1)] bg-white p-5">
+            <div className="flex flex-col gap-[14px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
               {howToEnter.map((step, i) => (
                 <div key={i} className="flex gap-3">
-                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.12)] text-[11px] font-semibold text-[var(--color-primary)]">
+                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-[var(--color-primary-muted)] text-[11px] font-semibold text-[var(--color-primary)]">
                     {i + 1}
                   </span>
-                  <span className="text-[14.5px] leading-[1.55] text-[#3A2A20]">{step}</span>
+                  <span className="text-[14.5px] leading-[1.55] text-[var(--color-ink)]">{step}</span>
                 </div>
               ))}
             </div>
@@ -262,7 +257,7 @@ export function CompetitionDetail({ competition }: CompetitionDetailProps) {
                   <Link
                     key={winner.storyId}
                     href={story ? `/kekere/story/${story.slug ?? story.id}` : "#"}
-                    className="flex items-center justify-between rounded-xl bg-white px-4 py-3 ring-1 ring-[rgba(42,26,18,0.08)] transition-colors hover:ring-[var(--color-primary)]/40"
+                    className="flex items-center justify-between rounded-xl bg-[var(--color-surface)] px-4 py-3 ring-1 ring-[var(--color-ink)]/[0.08] transition-colors hover:ring-[var(--color-primary)]/40"
                   >
                     <div>
                       <p className="font-medium text-[var(--color-ink)]">
