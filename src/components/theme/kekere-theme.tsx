@@ -26,6 +26,18 @@ const KEKERE_THEME_VARS = {
   "--color-ink-muted": "#6A5446",
   "--color-ink-muted-2": "#8A7565",
   "--color-ink-muted-3": "#A08C7C",
+  // Aliases for the shared (Narriva-originated) src/components/legal
+  // layout, which was built against Narriva's --color-muted*/
+  // --color-accent-text token names — Kekere's privacy/terms/refunds/
+  // copyright pages reuse that same layout but never had these names
+  // defined, so most of that shared component's text was silently
+  // falling back to unstyled defaults on every Kekere legal page, in
+  // both light and dark mode. Point them at the equivalent ink-muted
+  // tones rather than rewriting the shared component.
+  "--color-muted": "#6A5446",
+  "--color-muted-2": "#8A7565",
+  "--color-muted-3": "#A08C7C",
+  "--color-accent-text": "#8A7565",
   // Accent-only teal — genre tags, badges, category labels. Never a
   // page-wide background.
   "--color-accent": "#1F4B4B",
@@ -96,6 +108,10 @@ const KEKERE_DARK_THEME_VARS = {
   "--color-ink-muted": "#B8AE9E",
   "--color-ink-muted-2": "#9A9082",
   "--color-ink-muted-3": "#7C7366",
+  "--color-muted": "#B8AE9E",
+  "--color-muted-2": "#9A9082",
+  "--color-muted-3": "#7C7366",
+  "--color-accent-text": "#9A9082",
   "--color-accent": "#4FA3A3",
   "--color-accent-light": "#6BC2C2",
   "--color-surface": "#211B14",

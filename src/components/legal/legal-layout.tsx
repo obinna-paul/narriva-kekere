@@ -110,7 +110,7 @@ export function LegalSection({ heading, id, children }: LegalSectionProps) {
       <h2 className="mb-4 font-[family-name:var(--font-display)] text-2xl font-medium text-[var(--color-ink)]">
         {heading}
       </h2>
-      <div className="flex flex-col gap-4 text-base leading-[1.75] text-[#3A352E]">{children}</div>
+      <div className="flex flex-col gap-4 text-base leading-[1.75] text-[var(--color-ink)]">{children}</div>
     </section>
   );
 }
