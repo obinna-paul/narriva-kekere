@@ -79,7 +79,7 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
       {/* Sheet */}
       <div className="fixed inset-x-0 bottom-0 z-50 max-h-[92vh] overflow-y-auto rounded-t-[24px] bg-[var(--color-bg)] shadow-[0_-20px_60px_-10px_rgba(42,26,18,0.5)]">
         <div className="flex justify-center pb-1 pt-3">
-          <div className="h-[3px] w-10 rounded-full bg-[rgba(42,26,18,0.18)]" />
+          <div className="h-[3px] w-10 rounded-full bg-[var(--color-ink)]/[0.18]" />
         </div>
 
         <div className="flex items-center justify-between px-5 pb-4 pt-2">
@@ -90,7 +90,7 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-ink)]/[0.06]"
           >
             <X size={18} />
           </button>
@@ -150,7 +150,7 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
                 "flex w-full items-center justify-center gap-2 rounded-[14px] border px-4 py-[15px] text-[14.5px] font-semibold transition-colors",
                 copied
                   ? "border-[var(--color-success)]/30 bg-[var(--color-success)]/10 text-[var(--color-success)]"
-                  : "border-[rgba(42,26,18,0.14)] bg-white text-[var(--color-ink)] hover:border-[var(--color-primary)]/40"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-primary)]/40"
               )}
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}

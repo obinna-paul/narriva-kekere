@@ -79,7 +79,7 @@ function CardSubLabel({ children }: { children: ReactNode }) {
 /** The one card shape used everywhere on this page — padded content. */
 function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white p-4", className)}>
+    <div className={cn("rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4", className)}>
       {children}
     </div>
   );
@@ -90,7 +90,7 @@ function Card({ children, className }: { children: ReactNode; className?: string
  *  floating on the page background. */
 function ListCard({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white">{children}</div>
+    <div className="overflow-hidden rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)]">{children}</div>
   );
 }
 
@@ -110,13 +110,13 @@ function ListRow({
   trailing?: ReactNode;
 }) {
   const toneClasses = {
-    primary: "bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]",
-    accent: "bg-[rgba(31,75,75,0.1)] text-[var(--color-accent)]",
-    neutral: "bg-[rgba(42,26,18,0.06)] text-[var(--color-ink-muted)]",
+    primary: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+    accent: "bg-[var(--color-accent)]/10 text-[var(--color-accent)]",
+    neutral: "bg-[var(--color-ink)]/[0.06] text-[var(--color-ink-muted)]",
   }[tone];
 
   const className =
-    "flex w-full items-center gap-3 border-b border-[rgba(42,26,18,0.06)] px-4 py-[13px] text-left transition-colors last:border-b-0 hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]";
+    "flex w-full items-center gap-3 border-b border-[var(--color-ink)]/[0.06] px-4 py-[13px] text-left transition-colors last:border-b-0 hover:bg-[var(--color-ink)]/[0.02] active:bg-[var(--color-ink)]/[0.04]";
 
   const content = (
     <>
@@ -556,7 +556,7 @@ export function ProfileView(props: ProfileViewProps) {
             <div>
               <label
                 htmlFor="profile-name"
-                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]"
               >
                 Name
               </label>
@@ -564,7 +564,7 @@ export function ProfileView(props: ProfileViewProps) {
                 id="profile-name"
                 value={draftName}
                 onChange={(e) => setDraftName(e.target.value)}
-                className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                 style={{ fontFamily: "inherit" }}
               />
             </div>
@@ -572,7 +572,7 @@ export function ProfileView(props: ProfileViewProps) {
               <div>
                 <label
                   htmlFor="profile-bio"
-                  className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                  className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]"
                 >
                   Brief author bio
                 </label>
@@ -583,7 +583,7 @@ export function ProfileView(props: ProfileViewProps) {
                   value={draftBio}
                   onChange={(e) => setDraftBio(e.target.value)}
                   placeholder="A couple of sentences readers will see on your public profile and shareable profile card."
-                  className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                  className="w-full resize-none rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                   style={{ fontFamily: "inherit" }}
                 />
                 <div className="mt-[6px] text-right text-xs text-[var(--color-ink-muted-3)]">
@@ -594,7 +594,7 @@ export function ProfileView(props: ProfileViewProps) {
             <div>
               <label
                 htmlFor="profile-country"
-                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]"
               >
                 Country
               </label>
@@ -604,7 +604,7 @@ export function ProfileView(props: ProfileViewProps) {
                 onChange={(e) => setDraftCountry(e.target.value)}
                 placeholder="e.g. Lagos, Nigeria"
                 maxLength={80}
-                className="w-full rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                className="w-full rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                 style={{ fontFamily: "inherit" }}
               />
               <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
@@ -614,7 +614,7 @@ export function ProfileView(props: ProfileViewProps) {
             <div>
               <label
                 htmlFor="profile-social-links"
-                className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]"
               >
                 Social links
               </label>
@@ -624,7 +624,7 @@ export function ProfileView(props: ProfileViewProps) {
                 value={draftSocialLinksText}
                 onChange={(e) => setDraftSocialLinksText(e.target.value)}
                 placeholder={"Instagram|https://instagram.com/you\nX|https://x.com/you"}
-                className="w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
+                className="w-full resize-none rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[15px] text-[var(--color-ink)] transition-colors focus:border-[var(--color-primary)] focus:outline-none"
                 style={{ fontFamily: "inherit" }}
               />
               <div className="mt-[6px] text-xs text-[var(--color-ink-muted-3)]">
@@ -637,11 +637,11 @@ export function ProfileView(props: ProfileViewProps) {
                 <div>
                   <label
                     htmlFor="profile-username"
-                    className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]"
+                    className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]"
                   >
                     Profile link
                   </label>
-                  <div className="flex items-center overflow-hidden rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white transition-colors focus-within:border-[var(--color-primary)]">
+                  <div className="flex items-center overflow-hidden rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors focus-within:border-[var(--color-primary)]">
                     <span className="flex-none pl-[15px] text-[13.5px] text-[var(--color-ink-muted-2)]">
                       {SITE_URL.replace("https://", "")}/kekere/writer/
                     </span>
@@ -663,14 +663,14 @@ export function ProfileView(props: ProfileViewProps) {
                 </div>
 
                 <div>
-                  <label className="mb-[7px] block text-[13px] font-semibold text-[#4A372C]">Coming soon</label>
+                  <label className="mb-[7px] block text-[13px] font-semibold text-[var(--color-ink-muted)]">Coming soon</label>
                   <div className="mb-[10px] text-xs text-[var(--color-ink-muted-3)]">
                     Feature a work-in-progress on your public profile — its title and hook line, never the full
                     text. Pick one of your drafts below.
                   </div>
 
                   {draftsLoading && (
-                    <p className="rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px] text-[13.5px] text-[var(--color-ink-muted-2)]">
+                    <p className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px] text-[13.5px] text-[var(--color-ink-muted-2)]">
                       Loading your drafts…
                     </p>
                   )}
@@ -684,8 +684,8 @@ export function ProfileView(props: ProfileViewProps) {
                         className={cn(
                           "flex items-center gap-2.5 rounded-[10px] border px-[15px] py-[12px] text-left transition-colors",
                           draftComingSoonId === null
-                            ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
-                            : "border-[rgba(42,26,18,0.16)] bg-white",
+                            ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
+                            : "border-[var(--color-border)] bg-[var(--color-surface)]",
                         )}
                       >
                         <span
@@ -693,7 +693,7 @@ export function ProfileView(props: ProfileViewProps) {
                             "flex h-4 w-4 flex-none items-center justify-center rounded-full border",
                             draftComingSoonId === null
                               ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
-                              : "border-[rgba(42,26,18,0.25)]",
+                              : "border-[var(--color-ink)]/25",
                           )}
                         >
                           {draftComingSoonId === null && <Check size={10} className="text-white" strokeWidth={3} />}
@@ -704,7 +704,7 @@ export function ProfileView(props: ProfileViewProps) {
                       </button>
 
                       {drafts.length === 0 && (
-                        <p className="rounded-[10px] border border-dashed border-[rgba(42,26,18,0.2)] px-[15px] py-[13px] text-[13px] text-[var(--color-ink-muted-2)]">
+                        <p className="rounded-[10px] border border-dashed border-[var(--color-ink)]/20 px-[15px] py-[13px] text-[13px] text-[var(--color-ink-muted-2)]">
                           You don&rsquo;t have any drafts yet — start a new story to feature one here.
                         </p>
                       )}
@@ -720,8 +720,8 @@ export function ProfileView(props: ProfileViewProps) {
                             className={cn(
                               "rounded-[10px] border px-[15px] py-[12px] transition-colors",
                               selected
-                                ? "border-[var(--color-primary)] bg-[rgba(199,93,44,0.06)]"
-                                : "border-[rgba(42,26,18,0.16)] bg-white",
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/[0.06]"
+                                : "border-[var(--color-border)] bg-[var(--color-surface)]",
                               !eligible && "opacity-55",
                             )}
                           >
@@ -736,7 +736,7 @@ export function ProfileView(props: ProfileViewProps) {
                                   "mt-0.5 flex h-4 w-4 flex-none items-center justify-center rounded-full border",
                                   selected
                                     ? "border-[var(--color-primary)] bg-[var(--color-primary)]"
-                                    : "border-[rgba(42,26,18,0.25)]",
+                                    : "border-[var(--color-ink)]/25",
                                 )}
                               >
                                 {selected && <Check size={10} className="text-white" strokeWidth={3} />}
@@ -754,7 +754,7 @@ export function ProfileView(props: ProfileViewProps) {
                             </button>
 
                             {selected && (
-                              <div className="mt-3 border-t border-[rgba(42,26,18,0.08)] pt-3">
+                              <div className="mt-3 border-t border-[var(--color-ink)]/[0.08] pt-3">
                                 {hasHookline && kemiDraftId !== draft.id && (
                                   <p className="text-[12.5px] italic leading-[1.5] text-[var(--color-ink-muted)]">
                                     &ldquo;{draft.hookLine}&rdquo;
@@ -773,7 +773,7 @@ export function ProfileView(props: ProfileViewProps) {
                                     {kemiError && <p className="text-[12.5px] text-[#A13A3A]">{kemiError}</p>}
                                     {kemiSuggestion && (
                                       <>
-                                        <p className="rounded-[8px] bg-[rgba(199,93,44,0.08)] px-3 py-2.5 text-[12.5px] italic leading-[1.5] text-[var(--color-ink)]">
+                                        <p className="rounded-[8px] bg-[var(--color-primary)]/[0.08] px-3 py-2.5 text-[12.5px] italic leading-[1.5] text-[var(--color-ink)]">
                                           &ldquo;{kemiSuggestion}&rdquo;
                                         </p>
                                         <div className="flex gap-2">
@@ -788,7 +788,7 @@ export function ProfileView(props: ProfileViewProps) {
                                             type="button"
                                             onClick={() => askKemiForHookline(draft.id)}
                                             disabled={kemiLoading}
-                                            className="flex items-center gap-1 rounded-full border border-[rgba(42,26,18,0.16)] px-3 py-[7px] text-[12px] font-semibold text-[var(--color-ink)] disabled:opacity-50"
+                                            className="flex items-center gap-1 rounded-full border border-[var(--color-border)] px-3 py-[7px] text-[12px] font-semibold text-[var(--color-ink)] disabled:opacity-50"
                                           >
                                             <RefreshCw size={11} /> Try again
                                           </button>
@@ -817,7 +817,7 @@ export function ProfileView(props: ProfileViewProps) {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[rgba(42,26,18,0.16)] bg-white px-[15px] py-[13px]">
+                <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-[15px] py-[13px]">
                   <div>
                     <p className="text-[14px] font-semibold text-[var(--color-ink)]">Cross-promotion</p>
                     <p className="mt-0.5 text-xs text-[var(--color-ink-muted-3)]">
@@ -829,7 +829,7 @@ export function ProfileView(props: ProfileViewProps) {
                     onClick={() => setDraftCrossPromotionEnabled((v) => !v)}
                     className={cn(
                       "relative h-6 w-11 flex-none rounded-full transition-colors",
-                      draftCrossPromotionEnabled ? "bg-[var(--color-primary)]" : "bg-[rgba(42,26,18,0.15)]",
+                      draftCrossPromotionEnabled ? "bg-[var(--color-primary)]" : "bg-[var(--color-ink)]/15",
                     )}
                     aria-label={draftCrossPromotionEnabled ? "Turn cross-promotion off" : "Turn cross-promotion on"}
                   >
@@ -883,7 +883,7 @@ export function ProfileView(props: ProfileViewProps) {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.12)] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
+                    className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
                   >
                     <span className="flex-none text-[var(--color-primary)]/75">
                       <SocialIcon platform={detectSocialPlatform(link.href)} />
@@ -897,7 +897,7 @@ export function ProfileView(props: ProfileViewProps) {
             <button
               type="button"
               onClick={openEdit}
-              className="mt-[18px] cursor-pointer rounded-[30px] border border-[rgba(42,26,18,0.16)] bg-transparent px-6 py-[10px] text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              className="mt-[18px] cursor-pointer rounded-[30px] border border-[var(--color-border)] bg-transparent px-6 py-[10px] text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
               style={{ background: "none" }}
             >
               Edit profile
@@ -911,7 +911,7 @@ export function ProfileView(props: ProfileViewProps) {
               <SectionLabel>Stats</SectionLabel>
               <Card className="flex flex-col gap-4">
                 {props.hasAuthoredAnyStory && (
-                  <div className="border-b border-[rgba(42,26,18,0.07)] pb-4">
+                  <div className="border-b border-[var(--color-ink)]/[0.07] pb-4">
                     <CardSubLabel>Writing</CardSubLabel>
                     <div className="grid grid-cols-2 gap-3">
                       <StatBlock

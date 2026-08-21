@@ -57,7 +57,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
       <div className="mb-[26px] flex items-center gap-3">
         <Link
           href="/kekere/profile"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[rgba(42,26,18,0.06)]"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-ink)]/[0.06]"
           aria-label="Back to profile"
         >
           <ChevronLeft size={20} />
@@ -77,7 +77,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
               {kemiBelief.map((slug) => (
                 <span
                   key={slug}
-                  className="rounded-full border border-[rgba(42,26,18,0.16)] bg-white px-3.5 py-[7px] text-[13px] font-medium text-[var(--color-ink)]"
+                  className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-[7px] text-[13px] font-medium text-[var(--color-ink)]"
                 >
                   {tagLabel(slug)}
                 </span>
@@ -88,7 +88,7 @@ export function PreferencesView({ initialExplicit, initialAutoDetected }: Prefer
           <button
             type="button"
             onClick={() => setMode("picker")}
-            className="flex w-full items-center gap-3 border-t border-[var(--color-border)] px-4 py-3.5 text-left transition-colors hover:bg-[rgba(42,26,18,0.02)] active:bg-[rgba(42,26,18,0.04)]"
+            className="flex w-full items-center gap-3 border-t border-[var(--color-border)] px-4 py-3.5 text-left transition-colors hover:bg-[var(--color-ink)]/[0.02] active:bg-[var(--color-ink)]/[0.04]"
           >
             <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[rgba(199,93,44,0.1)] text-[var(--color-primary)]">
               <PenLine size={14} />
