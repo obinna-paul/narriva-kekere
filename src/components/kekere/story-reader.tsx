@@ -68,6 +68,12 @@ const READER_THEMES: Record<
     track: string;
     swatch: string;
     swatchRing: string;
+    /** Error/danger text — kept per-theme rather than inherited from the
+     *  app-wide --color-danger, since this reader theme is independent of
+     *  the app toggle: a reader could be on "Dark" while the app itself is
+     *  light (or vice versa), and inheriting the ancestor's value would
+     *  pick the wrong contrast for THIS surface. */
+    danger: string;
   }
 > = {
   white: {
@@ -82,6 +88,7 @@ const READER_THEMES: Record<
     track: "rgba(42,26,18,0.08)",
     swatch: "#FCFCFA",
     swatchRing: "rgba(42,26,18,0.18)",
+    danger: "#A13A3A",
   },
   cream: {
     label: "Cream",
@@ -95,6 +102,7 @@ const READER_THEMES: Record<
     track: "rgba(42,26,18,0.08)",
     swatch: "#F0E2CC",
     swatchRing: "rgba(42,26,18,0.18)",
+    danger: "#A13A3A",
   },
   dark: {
     label: "Dark",
@@ -108,6 +116,7 @@ const READER_THEMES: Record<
     track: "rgba(237,230,218,0.14)",
     swatch: "#181510",
     swatchRing: "rgba(237,230,218,0.3)",
+    danger: "#E28080",
   },
 };
 
@@ -364,6 +373,7 @@ export function StoryReader({
     // of a hardcoded dark-ink border that vanishes on the dark background.
     "--color-border": theme.border,
     "--color-border-strong": theme.swatchRing,
+    "--color-danger": theme.danger,
   } as CSSProperties;
 
   // Once a successful unlock triggers router.refresh(), this fires when the
@@ -857,6 +867,10 @@ export function StoryReader({
     return (
       <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#F5EBDD] px-7 text-center">
         <div className="w-full max-w-[340px]">
+          {/* Fixed light cream, like the finish screen below — a safety
+              checkpoint with its own identity, not part of the reader's
+              white/cream/dark reading surface, so this intentionally does
+              NOT use --color-danger (which follows the app-wide toggle). */}
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#A13A3A]/10">
             <ShieldAlert size={26} className="text-[#A13A3A]" />
           </div>
@@ -1028,7 +1042,7 @@ export function StoryReader({
                       <Send size={13} /> {noteSending ? "Sending…" : "Send note"}
                     </button>
                   </div>
-                  {noteError && <p className="mt-2 text-[12px] text-[#A13A3A]">{noteError}</p>}
+                  {noteError && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{noteError}</p>}
                 </>
               )}
             </div>
@@ -1464,7 +1478,7 @@ export function StoryReader({
                         type="button"
                         role="menuitem"
                         onClick={() => openReport("STORY", story.id)}
-                        className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                        className="flex w-full items-center gap-[10px] rounded-[8px] px-2 py-[9px] text-left text-[13.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
                         style={{ background: "none", border: "none", cursor: "pointer" }}
                       >
                         <Flag className="h-[15px] w-[15px] flex-none" />

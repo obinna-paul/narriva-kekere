@@ -166,7 +166,7 @@ export function ShareProfileSheet({ writerId, writerUsername, writerName, onClos
               <Download size={16} />
               {downloading ? "Generating your card…" : "Download profile card"}
             </button>
-            {downloadError && <p className="text-center text-[12.5px] text-[#A13A3A]">{downloadError}</p>}
+            {downloadError && <p className="text-center text-[12.5px] text-[var(--color-danger)]">{downloadError}</p>}
           </div>
 
           <p className="mt-4 text-center text-[12px] leading-[1.5] text-[var(--color-ink-muted-3)]">

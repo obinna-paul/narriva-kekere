@@ -594,7 +594,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           reveals below instead of being crammed in here. */}
       <div
         ref={toolbarWrapperRef}
-        className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[rgba(42,26,18,.10)] bg-[var(--color-bg)]"
+        className="sticky top-[var(--writer-header-h,0px)] z-[16] -mx-[22px] mb-1.5 flex flex-col border-b border-[var(--color-border)] bg-[var(--color-bg)]"
       >
         <div className="flex items-center gap-1.5 px-[22px] py-2">
           <ToolbarButton
@@ -626,11 +626,11 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
               read" is right at the edge of that budget once B/I/U and the
               toggle have taken their fixed share). */}
           <div
-            className="min-w-0 flex-1 truncate text-right text-[12.5px] font-medium text-[rgba(42,26,18,.55)]"
+            className="min-w-0 flex-1 truncate text-right text-[12.5px] font-medium text-[var(--color-ink)]/[0.55]"
             title={`${localWordCount.toLocaleString()} words · ${readingTimeLabel}`}
           >
-            <b className="font-bold text-[#2A1A12]">{localWordCount.toLocaleString()}</b> words{" "}
-            <span className="text-[rgba(42,26,18,.35)]">·</span> {readingTimeLabel}
+            <b className="font-bold text-[var(--color-ink)]">{localWordCount.toLocaleString()}</b> words{" "}
+            <span className="text-[var(--color-ink)]/35">·</span> {readingTimeLabel}
           </div>
 
           <ToolbarButton
@@ -643,7 +643,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
         </div>
 
         {toolbarExpanded && (
-          <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[rgba(42,26,18,.08)] px-[22px] py-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto border-t border-[var(--color-border)] px-[22px] py-2">
             <ToolbarButton
               label="Align left"
               active={editor.isActive({ textAlign: "left" })}
@@ -673,7 +673,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
               <AlignJustify size={16} />
             </ToolbarButton>
 
-            <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[rgba(42,26,18,.14)]" />
+            <span className="mx-0.5 inline-block h-[22px] w-px flex-none bg-[var(--color-ink)]/[0.14]" />
 
             <ToolbarButton
               label="Find & replace (Ctrl+F)"
@@ -694,10 +694,10 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
           still wraps internally as a safety net if it's ever too narrow to
           read even on its own. */}
       {findReplaceOpen && (
-        <div className="-mx-[22px] mb-3 flex flex-col gap-2 border-b border-[rgba(42,26,18,.10)] bg-[rgba(199,93,44,0.04)] px-[22px] py-2.5">
+        <div className="-mx-[22px] mb-3 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[rgba(199,93,44,0.04)] px-[22px] py-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-[160px] flex-1 items-center gap-1.5 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-1.5">
-              <Search size={14} className="flex-none text-[rgba(42,26,18,.45)]" />
+            <div className="flex min-w-[160px] flex-1 items-center gap-1.5 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5">
+              <Search size={14} className="flex-none text-[var(--color-ink)]/45" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -705,12 +705,12 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
                 onChange={(e) => handleSearchChange(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Find in story…"
-                className="w-full min-w-0 bg-transparent text-[13.5px] text-[#2A1A12] outline-none placeholder:text-[rgba(42,26,18,.4)]"
+                className="w-full min-w-0 bg-transparent text-[13.5px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink)]/40"
               />
               {searchTerm && (
                 <span
                   data-testid="search-match-counter"
-                  className="flex-none whitespace-nowrap text-[12px] text-[rgba(42,26,18,.5)]"
+                  className="flex-none whitespace-nowrap text-[12px] text-[var(--color-ink)]/50"
                 >
                   {searchCount > 0 ? `${searchIndex + 1}/${searchCount}` : "0/0"}
                 </span>
@@ -724,7 +724,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
                 disabled={searchCount === 0}
                 aria-label="Previous match"
                 title="Previous match (Shift+Enter)"
-                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronUp size={15} />
               </button>
@@ -734,7 +734,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
                 disabled={searchCount === 0}
                 aria-label="Next match"
                 title="Next match (Enter)"
-                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronDown size={15} />
               </button>
@@ -742,7 +742,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
                 type="button"
                 onClick={closeFindReplace}
                 aria-label="Close find & replace"
-                className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] text-[rgba(42,26,18,.5)] hover:bg-[rgba(42,26,18,.06)] hover:text-[#2A1A12]"
+                className="flex h-8 w-8 flex-none items-center justify-center rounded-[8px] text-[var(--color-ink)]/50 hover:bg-[var(--color-ink)]/[0.06] hover:text-[var(--color-ink)]"
               >
                 <X size={15} />
               </button>
@@ -758,14 +758,14 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
                 if (e.key === "Escape") closeFindReplace();
               }}
               placeholder="Replace with…"
-              className="min-w-[160px] flex-1 rounded-[9px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[13.5px] text-[#2A1A12] outline-none placeholder:text-[rgba(42,26,18,.4)]"
+              className="min-w-[160px] flex-1 rounded-[9px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[13.5px] text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink)]/40"
             />
             <div className="flex flex-none items-center gap-1.5">
               <button
                 type="button"
                 onClick={handleReplace}
                 disabled={searchCount === 0}
-                className="rounded-[8px] border border-[rgba(42,26,18,.14)] bg-white px-2.5 py-[7px] text-[12.5px] font-semibold text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-[7px] text-[12.5px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Replace
               </button>
@@ -785,7 +785,7 @@ export const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(funct
       <EditorContent
         editor={editor}
         className={cn(
-          "min-h-[340px] w-full font-sans text-[17px] leading-[1.75] text-[#2A1A12]",
+          "min-h-[340px] w-full font-sans text-[17px] leading-[1.75] text-[var(--color-ink)]",
           "[&_.ProseMirror]:min-h-[340px]",
           "[&_.ProseMirror]:caret-[#C75D2C]",
           "[&_.ProseMirror]:outline-none",
@@ -864,7 +864,7 @@ function ToolbarButton({
         "flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] transition-colors",
         active
           ? "border border-[#2A1A12] bg-[#2A1A12] text-[#F5EBDD]"
-          : "border border-[rgba(42,26,18,.14)] bg-white text-[#2A1A12] hover:bg-[rgba(42,26,18,.04)]"
+          : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-ink)]/[0.04]"
       )}
     >
       {children}

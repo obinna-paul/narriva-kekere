@@ -306,20 +306,20 @@ function StoryCard({
         {isRejected && (
           <a
             href={`/api/kekere/stories/${story.id}/export`}
-            className="text-[12.5px] font-semibold text-[#C75D2C] underline"
+            className="text-[12.5px] font-semibold text-[var(--color-primary)] underline"
           >
             Export as .docx first
           </a>
         )}
         {deleteError && (
-          <p className="text-[12.5px] text-[#A13A3A]">Couldn&apos;t delete — try again.</p>
+          <p className="text-[12.5px] text-[var(--color-danger)]">Couldn&apos;t delete — try again.</p>
         )}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setConfirming(false)}
             disabled={deleting}
-            className="rounded-full border border-[rgba(42,26,18,.16)] px-4 py-1.5 text-[13px] font-semibold text-[#2A1A12] disabled:opacity-60"
+            className="rounded-full border border-[var(--color-border)] px-4 py-1.5 text-[13px] font-semibold text-[var(--color-ink)] disabled:opacity-60"
           >
             Cancel
           </button>
@@ -401,7 +401,7 @@ function StoryCard({
             setConfirming(true);
           }}
           aria-label="Delete story"
-          className="absolute right-3 top-3 rounded-full p-1.5 text-[rgba(42,26,18,.35)] transition-colors hover:bg-[rgba(193,58,58,0.08)] hover:text-[#A13A3A]"
+          className="absolute right-3 top-3 rounded-full p-1.5 text-[var(--color-ink)]/35 transition-colors hover:bg-[var(--color-danger)]/[0.08] hover:text-[var(--color-danger)]"
         >
           <Trash2 size={15} />
         </button>

@@ -510,7 +510,7 @@ export function ProfileView(props: ProfileViewProps) {
           </div>
 
           {saveError && (
-            <div className="mb-[18px] rounded-[10px] border border-[rgba(193,58,58,0.22)] bg-[rgba(193,58,58,0.06)] px-[15px] py-[11px] text-[13.5px] text-[#A13A3A]">
+            <div className="mb-[18px] rounded-[10px] border border-[var(--color-danger)]/[0.22] bg-[var(--color-danger)]/[0.06] px-[15px] py-[11px] text-[13.5px] text-[var(--color-danger)]">
               {saveError}
             </div>
           )}
@@ -545,7 +545,7 @@ export function ProfileView(props: ProfileViewProps) {
             >
               {uploadingAvatar ? "Uploading…" : "Change photo"}
             </button>
-            {avatarError && <p className="mt-2 text-[12.5px] text-[#A13A3A]">{avatarError}</p>}
+            {avatarError && <p className="mt-2 text-[12.5px] text-[var(--color-danger)]">{avatarError}</p>}
           </div>
 
           {cropSrc && (
@@ -659,7 +659,7 @@ export function ProfileView(props: ProfileViewProps) {
                     A memorable link for your public profile — used on your shareable card too. Leave blank to keep
                     the default link.
                   </div>
-                  {usernameError && <p className="mt-[6px] text-xs text-[#A13A3A]">{usernameError}</p>}
+                  {usernameError && <p className="mt-[6px] text-xs text-[var(--color-danger)]">{usernameError}</p>}
                 </div>
 
                 <div>
@@ -674,7 +674,7 @@ export function ProfileView(props: ProfileViewProps) {
                       Loading your drafts…
                     </p>
                   )}
-                  {draftsError && <p className="mb-2 text-[12.5px] text-[#A13A3A]">{draftsError}</p>}
+                  {draftsError && <p className="mb-2 text-[12.5px] text-[var(--color-danger)]">{draftsError}</p>}
 
                   {drafts && (
                     <div className="flex flex-col gap-2">
@@ -770,7 +770,7 @@ export function ProfileView(props: ProfileViewProps) {
                                         Kemi is reading your draft…
                                       </p>
                                     )}
-                                    {kemiError && <p className="text-[12.5px] text-[#A13A3A]">{kemiError}</p>}
+                                    {kemiError && <p className="text-[12.5px] text-[var(--color-danger)]">{kemiError}</p>}
                                     {kemiSuggestion && (
                                       <>
                                         <p className="rounded-[8px] bg-[var(--color-primary)]/[0.08] px-3 py-2.5 text-[12.5px] italic leading-[1.5] text-[var(--color-ink)]">
@@ -1018,7 +1018,7 @@ export function ProfileView(props: ProfileViewProps) {
             <button
               type="button"
               onClick={() => hardSignOut("/kekere")}
-              className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(193,58,58,0.22)] bg-transparent py-[14px] text-[14px] font-semibold text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
+              className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--color-danger)]/[0.22] bg-transparent py-[14px] text-[14px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/[0.06]"
             >
               <LogOut size={15} />
               Log out

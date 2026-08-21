@@ -146,7 +146,7 @@ export function ContractsInbox({ contracts, writerName = "" }: { contracts: Cont
                     )}
                   </div>
                   {signError && (
-                    <p className="mb-3 rounded-[10px] bg-[rgba(193,58,58,0.08)] px-4 py-3 text-[13px] text-[#A13A3A]">
+                    <p className="mb-3 rounded-[10px] bg-[var(--color-danger)]/[0.08] px-4 py-3 text-[13px] text-[var(--color-danger)]">
                       {signError}
                     </p>
                   )}

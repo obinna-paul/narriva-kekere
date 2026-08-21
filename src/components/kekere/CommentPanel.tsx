@@ -99,7 +99,7 @@ function CommentRow({
                       setOpenMenuId(null);
                       onDelete();
                     }}
-                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
                     style={{ background: "none", border: "none", cursor: "pointer" }}
                   >
                     <Trash2 size={13} className="flex-none" />
@@ -113,7 +113,7 @@ function CommentRow({
                       setOpenMenuId(null);
                       onReportComment(c.id);
                     }}
-                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[#A13A3A] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
+                    className="flex w-full items-center gap-2 rounded-[7px] px-2 py-[7px] text-left text-[12.5px] font-medium text-[var(--color-danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)]"
                     style={{ background: "none", border: "none", cursor: "pointer" }}
                   >
                     <Flag size={13} className="flex-none" />
@@ -321,7 +321,7 @@ export function CommentPanel({
               </p>
             ) : (
               <>
-                {error && <p className="mb-2 text-xs text-[#A13A3A]">{error}</p>}
+                {error && <p className="mb-2 text-xs text-[var(--color-danger)]">{error}</p>}
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -334,7 +334,7 @@ export function CommentPanel({
                   <span
                     className={cn(
                       "text-[11px]",
-                      draft.length > BODY_LIMIT ? "text-[#A13A3A]" : "text-[var(--color-ink-muted-3)]"
+                      draft.length > BODY_LIMIT ? "text-[var(--color-danger)]" : "text-[var(--color-ink-muted-3)]"
                     )}
                   >
                     {draft.length}/{BODY_LIMIT}

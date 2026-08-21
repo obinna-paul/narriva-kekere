@@ -171,7 +171,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
             />
           </div>
 
-          {error && <p className="text-[12.5px] text-[#A13A3A]">{error}</p>}
+          {error && <p className="text-[12.5px] text-[var(--color-danger)]">{error}</p>}
           {success && <p className="text-[12.5px] font-semibold text-[var(--color-accent)]">Password updated.</p>}
 
           <button
@@ -246,7 +246,7 @@ export function SettingsView({ name, email, initialDeletionRequestedAt, initialE
       <button
         type="button"
         onClick={() => hardSignOut("/kekere")}
-        className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[rgba(193,58,58,0.22)] bg-transparent py-[14px] text-[14px] font-semibold text-[#A13A3A] transition-colors hover:bg-[rgba(193,58,58,0.06)]"
+        className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--color-danger)]/[0.22] bg-transparent py-[14px] text-[14px] font-semibold text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/[0.06]"
       >
         Log out
       </button>

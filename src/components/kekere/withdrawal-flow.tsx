@@ -134,7 +134,7 @@ export function WithdrawalPage({
           <Link href="/kekere/profile#bank-details" className="mt-3 block text-center text-[13px] font-semibold text-[var(--color-primary)]">
             Change bank details
           </Link>
-          {submitError && <p className="mt-3 text-center text-[13px] text-[#A13A3A]">{submitError}</p>}
+          {submitError && <p className="mt-3 text-center text-[13px] text-[var(--color-danger)]">{submitError}</p>}
           <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)] text-center">Your request will be reviewed by the admin team.</p>
           <button type="button" onClick={handleSubmit} disabled={submitting} className="mt-4 w-full rounded-[12px] bg-[var(--color-success)] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
             {submitting ? "Submitting…" : "Confirm withdrawal"}

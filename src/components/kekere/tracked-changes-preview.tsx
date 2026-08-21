@@ -89,7 +89,7 @@ export function TrackedChangesPreview({ original, edited }: { original: TiptapDo
           <div key={u.id || i} className="overflow-hidden rounded-[10px] border border-[rgba(20,22,26,0.08)]">
             <div className="flex items-center gap-1.5 border-b border-[rgba(20,22,26,0.06)] bg-[rgba(20,22,26,0.02)] px-3 py-1.5">
               <AlertCircle size={10} className={cn(
-                u.kind === "added" ? "text-[#1F8A5B]" : u.kind === "removed" ? "text-[#A13A3A]" : "text-[#C75D2C]",
+                u.kind === "added" ? "text-[#1F8A5B]" : u.kind === "removed" ? "text-[var(--color-danger)]" : "text-[#C75D2C]",
               )} />
               <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[#9AA0A8]">
                 {u.kind === "added" ? "New paragraph" : u.kind === "removed" ? "Removed" : "Edited"}
@@ -101,7 +101,7 @@ export function TrackedChangesPreview({ original, edited }: { original: TiptapDo
               )}
               {u.kind === "changed" && !u.spans && (
                 <>
-                  <p className="mb-2 text-[14.5px] leading-[1.7] text-[#A13A3A] line-through" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
+                  <p className="mb-2 text-[14.5px] leading-[1.7] text-[var(--color-danger)] line-through" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
                   <p className="text-[14.5px] leading-[1.7] text-[#1F8A5B]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
                 </>
               )}
@@ -109,7 +109,7 @@ export function TrackedChangesPreview({ original, edited }: { original: TiptapDo
                 <p className="text-[14.5px] leading-[1.7] text-[#1F8A5B]" style={{ textAlign: u.textAlign ?? "left" }} dangerouslySetInnerHTML={{ __html: u.newHtml || "" }} />
               )}
               {u.kind === "removed" && (
-                <p className="text-[14.5px] leading-[1.7] text-[#A13A3A] line-through" dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
+                <p className="text-[14.5px] leading-[1.7] text-[var(--color-danger)] line-through" dangerouslySetInnerHTML={{ __html: u.oldHtml || "" }} />
               )}
             </div>
           </div>

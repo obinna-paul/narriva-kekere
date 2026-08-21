@@ -127,7 +127,7 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
               className="mt-3 w-full resize-none rounded-[10px] border border-[rgba(42,26,18,0.14)] px-3 py-2.5 text-[13.5px] text-[#2A1A12] outline-none transition-colors focus:border-[#C75D2C]"
             />
 
-            {error && <p className="mt-2 text-[12px] text-[#A13A3A]">{error}</p>}
+            {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
 
             <button
               type="button"

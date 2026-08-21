@@ -143,7 +143,7 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
                 ))}
               </div>
             )}
-            {banksError && <p className="mt-[6px] text-[12.5px] text-[#A13A3A]">{banksError}</p>}
+            {banksError && <p className="mt-[6px] text-[12.5px] text-[var(--color-danger)]">{banksError}</p>}
           </div>
 
           <div>
@@ -163,7 +163,7 @@ export function BankDetailsSection({ bankDetails }: { bankDetails: BankDetailsPr
             />
           </div>
 
-          {verifyError && <p className="text-[12.5px] text-[#A13A3A]">{verifyError}</p>}
+          {verifyError && <p className="text-[12.5px] text-[var(--color-danger)]">{verifyError}</p>}
 
           <div className="flex gap-[10px]">
             {saved && (

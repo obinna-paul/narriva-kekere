@@ -100,7 +100,7 @@ function PromptRow({ prompt, onSent }: { prompt: NotePrompt; onSent: (storyId: s
               <Send size={12} /> {sending ? "Sending…" : "Send note"}
             </button>
           </div>
-          {error && <p className="mt-2 text-[12px] text-[#A13A3A]">{error}</p>}
+          {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
         </div>
       )}
     </div>
@@ -278,7 +278,7 @@ function InboxNoteRow({
                   <Send size={11} /> {replying ? "Sending…" : "Reply"}
                 </button>
               </div>
-              {error && <p className="mt-2 text-[12px] text-[#A13A3A]">{error}</p>}
+              {error && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{error}</p>}
             </div>
           )}
 
@@ -303,16 +303,16 @@ function InboxNoteRow({
             {confirmBlock ? (
               <span className="flex items-center gap-2 text-[11.5px]">
                 Block {note.fromUserName}?
-                <button type="button" onClick={block} className="font-semibold text-[#A13A3A]">Yes</button>
+                <button type="button" onClick={block} className="font-semibold text-[var(--color-danger)]">Yes</button>
                 <button type="button" onClick={() => setConfirmBlock(false)} className="text-[var(--color-ink-muted-2)]">No</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmBlock(true)} className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-ink-muted-2)] hover:text-[#A13A3A]">
+              <button type="button" onClick={() => setConfirmBlock(true)} className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--color-ink-muted-2)] hover:text-[var(--color-danger)]">
                 <UserX size={12} /> Block
               </button>
             )}
           </div>
-          {pinError && <p className="mt-2 text-[12px] text-[#A13A3A]">{pinError}</p>}
+          {pinError && <p className="mt-2 text-[12px] text-[var(--color-danger)]">{pinError}</p>}
           {!note.pinned && (
             <p className="mt-2 text-[11px] text-[var(--color-ink-muted-3)]">
               Pin a note to feature it as a testimonial on your public profile — up to {maxPinnedNotes}.
