@@ -51,28 +51,31 @@ function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
   }).catch(() => {});
 }
 
+// Credits reuse the --color-success token (it's the same green); debits use
+// a fixed red — there's no "danger" theme token, and a saturated red like
+// this reads fine against both a light and a dark page without one.
 const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = {
-  TOP_UP: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  TOP_UP: { icon: ArrowDownLeft, color: "var(--color-success)" },
   UNLOCK: { icon: ArrowUpRight, color: "#C0392B" },
   WITHDRAWAL: { icon: ArrowUpRight, color: "#C0392B" },
-  REFERRAL_REWARD: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  SIGNUP_BONUS: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
-  TIP_RECEIVED: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  REFERRAL_REWARD: { icon: ArrowDownLeft, color: "var(--color-success)" },
+  SIGNUP_BONUS: { icon: ArrowDownLeft, color: "var(--color-success)" },
+  EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
+  TIP_RECEIVED: { icon: ArrowDownLeft, color: "var(--color-success)" },
   TIP_SENT: { icon: ArrowUpRight, color: "#C0392B" },
-  ADMIN_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  ADMIN_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
   ADMIN_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
-  DATA_CORRECTION_CREDIT: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  DATA_CORRECTION_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
   DATA_CORRECTION_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
   EARNED_TO_SPENDING_OUT: { icon: ArrowUpRight, color: "#C0392B" },
-  EARNED_TO_SPENDING_IN: { icon: ArrowDownLeft, color: "#1F8A5B" },
+  EARNED_TO_SPENDING_IN: { icon: ArrowDownLeft, color: "var(--color-success)" },
 };
 
 function TxIcon({ type }: { type: string }) {
-  const def = TX_ICONS[type] ?? { icon: ArrowDownLeft, color: "#8A7565" };
+  const def = TX_ICONS[type] ?? { icon: ArrowDownLeft, color: "var(--color-ink-muted-2)" };
   const Icon = def.icon;
   return (
-    <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[12px] bg-[rgba(42,26,18,0.06)]" style={{ color: def.color }}>
+    <div className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[12px] bg-[var(--color-ink)]/[0.06]" style={{ color: def.color }}>
       <Icon size={16} />
     </div>
   );
@@ -115,7 +118,7 @@ export function WalletView({
 
   return (
     <div className="mx-auto max-w-[402px] px-[22px] pb-[120px] pt-6">
-      <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#2A1A12] tracking-[-0.01em]">Wallet</h1>
+      <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[var(--color-ink)] tracking-[-0.01em]">Wallet</h1>
 
       {/* Two-balance cards */}
       <div className="mt-5 flex flex-col gap-[14px]">
@@ -183,66 +186,66 @@ export function WalletView({
       {/* Quick actions */}
       {isWriter && (
         <div className="mt-[14px]">
-          <Link href="/kekere/analytics" className="flex items-center justify-between rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 transition-colors hover:border-[#1F8A5B]/40">
+          <Link href="/kekere/analytics" className="flex items-center justify-between rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 transition-colors hover:border-[var(--color-success)]/40">
             <div className="flex items-center gap-3">
-              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[#1F8A5B]/10 text-[#1F8A5B]">
+              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[var(--color-success)]/10 text-[var(--color-success)]">
                 <BarChart3 size={16} />
               </div>
               <div>
-                <div className="text-[14px] font-medium text-[#2A1A12]">Analytics &amp; earnings</div>
-                <div className="text-[12px] text-[#8A7565]">Reads, completion, ratings &amp; your earnings ledger</div>
+                <div className="text-[14px] font-medium text-[var(--color-ink)]">Analytics &amp; earnings</div>
+                <div className="text-[12px] text-[var(--color-ink-muted-2)]">Reads, completion, ratings &amp; your earnings ledger</div>
               </div>
             </div>
-            <ArrowRight size={16} className="text-[#8A7565]" />
+            <ArrowRight size={16} className="text-[var(--color-ink-muted-2)]" />
           </Link>
         </div>
       )}
 
       {referralCode && (
         <div className="mt-[14px]">
-          <Link href="/kekere/invite" className="flex items-center justify-between rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4 transition-colors hover:border-[#C75D2C]/30">
+          <Link href="/kekere/invite" className="flex items-center justify-between rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 transition-colors hover:border-[var(--color-primary)]/30">
             <div className="flex items-center gap-3">
-              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[#C75D2C]/10 text-[#C75D2C]">
+              <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[12px] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
                 <Zap size={16} />
               </div>
               <div>
-                <div className="text-[14px] font-medium text-[#2A1A12]">Invite friends, earn cowries</div>
-                <div className="text-[12px] text-[#8A7565]">{referralEarnings} cowries earned</div>
+                <div className="text-[14px] font-medium text-[var(--color-ink)]">Invite friends, earn cowries</div>
+                <div className="text-[12px] text-[var(--color-ink-muted-2)]">{referralEarnings} cowries earned</div>
               </div>
             </div>
-            <ArrowRight size={16} className="text-[#8A7565]" />
+            <ArrowRight size={16} className="text-[var(--color-ink-muted-2)]" />
           </Link>
         </div>
       )}
 
       {/* Transaction history */}
       <div className="mt-[24px]">
-        <h2 className="mb-3 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#2A1A12]">History</h2>
+        <h2 className="mb-3 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-ink)]">History</h2>
         <div className="flex flex-col gap-[2px]">
           {transactions.length === 0 && (
-            <p className="py-8 text-center text-[14px] text-[#8A7565]">No transactions yet</p>
+            <p className="py-8 text-center text-[14px] text-[var(--color-ink-muted-2)]">No transactions yet</p>
           )}
           {visibleTransactions.map((tx) => {
             const isDebit = DEBIT_TX_TYPES.has(tx.type);
             const wallet = isWriter ? getWalletForTx(tx.type) : null;
             return (
-              <div key={tx.id} className="flex items-center gap-3 rounded-[13px] px-3 py-3 transition-colors hover:bg-[rgba(42,26,18,0.03)]">
+              <div key={tx.id} className="flex items-center gap-3 rounded-[13px] px-3 py-3 transition-colors hover:bg-[var(--color-ink)]/[0.03]">
                 <TxIcon type={tx.type} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-medium text-[#2A1A12]">{TxLabel(tx.type)}</div>
-                  <div className="flex items-center gap-2 text-[12px] text-[#8A7565]">
+                  <div className="text-[14px] font-medium text-[var(--color-ink)]">{TxLabel(tx.type)}</div>
+                  <div className="flex items-center gap-2 text-[12px] text-[var(--color-ink-muted-2)]">
                     <span>{tx.description}</span>
-                    {wallet && <span className="text-[#A08C7C]">· {wallet}</span>}
+                    {wallet && <span className="text-[var(--color-ink-muted-3)]">· {wallet}</span>}
                     {tx.status === "PENDING" && (
                       <span className="rounded-full bg-[#B7791F]/15 px-2 py-0.5 text-[11px] font-medium text-[#B7791F]">Pending</span>
                     )}
                   </div>
                 </div>
                 <div className="flex-none text-right">
-                  <div className={cn("text-[14px] font-semibold", isDebit ? "text-[#C0392B]" : "text-[#1F8A5B]")}>
+                  <div className={cn("text-[14px] font-semibold", isDebit ? "text-[#C0392B]" : "text-[var(--color-success)]")}>
                     {isDebit ? "-" : "+"}{tx.amountCowries}
                   </div>
-                  <div className="text-[11px] text-[#A08C7C]">{new Date(tx.date).toLocaleDateString()}</div>
+                  <div className="text-[11px] text-[var(--color-ink-muted-3)]">{new Date(tx.date).toLocaleDateString()}</div>
                 </div>
               </div>
             );
@@ -253,7 +256,7 @@ export function WalletView({
           <button
             type="button"
             onClick={() => setShowHistoryExport(true)}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[13px] border border-[rgba(42,26,18,0.10)] bg-white py-3 text-[13px] font-semibold text-[#2A1A12] transition-colors hover:border-[#C75D2C]/30"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[13px] border border-[var(--color-border)] bg-[var(--color-surface)] py-3 text-[13px] font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/30"
           >
             <Mail size={14} /> Request full transaction history
           </button>

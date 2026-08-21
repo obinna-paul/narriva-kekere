@@ -69,16 +69,16 @@ export function WithdrawalPage({
     <div className="mx-auto max-w-[402px] px-[22px] pb-[calc(80px+env(safe-area-inset-bottom))] pt-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => router.back()} className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[rgba(42,26,18,0.08)]"><ArrowLeft size={16} className="text-[#8A7565]" /></button>
-        <h1 className="font-[family-name:var(--font-display)] text-[22px] font-semibold text-[#2A1A12]">Withdraw</h1>
+        <button type="button" onClick={() => router.back()} className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] border border-[var(--color-border)]"><ArrowLeft size={16} className="text-[var(--color-ink-muted-2)]" /></button>
+        <h1 className="font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--color-ink)]">Withdraw</h1>
       </div>
 
       {/* Stepper */}
       <div className="mt-6 flex items-center gap-2">
         {([1, 2, 3] as Step[]).map((s) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={cn("flex h-[7px] w-[7px] rounded-full", s <= step ? "bg-[#1F8A5B]" : "bg-[rgba(42,26,18,0.12)]")} />
-            {s < 3 && <div className={cn("h-px w-9", s < step ? "bg-[#1F8A5B]" : "bg-[rgba(42,26,18,0.12)]")} />}
+            <div className={cn("flex h-[7px] w-[7px] rounded-full", s <= step ? "bg-[var(--color-success)]" : "bg-[var(--color-ink)]/[0.12]")} />
+            {s < 3 && <div className={cn("h-px w-9", s < step ? "bg-[var(--color-success)]" : "bg-[var(--color-ink)]/[0.12]")} />}
           </div>
         ))}
       </div>
@@ -86,9 +86,9 @@ export function WithdrawalPage({
       {/* Step 1: Amount */}
       {step === 1 && (
         <div className="mt-6">
-          <p className="text-[14px] text-[#8A7565]">Available: <span className="font-semibold text-[#2A1A12]">{availableBalance.toFixed(2)} cowries</span></p>
+          <p className="text-[14px] text-[var(--color-ink-muted-2)]">Available: <span className="font-semibold text-[var(--color-ink)]">{availableBalance.toFixed(2)} cowries</span></p>
           <div className="mt-5">
-            <label className="mb-1.5 block text-[13px] font-medium text-[#2A1A12]">Amount (cowries)</label>
+            <label className="mb-1.5 block text-[13px] font-medium text-[var(--color-ink)]">Amount (cowries)</label>
             <input
               value={amount}
               onChange={(e) => {
@@ -98,21 +98,21 @@ export function WithdrawalPage({
                 setAmount(cleaned);
               }}
               placeholder={`Min ${MIN_WITHDRAWAL} cowries`}
-              className="w-full rounded-[12px] border border-[rgba(42,26,18,0.12)] bg-white px-4 py-3 text-[24px] font-[family-name:var(--font-display)] font-semibold text-[#2A1A12] outline-none placeholder:text-[#A08C7C]"
+              className="w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[24px] font-[family-name:var(--font-display)] font-semibold text-[var(--color-ink)] outline-none placeholder:text-[var(--color-ink-muted-3)]"
             />
           </div>
           {amount && (
-            <div className="mt-4 rounded-[14px] border border-[rgba(42,26,18,0.08)] bg-white px-4 py-4">
-              <div className="text-[13px] text-[#8A7565]">You receive</div>
-              <div className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[#1F8A5B]">&#8358;{nairaAmount.toLocaleString()}</div>
-              <div className="mt-2 text-[12px] text-[#A08C7C]">Remaining after: {remaining.toFixed(2)} cowries</div>
+            <div className="mt-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
+              <div className="text-[13px] text-[var(--color-ink-muted-2)]">You receive</div>
+              <div className="font-[family-name:var(--font-display)] text-[28px] font-semibold text-[var(--color-success)]">&#8358;{nairaAmount.toLocaleString()}</div>
+              <div className="mt-2 text-[12px] text-[var(--color-ink-muted-3)]">Remaining after: {remaining.toFixed(2)} cowries</div>
             </div>
           )}
           <button
             type="button"
             onClick={() => setStep(2)}
             disabled={!amount || parsedAmount < MIN_WITHDRAWAL || parsedAmount > availableBalance}
-            className="mt-5 w-full rounded-[12px] bg-[#1F8A5B] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-5 w-full rounded-[12px] bg-[var(--color-success)] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             Review withdrawal
           </button>
@@ -122,21 +122,21 @@ export function WithdrawalPage({
       {/* Step 2: Confirm */}
       {step === 2 && (
         <div className="mt-6">
-          <div className="rounded-[16px] border border-[rgba(42,26,18,0.08)] bg-white px-5 py-5">
-            <div className="font-[family-name:var(--font-display)] text-[32px] font-semibold text-[#1F8A5B]">&#8358;{nairaAmount.toLocaleString()}</div>
+          <div className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-5">
+            <div className="font-[family-name:var(--font-display)] text-[32px] font-semibold text-[var(--color-success)]">&#8358;{nairaAmount.toLocaleString()}</div>
             <div className="mt-4 space-y-2 text-[14px]">
-              <div className="flex justify-between"><span className="text-[#8A7565]">Cowries</span><span className="text-[#2A1A12] font-medium">{amount} cowries</span></div>
-              <div className="flex justify-between"><span className="text-[#8A7565]">Bank</span><span className="text-[#2A1A12] font-medium">{bankDetails.bankName}</span></div>
-              <div className="flex justify-between"><span className="text-[#8A7565]">Account</span><span className="text-[#2A1A12] font-medium">****{bankDetails.accountNumberLast4} &middot; {bankDetails.accountName}</span></div>
-              <div className="flex justify-between"><span className="text-[#8A7565]">Remaining balance</span><span className="text-[#2A1A12] font-medium">{remaining.toFixed(2)} cowries</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-ink-muted-2)]">Cowries</span><span className="text-[var(--color-ink)] font-medium">{amount} cowries</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-ink-muted-2)]">Bank</span><span className="text-[var(--color-ink)] font-medium">{bankDetails.bankName}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-ink-muted-2)]">Account</span><span className="text-[var(--color-ink)] font-medium">****{bankDetails.accountNumberLast4} &middot; {bankDetails.accountName}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--color-ink-muted-2)]">Remaining balance</span><span className="text-[var(--color-ink)] font-medium">{remaining.toFixed(2)} cowries</span></div>
             </div>
           </div>
           <Link href="/kekere/profile#bank-details" className="mt-3 block text-center text-[13px] font-semibold text-[var(--color-primary)]">
             Change bank details
           </Link>
           {submitError && <p className="mt-3 text-center text-[13px] text-[#A13A3A]">{submitError}</p>}
-          <p className="mt-3 text-[12px] text-[#A08C7C] text-center">Your request will be reviewed by the admin team.</p>
-          <button type="button" onClick={handleSubmit} disabled={submitting} className="mt-4 w-full rounded-[12px] bg-[#1F8A5B] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+          <p className="mt-3 text-[12px] text-[var(--color-ink-muted-3)] text-center">Your request will be reviewed by the admin team.</p>
+          <button type="button" onClick={handleSubmit} disabled={submitting} className="mt-4 w-full rounded-[12px] bg-[var(--color-success)] py-3 text-[14px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50">
             {submitting ? "Submitting…" : "Confirm withdrawal"}
           </button>
         </div>
@@ -145,14 +145,14 @@ export function WithdrawalPage({
       {/* Step 3: Submitted */}
       {step === 3 && submitted && (
         <div className="mt-12 flex flex-col items-center text-center">
-          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[#1F8A5B]/15">
-            <Check size={30} className="text-[#1F8A5B]" />
+          <div className="flex h-[64px] w-[64px] items-center justify-center rounded-full bg-[var(--color-success)]/15">
+            <Check size={30} className="text-[var(--color-success)]" />
           </div>
-          <h2 className="mt-5 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[#2A1A12]">Request received</h2>
-          <p className="mt-2 text-[14px] text-[#8A7565]">Your withdrawal of {amount} cowries (&#8358;{nairaAmount.toLocaleString()}) is under review.</p>
+          <h2 className="mt-5 font-[family-name:var(--font-display)] text-[22px] font-semibold text-[var(--color-ink)]">Request received</h2>
+          <p className="mt-2 text-[14px] text-[var(--color-ink-muted-2)]">Your withdrawal of {amount} cowries (&#8358;{nairaAmount.toLocaleString()}) is under review.</p>
           <div className="mt-3 rounded-full bg-[#B7791F]/15 px-3 py-1 text-[12px] font-medium text-[#B7791F]">Pending review</div>
-          <div className="mt-4 text-[14px] text-[#A08C7C]">Updated balance: {remaining.toFixed(2)} cowries</div>
-          <button type="button" onClick={() => router.push("/kekere/wallet")} className="mt-6 rounded-[12px] bg-[#C75D2C] px-8 py-3 text-[14px] font-semibold text-white">
+          <div className="mt-4 text-[14px] text-[var(--color-ink-muted-3)]">Updated balance: {remaining.toFixed(2)} cowries</div>
+          <button type="button" onClick={() => router.push("/kekere/wallet")} className="mt-6 rounded-[12px] bg-[var(--color-primary)] px-8 py-3 text-[14px] font-semibold text-white">
             Back to wallet
           </button>
         </div>

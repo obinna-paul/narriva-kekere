@@ -87,7 +87,7 @@ export function HistoryExportModal({ userEmail, onClose }: HistoryExportModalPro
                   value={from}
                   max={to || todayIso()}
                   onChange={(e) => setFrom(e.target.value)}
-                  className="rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-sm text-[#1A1C20]"
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)]"
                 />
               </label>
               <label className="flex flex-col gap-1 text-xs font-medium text-[var(--color-ink-muted)]">
@@ -98,7 +98,7 @@ export function HistoryExportModal({ userEmail, onClose }: HistoryExportModalPro
                   min={from || undefined}
                   max={todayIso()}
                   onChange={(e) => setTo(e.target.value)}
-                  className="rounded-lg border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2 text-sm text-[#1A1C20]"
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)]"
                 />
               </label>
             </div>

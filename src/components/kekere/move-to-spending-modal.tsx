@@ -92,7 +92,7 @@ export function MoveToSpendingModal({ earnedBalance, onClose, onSuccess }: MoveT
             onChange={(e) => setAmount(e.target.value)}
             disabled={submitting || maxMovable < 1}
             placeholder={maxMovable >= 1 ? `1 – ${maxMovable}` : "0"}
-            className="mt-1 w-full rounded-[12px] border border-[rgba(42,26,18,0.14)] bg-white px-3 py-2.5 text-[15px] text-[#2A1A12] disabled:opacity-50"
+            className="mt-1 w-full rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-ink)] disabled:opacity-50"
           />
         </label>
 
