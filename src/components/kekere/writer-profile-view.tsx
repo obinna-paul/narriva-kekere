@@ -92,9 +92,9 @@ function StoryListItem({ story }: { story: WriterProfileStory }) {
 function SectionDivider() {
   return (
     <div className="flex items-center gap-3 px-[22px]">
-      <div className="h-px flex-1 bg-[rgba(42,26,18,0.08)]" />
+      <div className="h-px flex-1 bg-[var(--color-ink)]/[0.08]" />
       <div className="h-1 w-1 rounded-full bg-[var(--color-primary)]/30" />
-      <div className="h-px flex-1 bg-[rgba(42,26,18,0.08)]" />
+      <div className="h-px flex-1 bg-[var(--color-ink)]/[0.08]" />
     </div>
   );
 }
@@ -118,13 +118,13 @@ function StatsStrip({
   ratingCount: number;
 }) {
   return (
-    <div className="mx-[22px] flex items-stretch overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.08)] bg-[linear-gradient(175deg,#FFFFFF,#FDF8F3)]">
+    <div className="mx-[22px] flex items-stretch overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
       <StatItem icon={<BookOpen size={15} />} value={String(stories)} label={stories === 1 ? "Story" : "Stories"} />
-      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <div className="w-px self-stretch bg-[var(--color-ink)]/[0.07]" />
       <StatItem icon={<Heart size={15} />} value={formatCount(reads)} label="Reads" />
-      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <div className="w-px self-stretch bg-[var(--color-ink)]/[0.07]" />
       <StatItem icon={<Users size={15} />} value={formatCount(followers)} label="Followers" />
-      <div className="w-px self-stretch bg-[rgba(42,26,18,0.07)]" />
+      <div className="w-px self-stretch bg-[var(--color-ink)]/[0.07]" />
       <StatItem
         icon={<Star size={15} />}
         value={rating !== null ? rating.toFixed(1) : "—"}
@@ -157,7 +157,7 @@ function PraiseWallCard({ note }: { note: PraiseWallNote }) {
   const avatarColor = note.fromUserAvatarColor ?? "#C75D2C";
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-[rgba(42,26,18,0.08)] bg-white">
+    <div className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
       {/* Left accent stripe */}
       <div
         className="absolute bottom-0 left-0 top-0 w-[4px] rounded-l-2xl opacity-60"
@@ -190,7 +190,7 @@ function PraiseWallCard({ note }: { note: PraiseWallNote }) {
       {/* Bottom: linked story attribution */}
       <Link
         href={`/kekere/story/${note.storySlug ?? note.storyId}`}
-        className="flex items-center gap-1.5 border-t border-[rgba(42,26,18,0.06)] px-5 py-3 text-[12px] text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-cream)]/60"
+        className="flex items-center gap-1.5 border-t border-[var(--color-ink)]/[0.06] px-5 py-3 text-[12px] text-[var(--color-ink-muted-2)] transition-colors hover:bg-[var(--color-ink)]/[0.04]"
       >
         <BookOpen size={12} className="flex-none text-[var(--color-primary)]/70" />
         <span className="truncate">
@@ -340,7 +340,7 @@ export function WriterProfileView({
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[rgba(42,26,18,0.10)] bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_1px_4px_rgba(199,93,44,0.1)]"
+                className="flex max-w-[220px] items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-ink)] shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all hover:border-[var(--color-primary)]/40 hover:shadow-[0_1px_4px_rgba(199,93,44,0.1)]"
               >
                 <span className="flex-none text-[var(--color-primary)]/75">
                   <SocialIcon platform={detectSocialPlatform(link.href)} />

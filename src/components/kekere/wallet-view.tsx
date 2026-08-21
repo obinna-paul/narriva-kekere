@@ -56,18 +56,18 @@ function copyToClipboard(text: string, setCopied: (v: boolean) => void) {
 // this reads fine against both a light and a dark page without one.
 const TX_ICONS: Record<string, { icon: typeof ArrowDownLeft; color: string }> = {
   TOP_UP: { icon: ArrowDownLeft, color: "var(--color-success)" },
-  UNLOCK: { icon: ArrowUpRight, color: "#C0392B" },
-  WITHDRAWAL: { icon: ArrowUpRight, color: "#C0392B" },
+  UNLOCK: { icon: ArrowUpRight, color: "var(--color-danger)" },
+  WITHDRAWAL: { icon: ArrowUpRight, color: "var(--color-danger)" },
   REFERRAL_REWARD: { icon: ArrowDownLeft, color: "var(--color-success)" },
   SIGNUP_BONUS: { icon: ArrowDownLeft, color: "var(--color-success)" },
   EARNINGS_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
   TIP_RECEIVED: { icon: ArrowDownLeft, color: "var(--color-success)" },
-  TIP_SENT: { icon: ArrowUpRight, color: "#C0392B" },
+  TIP_SENT: { icon: ArrowUpRight, color: "var(--color-danger)" },
   ADMIN_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
-  ADMIN_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
+  ADMIN_DEBIT: { icon: ArrowUpRight, color: "var(--color-danger)" },
   DATA_CORRECTION_CREDIT: { icon: ArrowDownLeft, color: "var(--color-success)" },
-  DATA_CORRECTION_DEBIT: { icon: ArrowUpRight, color: "#C0392B" },
-  EARNED_TO_SPENDING_OUT: { icon: ArrowUpRight, color: "#C0392B" },
+  DATA_CORRECTION_DEBIT: { icon: ArrowUpRight, color: "var(--color-danger)" },
+  EARNED_TO_SPENDING_OUT: { icon: ArrowUpRight, color: "var(--color-danger)" },
   EARNED_TO_SPENDING_IN: { icon: ArrowDownLeft, color: "var(--color-success)" },
 };
 
@@ -242,7 +242,7 @@ export function WalletView({
                   </div>
                 </div>
                 <div className="flex-none text-right">
-                  <div className={cn("text-[14px] font-semibold", isDebit ? "text-[#C0392B]" : "text-[var(--color-success)]")}>
+                  <div className={cn("text-[14px] font-semibold", isDebit ? "text-[var(--color-danger)]" : "text-[var(--color-success)]")}>
                     {isDebit ? "-" : "+"}{tx.amountCowries}
                   </div>
                   <div className="text-[11px] text-[var(--color-ink-muted-3)]">{new Date(tx.date).toLocaleDateString()}</div>
