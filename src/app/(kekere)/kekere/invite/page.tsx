@@ -29,7 +29,7 @@ export default async function KekereInvitePage() {
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[#F5EBDD]">
+      <div className="min-h-screen bg-[var(--color-bg)]">
         <KekereNavWrapper />
         <ReferralSection
           stats={{

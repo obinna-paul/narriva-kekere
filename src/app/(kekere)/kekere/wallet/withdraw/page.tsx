@@ -23,7 +23,7 @@ export default async function KekereWithdrawPage() {
 
   return (
     <KekereTheme>
-      <div className="min-h-screen bg-[#F5EBDD]">
+      <div className="min-h-screen bg-[var(--color-bg)]">
         <KekereNavWrapper />
         {isVerified && bankDetails ? (
           <WithdrawalPage

@@ -109,13 +109,13 @@ export function WriterDashboard({ competitionSlug, competitionTitle, competition
   const otherStories = stories?.filter((s) => !EDITABLE.includes(s.status)) ?? [];
 
   return (
-    <div className="min-h-screen bg-[#F5EBDD]">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-[rgba(42,26,18,.08)] bg-[#F5EBDD]/95 backdrop-blur-md">
+      <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[680px] items-center justify-between px-5 py-3.5">
           <Link
             href="/kekere/feed"
-            className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#C75D2C]"
+            className="font-[family-name:var(--font-display)] text-[18px] font-semibold text-[var(--color-primary)]"
           >
             Kekere
           </Link>

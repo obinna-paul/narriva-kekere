@@ -63,7 +63,7 @@ export default async function KekereReviewPage({ params }: { params: { storyId: 
       <KekereTheme>
         <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] px-6">
           <div className="max-w-[380px] text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(31,138,91,0.12)] text-[#1F8A5B]">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-success)]/[0.12] text-[var(--color-success)]">
               <CheckCircle2 size={28} />
             </div>
             <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[var(--color-ink)]">{copy.heading}</h1>
