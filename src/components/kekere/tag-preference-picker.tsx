@@ -44,7 +44,7 @@ export function TagPreferencePicker({ value, onChange }: TagPreferencePickerProp
                   className={
                     isSelected
                       ? "rounded-full border border-[var(--color-primary)] bg-[var(--color-primary)] px-3.5 py-[7px] text-[13px] font-semibold text-white transition-colors"
-                      : "rounded-full border border-[rgba(42,26,18,0.16)] bg-white px-3.5 py-[7px] text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:border-[rgba(42,26,18,0.32)]"
+                      : "rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-[7px] text-[13px] font-medium text-[var(--color-ink)] transition-colors hover:border-[var(--color-ink)]/30"
                   }
                 >
                   {tag.label}

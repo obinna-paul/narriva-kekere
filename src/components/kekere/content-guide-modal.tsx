@@ -51,7 +51,7 @@ export function ContentGuideModal() {
             aria-modal="true"
             aria-labelledby="content-guide-title"
             onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[85vh] w-full max-w-[640px] overflow-y-auto rounded-[20px] bg-white p-[28px] shadow-[0_20px_50px_-16px_rgba(42,26,18,0.4)]"
+            className="relative max-h-[85vh] w-full max-w-[640px] overflow-y-auto rounded-[20px] bg-[var(--color-surface)] p-[28px] shadow-[0_20px_50px_-16px_rgba(42,26,18,0.4)]"
           >
             <button
               type="button"
@@ -78,7 +78,7 @@ export function ContentGuideModal() {
                   <h3 className="mb-2 font-[family-name:var(--font-display)] text-lg font-medium text-[var(--color-ink)]">
                     {s.heading}
                   </h3>
-                  <div className="flex flex-col gap-3 text-[14.5px] leading-[1.7] text-[#3A352E]">
+                  <div className="flex flex-col gap-3 text-[14.5px] leading-[1.7] text-[var(--color-ink)]">
                     {s.content}
                   </div>
                 </div>
