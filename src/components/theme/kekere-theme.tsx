@@ -34,6 +34,11 @@ const KEKERE_THEME_VARS = {
   "--color-border": "#E8D5C4",
   "--color-cream": "#F7EFE3",
   "--color-success": "#1F6F4A",
+  // The app's one recurring "danger" red (error text, destructive actions,
+  // sign-out) — not part of the original handoff, but used consistently
+  // enough across error states to warrant its own token rather than a
+  // hardcoded #A13A3A repeated at dozens of call sites.
+  "--color-danger": "#A13A3A",
   "--color-sand-accent": "#E9C9A3",
   "--color-sand-accent-2": "#E08A4A",
   // Legacy aliases from an earlier (pre-handoff) redesign pass — same value
@@ -96,6 +101,11 @@ const KEKERE_DARK_THEME_VARS = {
   "--color-surface": "#211B14",
   "--color-border": "rgba(237,230,218,0.14)",
   "--color-success": "#3FA876",
+  // The light value (#A13A3A) computes to roughly 2.8:1 contrast against
+  // this dark background — well under the 4.5:1 AA minimum — so this needs
+  // its own lighter red rather than staying fixed like the decorative
+  // tokens above. #E28080 computes to ~7:1.
+  "--color-danger": "#E28080",
   "--shadow-card": "0 10px 24px -12px rgba(0,0,0,0.6)",
   "--shadow-card-hover": "0 16px 32px -14px rgba(0,0,0,0.65)",
 } as CSSProperties;

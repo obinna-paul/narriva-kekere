@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { hardSignOut } from "@/lib/auth/client-sign-out";
-import { cn } from "@/lib/utils/cn";
-import { readThemeMode, onThemeModeChange } from "@/lib/utils/kekere-theme-mode";
 
 export interface UserMenuProps {
   name: string;
@@ -26,14 +24,6 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
-
-  // Narriva never sets this (no dark mode there), so this always resolves
-  // light for that brand — only Kekere's sign-out colour actually adjusts.
-  const [dark, setDark] = useState(false);
-  useEffect(() => {
-    setDark(readThemeMode() === "dark");
-    return onThemeModeChange((mode) => setDark(mode === "dark"));
-  }, []);
 
   const initial = name.trim().charAt(0).toUpperCase() || "?";
 
@@ -95,10 +85,7 @@ export function UserMenu({ name, email, brand = "narriva" }: UserMenuProps) {
           <button
             type="button"
             onClick={() => hardSignOut(isKekere ? "/kekere" : "/")}
-            className={cn(
-              "block w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
-              dark ? "text-[#E28080] hover:bg-[#E28080]/10" : "text-[#A13A3A] hover:bg-[rgba(193,58,58,0.06)]"
-            )}
+            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10"
           >
             Sign out
           </button>
